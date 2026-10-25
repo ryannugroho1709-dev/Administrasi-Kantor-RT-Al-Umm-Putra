@@ -1,0 +1,73 @@
+/* ============================================================
+   KULIAH — halaman pembuka (S1 / S2) + layar penuh Ruang Kuliah S1
+   Warna mengikuti palet aplikasi (--accent, --p-deep, --p-deeper dari tema-elegan.css).
+   ============================================================ */
+.kul { --k1: var(--accent, #1546a8); --k1d: var(--p-deeper, #06173f); --k1m: var(--p-deep, #0b2a6b); --emas: #d4a64a;
+  display: flex; flex-direction: column; gap: 16px; font-family: "Plus Jakarta Sans", inherit; }
+
+/* Hero */
+.kul-hero { position: relative; overflow: hidden; border-radius: 22px; padding: 30px 28px; color: #fff;
+  background: radial-gradient(120% 140% at 85% 0%, color-mix(in srgb, var(--k1) 70%, #fff 0%) 0%, var(--k1m) 45%, var(--k1d) 100%); box-shadow: 0 14px 40px rgba(0,0,0,.14); }
+.kul-hero::before { content: ""; position: absolute; inset: 0; opacity: .14; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='none' stroke='%23fff' stroke-width='1'%3E%3Crect x='26' y='26' width='28' height='28'/%3E%3Crect x='26' y='26' width='28' height='28' transform='rotate(45 40 40)'/%3E%3Ccircle cx='40' cy='40' r='6'/%3E%3Cpath d='M0 0l14 14M80 0 66 14M0 80l14-14M80 80 66 66'/%3E%3C/g%3E%3C/svg%3E"); }
+.kul-hero-isi { position: relative; }
+.kul-bismillah { font-family: "Amiri", "Noto Naskh Arabic", serif; font-size: 22px; color: var(--emas); margin-bottom: 6px; }
+.kul-hero h1 { font-family: "Playfair Display", Georgia, serif; font-size: clamp(26px, 4vw, 38px); font-weight: 700; margin: 0; line-height: 1.15; }
+.kul-hero p { margin: 8px 0 0; opacity: .85; font-size: 14px; }
+
+.kul-info { border: 1px dashed var(--emas); background: color-mix(in srgb, var(--emas) 12%, var(--surface, #fff)); border-radius: 14px; padding: 10px 14px; font-size: 13px; line-height: 1.5; }
+.kul-info small { display: block; color: var(--text-secondary); }
+
+/* Kartu program */
+.kul-program { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
+.kul-prog { position: relative; overflow: hidden; border-radius: 22px; padding: 22px; display: flex; flex-direction: column; gap: 8px;
+  background: var(--surface, #fff); border: 1px solid var(--border-soft, #e3e8f2); box-shadow: 0 6px 22px rgba(0,0,0,.06); transition: transform .2s, box-shadow .2s; }
+.kul-prog.s1 { cursor: pointer; border-top: 5px solid var(--k1); }
+.kul-prog.s1:hover { transform: translateY(-3px); box-shadow: 0 14px 34px rgba(var(--accent-rgb, 21,70,168), .18); }
+.kul-prog.s2 { border-top: 5px solid var(--emas); }
+.kul-prog-atas { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.kul-badge { background: var(--k1); color: #fff; font-weight: 800; font-size: 12px; padding: 3px 10px; border-radius: 999px; }
+.kul-prog.s2 .kul-badge { background: var(--emas); color: #2b1d02; }
+.kul-kampus { font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+.kul-prog h2 { font-family: "Playfair Display", Georgia, serif; font-size: 30px; margin: 4px 0 0; line-height: 1.1; color: var(--text-primary); }
+.kul-arab { font-family: "Amiri", "Noto Naskh Arabic", serif; font-size: 22px; color: var(--emas); direction: rtl; text-align: left; }
+.kul-prog-mk { font-size: 13.5px; font-weight: 600; color: var(--k1); }
+.kul-redup { font-size: 12.5px; color: var(--text-secondary); margin: 0; }
+.kul-stat { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 6px 0; }
+.kul-stat div { background: var(--accent-soft, #eef2fb); border-radius: 14px; padding: 10px 8px; text-align: center; }
+.kul-stat b { display: block; font-family: "Playfair Display", Georgia, serif; font-size: 26px; line-height: 1; color: var(--k1); }
+.kul-stat small { font-size: 11px; color: var(--text-secondary); }
+.kul-btn-utama { margin-top: auto; align-self: flex-start; background: var(--k1); color: #fff; border: 0; border-radius: 12px; padding: 10px 18px; font-weight: 700; }
+.kul-btn-emas { margin-top: auto; align-self: flex-start; background: linear-gradient(135deg, #e2bb63, #b98a2c); color: #2b1d02; border: 0; border-radius: 12px; padding: 10px 18px; font-weight: 700; text-decoration: none; }
+
+/* Cara belajar */
+.kul-cara { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.kul-cara div { background: var(--surface, #fff); border: 1px solid var(--border-soft, #e3e8f2); border-radius: 16px; padding: 12px 14px; display: grid; grid-template-columns: auto 1fr; column-gap: 10px; align-items: center; }
+.kul-cara span { grid-row: span 2; font-size: 22px; }
+.kul-cara b { font-size: 13px; }
+.kul-cara small { font-size: 11.5px; color: var(--text-secondary); }
+
+.kul-lama { background: var(--surface, #fff); border: 1px solid var(--border-soft, #e3e8f2); border-radius: 16px; padding: 12px 16px; }
+.kul-lama summary { cursor: pointer; font-weight: 700; }
+.kul-lama-item { border-top: 1px dashed var(--border-soft, #e3e8f2); padding: 10px 0; }
+.kul-lama-item small { text-transform: capitalize; color: var(--text-secondary); font-weight: 700; }
+.kul-lama-item p { margin: 2px 0 6px; font-size: 13px; line-height: 1.6; }
+
+/* Layar penuh Ruang Kuliah S1 */
+#kul-layar { position: fixed; inset: 0; z-index: 9000; background: var(--bg, #f7f8fc); }
+#kul-layar iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
+.kul-muat { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: #fff; font-weight: 600;
+  background: radial-gradient(circle at 50% 40%, var(--accent, #1546a8), var(--p-deeper, #06173f)); }
+.kul-putar { width: 44px; height: 44px; border-radius: 50%; border: 3px solid rgba(255,255,255,.25); border-top-color: #d4a64a; animation: kulPutar 1s linear infinite; }
+@keyframes kulPutar { to { transform: rotate(360deg); } }
+html.kul-buka, html.kul-buka body { overflow: hidden; }
+
+@media (max-width: 820px) {
+  .kul-program { grid-template-columns: 1fr; }
+  .kul-cara { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 480px) {
+  .kul-hero { padding: 22px 18px; border-radius: 18px; }
+  .kul-stat { grid-template-columns: 1fr 1fr; }
+  .kul-prog h2 { font-size: 26px; }
+}

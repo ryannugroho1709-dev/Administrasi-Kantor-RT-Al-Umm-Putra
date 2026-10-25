@@ -1,0 +1,240 @@
+/* ============================================================
+   TEMA ELEGAN + PILIHAN PALET WARNA
+   Aktif kalau <html> punya class "tema-elegan"; warnanya ditentukan atribut
+   data-palet ("hijau" | "biru" | "maroon" | "ungu"). Pilihan "Klasik" = tanpa
+   class ini sama sekali (tampilan hijau lama, 100% seperti semula).
+   Murni tampilan: tidak menyentuh logika/fitur. Padding/ukuran sengaja tidak
+   diubah supaya aturan khusus HP (media query) di index.html tetap berlaku.
+   ============================================================ */
+
+/* ── Token bersama (tidak bergantung palet) ── */
+html.tema-elegan{
+  --text-primary:#141f3a;--text-secondary:#5a6683;
+  --surface:#ffffff;--glass-bg:rgba(255,255,255,.86);--shimmer:rgba(255,255,255,.6);
+  --warn:#cf8317;--ok:#2f8f5b;--bad:#c2453d;
+  --neu-dark:rgba(20,31,58,.10);--neu-light:rgba(255,255,255,0);
+  --edit-color:#2f6fbf;--edit-soft:#e3edfa;
+  --sidebar-text:#f2f4fa;
+  --sidebar-active-bg:linear-gradient(135deg,#e2bb66,#a87a2a);
+  --emas:#d4a64a;--emas-tua:#a87a2a;--emas-soft:#f8efd9;
+  --tl-shadow-sm:0 1px 2px rgba(20,31,58,.06),0 3px 10px rgba(20,31,58,.05);
+  --tl-shadow:0 14px 34px -14px rgba(20,31,58,.22);
+  --tl-shadow-lg:0 30px 70px -24px rgba(20,31,58,.35);
+  --tl-ease:cubic-bezier(.2,.8,.2,1);
+  --tl-serif:'Playfair Display',Georgia,serif;
+  --tl-pola:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='.13' stroke-width='1'%3E%3Crect x='16' y='16' width='24' height='24'/%3E%3Crect x='16' y='16' width='24' height='24' transform='rotate(45 28 28)'/%3E%3Ccircle cx='28' cy='28' r='4'/%3E%3C/g%3E%3C/svg%3E");
+}
+html.tema-elegan.dark{
+  --text-primary:#e8ecf6;--text-secondary:#a7b0c6;
+  --glass-bg:color-mix(in srgb,var(--surface) 86%,transparent);--shimmer:rgba(255,255,255,.04);
+  --warn:#e3a23f;--ok:#4fbf83;--bad:#e2726a;
+  --neu-dark:rgba(0,0,0,.35);
+  --edit-color:#8fb2f6;--edit-soft:#1a2a52;
+  --emas-soft:#3a2f17;
+  --tl-shadow-sm:0 1px 2px rgba(0,0,0,.3),0 3px 10px rgba(0,0,0,.25);
+  --tl-shadow:0 14px 34px -14px rgba(0,0,0,.6);
+  color-scheme:dark;
+}
+
+/* ── Palet: BIRU KERAJAAN & EMAS (juga bawaan kalau data-palet kosong) ── */
+html.tema-elegan,html.tema-elegan[data-palet="biru"]{
+  --accent:#1546a8;--accent2:#1d56c4;--accent-soft:#e8eefb;--accent-dim:#cfdbf5;--accent-rgb:21,70,168;
+  --p-deep:#0b2a6b;--p-deeper:#06173f;
+  --bg:#f7f8fc;--nl:#f1f4fb;--nd:#e3e9f5;--border-soft:#dfe5f2;--glass-border:#dfe5f2;
+  --sidebar-text-dim:#9fb0d6;
+}
+html.tema-elegan.dark,html.tema-elegan.dark[data-palet="biru"]{
+  --accent:#6f9bf2;--accent2:#8fb2f6;--accent-soft:#1a2a52;--accent-dim:#253a6b;--accent-rgb:111,155,242;
+  --bg:#0a1124;--surface:#111a33;--nl:#16213f;--nd:#0a1020;--border-soft:#22305a;--glass-border:#22305a;
+  --p-deep:#0a1a44;--p-deeper:#050d24;--sidebar-text-dim:#8494bb;
+}
+/* ── Palet: HIJAU ZAMRUD & EMAS ── */
+html.tema-elegan[data-palet="hijau"]{
+  --accent:#0f6b55;--accent2:#138a6c;--accent-soft:#e4f3ee;--accent-dim:#c4e4d9;--accent-rgb:15,107,85;
+  --p-deep:#0b4a3c;--p-deeper:#062b23;
+  --bg:#f5f8f6;--nl:#eff5f2;--nd:#dfeae5;--border-soft:#dbe7e1;--glass-border:#dbe7e1;
+  --text-primary:#12281f;--text-secondary:#566b62;--sidebar-text-dim:#9cc5b6;
+}
+html.tema-elegan.dark[data-palet="hijau"]{
+  --accent:#3fbf96;--accent2:#6fd4b2;--accent-soft:#143a2f;--accent-dim:#1d4d3e;--accent-rgb:63,191,150;
+  --bg:#08130f;--surface:#0f1f19;--nl:#142821;--nd:#07110d;--border-soft:#1f3a30;--glass-border:#1f3a30;
+  --p-deep:#0a3328;--p-deeper:#041a14;--text-primary:#e6f2ec;--text-secondary:#9fbcb0;--sidebar-text-dim:#7fa895;
+}
+/* ── Palet: MAROON & EMAS ── */
+html.tema-elegan[data-palet="maroon"]{
+  --accent:#8a1f33;--accent2:#a52a41;--accent-soft:#f8e8eb;--accent-dim:#efccd3;--accent-rgb:138,31,51;
+  --p-deep:#5c1222;--p-deeper:#350912;
+  --bg:#fbf8f8;--nl:#f7f0f1;--nd:#eddfe2;--border-soft:#ecdde0;--glass-border:#ecdde0;
+  --text-primary:#2a1418;--text-secondary:#6d5459;--sidebar-text-dim:#d6a9b2;
+}
+html.tema-elegan.dark[data-palet="maroon"]{
+  --accent:#e07a8c;--accent2:#ec9cab;--accent-soft:#3d1820;--accent-dim:#52212b;--accent-rgb:224,122,140;
+  --bg:#160a0d;--surface:#221116;--nl:#2b161c;--nd:#12080a;--border-soft:#3e2027;--glass-border:#3e2027;
+  --p-deep:#4a0f1c;--p-deeper:#24060c;--text-primary:#f4e9eb;--text-secondary:#c3a5ab;--sidebar-text-dim:#b98c95;
+}
+/* ── Palet: UNGU ANGGUR & EMAS ── */
+html.tema-elegan[data-palet="ungu"]{
+  --accent:#5b3d93;--accent2:#6f4fb0;--accent-soft:#efe9f8;--accent-dim:#dccff0;--accent-rgb:91,61,147;
+  --p-deep:#3b2566;--p-deeper:#211438;
+  --bg:#f9f8fc;--nl:#f3f0fa;--nd:#e6e0f2;--border-soft:#e3ddef;--glass-border:#e3ddef;
+  --text-primary:#1f1733;--text-secondary:#61597a;--sidebar-text-dim:#b9a8db;
+}
+html.tema-elegan.dark[data-palet="ungu"]{
+  --accent:#a68ae6;--accent2:#bea8ee;--accent-soft:#2a2050;--accent-dim:#372b66;--accent-rgb:166,138,230;
+  --bg:#100c1c;--surface:#19132b;--nl:#201936;--nd:#0d0a17;--border-soft:#2f2650;--glass-border:#2f2650;
+  --p-deep:#2c1b52;--p-deeper:#140c26;--text-primary:#efeaf9;--text-secondary:#b2a8cc;--sidebar-text-dim:#9d8fc4;
+}
+html.tema-elegan{--sidebar-bg:linear-gradient(180deg,var(--p-deep) 0%,var(--p-deeper) 100%);}
+
+/* ── Tipografi ── */
+html.tema-elegan body{font-feature-settings:"tnum" 1;}
+html.tema-elegan #topbar-title,
+html.tema-elegan .dash-hero-greeting,
+html.tema-elegan #modal-panel h3,
+html.tema-elegan .splash-title,
+html.tema-elegan .brand-text b{font-family:var(--tl-serif);letter-spacing:.2px;}
+html.tema-elegan #topbar-title{font-size:17px;font-weight:700;color:var(--text-primary);}
+html.tema-elegan #modal-panel h3{font-size:19px;font-weight:700;}
+html.tema-elegan .dash-hero-greeting{font-size:22px;font-weight:700;}
+html.tema-elegan table.simple-table td,
+html.tema-elegan .stat-tile-value,
+html.tema-elegan .bop-stat-value{font-variant-numeric:tabular-nums;}
+
+/* ── Fokus keyboard: outline emas ── */
+html.tema-elegan :focus-visible{outline:2px solid var(--emas);outline-offset:2px;border-radius:10px;}
+html.tema-elegan .input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.15);}
+
+/* ── Sidebar ── */
+html.tema-elegan #sidebar{border-right:none;box-shadow:4px 0 24px -12px rgba(0,0,0,.45);}
+html.tema-elegan #sidebar .brand{background-image:var(--tl-pola);background-size:56px 56px;border-bottom:1px solid rgba(212,166,74,.28);}
+html.tema-elegan #sidebar .brand .logo{border-radius:16px;box-shadow:0 0 0 2px rgba(212,166,74,.55),0 6px 16px rgba(0,0,0,.35);}
+html.tema-elegan .nav-group-label{color:var(--emas);opacity:.85;letter-spacing:.12em;}
+html.tema-elegan .nav-item{border-radius:999px;transition:background .2s var(--tl-ease),transform .2s var(--tl-ease);}
+html.tema-elegan .nav-item:hover{background:rgba(255,255,255,.07);transform:translateX(2px);}
+html.tema-elegan .nav-item.active{background:var(--sidebar-active-bg);color:#1c1406;font-weight:800;box-shadow:0 6px 16px -6px rgba(212,166,74,.65);}
+
+/* ── Topbar ── */
+html.tema-elegan #topbar{border-bottom:1px solid var(--border-soft);}
+html.tema-elegan #topbar .pill{border-radius:999px;border-color:var(--border-soft);box-shadow:var(--tl-shadow-sm);}
+html.tema-elegan #guru-account-chip{border-radius:999px;background:var(--surface);border:1px solid var(--border-soft);box-shadow:var(--tl-shadow-sm);}
+html.tema-elegan #guru-pill-foto{box-shadow:0 0 0 2px var(--emas);}
+html.tema-elegan #tema-toggle{background:linear-gradient(135deg,#e2bb66,#a87a2a);color:#1c1406;border-color:transparent;}
+html.tema-elegan #mobile-topbar{box-shadow:var(--tl-shadow-sm);}
+
+/* ── Halaman & animasi masuk ── */
+html.tema-elegan .page.show{animation:tlMasuk .45s var(--tl-ease);}
+@keyframes tlMasuk{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+
+/* ── Kartu ── */
+html.tema-elegan .card{border-radius:20px;border:1px solid var(--border-soft);box-shadow:var(--tl-shadow-sm);transition:box-shadow .25s var(--tl-ease),transform .25s var(--tl-ease);}
+html.tema-elegan .card:hover{box-shadow:var(--tl-shadow);}
+html.tema-elegan .card:has(table){background-color:var(--surface);}
+
+/* ── Tombol ── */
+html.tema-elegan .btn{border-radius:999px;transition:background .2s var(--tl-ease),box-shadow .2s var(--tl-ease),transform .15s var(--tl-ease);}
+html.tema-elegan .btn:active{transform:scale(.98);}
+html.tema-elegan .btn-accent{background:linear-gradient(135deg,var(--accent2),var(--accent));box-shadow:0 8px 18px -8px rgba(var(--accent-rgb),.7);}
+html.tema-elegan .btn-accent:hover{background:linear-gradient(135deg,var(--accent),var(--p-deep));box-shadow:0 10px 22px -8px rgba(var(--accent-rgb),.8);}
+html.tema-elegan.dark .btn-accent{color:var(--p-deeper);}
+html.tema-elegan .btn-ghost{background:var(--accent-soft);}
+
+/* ── Input ── */
+html.tema-elegan .input,html.tema-elegan select.input,html.tema-elegan textarea.input{border-radius:12px;border:1.5px solid var(--border-soft);background:var(--nl);transition:border-color .2s,box-shadow .2s;}
+
+/* ── Tombol ikon kecil (edit/hapus) ── */
+html.tema-elegan span[style*="cursor:pointer"]{border-radius:12px;background:var(--surface);border:1px solid var(--border-soft);box-shadow:var(--tl-shadow-sm);}
+html.tema-elegan span[style*="cursor:pointer"]:hover{transform:translateY(-2px);box-shadow:var(--tl-shadow);}
+html.tema-elegan span[style*="cursor:pointer"]:active{transform:scale(.94);box-shadow:none;}
+
+/* ── Tabel ── */
+html.tema-elegan table.simple-table th{background:var(--accent-soft);color:var(--p-deep);font-weight:800;font-size:11.5px;letter-spacing:.02em;border-bottom:2px solid var(--emas);}
+html.tema-elegan.dark table.simple-table th{color:var(--text-primary);}
+/* Zebra dicampur ke --surface (PADAT, bukan tembus pandang) — dulu transparan sehingga kolom beku
+   (nama) jadi tembus & teks kolom lain terlihat bertabrakan saat tabel digeser di HP. */
+html.tema-elegan table.simple-table tbody tr:nth-child(even) td{background-color:color-mix(in srgb,var(--accent-soft) 35%,var(--surface));}
+html.tema-elegan table.simple-table tbody tr:hover td{background-color:var(--accent-soft);}
+html.tema-elegan table.simple-table th.sticky-col-1,html.tema-elegan table.simple-table th.sticky-col-2{background:var(--accent-soft);}
+
+/* ── Badge/chip ── */
+html.tema-elegan .badge,html.tema-elegan .chip,html.tema-elegan .stat-chip{border-radius:999px;}
+html.tema-elegan .stat-chip{box-shadow:var(--tl-shadow-sm);}
+
+/* ── Dashboard ── */
+html.tema-elegan .dash-hero{border-radius:24px;background-color:var(--p-deeper);
+  background-image:var(--tl-pola),linear-gradient(135deg,var(--accent) 0%,var(--p-deep) 55%,var(--p-deeper) 100%);
+  background-size:56px 56px,100% 100%;box-shadow:var(--tl-shadow-lg);border-bottom:3px solid var(--emas);}
+html.tema-elegan.dark .dash-hero{background-image:var(--tl-pola),linear-gradient(135deg,var(--p-deep) 0%,var(--p-deeper) 100%);}
+html.tema-elegan .dash-hero-pill{border-radius:18px;border-color:rgba(212,166,74,.45);}
+html.tema-elegan .dash-jam-live{color:#f8dfa0;background:rgba(0,0,0,.28);border-color:rgba(212,166,74,.7);text-shadow:0 0 6px rgba(212,166,74,.6);box-shadow:none;animation:none;}
+html.tema-elegan .dash-jam-live::before{background:var(--emas);box-shadow:0 0 6px 1px rgba(212,166,74,.9);}
+html.tema-elegan .quick-action-card{border-radius:20px;box-shadow:var(--tl-shadow-sm);transition:transform .25s var(--tl-ease),box-shadow .25s var(--tl-ease);}
+html.tema-elegan .quick-action-card:hover{transform:translateY(-5px);box-shadow:var(--tl-shadow);}
+html.tema-elegan .quick-action-icon{border-radius:16px;}
+html.tema-elegan .dash-quote-card{background:linear-gradient(120deg,var(--emas-soft),var(--surface));border:1px solid rgba(212,166,74,.45);color:var(--text-primary);border-radius:20px;}
+html.tema-elegan .dash-progress-card{background:linear-gradient(120deg,var(--accent-soft),var(--surface) 65%);}
+html.tema-elegan .aksi-tile{border-radius:20px;box-shadow:var(--tl-shadow-sm);}
+html.tema-elegan .aksi-tile:not(:disabled):hover{transform:translateY(-4px);box-shadow:var(--tl-shadow);}
+
+/* ── Modal ── */
+html.tema-elegan #modal-overlay{background:color-mix(in srgb,var(--p-deeper) 60%,transparent);backdrop-filter:blur(4px);}
+html.tema-elegan #modal-panel{border-radius:24px;background:var(--surface);border-top:4px solid var(--emas);box-shadow:var(--tl-shadow-lg);}
+html.tema-elegan #modal-close-btn{background:var(--nl);color:var(--text-secondary);}
+html.tema-elegan #modal-close-btn:hover{background:var(--accent-soft);color:var(--accent);}
+
+/* ── Toast ── */
+html.tema-elegan .toast{border-radius:18px;background:linear-gradient(135deg,var(--p-deep),var(--p-deeper));color:#eef2fb;border-left-color:var(--emas);}
+html.tema-elegan .toast.ok{background:linear-gradient(135deg,#1f6e46,#14512f);color:#e3f6ea;border-left-color:#7fd6a6;}
+
+/* ── Loading ── */
+html.tema-elegan #global-loading-overlay{background:color-mix(in srgb,var(--p-deeper) 55%,transparent);backdrop-filter:blur(5px);}
+
+/* ── Splash ── */
+html.tema-elegan #app-splash{background-color:var(--p-deeper);background-image:var(--tl-pola),radial-gradient(120% 120% at 50% 20%,var(--accent) 0%,var(--p-deep) 55%,var(--p-deeper) 100%);background-size:56px 56px,100% 100%;}
+html.tema-elegan #app-splash .splash-orb{background:radial-gradient(circle,rgba(212,166,74,.45),rgba(212,166,74,0) 70%);}
+html.tema-elegan .splash-ring{border-color:rgba(212,166,74,.55);}
+html.tema-elegan .splash-logo{box-shadow:0 0 0 3px rgba(212,166,74,.6),0 10px 34px rgba(0,0,0,.4);}
+html.tema-elegan .splash-sub{color:rgba(255,255,255,.78);}
+html.tema-elegan .splash-dots span{background:var(--emas);}
+
+/* ── Scrollbar ── */
+html.tema-elegan ::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--emas) 55%,var(--accent-dim));}
+
+/* ── Ikon garis (menggantikan emoji di sidebar & navigasi bawah) ── */
+.ikon-garis{width:18px;height:18px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+html.tema-elegan .quick-action-icon .ikon-garis{width:22px;height:22px;}
+html.tema-elegan .stat-tile-icon .ikon-garis{width:20px;height:20px;}
+html.tema-elegan .qa-green,html.tema-elegan .st-green{color:#1f8a5f;}
+html.tema-elegan .qa-purple,html.tema-elegan .st-purple{color:#7b55c7;}
+html.tema-elegan .qa-amber,html.tema-elegan .st-amber{color:#b7791f;}
+html.tema-elegan .qa-blue,html.tema-elegan .st-blue{color:#2f6fbf;}
+html.tema-elegan.dark .qa-green,html.tema-elegan.dark .st-green{background:#163a2a;color:#5fd3a0;}
+html.tema-elegan.dark .qa-purple,html.tema-elegan.dark .st-purple{background:#2b2150;color:#b9a2f0;}
+html.tema-elegan.dark .qa-amber,html.tema-elegan.dark .st-amber{background:#3a2c12;color:#f0c46a;}
+html.tema-elegan.dark .qa-blue,html.tema-elegan.dark .st-blue{background:#172a4d;color:#8fb2f6;}
+
+/* ── Sakelar mode terang/gelap (di jendela ✨) ── */
+.mode-pilih{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:4px;border-radius:999px;background:var(--nl);border:1px solid var(--border-soft);}
+.mode-pilih button{border:none;background:transparent;border-radius:999px;padding:9px;font-weight:800;font-size:12.5px;cursor:pointer;color:var(--text-secondary);font-family:inherit;}
+.mode-pilih button.aktif{background:var(--surface);color:var(--accent);box-shadow:0 2px 8px rgba(0,0,0,.08);}
+
+/* ── Pemilih palet ── */
+.palet-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;}
+.palet-opsi{border:2px solid var(--border-soft);border-radius:16px;padding:10px;cursor:pointer;background:var(--surface);text-align:start;transition:border-color .15s,transform .15s;font-family:inherit;color:var(--text-primary);}
+.palet-opsi:hover{transform:translateY(-2px);}
+.palet-opsi.aktif{border-color:var(--accent);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.18);}
+.palet-contoh{display:flex;height:34px;border-radius:10px;overflow:hidden;margin-bottom:8px;}
+.palet-contoh span{flex:1;}
+.palet-nama{font-weight:800;font-size:12px;}
+.palet-ket{font-size:10.5px;color:var(--text-secondary);margin-top:2px;}
+
+/* ── Hormati pengguna yang mematikan animasi ── */
+@media (prefers-reduced-motion:reduce){
+  html.tema-elegan *{animation-duration:.01ms !important;transition-duration:.01ms !important;}
+}
+
+/* ── Splash mengikuti palet pilihan (sebelumnya selalu hijau) ── */
+html.tema-elegan #app-splash{background:radial-gradient(120% 120% at 50% 20%,color-mix(in srgb,var(--accent) 55%,var(--p-deep)) 0%,var(--p-deep) 55%,var(--p-deeper) 100%);}
+html.tema-elegan #app-splash .splash-orb{background:radial-gradient(circle,rgba(var(--accent-rgb),.6),rgba(var(--accent-rgb),0) 70%);}
+html.tema-elegan .splash-title{color:#fff;}
+html.tema-elegan .splash-sub{color:color-mix(in srgb,#fff 70%,var(--accent));}
+html.tema-elegan .splash-dots span{background:#d4a64a;}

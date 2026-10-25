@@ -1,0 +1,191 @@
+/* ── KAS BENDAHARA — mengikuti token warna aplikasi (semua palet + mode gelap) ── */
+#page-kas{--kas-masuk:#2f8f5b;--kas-keluar:#c2453d;--kas-transfer:#2f6fbf;}
+.dark #page-kas{--kas-masuk:#4fbf83;--kas-keluar:#e2726a;--kas-transfer:#8fb2f6;}
+
+.kas-kepala{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+.kas-judul{font-size:20px;font-weight:800;}
+html.tema-elegan .kas-judul{font-family:var(--tl-serif);}
+.kas-sub{font-size:12px;color:var(--text-secondary);margin-top:2px;}
+.kas-kepala-aksi{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.kas-bulan{display:flex;align-items:center;border:1px solid var(--border-soft);border-radius:999px;background:var(--surface);overflow:hidden;}
+.kas-bulan button{border:none;background:transparent;width:34px;height:38px;font-size:18px;cursor:pointer;color:var(--text-secondary);}
+.kas-bulan button:hover{background:var(--accent-soft);color:var(--accent);}
+.kas-bulan input{border:none;background:transparent;font-family:inherit;font-weight:700;font-size:12.5px;color:var(--text-primary);padding:0 4px;}
+.kas-btn-masuk{background:var(--kas-masuk);color:#fff;}
+.kas-btn-keluar{background:var(--kas-keluar);color:#fff;}
+.kas-btn-masuk:hover,.kas-btn-keluar:hover{filter:brightness(1.07);}
+.kas-tab{margin-bottom:14px;}
+
+.kas-hero{border-radius:24px;padding:20px 22px;color:#fff;margin-bottom:14px;position:relative;overflow:hidden;
+  background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 55%,#000));box-shadow:0 18px 40px -18px rgba(var(--accent-rgb),.8);}
+html.tema-elegan .kas-hero{background-image:var(--tl-pola),linear-gradient(135deg,var(--accent) 0%,var(--p-deep) 60%,var(--p-deeper) 100%);background-size:56px 56px,100% 100%;border-bottom:3px solid var(--emas);}
+.kas-hero-label{font-size:12px;opacity:.85;font-weight:600;}
+.kas-hero-saldo{font-size:32px;font-weight:800;letter-spacing:-.5px;margin:4px 0 14px;font-variant-numeric:tabular-nums;}
+.kas-akun-row{display:flex;gap:8px;flex-wrap:wrap;}
+.kas-akun-chip{display:flex;flex-direction:column;gap:2px;padding:8px 12px;border-radius:14px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);font-size:11px;min-width:130px;backdrop-filter:blur(4px);}
+.kas-akun-chip b{font-size:13.5px;font-variant-numeric:tabular-nums;}
+
+.kas-stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:14px;}
+.kas-stat{border-radius:20px;padding:14px 16px;background:var(--surface);border:1px solid var(--border-soft);position:relative;overflow:hidden;}
+.kas-stat::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c);}
+.kas-stat.masuk{--c:var(--kas-masuk);} .kas-stat.keluar{--c:var(--kas-keluar);} .kas-stat.surplus{--c:var(--accent);} .kas-stat.defisit{--c:var(--warn);}
+.kas-stat-label{font-size:11px;color:var(--text-secondary);font-weight:700;}
+.kas-stat-nilai{font-size:21px;font-weight:800;color:var(--c);margin:3px 0 5px;font-variant-numeric:tabular-nums;}
+.kas-ubah{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--nl);color:var(--text-secondary);}
+.kas-ubah.naik{background:color-mix(in srgb,var(--kas-masuk) 14%,transparent);color:var(--kas-masuk);}
+.kas-ubah.turun{background:color-mix(in srgb,var(--kas-keluar) 14%,transparent);color:var(--kas-keluar);}
+
+.kas-dua{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:14px;align-items:start;}
+.kas-kartu-judul{display:flex;align-items:center;gap:8px;font-weight:800;font-size:13px;margin-bottom:10px;flex-wrap:wrap;}
+.kas-kunci{margin-left:auto;font-size:10.5px;font-weight:600;color:var(--text-secondary);display:flex;gap:8px;align-items:center;}
+.kas-kunci i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:3px;}
+.kas-kunci i.m{background:var(--kas-masuk);} .kas-kunci i.k{background:var(--kas-keluar);}
+.kas-grafik{width:100%;height:auto;max-height:250px;display:block;margin:0 auto;}
+.kas-grid{stroke:var(--border-soft);stroke-width:1;}
+.kas-bar-masuk{fill:var(--kas-masuk);} .kas-bar-keluar{fill:var(--kas-keluar);opacity:.85;}
+.kas-bar-masuk,.kas-bar-keluar{transform-origin:bottom;transform-box:fill-box;animation:kasNaik .7s cubic-bezier(.2,.8,.2,1);}
+@keyframes kasNaik{from{transform:scaleY(0);}to{transform:scaleY(1);}}
+.kas-label{font-size:9.5px;fill:var(--text-secondary);font-weight:600;}
+.kas-label.aktif{fill:var(--accent);font-weight:800;}
+.kas-donut-wrap{display:flex;gap:14px;align-items:center;flex-wrap:wrap;justify-content:center;}
+.kas-donut{width:150px;height:150px;flex-shrink:0;}
+.kas-donut circle{transition:stroke-dasharray .6s;}
+.kas-donut-kecil{font-size:10px;fill:var(--text-secondary);font-weight:600;}
+.kas-donut-besar{font-size:12px;fill:var(--text-primary);font-weight:800;}
+.kas-legenda{display:flex;flex-direction:column;gap:5px;font-size:11.5px;min-width:160px;flex:1;}
+.kas-legenda div{display:flex;align-items:center;gap:6px;}
+.kas-legenda span{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
+.kas-legenda b{margin-left:auto;font-variant-numeric:tabular-nums;}
+
+.kas-anggaran-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;}
+.kas-anggaran-atas{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;font-weight:700;}
+.kas-meter{height:9px;border-radius:999px;background:var(--nl);overflow:hidden;margin:6px 0 3px;}
+.kas-meter span{display:block;height:100%;border-radius:999px;background:var(--kas-masuk);transition:width .7s cubic-bezier(.2,.8,.2,1);}
+.kas-meter span.hampir{background:var(--warn);} .kas-meter span.lewat{background:var(--kas-keluar);}
+.kas-anggaran-ket{font-size:10.5px;color:var(--text-secondary);}
+
+.kas-baris{display:flex;align-items:center;gap:12px;padding:10px 6px;border-radius:14px;cursor:pointer;transition:background .15s;}
+.kas-baris:hover,.kas-baris:focus-visible{background:var(--accent-soft);}
+.kas-baris + .kas-baris{border-top:1px solid var(--border-soft);}
+.kas-baris-ikon{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;background:var(--nl);}
+.kas-baris-isi{min-width:0;flex:1;font-size:11px;color:var(--text-secondary);}
+.kas-baris-isi b{display:block;font-size:12.5px;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.kas-baris-isi > div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.kas-baris-meta{font-size:10px;opacity:.85;}
+.kas-baris-nominal{font-weight:800;font-size:13.5px;white-space:nowrap;font-variant-numeric:tabular-nums;}
+.kas-baris-nominal.masuk{color:var(--kas-masuk);} .kas-baris-nominal.keluar{color:var(--kas-keluar);} .kas-baris-nominal.transfer{color:var(--kas-transfer);}
+.kas-total-filter{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;font-weight:700;color:var(--text-secondary);padding:8px 12px;border-radius:12px;background:var(--nl);margin-bottom:6px;}
+.kas-total-filter .masuk{color:var(--kas-masuk);} .kas-total-filter .keluar{color:var(--kas-keluar);}
+.kas-grup-tgl{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text-secondary);margin:14px 6px 4px;}
+
+table.simple-table.kas-buku{min-width:640px;font-size:11.5px;}
+.kas-buku-awal td{font-style:italic;color:var(--text-secondary);background:var(--nl) !important;}
+.kas-buku-akhir td{font-weight:800;background:var(--accent-soft) !important;}
+.kas-lap-baris{display:flex;justify-content:space-between;gap:12px;padding:9px 2px;border-bottom:1px dashed var(--border-soft);font-size:12.5px;}
+.kas-lap-baris.masuk b{color:var(--kas-masuk);} .kas-lap-baris.keluar b{color:var(--kas-keluar);}
+.kas-lap-baris.total{border-bottom:none;font-size:14px;} .kas-lap-baris.total b{color:var(--accent);}
+
+.kas-atur-baris{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px dashed var(--border-soft);font-size:12px;}
+.kas-atur-sub{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text-secondary);margin:12px 0 4px;}
+
+.kas-pilih-jenis{display:grid;gap:10px;}
+.kas-pilih-jenis button{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:12px;text-align:start;align-items:center;padding:14px;border-radius:18px;border:1.5px solid var(--border-soft);background:var(--surface);cursor:pointer;font-family:inherit;color:var(--text-primary);transition:transform .15s,border-color .15s;}
+.kas-pilih-jenis button:hover{transform:translateY(-2px);}
+.kas-pilih-jenis span{grid-row:1/3;width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;}
+.kas-pilih-jenis small{color:var(--text-secondary);font-size:11px;}
+.kas-pilih-jenis .masuk span{background:color-mix(in srgb,var(--kas-masuk,#2f8f5b) 15%,transparent);} .kas-pilih-jenis .masuk:hover{border-color:#2f8f5b;}
+.kas-pilih-jenis .keluar span{background:color-mix(in srgb,#c2453d 15%,transparent);} .kas-pilih-jenis .keluar:hover{border-color:#c2453d;}
+.kas-pilih-jenis .transfer span{background:color-mix(in srgb,#2f6fbf 15%,transparent);} .kas-pilih-jenis .transfer:hover{border-color:#2f6fbf;}
+
+.kas-nominal{display:flex;align-items:center;gap:8px;padding:12px 16px;border-radius:18px;margin-bottom:8px;border:2px solid var(--c);background:color-mix(in srgb,var(--c) 7%,var(--surface));}
+.kas-nominal.masuk{--c:#2f8f5b;} .kas-nominal.keluar{--c:#c2453d;} .kas-nominal.transfer{--c:#2f6fbf;}
+.kas-nominal span{font-size:18px;font-weight:800;color:var(--c);}
+.kas-nominal input{flex:1;min-width:0;border:none;background:transparent;font-family:inherit;font-size:28px;font-weight:800;color:var(--text-primary);outline:none;font-variant-numeric:tabular-nums;}
+.kas-cepat{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+.kas-cepat button{border:1px solid var(--border-soft);background:var(--nl);border-radius:999px;padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--text-primary);}
+.kas-cepat button:hover{background:var(--accent-soft);color:var(--accent);}
+.kas-kat-pilih{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px;}
+.kas-kat-pilih button{display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:12px;border:1.5px solid var(--border-soft);background:var(--surface);cursor:pointer;font-family:inherit;font-size:11.5px;font-weight:700;color:var(--text-primary);text-align:start;}
+.kas-kat-pilih button span{font-size:15px;}
+.kas-kat-pilih button.aktif{border-color:var(--w);background:color-mix(in srgb,var(--w) 12%,var(--surface));color:var(--w);}
+.kas-jenis-pilih{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:4px;border-radius:999px;background:var(--nl);}
+.kas-jenis-pilih button{border:none;background:transparent;border-radius:999px;padding:9px;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit;color:var(--text-secondary);}
+.kas-jenis-pilih button.aktif{background:var(--surface);box-shadow:0 2px 8px rgba(0,0,0,.08);}
+.kas-jenis-pilih button.aktif.masuk{color:#2f8f5b;} .kas-jenis-pilih button.aktif.keluar{color:#c2453d;}
+.kas-ikon-pilih{display:flex;flex-wrap:wrap;gap:6px;}
+.kas-ikon-pilih button{width:38px;height:38px;border-radius:12px;border:1.5px solid var(--border-soft);background:var(--surface);font-size:17px;cursor:pointer;}
+.kas-ikon-pilih button.aktif{border-color:var(--accent);background:var(--accent-soft);}
+.kas-warna-pilih{display:flex;gap:8px;flex-wrap:wrap;}
+.kas-warna-pilih button{width:30px;height:30px;border-radius:50%;border:3px solid var(--surface);box-shadow:0 0 0 1px var(--border-soft);cursor:pointer;}
+.kas-warna-pilih button.aktif{box-shadow:0 0 0 2px var(--text-primary);}
+.kas-detail-nominal{font-size:28px;font-weight:800;text-align:center;margin:-4px 0 12px;font-variant-numeric:tabular-nums;}
+.kas-detail-nominal.masuk{color:#2f8f5b;} .kas-detail-nominal.keluar{color:#c2453d;} .kas-detail-nominal.transfer{color:#2f6fbf;}
+.kas-bukti-img{width:100%;max-height:260px;object-fit:contain;border-radius:14px;border:1px solid var(--border-soft);margin-top:10px;background:var(--nl);}
+
+/* ── Impor Excel ── */
+.kas-transisi{display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:12px;border-radius:16px;border:1px dashed var(--accent);background:var(--accent-soft);}
+.kas-transisi>span{font-size:22px;}
+.kas-transisi>div{flex:1;min-width:0;font-size:12.5px;}
+.kas-transisi small{display:block;font-size:11px;color:var(--text-secondary);margin-top:1px;}
+.kas-imp-file{font-size:11.5px;color:var(--text-secondary);margin:-4px 0 10px;word-break:break-word;}
+.kas-imp-kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+.kas-imp-kpi>div{padding:9px 11px;border-radius:12px;background:var(--nl);border:1px solid var(--border-soft);min-width:0;}
+.kas-imp-kpi small{display:block;font-size:10px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.4px;}
+.kas-imp-kpi b{font-size:13px;font-variant-numeric:tabular-nums;}
+.kas-imp-kpi .ok{background:rgba(47,143,91,.1);border-color:rgba(47,143,91,.35);} .kas-imp-kpi .ok b{color:#2f8f5b;}
+.kas-imp-kpi .beda{background:rgba(207,131,23,.1);border-color:rgba(207,131,23,.4);} .kas-imp-kpi .beda b{color:#b06c0c;}
+.kas-imp-opsi{display:flex;gap:10px;align-items:flex-start;font-size:12px;padding:10px 12px;border-radius:12px;border:1px solid var(--border-soft);margin-bottom:10px;cursor:pointer;}
+.kas-imp-opsi input{margin-top:2px;}
+.kas-imp-opsi small{display:block;font-size:10.5px;color:var(--text-secondary);margin-top:2px;}
+.kas-imp-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+.kas-imp-filter button{border:1px solid var(--border-soft);background:var(--surface);color:var(--text-secondary);border-radius:999px;padding:5px 11px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;}
+.kas-imp-filter button.aktif{background:var(--accent);border-color:var(--accent);color:#fff;}
+.kas-imp-daftar{max-height:44vh;overflow-y:auto;border:1px solid var(--border-soft);border-radius:14px;padding:4px 10px;}
+.kas-imp-tgl{position:sticky;top:-4px;background:var(--surface);font-size:10.5px;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;padding:8px 0 4px;z-index:1;}
+.kas-imp-baris{display:grid;grid-template-columns:auto 1fr 170px 110px;gap:10px;align-items:center;padding:7px 0;border-bottom:1px dashed var(--border-soft);font-size:12px;}
+.kas-imp-baris.mati{opacity:.45;}
+.kas-imp-ur{min-width:0;word-break:break-word;}
+.kas-imp-tag{display:flex;gap:6px;flex-wrap:wrap;font-size:10px;color:var(--text-secondary);margin-top:2px;}
+.kas-imp-tag .ragu{color:#b06c0c;font-weight:700;} .kas-imp-tag .dobel{color:#c2453d;font-weight:700;}
+.kas-imp-kat{padding:5px 8px !important;font-size:11.5px !important;}
+.kas-imp-nom{text-align:right;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.kas-imp-baris.masuk .kas-imp-nom{color:#2f8f5b;} .kas-imp-baris.keluar .kas-imp-nom{color:#c2453d;}
+.kas-imp-kpi>div.ok{background:rgba(47,143,91,.1);border-color:rgba(47,143,91,.35);} .kas-imp-kpi>div.ok b{color:#2f8f5b;}
+.kas-imp-kpi>div.beda{background:rgba(194,69,61,.08);border-color:rgba(194,69,61,.4);} .kas-imp-kpi>div.beda b{color:#c2453d;}
+.kas-imp-cek-daftar{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
+.kas-imp-cek{border:1px solid var(--border-soft);border-left:4px solid #2f8f5b;border-radius:12px;padding:9px 12px;font-size:11.5px;}
+.kas-imp-cek.beda{border-left-color:#c2453d;background:rgba(194,69,61,.05);}
+.kas-imp-cek-kepala{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+.kas-imp-cek.ok .kas-imp-cek-kepala b{color:#2f8f5b;} .kas-imp-cek.beda .kas-imp-cek-kepala b{color:#c2453d;}
+.kas-imp-cek-kepala span{color:var(--text-secondary);font-size:10.5px;}
+.kas-imp-cek-angka{display:flex;gap:12px;flex-wrap:wrap;margin-top:4px;color:var(--text-secondary);font-variant-numeric:tabular-nums;}
+.kas-imp-cek-angka b{color:var(--text-primary);} .kas-imp-cek-angka .m{color:#2f8f5b;font-weight:700;} .kas-imp-cek-angka .k{color:#c2453d;font-weight:700;}
+.kas-imp-cek ul{margin:6px 0 0;padding-left:18px;color:#a3362f;} .kas-imp-cek li{margin-top:2px;}
+.kas-imp-setuju{border-color:rgba(194,69,61,.4);background:rgba(194,69,61,.05);}
+.kas-imp-setuju[hidden]{display:none;}
+.kas-imp-tgl-isi{margin-top:4px;padding:4px 8px !important;font-size:11.5px !important;max-width:170px;border-color:#cf8317 !important;}
+#kas-imp-tombol:disabled{opacity:.55;cursor:not-allowed;}
+.kas-buku td:nth-child(n+4),.kas-buku th:nth-child(n+4){white-space:nowrap;}
+.kas-imp-kosong{font-size:12px;color:var(--text-secondary);padding:16px 0;text-align:center;}
+.kas-imp-kaki{display:flex;align-items:center;gap:10px;margin-top:12px;}
+.kas-imp-total{flex:1;display:flex;gap:12px;flex-wrap:wrap;font-size:12px;font-weight:800;font-variant-numeric:tabular-nums;}
+.kas-imp-total .masuk{color:#2f8f5b;} .kas-imp-total .keluar{color:#c2453d;}
+@media (max-width:620px){
+  .kas-imp-kpi{grid-template-columns:1fr 1fr;} .kas-imp-kpi>div:last-child{grid-column:1/-1;}
+  .kas-imp-baris{grid-template-columns:auto 1fr auto;}
+  .kas-imp-kat{grid-column:2/-1;grid-row:2;}
+  .kas-transisi{flex-wrap:wrap;} .kas-transisi .btn{width:100%;}
+}
+
+.kas-fab{display:none;}
+@media (max-width:860px){
+  .kas-fab{display:flex;position:fixed;right:16px;bottom:calc(78px + env(safe-area-inset-bottom));z-index:350;width:56px;height:56px;border-radius:50%;border:none;
+    background:var(--accent);color:#fff;font-size:28px;align-items:center;justify-content:center;box-shadow:0 12px 26px -8px rgba(var(--accent-rgb),.8);cursor:pointer;}
+  .kas-kepala-aksi .kas-btn-masuk,.kas-kepala-aksi .kas-btn-keluar{display:none;}
+  .kas-hero-saldo{font-size:26px;}
+}
+@media (max-width:620px){
+  .kas-kepala-aksi{width:100%;} .kas-bulan{flex:1;justify-content:space-between;}
+  .kas-akun-chip{flex:1;min-width:120px;}
+}
+@media (prefers-reduced-motion:reduce){.kas-bar-masuk,.kas-bar-keluar{animation:none;}}
