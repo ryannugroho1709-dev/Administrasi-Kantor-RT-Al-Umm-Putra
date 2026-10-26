@@ -1264,3 +1264,8 @@ body.focus .reader { grid-template-columns: 1fr !important; max-width: 860px; ma
 .rc-exf small { flex: 1; }
 .rc-exf .btn.gold { padding: 4px 10px; font-size: .78em; }
 .rc-exf .btn { white-space: nowrap; flex: none; }
+.rc-note { margin: -4px 0 8px; font-size: .82em; color: var(--mut); }
+.rc-item.done { opacity: .7; background: var(--ok-bg, var(--sf2)); }
+.rc-item.done .rc-no { background: var(--ok); color: #fff; }
+.rc-item.done .rc-no .ic { width: 16px; height: 16px; }
+.rc-item.done b { text-decoration: line-through; text-decoration-color: color-mix(in srgb, currentColor 40%, transparent); }
