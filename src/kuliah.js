@@ -140,8 +140,9 @@ async function renderKuliahInit() {
   try { await kulMuat(); KUL.siap = true; KUL.galat = ""; }
   catch (e) { KUL.siap = false; KUL.galat = _kulGalat(e); }
   renderKuliah();
-  let terakhir = ""; try { terakhir = localStorage.getItem("kulTerakhir") || ""; } catch (e) {}
-  if (KUL_PROGRAM[terakhir]) kulBuka(terakhir);
+  // Buka otomatis hanya bila pengguna cuma punya 1 program; punya S1 & S2 → tampilkan halaman pilihan
+  const prog = kulProgramSaya();
+  if (prog.length === 1) kulBuka(prog[0]);
 }
 
 // Ringkasan kemajuan dari salinan store (tanpa memuat iframe)
