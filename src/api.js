@@ -1485,6 +1485,81 @@ async function apiBantuAbsenPulangAdmin(sesiId) {
   }
 }
 
+// ── JURNAL TERTUNDA: admin bantu absen pulang SEKALIGUS (tanpa mengisi jurnal atas nama guru).
+// Sesi tanpa jurnal ditandai "Jurnal tertunda" di catatan_admin → guru wajib melengkapinya saat login
+// (lihat _muatJurnalTertunda di index.html). Tidak ada kolom baru: status tertunda = hadir_bersyarat
+// && jam_masuk && !jurnal_id. Dua UPDATE massal (dengan/tanpa jurnal) supaya hemat request.
+const JURNAL_TERTUNDA_BATAS_HARI = 3;
+async function apiBantuLupaSekaligus(denganJurnalIds, tanpaJurnalIds) {
+  try {
+    const kini = new Date(), jam = kini.toLocaleString("id-ID");
+    const dasar = { status_kehadiran: "hadir", hadir_bersyarat: true, jam_pulang: kini.toISOString() };
+    let n = 0;
+    if (denganJurnalIds.length) n += unwrap(await supa.from("absensi_sesi").update({ ...dasar,
+      catatan_admin: `⚠️ Hadir bersyarat — dibantu absen pulang oleh admin pada ${jam}.` }).in("id", denganJurnalIds).select("id")).length;
+    if (tanpaJurnalIds.length) n += unwrap(await supa.from("absensi_sesi").update({ ...dasar,
+      catatan_admin: `⚠️ Hadir bersyarat — dibantu absen pulang oleh admin pada ${jam}. 📝 Jurnal tertunda: wajib dilengkapi guru (batas ${JURNAL_TERTUNDA_BATAS_HARI} hari).` }).in("id", tanpaJurnalIds).select("id")).length;
+    return n;
+  } catch (e) {
+    throw new Error(_pesanErrorRamah(e) || e.message);
+  }
+}
+async function apiGetJurnalTertunda(guruId) {
+  try {
+    return unwrap(await supa.from("absensi_sesi")
+      .select("*,kelas(nama_kelas),mapel(nama_mapel),jadwal_pelajaran(jam_mulai,jam_selesai)")
+      .eq("guru_id", guruId).eq("hadir_bersyarat", true).is("jurnal_id", null).not("jam_masuk", "is", null)
+      .order("tanggal"));
+  } catch (e) {
+    throw new Error(_pesanErrorRamah(e) || e.message);
+  }
+}
+async function apiTandaiJurnalTertundaLengkap(sesiId) {
+  try {
+    const r = unwrap(await supa.from("absensi_sesi").select("catatan_admin").eq("id", sesiId).limit(1))[0];
+    const catatan = String(r?.catatan_admin || "").replace(/ ?📝 Jurnal tertunda:[^.]*\.?/, "") + ` ✅ Jurnal dilengkapi guru pada ${new Date().toLocaleString("id-ID")}.`;
+    unwrap(await supa.from("absensi_sesi").update({ catatan_admin: catatan.trim() }).eq("id", sesiId));
+  } catch (e) {
+    throw new Error(_pesanErrorRamah(e) || e.message);
+  }
+}
+// Sesi Alpha tanpa absen masuk (≤14 hari) yang belum diajukan — untuk klarifikasi oleh guru sendiri
+async function apiGetAlphaPerluKlarifikasi(guruId, dariTanggal) {
+  try {
+    const sesi = unwrap(await supa.from("absensi_sesi")
+      .select("*,kelas(nama_kelas),mapel(nama_mapel),jadwal_pelajaran(jam_mulai,jam_selesai)")
+      .eq("guru_id", guruId).eq("status_kehadiran", "alpha").is("jam_masuk", null).is("jurnal_id", null)
+      .gte("tanggal", dariTanggal).order("tanggal"));
+    if (!sesi.length) return [];
+    const aju = unwrap(await supa.from("pengajuan_jurnal_terlambat").select("sesi_id").eq("guru_id", guruId).eq("status_verifikasi", "menunggu"));
+    const sudah = new Set(aju.map((a) => a.sesi_id));
+    return sesi.filter((s) => !s.hadir_bersyarat && !sudah.has(s.id));
+  } catch (e) {
+    throw new Error(_pesanErrorRamah(e) || e.message);
+  }
+}
+// Jurnal terakhir guru di kelas & mapel yang sama — untuk isian cepat "Lanjutan materi …"
+async function apiGetJurnalTerakhir(guruId, kelasId, mapelId, sebelumTanggal) {
+  try {
+    let q = supa.from("jurnal_kelas").select("materi_pokok,metode_mengajar,tanggal").eq("guru_id", guruId).eq("kelas_id", kelasId).eq("mapel_id", mapelId);
+    if (sebelumTanggal) q = q.lte("tanggal", sebelumTanggal);
+    return unwrap(await q.order("tanggal", { ascending: false }).limit(1))[0] || null;
+  } catch (e) {
+    return null;
+  }
+}
+// Rekap kedisiplinan (absen + jurnal) per guru dalam rentang tanggal — kolom ringkas saja (hemat kuota)
+async function apiGetRekapKedisiplinan(dari, sampai, guruId) {
+  try {
+    let q = supa.from("absensi_sesi").select("guru_id,tanggal,status_kehadiran,hadir_bersyarat,jurnal_id,jam_masuk,jam_pulang,catatan_admin,guru(nama)")
+      .gte("tanggal", dari).lte("tanggal", sampai);
+    if (guruId) q = q.eq("guru_id", guruId);
+    return unwrap(await q);
+  } catch (e) {
+    throw new Error(_pesanErrorRamah(e) || e.message);
+  }
+}
+
 // ── KALDIK (Kalender Pendidikan): hari libur & agenda ──
 async function apiGetKaldikSemua() {
   try {

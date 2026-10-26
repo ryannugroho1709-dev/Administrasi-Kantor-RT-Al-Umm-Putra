@@ -44,7 +44,7 @@ function _logoAwal(){try{return localStorage.getItem("logoSekolahUrl")||"assets/
 <!-- pdf.js — hanya dipakai fitur "Ambil sampul dari halaman pertama PDF" di Modul Ajar (render page 1 ke canvas) -->
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script>if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";</script>
-<script src="src/api.js?v=10"></script>
+<script src="src/api.js?v=11"></script>
 <script>
 // ── Override apiPerbaikanAbsenAdmin: pakai RPC SECURITY DEFINER (bypass RLS) ──
 // Blok ini di index.html mengoverride versi dari api.js agar pasti termuat,
@@ -2995,6 +2995,7 @@ function showPage(key, pageId, i18nTitle) {
   // Absensi — kalau tidak dihentikan saat pindah menu, GPS terus aktif di background dan
   // menguras baterai walau layarnya sudah menampilkan halaman lain. renderAbsensiGuru() yang
   // menyalakan lagi kalau guru kembali ke halaman ini.
+  if (_jurnalTertundaMengunci() && !_HALAMAN_SAAT_JURNAL_TERTUNDA.includes(key)) { tampilkanJurnalTertunda(); toast("Lengkapi jurnal tertunda dulu ya — menu lain terbuka setelahnya", "warn"); return; }
   if (STATE.currentPage === "absensi-guru" && key !== "absensi-guru") stopGPSMonitor();
   const bolehKepsek = (_HALAMAN_KEPSEK_ALLOWED.includes(key) && isKepsekOrTU()) || (key === "kas" && typeof isBendahara === "function" && isBendahara());
   if (key === "kuliah" && !(typeof kulBolehAkses === "function" && kulBolehAkses())) {
@@ -3419,9 +3420,10 @@ function _jadwalPerluJurnal() {
   }).filter(Boolean);
 }
 function htmlPengingatJurnal() {
-  const daftar = _jadwalPerluJurnal();
-  if (!daftar.length) return "";
-  return `<div class="pengingat-jurnal" role="alert">
+  const daftar = _jadwalPerluJurnal(), tertunda = STATE.jurnalTertunda || [];
+  const bannerTertunda = tertunda.length ? `<div class="pengingat-jurnal" role="alert"><span style="font-size:20px;line-height:1;">📝</span><div style="flex:1;min-width:0;"><b>${tertunda.length} jurnal tertunda</b><div style="margin-top:3px;">Admin sudah membantu absen pulang — lengkapi jurnalnya (batas ${JURNAL_TERTUNDA_BATAS_HARI} hari).${tertunda.some(_lewatBatasJurnalTertunda) ? " <b style=\"color:var(--bad,#c0392b);\">Ada yang lewat batas.</b>" : ""}</div></div><button class="btn btn-accent" style="padding:7px 12px;font-size:11.5px;flex-shrink:0;align-self:center;" onclick="tampilkanJurnalTertunda()">Isi Sekarang</button></div>` : "";
+  if (!daftar.length) return bannerTertunda;
+  return bannerTertunda + `<div class="pengingat-jurnal" role="alert">
     <span style="font-size:20px;line-height:1;">📝</span>
     <div style="flex:1;min-width:0;">
       <b>Jurnal belum diisi</b>
@@ -3432,7 +3434,128 @@ function htmlPengingatJurnal() {
   </div>`;
 }
 const _PENGINGAT_JURNAL_TERKIRIM = new Set();
+// ── JURNAL TERTUNDA (guru) — sesi yang dibantu absen pulang admin tapi jurnalnya belum ada. Saat login
+// muncul layar wajib isi; menu lain terkunci (kecuali Beranda, Absen, Riwayat, Jurnal) sampai lunas,
+// supaya guru tetap bisa absen masuk kelas hari ini. Lewat batas → hanya tanda merah (tanpa potongan).
+const _HALAMAN_SAAT_JURNAL_TERTUNDA = ["dashboard", "absensi-guru", "riwayat-absen", "jurnal-guru"];
+function _sesiJurnalTertunda(r) {
+  return !!(r && r.hadir_bersyarat && r.jam_masuk && !r.jurnal_id && !["izin", "sakit"].includes(r.status_kehadiran));
+}
+function _batasJurnalTertunda(r) {
+  const dasar = r.jam_pulang ? new Date(r.jam_pulang) : new Date(r.tanggal + "T12:00:00");
+  return new Date(dasar.getTime() + JURNAL_TERTUNDA_BATAS_HARI * 86400000);
+}
+function _lewatBatasJurnalTertunda(r) { return _batasJurnalTertunda(r) < realNow(); }
+async function _muatJurnalTertunda() {
+  if (!STATE.guruId) return;
+  try { STATE.jurnalTertunda = await apiGetJurnalTertunda(STATE.guruId); } catch (e) { console.warn("Gagal cek jurnal tertunda:", e); STATE.jurnalTertunda = STATE.jurnalTertunda || []; }
+  try { STATE.alphaKlarifikasi = await apiGetAlphaPerluKlarifikasi(STATE.guruId, tanggalISO(new Date(Date.now() - AJUKAN_HADIR_MAKS_HARI * 86400000))); } catch (e) { STATE.alphaKlarifikasi = []; }
+}
+function _jurnalTertundaMengunci() { return !!(STATE.jurnalTertunda?.length) && !isAdmin(); }
+function tampilkanJurnalTertunda() {
+  const daftar = STATE.jurnalTertunda || [], alpha = STATE.alphaKlarifikasi || [];
+  if (!daftar.length && !alpha.length) return;
+  const perluMasuk = (STATE.jadwalHariIni || []).some((j) => { const s = sesiUntukJadwal(j.id); return !s?.jam_masuk && !["izin", "sakit"].includes(s?.status_kehadiran); });
+  const sisa = (r) => { const ms = _batasJurnalTertunda(r) - realNow(); if (ms < 0) return `<span style="color:var(--bad,#c0392b);font-weight:700;">lewat batas</span>`; const j = Math.ceil(ms / 3600000); return j > 24 ? `sisa ${Math.ceil(j / 24)} hari` : `sisa ${j} jam`; };
+  const baris = (r, tombol) => `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--border-soft);font-size:12px;">
+      <span style="flex:1;min-width:0;"><b>${_tglPendek(r.tanggal)}</b> · ${escapeHtml(r.mapel?.nama_mapel || "-")} · ${escapeHtml(r.kelas?.nama_kelas ? formatKelasLabel(r.kelas.nama_kelas) : "-")}<br/><span style="color:var(--text-secondary);font-size:11px;">${tombol.ket}</span></span>
+      <button class="btn ${tombol.cls}" style="padding:6px 12px;font-size:11.5px;flex-shrink:0;" onclick="${tombol.fn}">${tombol.label}</button></div>`;
+  openModal(`
+    <h3>📝 Jurnal Tertunda</h3>
+    ${daftar.length ? `<div style="font-size:11.5px;color:var(--text-secondary);margin:-8px 0 10px;line-height:1.5;">Admin sudah membantu absen pulang untuk sesi di bawah, tapi jurnalnya belum ada. Silakan lengkapi sekarang (±1 menit per sesi, batas ${JURNAL_TERTUNDA_BATAS_HARI} hari).${_jurnalTertundaMengunci() ? " Menu lain terbuka lagi setelah semua jurnal terisi." : ""}</div>
+    <div style="max-height:40vh;overflow-y:auto;border:1px solid var(--border-soft);border-radius:12px;padding:0 10px;">
+      ${daftar.map((r) => baris(r, { ket: `masuk ${formatJam(r.jam_masuk)} · ${sisa(r)}`, cls: "btn-accent", label: "Isi Jurnal", fn: `isiJurnalTertunda('${r.id}')` })).join("")}
+    </div>` : ""}
+    ${alpha.length ? `<div style="font-weight:700;font-size:12.5px;margin:14px 0 4px;">🙋 Sesi tercatat Alpha (${alpha.length})</div>
+    <div style="font-size:11px;color:var(--text-secondary);margin-bottom:6px;">Kalau sebenarnya Anda mengajar, ajukan hadir + isi jurnalnya. Admin tinggal menyetujui.</div>
+    <div style="max-height:26vh;overflow-y:auto;border:1px solid var(--border-soft);border-radius:12px;padding:0 10px;">
+      ${alpha.map((r) => baris(r, { ket: `${r.jadwal_pelajaran?.jam_mulai?.slice(0, 5) || ""}–${r.jadwal_pelajaran?.jam_selesai?.slice(0, 5) || ""} · tidak ada absen masuk`, cls: "btn-outline", label: "Ajukan Hadir",
+        fn: `closeModal();ajukanHadirGuru('${r.id}','${r.guru_id}','${r.jadwal_id}','${r.kelas_id}','${r.mapel_id}','${r.tanggal}','${escapeHtml((r.mapel?.nama_mapel || "") + " " + (r.kelas?.nama_kelas || "")).replace(/'/g, "")}')` })).join("")}
+    </div>` : ""}
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      ${perluMasuk && daftar.length ? `<button class="btn btn-outline" style="flex:1;" onclick="closeModal();showPage('absensi-guru','page-absensi-guru','menuAbsensiGuru')">⏱️ Absen masuk dulu</button>` : ""}
+      ${!_jurnalTertundaMengunci() ? `<button class="btn btn-ghost" style="flex:1;" onclick="closeModal()">Nanti</button>` : ""}
+      ${daftar.length ? `<button class="btn btn-accent" style="flex:1;" onclick="isiJurnalTertunda('${daftar[0].id}')">Mulai isi (${daftar.length})</button>` : ""}
+    </div>
+  `);
+}
+// ── SKOR KEDISIPLINAN & REKAP PEKANAN — dihitung dari absensi_sesi (sesi lengkap mandiri = 1,
+// hadir bersyarat = ½, jurnal tertunda / masuk tapi belum lengkap = ¼, alpha = 0; izin/sakit tidak dihitung).
+async function bukaKedisiplinan(periode) {
+  periode = periode || "pekan";
+  const hariIni = tanggalISO(), dari = periode === "pekan" ? _seninDariTanggal(hariIni) : hariIni.slice(0, 8) + "01";
+  const tab = (p, label) => `<button class="btn ${p === periode ? "btn-accent" : "btn-ghost"}" style="padding:5px 12px;font-size:11px;" onclick="bukaKedisiplinan('${p}')">${label}</button>`;
+  openModal(`<h3>📊 Kedisiplinan Absen & Jurnal</h3><div style="display:flex;gap:6px;margin:-6px 0 10px;">${tab("pekan", "Pekan ini")}${tab("bulan", "Bulan ini")}</div><div id="kd-isi">${loadingHTML("Menghitung...")}</div>`);
+  let rows;
+  try { rows = await apiGetRekapKedisiplinan(dari, hariIni, isAdmin() ? null : STATE.guruId); }
+  catch (e) { const el = qs("kd-isi"); if (el) el.innerHTML = `<div style="color:var(--bad,#c0392b);font-size:12px;">Gagal memuat: ${escapeHtml(e.message)}</div>`; return; }
+  const per = {}, tot = { total: 0, mandiri: 0, bersyarat: 0, tertunda: 0, lupa: 0, alpha: 0, jurnal: 0 };
+  rows.forEach((x) => {
+    if (["izin", "sakit"].includes(x.status_kehadiran)) return;
+    if (x.tanggal === hariIni && !x.jam_pulang && x.status_kehadiran !== "alpha") return; // sesi hari ini yang masih berjalan
+    const g = (per[x.guru_id] = per[x.guru_id] || { nama: x.guru?.nama || "-", total: 0, mandiri: 0, bersyarat: 0, tertunda: 0, lupa: 0, alpha: 0, nilai: 0 });
+    g.total++; tot.total++; if (x.jurnal_id) tot.jurnal++;
+    if (_sesiJurnalTertunda(x)) { g.tertunda++; tot.tertunda++; g.nilai += 0.25; }
+    else if (x.hadir_bersyarat) { g.bersyarat++; tot.bersyarat++; g.nilai += 0.5; }
+    else if (x.jam_masuk && x.jam_pulang && x.jurnal_id) { g.mandiri++; tot.mandiri++; g.nilai += 1; }
+    else if (!x.jam_masuk) { g.alpha++; tot.alpha++; }
+    else { g.lupa++; tot.lupa++; g.nilai += 0.25; }
+  });
+  const daftar = Object.values(per).map((g) => ({ ...g, skor: Math.round(g.nilai / Math.max(1, g.total) * 100) })).sort((a, b) => b.skor - a.skor || b.total - a.total);
+  const warna = (v) => v >= 85 ? "var(--ok,#16a34a)" : v >= 65 ? "#d97706" : "var(--bad,#c0392b)";
+  const pctJurnal = tot.total ? Math.round(tot.jurnal / tot.total * 100) : 0;
+  const rentang = `${_tglPendek(dari)} – ${_tglPendek(hariIni)}`;
+  const td = "padding:6px 8px;text-align:center;";
+  const el = qs("kd-isi"); if (!el) return;
+  el.innerHTML = !daftar.length ? `<div style="font-size:12px;color:var(--text-secondary);">Belum ada sesi pada ${rentang}.</div>` : `
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px;font-size:11px;text-align:center;">
+      ${[["Jurnal lengkap", pctJurnal + "%"], ["Lengkap mandiri", tot.mandiri], ["Lupa / tertunda", tot.lupa + tot.tertunda], ["Alpha", tot.alpha]].map(([k, v]) => `<div style="border:1px solid var(--border-soft);border-radius:10px;padding:7px 4px;"><b style="font-size:16px;display:block;">${v}</b>${k}</div>`).join("")}
+    </div>
+    <div style="max-height:48vh;overflow:auto;border:1px solid var(--border-soft);border-radius:10px;">
+      <table style="width:100%;border-collapse:collapse;font-size:11.5px;"><thead><tr style="text-align:left;background:var(--bg-soft,rgba(0,0,0,.03));">
+        ${["Guru", "Sesi", "Mandiri", "Bersyarat", "Jurnal tertunda", "Lupa pulang/jurnal", "Alpha", "Skor"].map((h) => `<th style="padding:7px 8px;white-space:nowrap;">${h}</th>`).join("")}</tr></thead>
+      <tbody>${daftar.map((g) => `<tr style="border-top:1px solid var(--border-soft);"><td style="padding:6px 8px;">${escapeHtml(g.nama)}</td><td style="${td}">${g.total}</td><td style="${td}">${g.mandiri}</td><td style="${td}">${g.bersyarat}</td><td style="${td}${g.tertunda ? "color:#d97706;font-weight:700;" : ""}">${g.tertunda}</td><td style="${td}${g.lupa ? "color:#d97706;font-weight:700;" : ""}">${g.lupa}</td><td style="${td}${g.alpha ? "color:var(--bad,#c0392b);font-weight:700;" : ""}">${g.alpha}</td><td style="${td}font-weight:800;color:${warna(g.skor)};">${g.skor}</td></tr>`).join("")}</tbody></table>
+    </div>
+    <div style="font-size:10.5px;color:var(--text-secondary);margin-top:6px;line-height:1.45;">${rentang} · Skor: lengkap mandiri = 1, hadir bersyarat = ½, jurnal tertunda / lupa pulang-jurnal = ¼, alpha = 0 (izin/sakit tidak dihitung). Sekadar pemantauan — tidak memengaruhi insentif.</div>
+    ${isAdmin() ? `<div style="display:flex;gap:8px;margin-top:10px;"><button class="btn btn-outline" style="flex:1;" onclick="_salinRekapDisiplin()">📋 Salin rekap</button><button class="btn btn-accent" style="flex:1;" onclick="window.open('https://wa.me/?text='+encodeURIComponent(_REKAP_DISIPLIN_TEKS),'_blank')">💬 Kirim ke WA</button></div>` : ""}`;
+  const tertundaGuru = daftar.filter((g) => g.tertunda).map((g) => `• ${g.nama} (${g.tertunda})`);
+  const alphaGuru = daftar.filter((g) => g.alpha).map((g) => `• ${g.nama} (${g.alpha})`);
+  _REKAP_DISIPLIN_TEKS = `📊 *Rekap Absensi & Jurnal ${periode === "pekan" ? "Pekan Ini" : "Bulan Ini"}*\n${rentang}\n\n✅ Jurnal lengkap: *${pctJurnal}%* (${tot.jurnal}/${tot.total} sesi)\n🟢 Lengkap mandiri: ${tot.mandiri} sesi\n🟡 Hadir bersyarat: ${tot.bersyarat} sesi\n⏳ Lupa pulang/jurnal: ${tot.lupa} sesi\n📝 Jurnal tertunda: ${tot.tertunda} sesi\n🔴 Alpha: ${tot.alpha} sesi` +
+    (tertundaGuru.length ? `\n\n📝 *Mohon lengkapi jurnal:*\n${tertundaGuru.join("\n")}` : "") + (alphaGuru.length ? `\n\n🙋 *Sesi Alpha — silakan ajukan hadir bila mengajar:*\n${alphaGuru.join("\n")}` : "") +
+    `\n\n🏅 *Paling disiplin:* ${daftar.filter((g) => g.skor >= 85).slice(0, 3).map((g) => g.nama).join(", ") || "-"}\n\nJazakumullahu khairan 🙏`;
+}
+let _REKAP_DISIPLIN_TEKS = "";
+function _salinRekapDisiplin() {
+  (navigator.clipboard ? navigator.clipboard.writeText(_REKAP_DISIPLIN_TEKS) : Promise.reject()).then(() => toast("Rekap disalin — tempel di grup WA", "ok")).catch(() => prompt("Salin teks berikut:", _REKAP_DISIPLIN_TEKS));
+}
+async function isiJurnalTertunda(sesiId) {
+  const r = (STATE.jurnalTertunda || []).find((x) => x.id === sesiId);
+  if (!r) return;
+  closeModal();
+  try {
+    await bukaFormJurnalUnified({
+      sesiId: r.id, kelasId: r.kelas_id, mapelId: r.mapel_id, jadwalId: r.jadwal_id, tanggal: r.tanggal, sudahJurnal: false,
+      judulInfo: `📝 Jurnal tertunda · ${escapeHtml(r.mapel?.nama_mapel || "")} · ${escapeHtml(r.kelas?.nama_kelas ? formatKelasLabel(r.kelas.nama_kelas) : "")} · ${_tglPendek(r.tanggal)}`,
+      afterSave: async () => {
+        try { await apiTandaiJurnalTertundaLengkap(r.id); } catch (e) { console.warn(e); }
+        closeModal();
+        STATE.jurnalTertunda = (STATE.jurnalTertunda || []).filter((x) => x.id !== r.id);
+        if (STATE.jurnalTertunda.length) { toast(`Jurnal tersimpan ✓ — tinggal ${STATE.jurnalTertunda.length} lagi`, "ok"); tampilkanJurnalTertunda(); }
+        else { toast("Alhamdulillah, semua jurnal tertunda sudah lengkap ✓", "ok"); refreshCurrentPage(); }
+      },
+    });
+  } catch (e) { console.error(e); toast("Gagal membuka form: " + e.message, "err"); }
+}
 function _cekPengingatJurnal() {
+  // Tepat saat jam pelajaran selesai: ingatkan isi jurnal & absen pulang (sebelum lupa)
+  _jadwalPerluJurnal().forEach((d) => {
+    const kunci = "selesai:" + d.sesi.id, batasMenit = (STATE.pengaturan || {}).batas_pulang_menit ?? 100;
+    if (d.sisaMenit === null || d.sisaMenit > batasMenit || d.sisaMenit <= 20 || _PENGINGAT_JURNAL_TERKIRIM.has(kunci)) return;
+    _PENGINGAT_JURNAL_TERKIRIM.add(kunci);
+    const pesan = `Kelas ${d.j.mapel?.nama_mapel || ""} ${d.j.kelas?.nama_kelas || ""} sudah selesai — isi jurnal & absen pulang sekarang (batas ${d.batasStr} WITA).`;
+    toast(pesan, "warn");
+    try { if ("Notification" in window && Notification.permission === "granted") new Notification("Kelas selesai — isi jurnal", { body: pesan, icon: urlLogoSekolah() }); } catch (e) {}
+  });
   _jadwalPerluJurnal().forEach((d) => {
     if (d.sisaMenit === null || d.sisaMenit > 20 || _PENGINGAT_JURNAL_TERKIRIM.has(d.sesi.id)) return;
     _PENGINGAT_JURNAL_TERKIRIM.add(d.sesi.id);
@@ -3457,7 +3580,9 @@ async function bootDataGuru() {
   _mulaiAutoRefreshJadwalHariIni(); // jaga jadwal tetap segar selama app terbuka (lihat komentar di atas)
   refreshCurrentPage();
   _cekPengingatJurnal();
-  setTimeout(tampilkanInfoFiturBaru, 1200);
+  await _muatJurnalTertunda();
+  if (STATE.jurnalTertunda?.length || STATE.alphaKlarifikasi?.length) { setTimeout(tampilkanJurnalTertunda, 900); if (STATE.currentPage === "dashboard") refreshCurrentPage(); }
+  else setTimeout(tampilkanInfoFiturBaru, 1200);
 }
 
 // ── Pengumuman "Fitur Baru" — muncul SEKALI per perangkat (versi dicatat di localStorage). Naikkan
@@ -3829,6 +3954,9 @@ function badgeSesi(sesi) {
     if (sudahLewat) return `<span class="badge badge-red">✕ ${t("statusAlpha")}</span>`;
     return `<span class="badge badge-red">○ ${t("statusBelumAbsen")}</span>`;
   }
+  if (_sesiJurnalTertunda(sesi)) return _lewatBatasJurnalTertunda(sesi)
+    ? `<span class="badge badge-red" title="Dibantu absen pulang oleh admin; jurnal belum dilengkapi guru dan sudah lewat batas ${JURNAL_TERTUNDA_BATAS_HARI} hari">▲ Bersyarat · 📝 jurnal lewat batas</span>`
+    : `<span class="badge badge-yellow" title="Dibantu absen pulang oleh admin; guru wajib melengkapi jurnal">▲ Bersyarat · 📝 jurnal tertunda</span>`;
   if (sesi.hadir_bersyarat) return `<span class="badge badge-yellow">▲ Hadir Bersyarat</span>`;
   if (sesi.status_kehadiran === "izin") return `<span class="badge badge-yellow">✉ ${t("statusIzin")}</span>`;
   if (sesi.status_kehadiran === "sakit") return `<span class="badge badge-yellow">✚ ${t("statusSakit")}</span>`;
@@ -5079,6 +5207,22 @@ async function bukaFormJurnalUnified(opts) {
     </div>` : ""}
     <button class="btn btn-accent" style="width:100%" onclick="submitJurnal()">${ajukanHadir ? "📤 Kirim Pengajuan Hadir" : isLaporTerlambat ? "📤 Kirim ke Admin" : `<span data-i18n="simpanJurnal">Simpan Jurnal</span>`}</button>
   `);
+  if (!existing && !ajukanHadir) _tawarkanLanjutanMateri(kelasId, mapelId, tanggal);
+}
+// Isian cepat: tawarkan "Lanjutan" dari jurnal terakhir di kelas & mapel yang sama (materi + metode)
+async function _tawarkanLanjutanMateri(kelasId, mapelId, tanggal) {
+  const akhir = await apiGetJurnalTerakhir(STATE.guruId, kelasId, mapelId, tanggal);
+  const ta = qs("jurnal-materi");
+  if (!akhir || !akhir.materi_pokok || !ta || ta.value.trim()) return;
+  const btn = document.createElement("button");
+  btn.type = "button"; btn.className = "btn btn-ghost"; btn.style.cssText = "margin-top:6px;padding:5px 10px;font-size:11px;text-align:left;white-space:normal;";
+  btn.textContent = `↺ Lanjutan materi ${_tglPendek(akhir.tanggal)}: "${akhir.materi_pokok.slice(0, 80)}"`;
+  btn.onclick = () => {
+    ta.value = (/^lanjutan/i.test(akhir.materi_pokok) ? "" : "Lanjutan: ") + akhir.materi_pokok;
+    (akhir.metode_mengajar || []).map(_bersihkanLabelMetode).forEach((m) => { const cb = [...document.querySelectorAll("#metode-panel input")].find((x) => x.value === m); if (cb && !cb.checked) { cb.checked = true; onToggleMetode(m, true); } });
+    btn.remove(); ta.focus();
+  };
+  ta.insertAdjacentElement("afterend", btn);
 }
 
 function ceklisSemuaHadir() {
@@ -5381,17 +5525,34 @@ function bukaPerbaikanBeberapa() {
   const jmlAlphaManual = (RIWAYAT_ABSEN_CACHE || []).filter((r) => !r.jam_masuk && r.status_kehadiran === "alpha" && !r.hadir_bersyarat).length;
   openModal(`
     <h3>🛠️ Bantu Lupa Pulang / Jurnal</h3>
-    <div style="font-size:11.5px;color:var(--text-secondary);margin:-8px 0 10px;">Khusus guru yang <b>sudah absen masuk</b> tapi lupa absen pulang atau lupa mengisi jurnal. Yang jurnalnya sudah ada cukup dibantu absen pulang; yang belum ada jurnal, formnya terbuka berurutan (jurnal tetap wajib diisi).</div>
+    <div style="font-size:11.5px;color:var(--text-secondary);margin:-8px 0 10px;">Khusus guru yang <b>sudah absen masuk</b> tapi lupa absen pulang atau lupa mengisi jurnal. Sekali klik: semua sesi terpilih dibantu absen pulang (Hadir Bersyarat). Yang <b>belum ada jurnal</b> ditandai <b>📝 Jurnal tertunda</b> — guru wajib melengkapinya sendiri saat login (batas ${JURNAL_TERTUNDA_BATAS_HARI} hari), admin tidak perlu mengisi.</div>
     ${jmlAlphaManual ? `<div class="antrian-perbaikan-info" style="display:block;margin-bottom:10px;line-height:1.45;">⚠️ ${jmlAlphaManual} sesi Alpha <b>tanpa absen masuk</b> tidak ada di daftar ini — konfirmasi dulu lewat tombol 💬 di tabel, lalu perbaiki satu per satu dengan 🛠️ supaya lebih hati-hati.</div>` : ""}
-    <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;margin-bottom:6px;"><input type="checkbox" onchange="qsa('.pb-cek').forEach(c=>c.checked=this.checked)"/> Pilih semua (${daftar.length})</label>
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;margin-bottom:6px;"><input type="checkbox" checked onchange="qsa('.pb-cek').forEach(c=>c.checked=this.checked);_pbHitung()"/> Pilih semua (${daftar.length})</label>
     <div style="max-height:46vh;overflow-y:auto;border:1px solid var(--border-soft);border-radius:12px;padding:4px 10px;">
       ${daftar.map((r) => `<label style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px dashed var(--border-soft);font-size:12px;cursor:pointer;">
-        <input type="checkbox" class="pb-cek" value="${r.id}" data-jurnal="${r.jurnal_id ? "1" : ""}"/>
+        <input type="checkbox" class="pb-cek" value="${r.id}" data-jurnal="${r.jurnal_id ? "1" : ""}" checked onchange="_pbHitung()"/>
         <span style="flex:1;"><b>${_tglPendek(r.tanggal)}</b> · ${escapeHtml(r.mapel?.nama_mapel || "-")} · ${escapeHtml(r.kelas?.nama_kelas || "-")}<br/><span style="color:var(--text-secondary);font-size:11px;">${escapeHtml(r.guru?.nama || "")} · masuk ${formatJam(r.jam_masuk)} · ${r.jurnal_id ? "jurnal ✓, belum pulang" : "belum isi jurnal"}</span></span>
       </label>`).join("")}
     </div>
-    <button class="btn btn-accent" style="width:100%;margin-top:12px;" onclick="_mulaiAntrianPerbaikan()">Mulai Bantu</button>
+    <button class="btn btn-accent" id="pb-mulai" style="width:100%;margin-top:12px;" onclick="_selesaikanLupaSekaligus()">⚡ Selesaikan ${daftar.length} sesi sekaligus</button>
   `);
+}
+function _pbHitung() {
+  const b = qs("pb-mulai"); if (b) b.textContent = `⚡ Selesaikan ${qsa(".pb-cek").filter((c) => c.checked).length} sesi sekaligus`;
+}
+// Sekali klik: semua sesi terpilih dibantu absen pulang; yang tanpa jurnal → "Jurnal tertunda" (guru isi sendiri)
+async function _selesaikanLupaSekaligus() {
+  const dipilih = qsa(".pb-cek").filter((c) => c.checked);
+  if (!dipilih.length) { toast("Centang minimal satu sesi", "err"); return; }
+  const dengan = dipilih.filter((c) => c.dataset.jurnal).map((c) => c.value), tanpa = dipilih.filter((c) => !c.dataset.jurnal).map((c) => c.value);
+  closeModal();
+  setGlobalLoading(true, `Menyelesaikan ${dipilih.length} sesi...`);
+  try {
+    const n = await apiBantuLupaSekaligus(dengan, tanpa);
+    toast(`✅ ${n} sesi selesai: ${dengan.length} dibantu absen pulang` + (tanpa.length ? `, ${tanpa.length} jurnal tertunda (guru wajib isi saat login)` : ""), "ok");
+  } catch (e) { console.error(e); toast("Gagal: " + e.message, "err"); }
+  finally { setGlobalLoading(false); }
+  await renderRiwayatAbsen();
 }
 async function _mulaiAntrianPerbaikan() {
   const dipilih = qsa(".pb-cek").filter((c) => c.checked);
@@ -7873,7 +8034,8 @@ async function renderRiwayatAbsen(pakaiCache) {
         <button class="btn btn-outline" onclick="toggleRiwayatBulkMode()">🗑️ Pilih &amp; hapus</button>
       </div>` : ""}
     </div>`;
-    target.innerHTML = htmlChip + kartuHp + `<div class="card${bulkMode ? "" : " desktop-only-table"}" style="overflow-x:auto;">
+    const tombolDisiplin = `<div style="display:flex;justify-content:flex-end;margin:0 0 8px;"><button class="btn btn-ghost" style="padding:6px 12px;font-size:11px;" onclick="bukaKedisiplinan()">📊 ${isAdmin() ? "Kedisiplinan & Rekap Pekanan" : "Skor Kedisiplinan Saya"}</button></div>`;
+    target.innerHTML = tombolDisiplin + htmlChip + kartuHp + `<div class="card${bulkMode ? "" : " desktop-only-table"}" style="overflow-x:auto;">
       <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:8px;">
         ${isAdmin() && !bulkMode && jmlLupa ? `<button class="btn btn-ghost" style="padding:6px 12px;font-size:11px;" title="Khusus guru yang SUDAH absen masuk tapi lupa absen pulang / lupa isi jurnal" onclick="bukaPerbaikanBeberapa()">🛠️ Bantu Lupa Pulang/Jurnal (${jmlLupa})</button>` : ""}
         ${isAdmin() && bulkMode ? `
