@@ -237,7 +237,7 @@
       stat("baca", Icon("book", "big"), n(ut.done) + "/" + n(ut.total), lab("Modul selesai dibaca", "الوحدات المقروءة"), "#/program") +
       stat("skor", Icon("target", "big"), n(avg) + "%", lab("Rata-rata nilai latihan", "متوسط الدرجات"), "#/profil") + "</div>" +
 
-      '<div class="home-grid">' +
+      '<div class="home-grid">' + rencanaCard() +
       '<div class="card today">' + (PROGRAM.mandiri ? targetCard() : todayCard(mkHari, today)) + "</div>" +
       '<div class="card hikmah-card"><div class="card-h">' + Icon("moonStar") + lab("Mutiara Ilmu", "درر العلم") + '</div><div class="hikmah-rot"></div></div>' +
       '<a class="card act-card daily ' + (harian && harian.selesai ? "done" : "") + '" href="#/arena/harian"><div class="ac-ic">' + Icon("sun") + "</div><div><b>" + lab("Tantangan Harian", "تحدي اليوم") + "</b><p>" + (harian && harian.selesai ? lab("Selesai hari ini · nilai " + harian.skor + "/5", "أنجزت اليوم") : lab("5 soal acak · +30 XP", "خمسة أسئلة")) + "</p></div>" + Icon("right", "ac-go") + "</a>" +
@@ -256,9 +256,47 @@
     tickC(); const ti = setInterval(tickC, 15000); cleanup.push(() => clearInterval(ti));
     hikmahRotate();
   }
+  /* ===== Rencana belajar harian menuju UTS: target modul per hari (earliest-deadline-first) + daftar modul hari ini ===== */
+  function rencanaUts() {
+    const today = new Date(U.todayKey() + "T00:00:00"), hk = t => Math.round((new Date(t + "T00:00:00") - today) / 864e5);
+    const mk = MKS().filter(m => !m.induk && !m.tanpaUjian && Kuliah.list(m.id).length).map(m => {
+      const t = RENC_TGL(m), r = RENC_RANGE(m), h = t ? hk(t) : null;
+      const sisa = Kuliah.list(m.id).filter(p => p.no >= r[0] && p.no <= r[1] && !p.belumDisusun && !(S().baca[pKey(m.id, p.no)] || {}).selesai);
+      return { m, t, h, r, sisa };
+    }).filter(x => x.h != null && x.h >= 0).sort((a, b) => a.h - b.h);
+    const total = mk.reduce((s, x) => s + x.sisa.length, 0);
+    // kapasitas minimal per hari agar setiap mata kuliah selesai paling lambat H-1 (hari ujian sendiri tidak dihitung)
+    const hMax = mk.reduce((a, x) => Math.max(a, x.h), 1);
+    const susun = cap => { const sisa = mk.map(x => x.sisa.length), hari0 = [];
+      for (let d = 0; d < hMax; d++) for (let c = 0; c < cap; c++) {
+        // satu per satu: tenggat terdekat dulu; tenggat sama → bergantian antar mata kuliah
+        let pilih = -1; mk.forEach((x, i) => { if (sisa[i] && d < Math.max(x.h, 1) && (pilih < 0 || x.h < mk[pilih].h || (x.h === mk[pilih].h && sisa[i] > sisa[pilih]))) pilih = i; });
+        if (pilih < 0) break; sisa[pilih]--; if (d === 0) { const e = hari0.find(z => z[0] === pilih); e ? e[1]++ : hari0.push([pilih, 1]); }
+      }
+      return sisa.every(v => !v) ? hari0 : null; };
+    let cap = 1, hari0 = null;
+    while (total && cap <= total && !(hari0 = susun(cap))) cap++;
+    if (total && !hari0) { cap = total; hari0 = mk.map((x, i) => [i, x.sisa.length]); }
+    const hariIni = (hari0 || []).flatMap(([i, a]) => mk[i].sisa.slice(0, a).map(p => ({ x: mk[i], p })));
+    const selesaiHariIni = Object.entries(S().baca).filter(([k, b]) => b && b.selesai && b.terakhir && U.todayKey(new Date(b.terakhir)) === U.todayKey()).length;
+    return { mk, total, cap: total ? cap : 0, hariIni, selesaiHariIni };
+  }
+  function rencanaCard() {
+    const R = rencanaUts();
+    if (!R.mk.length) return '<div class="card rencana"><div class="card-h">' + Icon("route") + lab("Rencana belajar menuju UTS", "خطة المذاكرة") + '</div><p class="muted">' + lab("Tanggal UTS belum diatur atau sudah lewat.", "لم يحدد موعد الاختبار") + "</p></div>";
+    const ujianHariIni = R.mk.filter(x => x.h === 0);
+    const head = R.total ? lab("Target hari ini: " + n(R.cap) + " modul", "هدف اليوم: " + arNum(R.cap)) + ' <small class="muted">' + lab("· sisa " + n(R.total) + " modul · sudah selesai hari ini " + n(R.selesaiHariIni), "") + "</small>" : lab("Semua modul UTS sudah selesai dibaca ✓ — perbanyak latihan & muraja'ah", "أنهيت جميع الوحدات");
+    const ujiStr = R.mk.map(x => '<span class="rc-chip' + (x.h === 0 ? " hot" : x.h <= 3 ? " warm" : "") + '">' + esc(x.m.kode || x.m.nama.id) + " · " + (x.h === 0 ? lab("UJIAN HARI INI", "اليوم") : lab("H-" + n(x.h), "بعد " + arNum(x.h))) + (x.sisa.length ? " · " + n(x.sisa.length) + " " + lab("sisa", "متبقٍ") : " ✓") + "</span>" + (x.h <= 14 ? '<button class="btn ghost sm tg-wa rc-wa" type="button" data-mk="' + esc(x.m.id) + '" data-j="uts" title="Kirim pengingat WhatsApp">' + Icon("chat") + "</button>" : "")).join("");
+    const daftar = R.hariIni.map(({ x, p }, i) => '<a class="rc-item st" style="--i:' + i + '" href="#/mk/' + x.m.id + "/" + p.no + '"><span class="rc-no">' + n(p.no) + "</span><div><small>" + esc(x.m.kode || x.m.nama.id) + "</small><b>" + one(p.judul) + "</b></div>" + Icon("right", "ac-go") + "</a>").join("");
+    return '<div class="card rencana"><div class="card-h">' + Icon("route") + lab("Rencana belajar menuju UTS", "خطة المذاكرة نحو الاختبار") + '<button class="btn ghost sm tg-set" style="margin-left:auto">' + Icon("calendar") + lab("Tanggal", "المواعيد") + "</button></div>" +
+      (ujianHariIni.length ? '<div class="rc-alert">' + Icon("bolt") + lab("Hari ini ujian " + ujianHariIni.map(x => one(x.m.nama)).join(", ") + " — ulang ringkasan & kerjakan simulasi UTS sekali lagi. Bismillah!", "اليوم الاختبار") + "</div>" : "") +
+      '<p class="rc-head">' + head + "</p><div class=\"rc-chips\">" + ujiStr + "</div>" + (daftar ? '<div class="rc-list">' + daftar + "</div>" : "") +
+      '<p class="muted sm">' + lab("Selesaikan bacaan & latihan setiap modul. Daftar ini menyesuaikan otomatis setelah modul ditandai selesai.", "تتجدد القائمة تلقائيًا") + "</p></div>";
+  }
   /* Kartu target ujian (kuliah mandiri IOU): tanggal UTS/UAS per mata kuliah + hitung mundur + target modul per hari + pengingat WA */
   const hariKe = t => t ? Math.ceil((new Date(t + "T00:00:00") - new Date(U.todayKey() + "T00:00:00")) / 864e5) : null;
-  function tglMk(id) { const st = S().set, m = (st.tglMk || {})[id] || {}; return { uts: m.uts || st.tglUts || "", uas: m.uas || st.tglUas || "" }; }
+  function tglMk(id) { const st = S().set, m = (st.tglMk || {})[id] || {}, d = (mkById(id) || {}).tglUjian || {}; return { uts: m.uts || d.uts || st.tglUts || "", uas: m.uas || d.uas || st.tglUas || "" }; }
+  const RENC_TGL = m => tglMk(m.id).uts, RENC_RANGE = m => UJI(m).uts;
   function sisaBaca(m, j) { const rr = UJI(m)[j]; return Kuliah.list(m.id).filter(p => p.no >= rr[0] && p.no <= rr[1] && !p.belumDisusun && !(S().baca[pKey(m.id, p.no)] || {}).selesai).length; }
   function kirimPengingatWa(id, j) {
     const m = mkById(id); if (!m) return;

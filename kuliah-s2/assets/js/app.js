@@ -223,7 +223,7 @@
       stat("baca", Icon("book", "big"), n(ut.done) + "/" + n(ut.total), lab("Pertemuan selesai dibaca", "المحاضرات المقروءة"), "#/program") +
       stat("skor", Icon("target", "big"), n(avg) + "%", lab("Rata-rata nilai latihan", "متوسط الدرجات"), "#/profil") + "</div>" +
 
-      '<div class="home-grid">' +
+      '<div class="home-grid">' + rencanaCard() +
       '<div class="card today">' + todayCard(mkHari, today) + "</div>" +
       '<div class="card hikmah-card"><div class="card-h">' + Icon("moonStar") + lab("Mutiara Ilmu", "درر العلم") + '</div><div class="hikmah-rot"></div></div>' +
       '<a class="card act-card daily ' + (harian && harian.selesai ? "done" : "") + '" href="#/arena/harian"><div class="ac-ic">' + Icon("sun") + "</div><div><b>" + lab("Tantangan Harian", "تحدي اليوم") + "</b><p>" + (harian && harian.selesai ? lab("Selesai hari ini · nilai " + harian.skor + "/5", "أنجزت اليوم") : lab("5 soal acak · +30 XP", "خمسة أسئلة")) + "</p></div>" + Icon("right", "ac-go") + "</a>" +
@@ -280,6 +280,70 @@
         (s.mk.length ? '<div class="mk-row wrap-row">' + s.mk.map(m => mkCard(Object.assign({ semester: s.no }, m))).join("") + "</div>" : '<p class="muted">' + lab("Mata kuliah semester ini akan ditambahkan ketika modulnya tersedia.", "ستضاف المقررات عند توفرها") + "</p>") + "</div></li>").join("") + "</ol></div>";
   }
 
+  /* ===== Tanggal UTS/UAS per mata kuliah (S2) + pengingat WhatsApp ===== */
+  const rngS2 = r => n(r[0]) + "–" + n(r[1]);
+  const UJI2 = m => ({ uts: [1, 8], uas: [1, m.jumlah || 16] });
+  function tglMk(id) { const st = S().set, m = (st.tglMk || {})[id] || {}, d = (mkById(id) || {}).tglUjian || {}; return { uts: m.uts || d.uts || "", uas: m.uas || d.uas || "" }; }
+  function kirimPengingatWa(id, j) {
+    const m = mkById(id); if (!m) return;
+    const t = tglMk(id)[j], h = t ? Math.round((new Date(t + "T00:00:00") - new Date(U.todayKey() + "T00:00:00")) / 864e5) : null, r = UJI2(m)[j];
+    const sisa = Kuliah.list(id).filter(p => p.no >= r[0] && p.no <= r[1] && !(S().baca[pKey(id, p.no)] || {}).selesai).length;
+    const tglTeks = t ? new Date(t + "T00:00:00").toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : "-";
+    const txt = "⏰ *Pengingat " + j.toUpperCase() + " " + m.nama.id + "* (" + m.nama.ar + ")\n📅 " + tglTeks + (h != null && h >= 0 ? " (" + (h === 0 ? "hari ini" : h + " hari lagi") + ")" : "") +
+      "\n📚 Materi: Pertemuan " + r[0] + "–" + r[1] + (sisa ? "\n✍️ Belum dibaca: " + sisa + " pertemuan → target " + Math.max(1, Math.ceil(sisa / Math.max(h || 1, 1))) + "/hari" : "\n✅ Semua pertemuan sudah dibaca") + "\n\nبالتوفيق — semoga dimudahkan 🤲";
+    window.open("https://wa.me/?text=" + encodeURIComponent(txt), "_blank", "noopener");
+  }
+  function aturTanggalUjian() {
+    const sh = $("#sheet"), st = S().set, ujiMk = MKS().filter(m => Kuliah.list(m.id).length);
+    sh.innerHTML = '<div class="sheet-bg"></div><div class="sheet-card" role="dialog" aria-modal="true"><div class="sheet-grip"></div><h3>' + Icon("calendar") + " " + lab("Tanggal ujian per mata kuliah", "مواعيد الاختبارات") + '</h3><p class="muted sm">' + lab("Terisi otomatis dari jadwal resmi; ubah bila ada perubahan.", "حسب الجدول الرسمي") + "</p>" +
+      '<form class="onb-f">' + ujiMk.map(m => { const t = tglMk(m.id); return '<fieldset class="tg-fs"><legend><b lang="ar">' + esc(m.nama.ar) + "</b> · " + esc(m.nama.id) + '</legend><label>UTS<input type="date" name="uts-' + esc(m.id) + '" value="' + esc(t.uts) + '"></label><label>UAS<input type="date" name="uas-' + esc(m.id) + '" value="' + esc(t.uas) + '"></label></fieldset>'; }).join("") +
+      '<button class="btn gold lg" type="submit">' + Icon("check") + lab("Simpan", "حفظ") + "</button></form></div>";
+    sh.classList.add("open");
+    const close = () => { sh.classList.remove("open"); setTimeout(() => sh.innerHTML = "", 300); };
+    sh.querySelector(".sheet-bg").onclick = close;
+    sh.querySelector("form").onsubmit = e => { e.preventDefault(); const f = new FormData(e.target); st.tglMk = st.tglMk || {};
+      ujiMk.forEach(m => { st.tglMk[m.id] = { uts: f.get("uts-" + m.id) || "", uas: f.get("uas-" + m.id) || "" }; });
+      Store.saveNow(); close(); route(true); U.toast(Icon("check") + " Tanggal ujian disimpan", "ok"); };
+  }
+  document.addEventListener("click", e => { if (!e.target.closest) return; if (e.target.closest(".tg-set")) aturTanggalUjian(); const w = e.target.closest(".tg-wa"); if (w) { e.preventDefault(); kirimPengingatWa(w.dataset.mk, w.dataset.j); } });
+  const RENC_TGL = m => tglMk(m.id).uts, RENC_RANGE = m => UJI2(m).uts;
+  /* ===== Rencana belajar harian menuju UTS: target modul per hari (earliest-deadline-first) + daftar modul hari ini ===== */
+  function rencanaUts() {
+    const today = new Date(U.todayKey() + "T00:00:00"), hk = t => Math.round((new Date(t + "T00:00:00") - today) / 864e5);
+    const mk = MKS().filter(m => !m.induk && !m.tanpaUjian && Kuliah.list(m.id).length).map(m => {
+      const t = RENC_TGL(m), r = RENC_RANGE(m), h = t ? hk(t) : null;
+      const sisa = Kuliah.list(m.id).filter(p => p.no >= r[0] && p.no <= r[1] && !p.belumDisusun && !(S().baca[pKey(m.id, p.no)] || {}).selesai);
+      return { m, t, h, r, sisa };
+    }).filter(x => x.h != null && x.h >= 0).sort((a, b) => a.h - b.h);
+    const total = mk.reduce((s, x) => s + x.sisa.length, 0);
+    // kapasitas minimal per hari agar setiap mata kuliah selesai paling lambat H-1 (hari ujian sendiri tidak dihitung)
+    const hMax = mk.reduce((a, x) => Math.max(a, x.h), 1);
+    const susun = cap => { const sisa = mk.map(x => x.sisa.length), hari0 = [];
+      for (let d = 0; d < hMax; d++) for (let c = 0; c < cap; c++) {
+        // satu per satu: tenggat terdekat dulu; tenggat sama → bergantian antar mata kuliah
+        let pilih = -1; mk.forEach((x, i) => { if (sisa[i] && d < Math.max(x.h, 1) && (pilih < 0 || x.h < mk[pilih].h || (x.h === mk[pilih].h && sisa[i] > sisa[pilih]))) pilih = i; });
+        if (pilih < 0) break; sisa[pilih]--; if (d === 0) { const e = hari0.find(z => z[0] === pilih); e ? e[1]++ : hari0.push([pilih, 1]); }
+      }
+      return sisa.every(v => !v) ? hari0 : null; };
+    let cap = 1, hari0 = null;
+    while (total && cap <= total && !(hari0 = susun(cap))) cap++;
+    if (total && !hari0) { cap = total; hari0 = mk.map((x, i) => [i, x.sisa.length]); }
+    const hariIni = (hari0 || []).flatMap(([i, a]) => mk[i].sisa.slice(0, a).map(p => ({ x: mk[i], p })));
+    const selesaiHariIni = Object.entries(S().baca).filter(([k, b]) => b && b.selesai && b.terakhir && U.todayKey(new Date(b.terakhir)) === U.todayKey()).length;
+    return { mk, total, cap: total ? cap : 0, hariIni, selesaiHariIni };
+  }
+  function rencanaCard() {
+    const R = rencanaUts();
+    if (!R.mk.length) return '<div class="card rencana"><div class="card-h">' + Icon("route") + lab("Rencana belajar menuju UTS", "خطة المذاكرة") + '</div><p class="muted">' + lab("Tanggal UTS belum diatur atau sudah lewat.", "لم يحدد موعد الاختبار") + "</p></div>";
+    const ujianHariIni = R.mk.filter(x => x.h === 0);
+    const head = R.total ? lab("Target hari ini: " + n(R.cap) + " pertemuan", "هدف اليوم: " + arNum(R.cap)) + ' <small class="muted">' + lab("· sisa " + n(R.total) + " pertemuan · sudah selesai hari ini " + n(R.selesaiHariIni), "") + "</small>" : lab("Semua pertemuan UTS sudah selesai dibaca ✓ — perbanyak latihan & muraja'ah", "أنهيت جميع الوحدات");
+    const ujiStr = R.mk.map(x => '<span class="rc-chip' + (x.h === 0 ? " hot" : x.h <= 3 ? " warm" : "") + '">' + esc(x.m.kode || x.m.nama.id) + " · " + (x.h === 0 ? lab("UJIAN HARI INI", "اليوم") : lab("H-" + n(x.h), "بعد " + arNum(x.h))) + (x.sisa.length ? " · " + n(x.sisa.length) + " " + lab("sisa", "متبقٍ") : " ✓") + "</span>" + (x.h <= 14 ? '<button class="btn ghost sm tg-wa rc-wa" type="button" data-mk="' + esc(x.m.id) + '" data-j="uts" title="Kirim pengingat WhatsApp">' + Icon("chat") + "</button>" : "")).join("");
+    const daftar = R.hariIni.map(({ x, p }, i) => '<a class="rc-item st" style="--i:' + i + '" href="#/mk/' + x.m.id + "/" + p.no + '"><span class="rc-no">' + n(p.no) + "</span><div><small>" + esc(x.m.kode || x.m.nama.id) + "</small><b>" + one(p.judul) + "</b></div>" + Icon("right", "ac-go") + "</a>").join("");
+    return '<div class="card rencana"><div class="card-h">' + Icon("route") + lab("Rencana belajar menuju UTS", "خطة المذاكرة نحو الاختبار") + '<button class="btn ghost sm tg-set" style="margin-left:auto">' + Icon("calendar") + lab("Tanggal", "المواعيد") + "</button></div>" +
+      (ujianHariIni.length ? '<div class="rc-alert">' + Icon("bolt") + lab("Hari ini ujian " + ujianHariIni.map(x => one(x.m.nama)).join(", ") + " — ulang ringkasan & kerjakan simulasi UTS sekali lagi. Bismillah!", "اليوم الاختبار") + "</div>" : "") +
+      '<p class="rc-head">' + head + "</p><div class=\"rc-chips\">" + ujiStr + "</div>" + (daftar ? '<div class="rc-list">' + daftar + "</div>" : "") +
+      '<p class="muted sm">' + lab("Selesaikan bacaan & latihan setiap pertemuan. Daftar ini menyesuaikan otomatis setelah pertemuan ditandai selesai.", "تتجدد القائمة تلقائيًا") + "</p></div>";
+  }
   /* ===================== MATA KULIAH ===================== */
   function mataKuliah(id) {
     const m = mkById(id); if (!m) return notFound();

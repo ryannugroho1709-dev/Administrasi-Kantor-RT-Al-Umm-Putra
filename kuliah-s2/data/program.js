@@ -27,7 +27,7 @@
         no: 1, status: "aktif", ar: "الفصل الدراسي الأول", tahun: "1448 H",
         mk: [
           {
-            id: "aqidah", hari: 6, ikon: "tauhid", tema: 0, motif: "kaidah", motifOpt: { lbl: "التوحيد" }, warna: "Zamrud", jumlah: 16,
+            id: "aqidah", tglUjian: { uts: "2026-10-26" }, hari: 6, ikon: "tauhid", tema: 0, motif: "kaidah", motifOpt: { lbl: "التوحيد" }, warna: "Zamrud", jumlah: 16,
             nama: { id: "Aqidah", ar: "العقيدة" },
             kitab: { id: "Syarh Al-Bidayah fil 'Aqidah", ar: "شرح البداية في العقيدة" },
             penulis: null,
@@ -53,7 +53,7 @@
             ]
           },
           {
-            id: "ulumul-quran", hari: 0, ikon: "mushaf", tema: 1, motif: "lentera", motifOpt: { lbl: "كِتَابٌ أَنزَلْنَاهُ إِلَيْكَ مُبَارَكٌ" }, warna: "Lazuardi", jumlah: 16,
+            id: "ulumul-quran", tglUjian: { uts: "2026-10-29" }, hari: 0, ikon: "mushaf", tema: 1, motif: "lentera", motifOpt: { lbl: "كِتَابٌ أَنزَلْنَاهُ إِلَيْكَ مُبَارَكٌ" }, warna: "Lazuardi", jumlah: 16,
             nama: { id: "Ulumul Qur'an", ar: "علوم القرآن" },
             kitab: { id: "Syarh Al-Bidayah fi 'Ulum al-Qur'an", ar: "شرح البداية في علوم القرآن" },
             penulis: null,
@@ -75,7 +75,7 @@
             ]
           },
           {
-            id: "ushul-tafsir", hari: 1, ikon: "ushul", tema: 7, motif: "akar", warna: "Kahrab", jumlah: 16,
+            id: "ushul-tafsir", tglUjian: { uts: "2026-11-02" }, hari: 1, ikon: "ushul", tema: 7, motif: "akar", warna: "Kahrab", jumlah: 16,
             nama: { id: "Ushul Tafsir", ar: "أصول التفسير" },
             kitab: { id: "At-Tahrir fi Ushul at-Tafsir", ar: "التحرير في أصول التفسير" },
             penulis: { id: "Dr. Musa'id bin Sulaiman ath-Thayyar", ar: "د. مساعد بن سليمان الطيار" },
@@ -99,7 +99,7 @@
             ]
           },
           {
-            id: "nasikh-mansukh", hari: 2, ikon: "naskh", tema: 11, motif: "mizan", motifOpt: { l1: "ناسخٌ", l2: "منسوخٌ", lbl: "نواسخ القرآن" }, warna: "Banafsaj", jumlah: 16,
+            id: "nasikh-mansukh", tglUjian: { uts: "2026-11-05" }, hari: 2, ikon: "naskh", tema: 11, motif: "mizan", motifOpt: { l1: "ناسخٌ", l2: "منسوخٌ", lbl: "نواسخ القرآن" }, warna: "Banafsaj", jumlah: 16,
             nama: { id: "An-Nasikh wal Mansukh", ar: "الناسخ والمنسوخ" },
             kitab: { id: "Nawasikh al-Qur'an", ar: "نواسخ القرآن" },
             penulis: { id: "Imam Ibnul Jauzi (w. 597 H)", ar: "الإمام ابن الجوزي (ت ٥٩٧هـ)" },
@@ -123,7 +123,7 @@
             ]
           },
           {
-            id: "tajwid", hari: 3, ikon: "makhraj", tema: 2, motif: "kalam", motifOpt: { big: "وَرَتِّلِ الْقُرْآنَ تَرْتِيلًا", lbl: "أحكام التجويد" }, warna: "Firuz", jumlah: 14,
+            id: "tajwid", tglUjian: { uts: "2026-11-09" }, hari: 3, ikon: "makhraj", tema: 2, motif: "kalam", motifOpt: { big: "وَرَتِّلِ الْقُرْآنَ تَرْتِيلًا", lbl: "أحكام التجويد" }, warna: "Firuz", jumlah: 14,
             nama: { id: "Tajwid", ar: "التجويد" },
             kitab: { id: "Muqarrar at-Tajwid", ar: "مقرر التجويد" },
             penulis: null,
@@ -144,7 +144,7 @@
             ]
           },
           {
-            id: "nahwu", hari: 4, ikon: "harakat", tema: 6, motif: "harakat", motifOpt: { lbl: "النحو تأسيسٌ وتطبيقٌ" }, warna: "Yaqut", jumlah: 16,
+            id: "nahwu", tglUjian: { uts: "2026-11-12" }, hari: 4, ikon: "harakat", tema: 6, motif: "harakat", motifOpt: { lbl: "النحو تأسيسٌ وتطبيقٌ" }, warna: "Yaqut", jumlah: 16,
             nama: { id: "Nahwu", ar: "النحو" },
             kitab: { id: "Ad-Durus an-Nahwiyyah", ar: "الدروس النحوية" },
             penulis: { id: "Hifni Nashif dkk.", ar: "حفني ناصف وآخرون" },

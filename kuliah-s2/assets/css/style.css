@@ -1172,3 +1172,22 @@ body.focus .reader { grid-template-columns: 1fr !important; max-width: 860px; ma
 .tugas-note { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 16px; background: var(--gold-bg); margin-bottom: 14px; font-size: 14px; }
 .tugas-note .ic { flex: none; color: var(--c2d); }
 .kembali-kantor { margin-right: 2px; flex: none; }
+
+/* ── Rencana belajar harian menuju UTS ── */
+.home-grid .rencana { grid-column: 1 / -1; }
+.rencana .rc-head { margin: 4px 0 8px; font-weight: 700; font-size: 1.05em; }
+.rc-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; align-items: center; }
+.rc-chip { padding: 4px 10px; border-radius: 999px; background: var(--acc-bg, var(--sf2)); font-size: .85em; }
+.rc-chip.warm { background: var(--gold-bg); }
+.rc-chip.hot { background: var(--no); color: #fff; font-weight: 700; }
+.rc-wa { padding: 3px 7px; color: var(--ok); }
+.rc-alert { display: flex; gap: 8px; align-items: center; padding: 10px 12px; border-radius: 14px; background: var(--gold-bg); margin-bottom: 8px; font-weight: 600; }
+.rc-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; margin-bottom: 8px; }
+.rc-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--sf); color: inherit; text-decoration: none; transition: transform .15s; }
+.rc-item:hover { transform: translateY(-2px); }
+.rc-item .rc-no { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: var(--gold-bg); color: var(--gold); font-weight: 800; flex: none; }
+.rc-item small { display: block; color: var(--mut); font-size: .78em; }
+.rc-item b { display: block; font-size: .92em; line-height: 1.3; }
+.rc-item .ac-go { margin-left: auto; opacity: .5; }
+.tg-fs { border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px 12px; margin: 0 0 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tg-fs legend { padding: 0 6px; font-size: .9em; }
