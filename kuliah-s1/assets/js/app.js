@@ -264,34 +264,57 @@
       const sisa = Kuliah.list(m.id).filter(p => p.no >= r[0] && p.no <= r[1] && !p.belumDisusun && !(S().baca[pKey(m.id, p.no)] || {}).selesai);
       return { m, t, h, r, sisa };
     }).filter(x => x.h != null && x.h >= 0).sort((a, b) => a.h - b.h);
-    const total = mk.reduce((s, x) => s + x.sisa.length, 0);
+    const pl = mk.filter(x => x.h > 0); // mata kuliah yang ujian hari ini tidak diberi materi baru
+    const total = pl.reduce((s, x) => s + x.sisa.length, 0);
     // kapasitas minimal per hari agar setiap mata kuliah selesai paling lambat H-1 (hari ujian sendiri tidak dihitung)
-    const hMax = mk.reduce((a, x) => Math.max(a, x.h), 1);
-    const susun = cap => { const sisa = mk.map(x => x.sisa.length), hari0 = [];
+    const hMax = pl.reduce((a, x) => Math.max(a, x.h), 1);
+    const susun = cap => { const sisa = pl.map(x => x.sisa.length), hari0 = [];
       for (let d = 0; d < hMax; d++) for (let c = 0; c < cap; c++) {
         // satu per satu: tenggat terdekat dulu; tenggat sama → bergantian antar mata kuliah
-        let pilih = -1; mk.forEach((x, i) => { if (sisa[i] && d < Math.max(x.h, 1) && (pilih < 0 || x.h < mk[pilih].h || (x.h === mk[pilih].h && sisa[i] > sisa[pilih]))) pilih = i; });
+        let pilih = -1; pl.forEach((x, i) => { if (sisa[i] && d < x.h && (pilih < 0 || x.h < pl[pilih].h || (x.h === pl[pilih].h && sisa[i] > sisa[pilih]))) pilih = i; });
         if (pilih < 0) break; sisa[pilih]--; if (d === 0) { const e = hari0.find(z => z[0] === pilih); e ? e[1]++ : hari0.push([pilih, 1]); }
       }
       return sisa.every(v => !v) ? hari0 : null; };
     let cap = 1, hari0 = null;
     while (total && cap <= total && !(hari0 = susun(cap))) cap++;
-    if (total && !hari0) { cap = total; hari0 = mk.map((x, i) => [i, x.sisa.length]); }
-    const hariIni = (hari0 || []).flatMap(([i, a]) => mk[i].sisa.slice(0, a).map(p => ({ x: mk[i], p })));
+    if (total && !hari0) { cap = total; hari0 = pl.map((x, i) => [i, x.sisa.length]); }
+    const hariIni = (hari0 || []).flatMap(([i, a]) => pl[i].sisa.slice(0, a).map(p => ({ x: pl[i], p })));
     const selesaiHariIni = Object.entries(S().baca).filter(([k, b]) => b && b.selesai && b.terakhir && U.todayKey(new Date(b.terakhir)) === U.todayKey()).length;
     return { mk, total, cap: total ? cap : 0, hariIni, selesaiHariIni };
   }
   function rencanaCard() {
-    const R = rencanaUts();
-    if (!R.mk.length) return '<div class="card rencana"><div class="card-h">' + Icon("route") + lab("Rencana belajar menuju UTS", "خطة المذاكرة") + '</div><p class="muted">' + lab("Tanggal UTS belum diatur atau sudah lewat.", "لم يحدد موعد الاختبار") + "</p></div>";
+    const R = rencanaUts(), SAT = "modul";
+    const judul = Icon("route") + lab("Rencana belajar menuju UTS", "خطة المذاكرة نحو الاختبار") + '<button class="btn ghost sm tg-set" style="margin-left:auto">' + Icon("calendar") + "Atur tanggal</button>";
+    if (!R.mk.length) return '<div class="card rencana"><div class="card-h">' + judul + '</div><p class="muted">Tanggal UTS belum diatur atau sudah lewat. Tekan <b>Atur tanggal</b> untuk mengisinya.</p></div>';
+    const tgl = t => new Date(t + "T00:00:00").toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short" });
     const ujianHariIni = R.mk.filter(x => x.h === 0);
-    const head = R.total ? lab("Target hari ini: " + n(R.cap) + " modul", "هدف اليوم: " + arNum(R.cap)) + ' <small class="muted">' + lab("· sisa " + n(R.total) + " modul · sudah selesai hari ini " + n(R.selesaiHariIni), "") + "</small>" : lab("Semua modul UTS sudah selesai dibaca ✓ — perbanyak latihan & muraja'ah", "أنهيت جميع الوحدات");
-    const ujiStr = R.mk.map(x => '<span class="rc-chip' + (x.h === 0 ? " hot" : x.h <= 3 ? " warm" : "") + '">' + esc(x.m.kode || x.m.nama.id) + " · " + (x.h === 0 ? lab("UJIAN HARI INI", "اليوم") : lab("H-" + n(x.h), "بعد " + arNum(x.h))) + (x.sisa.length ? " · " + n(x.sisa.length) + " " + lab("sisa", "متبقٍ") : " ✓") + "</span>" + (x.h <= 14 ? '<button class="btn ghost sm tg-wa rc-wa" type="button" data-mk="' + esc(x.m.id) + '" data-j="uts" title="Kirim pengingat WhatsApp">' + Icon("chat") + "</button>" : "")).join("");
-    const daftar = R.hariIni.map(({ x, p }, i) => '<a class="rc-item st" style="--i:' + i + '" href="#/mk/' + x.m.id + "/" + p.no + '"><span class="rc-no">' + n(p.no) + "</span><div><small>" + esc(x.m.kode || x.m.nama.id) + "</small><b>" + one(p.judul) + "</b></div>" + Icon("right", "ac-go") + "</a>").join("");
-    return '<div class="card rencana"><div class="card-h">' + Icon("route") + lab("Rencana belajar menuju UTS", "خطة المذاكرة نحو الاختبار") + '<button class="btn ghost sm tg-set" style="margin-left:auto">' + Icon("calendar") + lab("Tanggal", "المواعيد") + "</button></div>" +
-      (ujianHariIni.length ? '<div class="rc-alert">' + Icon("bolt") + lab("Hari ini ujian " + ujianHariIni.map(x => one(x.m.nama)).join(", ") + " — ulang ringkasan & kerjakan simulasi UTS sekali lagi. Bismillah!", "اليوم الاختبار") + "</div>" : "") +
-      '<p class="rc-head">' + head + "</p><div class=\"rc-chips\">" + ujiStr + "</div>" + (daftar ? '<div class="rc-list">' + daftar + "</div>" : "") +
-      '<p class="muted sm">' + lab("Selesaikan bacaan & latihan setiap modul. Daftar ini menyesuaikan otomatis setelah modul ditandai selesai.", "تتجدد القائمة تلقائيًا") + "</p></div>";
+    // --- target hari ini
+    const pct = R.cap ? Math.min(100, Math.round(R.selesaiHariIni / R.cap * 100)) : 100;
+    const target = R.total
+      ? '<div class="rc-target"><div class="rc-big"><b>' + n(R.cap) + "</b><span>" + SAT + "<br>hari ini</span></div>" +
+        '<div class="rc-tbody"><div class="rc-bar"><i style="width:' + pct + '%"></i></div><p><b>' + n(R.selesaiHariIni) + " dari " + n(R.cap) + "</b> " + SAT + " selesai hari ini · masih <b>" + n(R.total) + "</b> " + SAT + " lagi sebelum semua UTS</p>" +
+        '<ol class="rc-steps"><li><b>Baca</b> materi sampai tuntas, lalu tekan <i>Tandai selesai</i></li><li><b>Latihan</b> pilihan ganda & benar-salah (±5 menit)</li><li><b>Ulang</b> soal yang salah di Muraja\'ah</li></ol></div></div>'
+      : '<div class="rc-target done">' + Icon("checkCircle") + "<p><b>Semua " + SAT + " UTS sudah selesai dibaca.</b> Sekarang perbanyak simulasi UTS & muraja'ah soal yang salah.</p></div>";
+    // --- daftar hari ini
+    const daftar = R.hariIni.map(({ x, p }, i) => '<a class="rc-item st" style="--i:' + i + '" href="#/mk/' + x.m.id + "/" + p.no + '"><span class="rc-no">' + n(p.no) + '</span><div><small>' + esc(x.m.kode || x.m.nama.id) + " · ±" + n(p.durasi || 15) + " menit</small><b>" + one(p.judul, "id") + "</b></div>" + Icon("right", "ac-go") + "</a>").join("");
+    // --- jadwal ujian dengan progres per mata kuliah
+    const jadwal = R.mk.map(x => {
+      const semua = Kuliah.list(x.m.id).filter(p => p.no >= x.r[0] && p.no <= x.r[1] && !p.belumDisusun).length, sdh = semua - x.sisa.length, pr = semua ? Math.round(sdh / semua * 100) : 0;
+      const kapan = x.h === 0 ? "Hari ini" : x.h === 1 ? "Besok" : x.h + " hari lagi";
+      return '<div class="rc-ex' + (x.h === 0 ? " hot" : x.h <= 3 ? " warm" : "") + '"><div class="rc-date"><b>' + tgl(x.t).replace(/,.*/, "") + "</b><span>" + tgl(x.t).replace(/^[^,]*,\s*/, "") + "</span></div>" +
+        '<div class="rc-exb"><div class="rc-exh"><b>' + esc(x.m.nama.id) + '</b><span class="rc-kapan">' + kapan + '</span></div><div class="rc-bar sm"><i style="width:' + pr + '%"></i></div>' +
+        '<div class="rc-exf"><small>' + n(sdh) + "/" + n(semua) + " " + SAT + " dibaca" + (x.sisa.length ? "" : " ✓") + "</small>" +
+        (x.h <= 14 ? '<button class="btn ghost sm tg-wa rc-wa" type="button" data-mk="' + esc(x.m.id) + '" data-j="uts" title="Kirim pengingat WhatsApp">' + Icon("chat") + "</button>" : "") +
+        (x.h === 0 ? '<a class="btn sm gold" href="#/arena/uts/' + x.m.id + '">Simulasi UTS</a>' : "") + "</div></div></div>";
+    }).join("");
+    const TIPS = ["Ingat-ingat dulu isi materi tanpa melihat (active recall), baru cek — cara ini 2× lebih melekat daripada membaca ulang.", "Belajar 25 menit, istirahat 5 menit. Empat putaran = satu sesi yang kuat.", "Soal yang salah adalah guru terbaik: ulangi di Muraja'ah sampai ingat.", "Jelaskan materi dengan kata-katamu sendiri seolah mengajar orang lain.", "Selingi mata kuliah (interleaving) agar otak terlatih membedakan konsep.", "Tidur cukup sebelum ujian — ingatan dikunci saat tidur."];
+    const tip = TIPS[new Date().getDate() % TIPS.length];
+    return '<div class="card rencana"><div class="card-h">' + judul + "</div>" +
+      (ujianHariIni.length ? '<div class="rc-alert">' + Icon("bolt") + "<div><b>Hari ini ujian " + ujianHariIni.map(x => esc(x.m.nama.id)).join(", ") + ".</b> Jangan buka materi baru — cukup baca ringkasan & kerjakan simulasi UTS sekali. Bismillah!</div></div>" : "") +
+      target +
+      (daftar ? '<div class="rc-sec">' + Icon("list") + "Yang dipelajari hari ini</div><div class=\"rc-list\">" + daftar + "</div>" : "") +
+      '<div class="rc-sec">' + Icon("calendar") + "Jadwal UTS & kemajuan</div><div class=\"rc-exs\">" + jadwal + "</div>" +
+      '<p class="rc-tip">' + Icon("sparkle") + "<span><b>Tips:</b> " + tip + "</span></p></div>";
   }
   /* Kartu target ujian (kuliah mandiri IOU): tanggal UTS/UAS per mata kuliah + hitung mundur + target modul per hari + pengingat WA */
   const hariKe = t => t ? Math.ceil((new Date(t + "T00:00:00") - new Date(U.todayKey() + "T00:00:00")) / 864e5) : null;
