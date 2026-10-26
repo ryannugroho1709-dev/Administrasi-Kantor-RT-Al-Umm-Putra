@@ -60,7 +60,7 @@
     $("#tabbar").innerHTML = [["#/", "home", "Beranda", "الرئيسية"], ["#/program", "quran", "Kuliah", "المقررات"], ["#/arena", "trophy", "Arena", "الاختبارات"], ["#/murajaah", "cards", "Muraja'ah", "المراجعة"], ["#/profil", "user", "Profil", "ملفي"]]
       .map(t => '<a href="' + t[0] + '" data-tab="' + t[0] + '">' + Icon(t[1]) + '<span class="tb-id">' + t[2] + '</span><span class="tb-ar" lang="ar">' + t[3] + "</span></a>").join("");
     $$(".lang-sw button").forEach(b => b.onclick = () => setLang(b.dataset.lang));
-    const kk = $(".kembali-kantor"); if (kk) kk.onclick = () => { Store.saveNow(); induk.kulTutupS1 && induk.kulTutupS1(); };
+    const kk = $(".kembali-kantor"); if (kk) kk.onclick = () => { Store.saveNow(); (induk.kulTutupLayar || induk.kulTutupS1)(); };
     $(".snd-btn").onclick = () => openSheet("suara");
     $(".set-btn").onclick = () => openSheet("tampilan");
     $$("[data-go]").forEach(b => b.onclick = () => location.hash = b.dataset.go);
@@ -214,7 +214,7 @@
     if (lr) { const [mk, no] = lr.k.split("/"); const p = Kuliah.get(mk, +no); if (p) { const nx = lr.v.selesai ? Kuliah.get(mk, +no + 1) || p : p; lanjut = nx; } }
     const today = new Date().getDay(), mkHari = MKS().find(m => m.hari === today && AKTIF_L.includes(m.semester));
     if (!lanjut) { const f = mkHari && Kuliah.list(mkHari.id).length ? mkHari : adaData()[0]; lanjut = f ? Kuliah.get(f.id, 1) : null; }
-    const all = MKS().filter(m => AKTIF_L.includes(m.semester));
+    const all = MKS().filter(m => AKTIF_L.includes(m.semester) && !m.induk);
     const ut = adaData().reduce((s, m) => { const p = mkProgress(m.id); s.done += p.done; s.total += p.total; return s; }, { done: 0, total: 0 });
     const due = dueCards().length;
     const harian = S().harian[U.todayKey()];
@@ -332,10 +332,18 @@
       (PROGRAM.kanal && PROGRAM.kanal.pelajaran ? '<a class="btn sm ghost" target="_blank" rel="noopener" href="' + PROGRAM.kanal.pelajaran + '">' + Icon("send") + lab("Kanal kuliah", "قناة الدروس") + "</a>" : "") + "</div>" +
       '<ol class="sem-line">' + PROGRAM.semester.map(s => '<li class="sem ' + s.status + '"><div class="sem-dot">' + (s.status === "aktif" ? Icon("star8") : Icon("lock")) + '</div><div class="sem-b"><div class="sem-h"><h2>' + lab("Semester " + s.no, s.ar) + "</h2>" +
         '<span class="pill ' + (s.status === "aktif" ? "on" : "") + '">' + (s.status === "aktif" ? lab("Sedang berjalan", "جارٍ الآن") : lab("Segera", "قريبًا")) + "</span></div>" +
-        (s.mk.length ? '<div class="mk-row wrap-row">' + s.mk.map(m => mkCard(Object.assign({ semester: s.no }, m))).join("") + "</div>" : '<p class="muted">' + lab("Mata kuliah semester ini akan ditambahkan ketika modulnya tersedia.", "ستضاف المقررات عند توفرها") + "</p>") + "</div></li>").join("") + "</ol></div>";
+        (s.mk.length ? '<div class="mk-row wrap-row">' + s.mk.filter(m => !m.induk).map(m => mkCard(Object.assign({ semester: s.no }, m))).join("") + "</div>" : '<p class="muted">' + lab("Mata kuliah semester ini akan ditambahkan ketika modulnya tersedia.", "ستضاف المقررات عند توفرها") + "</p>") + "</div></li>").join("") + "</ol></div>";
   }
 
   /* ===================== MATA KULIAH ===================== */
+  /* Bahan pendamping satu mata kuliah (kisi-kisi, contoh ujian, pengayaan) — tidak tampil sebagai kartu sendiri */
+  function pendampingHtml(id) {
+    const anak = MKS().filter(x => x.induk === id && Kuliah.list(x.id).length);
+    if (!anak.length) return "";
+    return '<section class="pendamping"><div class="sec-h"><h2>' + Icon("target") + lab("Kisi-kisi, Contoh Ujian & Pengayaan", "أسئلة الدراسة والإثراء") + '</h2></div><div class="pd-grid">' +
+      anak.map((x, i) => { const pr = mkProgress(x.id), L = Kuliah.list(x.id), tg = L.reduce((s, p) => s + (p.tugas || []).length, 0), jenis = /kisi/i.test(x.kode || "") ? lab("Kisi-kisi & contoh ujian", "أسئلة الاختبار") : lab("Pengayaan", "إثراء");
+        return '<a class="pd-card st t' + (x.tema || 0) + '" style="--i:' + i + '" href="#/mk/' + x.id + '"><span class="pd-ic">' + Icon(x.ikon || "target") + "</span><div><small>" + jenis + "</small><b>" + one(x.nama) + "</b><p class=\"muted\">" + n(L.length) + " " + lab("pelajaran", "دروس") + (tg ? " · " + n(tg) + " " + lab("soal uraian", "سؤال مقالي") : "") + " · " + n(pr.done) + "/" + n(pr.total) + " " + lab("selesai", "منجز") + "</p></div>" + Icon("right", "ac-go") + "</a>"; }).join("") + "</div></section>";
+  }
   function mataKuliah(id) {
     const m = mkById(id); if (!m) return notFound();
     const list = Kuliah.list(id), pr = mkProgress(id);
@@ -343,7 +351,7 @@
     const pahamN = Object.keys(S().tugas).filter(k => k.startsWith(id + "/") && S().tugas[k].nilai === 2).length;
     const utsB = Store.terbaikUjian("uts-" + id), uasB = Store.terbaikUjian("uas-" + id), uj = UJI(m);
     view.innerHTML = '<div class="mk-hero t' + (m.tema || 0) + '"><div class="mk-hero-cover">' + Art.cover(m.motif || "kaidah", m.tema, Object.assign({}, m.motifOpt)) + '</div><div class="wrap mk-hero-in">' +
-      '<a class="crumb" href="#/program">' + Icon("left") + lab("Program " + (PROGRAM.singkat || "S2"), "البرنامج") + "</a>" +
+      (m.induk && mkById(m.induk) ? '<a class="crumb" href="#/mk/' + m.induk + '">' + Icon("left") + lab(mkById(m.induk).kode + " · " + mkById(m.induk).nama.id, "المقرر") + "</a>" : '<a class="crumb" href="#/program">' + Icon("left") + lab("Program " + (PROGRAM.singkat || "S2"), "البرنامج") + "</a>") +
       '<div class="mk-hero-t"><span class="mk-ic big">' + Icon(m.ikon) + "</span><div><h1>" + one(m.nama) + "</h1>" +
       '<p class="muted">' + (m.hari == null ? lab("Semester " + m.semester + " · " + (m.kode ? m.kode + " · " : "") + (m.sks ? m.sks + " SKS · " : "") + m.jumlah + " modul", "الفصل " + arNum(m.semester) + " · " + arNum(m.jumlah) + " وحدة") : lab("Semester " + m.semester + " · Setiap hari " + HARI[m.hari][0] + " · " + m.jumlah + " modul", "الفصل " + arNum(m.semester) + " · يوم " + HARI[m.hari][1] + " · " + arNum(m.jumlah) + " وحدة")) + "</p></div></div></div></div>" +
       '<div class="wrap">' +
@@ -355,7 +363,7 @@
       (m.tentang ? '<div class="kc-about">' + bi(m.tentang) + "</div>" : "") +
       (m.tentangPenulis ? '<details class="ak kc-pen"><summary>' + Icon("info") + lab("Tentang penulis", "عن المؤلف") + Icon("down", "ak-ic") + '</summary><div class="ak-b">' + bi(m.tentangPenulis) + "</div></details>" : "") +
       '<div class="kc-act">' + (m.lengkap ? '<a class="btn sm ghost" target="_blank" rel="noopener" href="' + m.lengkap + '">' + Icon("send") + lab("Berkas mata kuliah lengkap", "المقرر كاملًا") + "</a>" : "") +
-      (list.length ? '<a class="btn sm" href="#/peta/' + id + '">' + Icon("map") + lab("Peta kitab", "خريطة الكتاب") + '</a><a class="btn sm" href="#/istilah/' + id + '">' + Icon("language") + lab("Istilah", "المصطلحات") + "</a>" : "") + "</div></div></div>" +
+      (list.length ? '<a class="btn sm" href="#/peta/' + id + '">' + Icon("map") + lab("Peta kitab", "خريطة الكتاب") + '</a><a class="btn sm" href="#/istilah/' + id + '">' + Icon("language") + lab("Istilah", "المصطلحات") + "</a>" : "") + "</div></div></div>" + pendampingHtml(id) +
       (list.length && !m.tanpaUjian ? '<div class="mk-stats"><div><b>' + n(pr.done) + "/" + n(pr.total) + "</b><small>" + lab("selesai dibaca", "مقروءة") + "</small></div><div><b>" + n(pahamN) + "/" + n(tugasN) + "</b><small>" + lab(LBL_TUGAS[0].toLowerCase() + " dipahami", "مفهومة") + "</small></div><div><b>" + (utsB >= 0 ? n(utsB) + "%" : "–") + "</b><small>" + lab("simulasi UTS", "النصفي") + "</small></div><div><b>" + (uasB >= 0 ? n(uasB) + "%" : "–") + "</b><small>" + lab("simulasi UAS", "النهائي") + "</small></div></div>" +
         '<div class="exam-row"><a class="btn" href="#/arena/uts/' + id + '">' + Icon("medal") + lab("Simulasi UTS (M" + rng(uj.uts) + ")", "الاختبار النصفي") + '</a><a class="btn gold" href="#/arena/uas/' + id + '">' + Icon("seal") + lab("Simulasi UAS (M" + rng(uj.uas) + ")", "الاختبار النهائي") + "</a>" + (pr.done >= pr.total && uasB >= 70 ? '<a class="btn ghost" href="#/sertifikat/' + id + '">' + Icon("seal") + lab("Sertifikat", "الشهادة") + "</a>" : "") + "</div>" : "") +
       '<div class="sec-h"><h2>' + lab("Daftar Modul", "الوحدات") + "</h2></div>" +
@@ -584,7 +592,7 @@
   /* ===================== PETA KITAB ===================== */
   function petaPilih() {
     view.innerHTML = '<div class="wrap"><div class="page-h">' + Icon("map", "ph-ic") + "<div><h1>" + lab("Peta Kitab", "خريطة الكتب") + '</h1><p class="muted">' + lab("Pilih mata kuliah untuk melihat peta bab dan modulnya.", "اختر المقرر لعرض خريطته") + "</p></div></div>" +
-      '<div class="mk-row wrap-row">' + MKS().filter(m => AKTIF_L.includes(m.semester)).map(m => mkCard(m).replace('href="#/mk/' + m.id + '"', Kuliah.list(m.id).length ? 'href="#/peta/' + m.id + '"' : 'href="#/mk/' + m.id + '"')).join("") + "</div></div>";
+      '<div class="mk-row wrap-row">' + MKS().filter(m => AKTIF_L.includes(m.semester) && !m.induk).map(m => mkCard(m).replace('href="#/mk/' + m.id + '"', Kuliah.list(m.id).length ? 'href="#/peta/' + m.id + '"' : 'href="#/mk/' + m.id + '"')).join("") + "</div></div>";
   }
   function peta(mkId) {
     const m = mkById(mkId); if (!m) return notFound();
@@ -607,7 +615,7 @@
   const semuaDipilih = () => !(S().set.pilihMk || []).filter(id => adaData().some(m => m.id === id)).length || pilihan().length === adaData().length;
   // count(mkId) → angka di tiap chip (jumlah soal/kartu); onChange dipanggil setelah pilihan berubah
   function mkPicker(count, judul) {
-    const sel = pilihan(), all = semuaDipilih(), sem = MKS().filter(m => AKTIF_L.includes(m.semester));
+    const sel = pilihan(), all = semuaDipilih(), sem = MKS().filter(m => AKTIF_L.includes(m.semester) && !m.induk);
     return '<div class="mk-pick"><div class="mp-h">' + Icon("sliders") + "<b>" + (judul || lab("Pilih mata kuliah", "اختر المقررات")) + '</b><small class="muted">' + lab("bisa satu, beberapa, atau semua", "مقرر واحد أو أكثر أو الكل") + "</small></div>" +
       '<div class="mp-chips"><button class="mp-chip all ' + (all ? "on" : "") + '" data-mk="*"><span class="mp-ic">' + Icon("grid") + "</span><span>" + lab("Semua", "الكل") + "</span></button>" +
       sem.map(m => { const ada = Kuliah.list(m.id).length > 0, on = ada && !all && sel.includes(m.id), c = ada && count ? count(m.id) : null;

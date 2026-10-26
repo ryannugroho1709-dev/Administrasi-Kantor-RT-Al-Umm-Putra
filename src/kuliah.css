@@ -19,7 +19,9 @@
 .kul-info small { display: block; color: var(--text-secondary); }
 
 /* Kartu program */
-.kul-program { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
+.kul-program { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: stretch; }
+.kul-program > .kul-prog { display: flex; flex-direction: column; }
+.kul-program > .kul-prog > .btn { margin-top: auto; align-self: flex-start; }
 .kul-prog { position: relative; overflow: hidden; border-radius: 22px; padding: 22px; display: flex; flex-direction: column; gap: 8px;
   background: var(--surface, #fff); border: 1px solid var(--border-soft, #e3e8f2); box-shadow: 0 6px 22px rgba(0,0,0,.06); transition: transform .2s, box-shadow .2s; }
 .kul-prog.s1 { cursor: pointer; border-top: 5px solid var(--k1); }
@@ -42,7 +44,7 @@
 
 /* Cara belajar */
 .kul-cara { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-.kul-cara div { background: var(--surface, #fff); border: 1px solid var(--border-soft, #e3e8f2); border-radius: 16px; padding: 12px 14px; display: grid; grid-template-columns: auto 1fr; column-gap: 10px; align-items: center; }
+.kul-cara > div, .kul-cara > button { background: var(--surface, #fff); border: 1px solid var(--border-soft, #e3e8f2); border-radius: 16px; padding: 12px 14px; display: grid; grid-template-columns: auto 1fr; column-gap: 10px; align-items: center; }
 .kul-cara span { grid-row: span 2; font-size: 22px; }
 .kul-cara b { font-size: 13px; }
 .kul-cara small { font-size: 11.5px; color: var(--text-secondary); }
@@ -71,3 +73,9 @@ html.kul-buka, html.kul-buka body { overflow: hidden; }
   .kul-stat { grid-template-columns: 1fr 1fr; }
   .kul-prog h2 { font-size: 26px; }
 }
+
+/* Kotak fitur jadi tombol aktif + pilihan program */
+.kul-cara > button { font: inherit; color: inherit; text-align: left; cursor: pointer; transition: transform .15s, box-shadow .15s; }
+.kul-cara > button:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(15, 35, 80, .12); }
+.kul-pilih { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; padding: 12px 14px; border: 1px solid var(--border-soft); border-radius: 14px; background: var(--card, #fff); }
+.kul-pilih[hidden] { display: none; }

@@ -12,7 +12,7 @@
 
 const KUL_PROGRAM = {
   s1: { jenjang: "S1", kampus: "International Open University (IOU)", jurusan: "Psikologi Islam", arab: "علم النفس الإسلامي", semester: 8, aktif: "1 & 5",
-        matkul: "ENES101 Bahasa Inggris · PPAB301 Psikologi Perilaku Adiktif · PMAD301 Model & Pendekatan Disabilitas", src: "kuliah-s1/?v=6", lokal: "fk-s1.v1", ikon: "📘" },
+        matkul: "ENES101 Bahasa Inggris · PPAB301 Psikologi Perilaku Adiktif · PMAD301 Model & Pendekatan Disabilitas", src: "kuliah-s1/?v=7", lokal: "fk-s1.v1", ikon: "📘" },
   s2: { jenjang: "S2", kampus: "Shofwa", jurusan: "Ulumul Qur'an", arab: "علوم القرآن", semester: 4, aktif: "1",
         matkul: "Ushul Tafsir · Ulumul Qur'an · Nasikh Mansukh · Aqidah · Nahwu · Tajwid", src: "kuliah-s2/?v=1", lokal: "fk-uq.v1", ikon: "🌙" },
 };
@@ -91,19 +91,20 @@ function _kulSimpan(p, state, segera) {
 }
 function kulS1Muat() { return KUL.set[_kulKunci("s1")] || null; }
 function kulS2Muat() { return KUL.set[_kulKunci("s2")] || null; }
-const kulS1Profil = _kulProfil, kulS2Profil = _kulProfil;
+function kulS1Profil() { return _kulProfil(); }
+function kulS2Profil() { return _kulProfil(); }
 function kulS1Simpan(state, segera) { _kulSimpan("s1", state, segera); }
 function kulS2Simpan(state, segera) { _kulSimpan("s2", state, segera); }
 
 // ── LAYAR PENUH ─────────────────────────────────────────────
 let _kulLayarProg = "";
-function kulBuka(p) {
+function kulBuka(p, hash) {
   if (qs("kul-layar") || !kulProgramSaya().includes(p)) return;
   const P = KUL_PROGRAM[p];
   const el = document.createElement("div");
   el.id = "kul-layar";
   el.innerHTML = `<div class="kul-muat"><div class="kul-putar"></div><span>Membuka Ruang Kuliah ${P.jenjang}…</span></div>
-    <iframe src="${P.src}" title="Ruang Kuliah ${P.jenjang} ${escapeHtml(P.jurusan)}" allow="fullscreen; clipboard-write" onload="this.previousElementSibling?.remove()"></iframe>`;
+    <iframe src="${P.src}${hash || ""}" title="Ruang Kuliah ${P.jenjang} ${escapeHtml(P.jurusan)}" allow="fullscreen; clipboard-write" onload="this.previousElementSibling?.remove()"></iframe>`;
   document.body.appendChild(el);
   document.documentElement.classList.add("kul-buka");
   _kulLayarProg = p;
@@ -127,7 +128,7 @@ function kulTutupLayar(dariRiwayat) {
   if (!dariRiwayat && history.state?.kulLayar) { _kulAbaikanPop = true; try { history.back(); } catch (e) { _kulAbaikanPop = false; } }
   renderKuliah();
 }
-const kulTutupS1 = kulTutupLayar; // dipakai tombol kembali di kuliah-s1/
+function kulTutupS1() { kulTutupLayar(); } // dipakai tombol kembali di kuliah-s1/
 let _kulAbaikanPop = false; // popstate akibat history.back() milik kita sendiri jangan menutup layar yang baru dibuka
 window.addEventListener("popstate", () => { if (_kulAbaikanPop) { _kulAbaikanPop = false; return; } if (qs("kul-layar")) kulTutupLayar(true); });
 
@@ -195,11 +196,12 @@ function renderKuliah() {
     <div class="kul-program">${prog.map(_kulKartu).join("")}</div>
 
     <div class="kul-cara">
-      <div><span>🎯</span><b>UTS & UAS</b><small>Simulasi ujian di halaman mata kuliah & Arena</small></div>
-      <div><span>✍️</span><b>Latihan esai</b><small>Jawabanmu tersimpan, bisa dilanjut kapan saja</small></div>
-      <div><span>🃏</span><b>Muraja'ah berjarak</b><small>Kartu istilah muncul lagi sebelum lupa</small></div>
-      <div><span>☁️</span><b>${KUL.siap ? (KUL.sinkron === "gagal" ? "Sinkron tertunda" : "Tersinkron") : "Tersimpan lokal"}</b><small>${KUL.siap ? "Lanjut dari HP atau laptop" : "Jalankan SQL agar bisa pindah perangkat"}</small></div>
+      <button type="button" onclick="kulFitur('#/arena')"><span>🎯</span><b>UTS & UAS</b><small>Buka Arena: simulasi UTS, UAS & tantangan harian</small></button>
+      <button type="button" onclick="kulFitur('#/profil')"><span>✍️</span><b>Latihan esai</b><small>Lihat rapor & jawaban esai yang tersimpan</small></button>
+      <button type="button" onclick="kulFitur('#/murajaah')"><span>🃏</span><b>Muraja'ah berjarak</b><small>Ulang kartu istilah yang jatuh tempo hari ini</small></button>
+      <button type="button" onclick="kulSinkronSekarang()"><span>☁️</span><b>${KUL.siap ? (KUL.sinkron === "gagal" ? "Sinkron tertunda" : "Tersinkron") : "Tersimpan lokal"}</b><small>${KUL.siap ? "Ketuk untuk sinkron sekarang" : "Jalankan SQL agar bisa pindah perangkat"}</small></button>
     </div>
+    <div id="kul-pilih-fitur" class="kul-pilih" hidden></div>
 
     ${KUL.lama.length ? `<details class="kul-lama"><summary>🗂️ Arsip catatan Kuliah versi lama (${KUL.lama.length})</summary>
       ${KUL.lama.map((m) => `<div class="kul-lama-item"><b>${escapeHtml(m.judul || "")}</b>${["ringkasan", "catatan", "poin_kunci"].filter((k) => (m[k] || "").trim()).map((k) => `<div><small>${k.replace("_", " ")}</small><p>${escapeHtml(m[k]).replace(/\n/g, "<br>")}</p></div>`).join("")}</div>`).join("")}
@@ -274,4 +276,23 @@ async function kulLaporanAdmin() {
       <tbody>${baris.map((b) => `<tr style="border-top:1px solid var(--border-soft);"><td style="padding:6px 8px;">${escapeHtml(b.nama)}</td><td style="padding:6px 8px;">${KUL_PROGRAM[b.prog].jenjang}</td><td style="padding:6px 8px;text-align:center;"><b>${b.selesai || 0}</b></td><td style="padding:6px 8px;">${escapeHtml(mkTeks(b.perMk))}</td><td style="padding:6px 8px;text-align:center;">${b.rata != null ? b.rata + "%" : "–"}</td><td style="padding:6px 8px;text-align:center;">${b.tugas || 0}</td><td style="padding:6px 8px;">${escapeHtml(ujianTeks(b.ujian))}</td><td style="padding:6px 8px;text-align:center;">${b.aktifHari || 0}</td><td style="padding:6px 8px;white-space:nowrap;">${tgl(b.akhir)}</td></tr>`).join("")}</tbody></table></div>
       <div style="font-size:10.5px;color:var(--text-secondary);margin-top:6px;">Data dari salinan kemajuan yang tersinkron (±20 detik setelah belajar). ${baris.length} baris · dimuat ${new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}.</div>`;
   } catch (e) { box.innerHTML = `<div style="font-size:12px;color:var(--danger,#c0392b);">Gagal memuat: ${escapeHtml(_kulGalat(e))}</div>`; }
+}
+
+// ── 4 kotak fitur di halaman Kuliah ──
+function kulFitur(hash) {
+  const prog = kulProgramSaya();
+  if (prog.length === 1) return kulBuka(prog[0], hash);
+  const box = qs("kul-pilih-fitur");
+  if (!box) return;
+  box.hidden = false;
+  box.innerHTML = '<span>Buka di program:</span>' + prog.map((p) => `<button type="button" class="btn ${p === "s2" ? "kul-btn-emas" : "kul-btn-utama"}" onclick="kulBuka('${p}','${hash}')">${KUL_PROGRAM[p].jenjang} · ${escapeHtml(KUL_PROGRAM[p].jurusan)}</button>`).join("") + '<button type="button" class="btn" onclick="this.parentElement.hidden=true">Batal</button>';
+  box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+async function kulSinkronSekarang() {
+  if (!KUL.siap) { toast("Sinkron belum aktif: " + (KUL.galat || "tabel Kuliah belum ada"), "warn"); return; }
+  const prog = kulProgramSaya().filter((p) => KUL.set[_kulKunci(p)]);
+  if (!prog.length) { toast("Belum ada kemajuan untuk disinkronkan — mulai belajar dulu ya.", "info"); return; }
+  try { await Promise.all(prog.map((p) => kulSetel(_kulKunci(p), KUL.set[_kulKunci(p)]))); KUL.sinkron = "ok"; toast("Kemajuan kuliah tersinkron ✓", "ok"); }
+  catch (e) { KUL.sinkron = "gagal"; toast("Sinkron gagal: " + _kulGalat(e), "err"); }
+  renderKuliah();
 }

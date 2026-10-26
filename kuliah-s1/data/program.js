@@ -37,7 +37,7 @@
   });
 
   sem[0].mk.push({
-    id: "kisi-inggris", kode: "Kisi-kisi", ikon: "target", tema: 3, motif: "toga", motifOpt: { lbl: "Study Questions" }, jumlah: 2, tanpaUjian: true, bahasa: "en", labelKitab: "Sumber", sampul: "Study Questions", sampulPenulis: "ENES101 · UTS & UAS",
+    id: "kisi-inggris", induk: "bahasa-inggris", kode: "Kisi-kisi", ikon: "target", tema: 3, motif: "toga", motifOpt: { lbl: "Study Questions" }, jumlah: 2, tanpaUjian: true, bahasa: "en", labelKitab: "Sumber", sampul: "Study Questions", sampulPenulis: "ENES101 · UTS & UAS",
     nama: { id: "Kisi-kisi Ujian ENES101", en: "ENES101 Study Questions" },
     kitab: { id: "ENES101 Study Questions (UTS) · Final Study Questions (UAS)", en: "ENES101 Study Questions (UTS) · Final Study Questions (UAS)" },
     dosen: { id: "Rasheeda Abdul Hakeem", en: "Rasheeda Abdul Hakeem" },
@@ -46,7 +46,7 @@
   });
 
   sem[0].mk.push({
-    id: "rumus-inggris", kode: "Pengayaan", ikon: "bolt", tema: 6, motif: "target", motifOpt: { lbl: "Fluency Formula" }, jumlah: 6, tanpaUjian: true, bahasa: "en", labelKitab: "Rujukan", sampul: "Fluency Formula", sampulPenulis: "4 Strands · SRS · PEEL",
+    id: "rumus-inggris", induk: "bahasa-inggris", kode: "Pengayaan", ikon: "bolt", tema: 6, motif: "target", motifOpt: { lbl: "Fluency Formula" }, jumlah: 6, tanpaUjian: true, bahasa: "en", labelKitab: "Rujukan", sampul: "Fluency Formula", sampulPenulis: "4 Strands · SRS · PEEL",
     nama: { id: "Rumus Mahir Bahasa Inggris", en: "The Fluency Formula" },
     kitab: { id: "Nation (Four Strands) · Krashen · Ebbinghaus · Swain", en: "Fluency Formula" },
     dosen: { id: "Pengayaan di luar modul (disusun dari riset pemerolehan bahasa)", en: "Enrichment" },
@@ -104,7 +104,7 @@
   });
 
   sem[4].mk.push({
-    id: "kisi-disabilitas", kode: "Kisi-kisi", ikon: "target", tema: 5, motif: "target", motifOpt: { lbl: "Study Questions" }, jumlah: 2, tanpaUjian: true, teksBahasa: "id", labelKitab: "Sumber", sampul: "Study Questions", sampulPenulis: "PMAD301 · UTS",
+    id: "kisi-disabilitas", induk: "disabilitas", kode: "Kisi-kisi", ikon: "target", tema: 5, motif: "target", motifOpt: { lbl: "Study Questions" }, jumlah: 2, tanpaUjian: true, teksBahasa: "id", labelKitab: "Sumber", sampul: "Study Questions", sampulPenulis: "PMAD301 · UTS",
     nama: { id: "Kisi-kisi Ujian PMAD301", en: "PMAD301 Study Questions" },
     kitab: { id: "PMAD301 · PSY 404 — Midterm study questions (INA)", en: "PMAD301 Midterm study questions" },
     dosen: { id: "Hannah Morris", en: "Hannah Morris" },
