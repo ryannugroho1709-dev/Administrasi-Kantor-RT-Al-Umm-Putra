@@ -1290,3 +1290,24 @@ body.focus .reader { grid-template-columns: 1fr !important; max-width: 860px; ma
 .rc-item .ac-go { margin-left: auto; opacity: .5; }
 .tg-fs { border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px 12px; margin: 0 0 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .tg-fs legend { padding: 0 6px; font-size: .9em; }
+
+/* ===== Kemajuan mingguan, rubrik esai, kartu soal salah ===== */
+.wk-chart { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; height: 170px; align-items: end; padding: 14px; border-radius: 20px; background: var(--sf); border: 1px solid var(--line); }
+.wk-col { height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 3px; font-size: 12px; }
+.wk-col i { width: 100%; max-width: 34px; min-height: 3px; border-radius: 8px 8px 3px 3px; background: linear-gradient(0deg, var(--c1), var(--c2)); opacity: .55; animation: grow .8s cubic-bezier(.2, .8, .2, 1); transform-origin: bottom; }
+.wk-col.now i { opacity: 1; }
+.wk-col b { font-size: 13px; }
+.wk-col small, .wk-col em { font-size: 11px; color: var(--mut); font-style: normal; }
+.tg-rub { margin-top: 14px; padding: 12px 14px; border-radius: 16px; border: 1px dashed var(--line2, var(--line)); background: var(--sf2, var(--sf)); }
+.tg-rub-h { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.tg-rub-h > .ic { width: 20px; height: 20px; color: var(--gold); }
+.tg-rub-n { margin-left: auto; font-weight: 700; }
+.tg-rub-i { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; border-top: 1px solid var(--line); cursor: pointer; }
+.tg-rub-i input { margin-top: 4px; width: 18px; height: 18px; accent-color: var(--c1); flex: none; }
+.tg-rub-i span { flex: 1; }
+.tg-rub-ai { flex: none; font-style: normal; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--gold-bg); color: var(--gold); align-self: center; }
+.fc-q { font-size: clamp(17px, 3.6vw, 22px); line-height: 1.45; text-align: center; font-weight: 600; max-height: 60%; overflow: auto; padding: 0 6px; }
+.gr-mj { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; margin-top: 12px; font-size: .92em; }
+.gr-mj > .ic { width: 18px; height: 18px; color: var(--gold); }
+.gr-mj a { font-weight: 700; }
+@media (max-width: 560px) { .wk-chart { gap: 4px; padding: 10px; } .wk-col em { display: none; } }

@@ -412,7 +412,7 @@
       '<button class="btn sm glass tts-btn">' + Icon("ear") + lab("Dengarkan", "استمع") + "</button>" +
       '<button class="btn sm glass bm-btn ' + (isBm ? "on" : "") + '">' + Icon("bookmark") + lab(isBm ? "Ditandai" : "Tandai", "علامة") + "</button>" +
       '<button class="btn sm glass share-btn">' + Icon("share") + lab("Bagikan", "مشاركة") + "</button>" +
-      '<button class="btn sm glass focus-btn" title="Mode fokus">' + Icon("focus") + "</button></div></div></div>" +
+      '<button class="btn sm glass sum-btn">' + Icon("print") + lab("Ringkasan 1 hlm", "ملخص للطباعة") + "</button>" + '<button class="btn sm glass focus-btn" title="Mode fokus">' + Icon("focus") + "</button></div></div></div>" +
       '<div class="p-tabs-wrap"><nav class="p-tabs wrap">' + tabs.map(t => '<a href="#/mk/' + mkId + "/" + no + (t[0] === "materi" ? "" : "/" + t[0]) + '" class="' + (tab === t[0] ? "on" : "") + '">' + Icon(t[1]) + "<span>" + lab(t[2], t[3]) + "</span>" + (t[0] === "latihan" ? '<i class="cnt">' + n(gameList(p).length) + "</i>" : t[0] === "tugas" && p.tugas ? '<i class="cnt">' + n(p.tugas.length) + "</i>" : "") + "</a>").join("") + "</nav></div>" +
       '<div class="wrap p-body" id="pbody"></div>' +
       '<div class="wrap p-nav">' + (prev ? '<a class="pn prev" href="#/mk/' + mkId + "/" + prev.no + '">' + Icon("left") + "<span><small>" + lab("Sebelumnya", "السابق") + "</small>" + one(prev.judul) + "</span></a>" : "<span></span>") +
@@ -429,9 +429,38 @@
     Store.tandaiBaca(k, {});
     $(".bm-btn").onclick = e => { const i = S().tanda.indexOf(k); if (i > -1) S().tanda.splice(i, 1); else S().tanda.push(k); Store.save(); e.currentTarget.classList.toggle("on"); Audio2.sfx("pop"); U.toast(Icon("bookmark") + (i > -1 ? " Tanda dihapus" : " Pertemuan ditandai"), ""); };
     $(".share-btn").onclick = () => share(p.judul.id + " — " + m.nama.id, location.href);
+    $(".sum-btn").onclick = () => cetakRingkasan(m, p);
     $(".focus-btn").onclick = () => { document.body.classList.toggle("focus"); Audio2.sfx("whoosh"); };
     $(".tts-btn").onclick = e => speakPertemuan(p, e.currentTarget);
     cleanup.push(() => document.body.classList.remove("focus"));
+  }
+  /* Rangkuman satu halaman per modul — jendela baru siap dicetak / disimpan sebagai PDF */
+  function cetakRingkasan(m, p) {
+    const T = x => x == null ? "" : typeof x === "string" ? x : Array.isArray(x) ? x.map(T).join(" · ") : (x.judul ? T(x.judul) + ": " : "") + (x.id || x.en || x.ar || T(x.item) || "");
+    const bersih = x => String(T(x)).replace(/<[^>]+>/g, "").replace(/\*\*?|`/g, "").replace(/\s+/g, " ").trim();
+    const pendek = (x, max) => { const t = bersih(x); return t.length > max ? t.slice(0, max - 1) + "…" : t; };
+    const bag = []; let cur = null;
+    (p.isi || []).forEach(b => {
+      if (b.t === "judul") { cur = { h: bersih(b), i: [] }; bag.push(cur); return; }
+      if (!cur) { cur = { h: "", i: [] }; bag.push(cur); }
+      if (cur.i.length >= 3) return;
+      if (["poin", "ringkasan", "daftar", "langkah", "balik", "tokoh", "akordion"].includes(b.t)) (b.item || []).slice(0, 3 - cur.i.length).forEach(x => cur.i.push(pendek(x, 130)));
+      else if (b.t === "definisi") cur.i.push(pendek(b.judul, 40) + " — " + pendek(b.istilah || b.lughah, 120));
+      else if (b.t === "banding") cur.i.push(pendek(b.kiri, 70) + " ↔ " + pendek(b.kanan, 70));
+      else if (b.t === "tabel") (b.baris || []).slice(0, 3 - cur.i.length).forEach(r => cur.i.push(pendek(r, 130)));
+      else if ((b.t === "p" || b.t === "sub" || b.t === "catatan" || b.t === "pembuka" || b.t === "contoh") && !cur.i.length) cur.i.push(pendek(b, 150));
+    });
+    const ist = (p.istilah || []).slice(0, 8), li = t => '<li dir="auto">' + esc(t) + "</li>";
+    const html = '<!doctype html><html lang="id"><head><meta charset="utf-8"><title>' + esc("Ringkasan M" + p.no + " — " + bersih(p.judul)) + "</title><style>@page{size:A4;margin:12mm}body{font:9.5pt/1.4 system-ui,'Segoe UI',sans-serif;color:#222;margin:0}h1{font-size:14pt;margin:0 0 4px}.k{color:#666;font-size:8.5pt}.lead{background:#f3efe4;padding:6px 9px;border-radius:6px;margin:6px 0}.cols{columns:2;column-gap:16px}.sec{break-inside:avoid;margin:0 0 6px}.sec b{display:block;color:#0b5f4f;border-bottom:1px solid #ddd;margin-bottom:2px}ul{margin:2px 0 0 15px;padding:0}li{margin:1px 0}table{width:100%;border-collapse:collapse;font-size:8.5pt;margin-top:6px;break-inside:avoid}td{border:1px solid #ddd;padding:2px 5px;vertical-align:top}.ft{margin-top:6px;font-size:8pt;color:#888}@media screen{body{max-width:820px;margin:16px auto;padding:0 14px}}</style></head><body>" +
+      '<div class="k">' + esc(bersih(m.nama) + (m.kode ? " · " + m.kode : "") + " · Modul " + p.no + " dari " + m.jumlah) + '</div><h1 dir="auto">' + esc(bersih(p.judul)) + "</h1>" +
+      (p.ringkas ? '<div class="lead" dir="auto">' + esc(bersih(p.ringkas)) + "</div>" : "") +
+      (p.tujuan ? '<div class="sec"><b>Tujuan</b><ul>' + p.tujuan.map(t => li(pendek(t, 140))).join("") + "</ul></div>" : "") +
+      '<div class="cols">' + bag.filter(x => x.h || x.i.length).slice(0, 14).map(x => '<div class="sec">' + (x.h ? '<b dir="auto">' + esc(x.h) + "</b>" : "") + (x.i.length ? "<ul>" + x.i.map(li).join("") + "</ul>" : "") + "</div>").join("") + "</div>" +
+      (ist.length ? '<table><tr><td colspan="2"><b>Istilah kunci</b></td></tr>' + ist.map(c => '<tr><td dir="auto">' + esc([c.t, c.ar, c.latin].filter(Boolean).join(" · ")) + '</td><td dir="auto">' + esc(pendek(c.id, 120)) + "</td></tr>").join("") + "</table>" : "") +
+      '<div class="ft">Ruang Kuliah · dicetak ' + new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) + "</div><script>onload=function(){setTimeout(function(){print()},300)}<\/script></body></html>";
+    const w = window.open("", "_blank");
+    if (!w) return U.toast(Icon("info") + " Izinkan pop-up untuk mencetak ringkasan.", "warn");
+    w.document.open(); w.document.write(html); w.document.close();
   }
   function empty(ic, id, ar) { return '<div class="empty">' + Icon(ic) + "<p>" + lab(id, ar) + "</p></div>"; }
 
@@ -624,8 +653,8 @@
       if (dari && (p.no < dari || p.no > sampai)) return;
       if (onlyRead && !(S().baca[pKey(id, p.no)] || {}).terakhir) return;
       const L = p.latihan || {}, src = (multi ? namaMk(id) + " · " : "") + "P" + p.no;
-      (L.pg || []).forEach(q => out.push(Object.assign({ src }, q)));
-      (L.bs || []).forEach(q => out.push(Object.assign(Games.bsToPg(q), { src })));
+      (L.pg || []).forEach(q => out.push(Object.assign({ src, mk: id, no: p.no }, q)));
+      (L.bs || []).forEach(q => out.push(Object.assign(Games.bsToPg(q), { src, mk: id, no: p.no })));
     }));
     return out;
   }
@@ -677,7 +706,7 @@
       H("bolt", "Kuis Kilat", "اختبار سريع", lab("10 soal acak", "عشرة أسئلة") + subMk);
       ctl = Games.pg(host, pick(bank, 10), { onDone: r => { Store.catatUjian("kilat", r.benar, r.total, r.durasi); return { xp: 0 }; } });
     } else if (mode === "cepat") {
-      const bs = []; sel.forEach(id => Kuliah.list(id).forEach(p => ((p.latihan || {}).bs || []).forEach(q => bs.push(Object.assign({ src: (sel.length > 1 ? namaMk(id) + " · " : "") + "P" + p.no }, q)))));
+      const bs = []; sel.forEach(id => Kuliah.list(id).forEach(p => ((p.latihan || {}).bs || []).forEach(q => bs.push(Object.assign({ mk: id, no: p.no, src: (sel.length > 1 ? namaMk(id) + " · " : "") + "P" + p.no }, q)))));
       H("timer", "Adu Cepat 60 Detik", "سباق ٦٠ ثانية", lab("Tombol keyboard: ← benar, → salah", "أجب بسرعة") + subMk);
       ctl = Games.bs(host, bs, { waktu: 60, onDone: r => { const prev = Store.terbaikUjian("cepat"); S().ujian.unshift({ id: "cepat", benar: r.benar, total: r.total, pct: r.benar, ts: Date.now() }); Store.save(); const xp = Math.max(0, r.benar - Math.max(prev, 0)) * 3 + 10; Store.addXP(xp, "Adu cepat"); return { xp }; } });
     } else if (mode === "tahan") {
@@ -706,12 +735,17 @@
     ids.forEach(id => { const m = mkById(id); if (!m) return; Kuliah.list(id).forEach(p => (p.istilah || []).forEach((c, i) => out.push(Object.assign({ key: pKey(id, p.no) + "/i" + i, src: (multi ? m.nama.id + " · " : "") + "P" + p.no, mk: id, no: p.no }, c)))); });
     return out;
   }
-  function dueCards(mkIds) { const d = U.dayNum(); return allCards(mkIds).filter(c => { const s = Store.srs(c.key); return s.box > 0 && s.due <= d; }); }
+  function salahCards(mkIds) {
+    const ids = asList(mkIds), multi = ids.length > 1;
+    return Object.entries(S().salah || {}).filter(([, x]) => ids.includes(x.mk)).sort((a, b) => b[1].t - a[1].t)
+      .map(([key, x]) => ({ key, mk: x.mk, no: x.no, qh: x.q, id: x.a, def: x.b, src: (multi ? namaMk(x.mk) + " · " : "") + "M" + x.no }));
+  }
+  function dueCards(mkIds) { const d = U.dayNum(); return allCards(mkIds).concat(salahCards(mkIds)).filter(c => { const s = Store.srs(c.key); return s.box > 0 && s.due <= d; }); }
   function murajaah(mode) {
-    const sel = pilihan(), cards = allCards(sel), due = dueCards(sel), baru = cards.filter(c => Store.srs(c.key).box === 0);
+    const sel = pilihan(), cards = allCards(sel).concat(salahCards(sel)), due = dueCards(sel), salah = salahCards(MKS().map(m => m.id)), baru = cards.filter(c => Store.srs(c.key).box === 0);
     const boxes = [1, 2, 3, 4, 5].map(b => cards.filter(c => Store.srs(c.key).box === b).length);
-    if (mode === "mulai" || mode === "baru" || mode === "semua") {
-      const deck = mode === "mulai" ? due : mode === "baru" ? baru.slice(0, 12) : cards;
+    if (mode === "mulai" || mode === "baru" || mode === "semua" || mode === "salah") {
+      const deck = mode === "mulai" ? due : mode === "baru" ? baru.slice(0, 12) : mode === "salah" ? salah : cards;
       view.innerHTML = '<div class="wrap"><a class="crumb" href="#/murajaah">' + Icon("left") + lab("Muraja'ah", "المراجعة") + '</a><p class="mp-sum">' + Icon("layers") + "<span>" + labelPilihan() + '</span></p><div class="g-host"></div></div>';
       const host = $(".g-host");
       if (!deck.length) { host.innerHTML = empty("checkCircle", "Tidak ada kartu untuk diulang sekarang. Alhamdulillah!", "لا توجد بطاقات الآن"); return; }
@@ -723,7 +757,7 @@
       mkPicker(id => allCards(id).length, lab("Mata kuliah yang di-muraja'ah", "المقررات المراد مراجعتها")) +
       '<p class="mp-sum">' + Icon("cards") + "<span>" + labelPilihan() + " · <b>" + n(cards.length) + "</b> " + lab("kartu", "بطاقة") + " · <b>" + n(due.length) + "</b> " + lab("jatuh tempo", "مستحقة") + "</span></p>" +
       '<div class="leitner">' + boxes.map((c, i) => '<div class="lt-box st" style="--i:' + i + '"><span class="lt-n">' + n(i + 1) + "</span><b>" + n(c) + "</b><small>" + lab(["setiap hari", "2 hari", "4 hari", "8 hari", "16 hari"][i], ["يوميًا", "يومان", "٤ أيام", "٨ أيام", "١٦ يومًا"][i]) + "</small></div>").join("") + "</div>" +
-      '<div class="mj-act"><a class="btn gold lg ' + (due.length ? "" : "disabled") + '" href="#/murajaah/mulai">' + Icon("play") + lab("Ulang " + due.length + " kartu jatuh tempo", "راجع " + arNum(due.length) + " بطاقة") + '</a><a class="btn lg" href="#/murajaah/baru">' + Icon("sparkle") + lab("Pelajari kartu baru (" + baru.length + ")", "بطاقات جديدة") + '</a><a class="btn ghost lg" href="#/murajaah/semua">' + Icon("cards") + lab("Semua kartu (" + cards.length + ")", "كل البطاقات") + "</a></div>" +
+      '<div class="mj-act"><a class="btn gold lg ' + (due.length ? "" : "disabled") + '" href="#/murajaah/mulai">' + Icon("play") + lab("Ulang " + due.length + " kartu jatuh tempo", "راجع " + arNum(due.length) + " بطاقة") + '</a><a class="btn lg" href="#/murajaah/baru">' + Icon("sparkle") + lab("Pelajari kartu baru (" + baru.length + ")", "بطاقات جديدة") + '</a>' + (salah.length ? '<a class="btn lg" href="#/murajaah/salah">' + Icon("refresh") + lab("Soal yang pernah salah (" + salah.length + ")", "أسئلة أخطأت فيها") + "</a>" : "") + '<a class="btn ghost lg" href="#/murajaah/semua">' + Icon("cards") + lab("Semua kartu (" + cards.length + ")", "كل البطاقات") + "</a></div>" +
       '<p class="muted sm center">' + lab("Pintasan keyboard: Spasi = balik kartu, 1 = Lupa, 2 = Ragu, 3 = Ingat.", "اختصارات لوحة المفاتيح") + "</p></div>";
     bindPicker(view, () => route(true));
   }
@@ -781,6 +815,17 @@
   }
 
   /* ===================== PROFIL & RAPOR ===================== */
+  function pekananHtml() {
+    const awal = new Date(); awal.setHours(0, 0, 0, 0); awal.setDate(awal.getDate() - (awal.getDay() + 6) % 7);
+    const W = []; for (let i = 7; i >= 0; i--) { const a = new Date(awal); a.setDate(a.getDate() - i * 7); W.push({ a, b: +a + 7 * 864e5, modul: 0, menit: 0, xp: 0 }); }
+    const cari = t => W.find(w => t >= +w.a && t < w.b);
+    Object.values(S().baca).forEach(x => { const t = typeof x.selesai === "number" ? x.selesai : x.selesai ? x.terakhir : 0, w = t && cari(t); if (w) w.modul++; });
+    Object.entries(S().hari).forEach(([k, v]) => { const w = cari(+new Date(k + "T12:00:00")); if (w) { w.menit += v.menit || 0; w.xp += v.xp || 0; } });
+    const maxM = Math.max(1, ...W.map(w => w.modul)), ini = W[7], beda = ini.modul - W[6].modul;
+    return '<div class="sec-h"><h2>' + lab("Kemajuan mingguan", "التقدم الأسبوعي") + '</h2><small class="muted">' + lab("Pekan ini " + ini.modul + " modul · " + Math.round(ini.menit) + " menit" + (beda ? " (" + (beda > 0 ? "+" : "") + beda + " dari pekan lalu)" : ""), "هذا الأسبوع " + arNum(ini.modul)) + "</small></div>" +
+      '<div class="wk-chart">' + W.map((w, i) => '<div class="wk-col' + (i === 7 ? " now" : "") + '" title="' + esc("Pekan " + w.a.toLocaleDateString("id-ID", { day: "numeric", month: "short" }) + ": " + w.modul + " modul, " + Math.round(w.menit) + " menit, " + w.xp + " XP") + '"><b>' + n(w.modul) + '</b><i style="height:' + Math.round(w.modul / maxM * 100) + '%"></i><small>' + w.a.getDate() + "/" + (w.a.getMonth() + 1) + "</small><em>" + n(Math.round(w.menit)) + "′</em></div>").join("") + "</div>" +
+      '<p class="muted sm">' + lab("Batang = modul selesai dibaca per pekan (Senin–Ahad); angka bawah = menit belajar.", "الأعمدة = الوحدات المنجزة أسبوعيًا") + "</p>";
+  }
   function profil() {
     const pr = S().profil || {}, lv = Store.level(), st = Store.streak();
     const days = []; for (let i = 13; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); const k = U.todayKey(d); days.push({ d, v: S().hari[k] || {} }); }
@@ -795,7 +840,7 @@
       '<button class="btn ghost sm pf-edit">' + Icon("edit") + lab("Ubah", "تعديل") + "</button></div>" +
       '<div class="stats">' + stat("streak", Icon("flame", "big"), n(st), lab("hari istiqamah", "يوم"), "#/profil") + stat("baca", Icon("clock", "big"), n(totalMenit), lab("menit belajar", "دقيقة"), "#/profil") + stat("skor", Icon("seal", "big"), n(Object.keys(S().lencana).length) + "/" + n(Store.LENCANA.length), lab("lencana", "الأوسمة"), "#/profil") + stat("level", Icon("cards", "big"), n(S().dilihat.kartu || 0), lab("kartu diulang", "بطاقة"), "#/murajaah") + "</div>" +
       '<div class="sec-h"><h2>' + lab("Aktivitas 14 hari", "النشاط") + '</h2></div><div class="act-chart">' + days.map(x => '<div class="ac-col" title="' + x.d.toLocaleDateString("id-ID") + ": " + (x.v.xp || 0) + ' XP"><i style="height:' + Math.round((x.v.xp || 0) / maxXP * 100) + '%"></i><small>' + x.d.toLocaleDateString("id-ID", { weekday: "narrow" }) + "</small></div>").join("") + "</div>" +
-      '<div class="sec-h"><h2>' + lab("Ringkasan semua mata kuliah", "ملخص المقررات") + '</h2><button class="btn ghost sm rp-print">' + Icon("print") + lab("Cetak rapor", "طباعة") + "</button></div>" +
+      pekananHtml() + '<div class="sec-h"><h2>' + lab("Ringkasan semua mata kuliah", "ملخص المقررات") + '</h2><button class="btn ghost sm rp-print">' + Icon("print") + lab("Cetak rapor", "طباعة") + "</button></div>" +
       '<div class="tabel-scroll"><table class="tabel rapor"><thead><tr><th>' + lab("Mata kuliah", "المقرر") + "</th><th>" + lab("Dibaca", "مقروءة") + "</th><th>" + lab("Rata-rata latihan", "متوسط التمارين") + "</th><th>UTS</th><th>UAS</th></tr></thead><tbody>" + ringkas + "</tbody></table></div>" +
       '<div class="sec-h"><h2>' + lab("Rapor " + mk.nama.id, "كشف الدرجات: " + mk.nama.ar) + "</h2></div>" +
       '<div class="mp-chips rp-tabs">' + ada.map(m => '<button class="mp-chip t' + (m.tema || 0) + (m.id === mk.id ? " on" : "") + '" data-rp="' + m.id + '"><span class="mp-ic">' + Icon(m.ikon) + "</span><span>" + esc(m.nama.id) + "</span></button>").join("") + "</div>" +

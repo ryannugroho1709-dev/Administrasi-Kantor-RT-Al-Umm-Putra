@@ -12,9 +12,9 @@
 
 const KUL_PROGRAM = {
   s1: { jenjang: "S1", kampus: "International Open University (IOU)", jurusan: "Psikologi Islam", arab: "علم النفس الإسلامي", semester: 8, aktif: "1 & 5",
-        matkul: "ENES101 Bahasa Inggris · PPAB301 Psikologi Perilaku Adiktif · PMAD301 Model & Pendekatan Disabilitas", src: "kuliah-s1/?v=8", lokal: "fk-s1.v1", ikon: "📘" },
+        matkul: "ENES101 Bahasa Inggris · PPAB301 Psikologi Perilaku Adiktif · PMAD301 Model & Pendekatan Disabilitas", src: "kuliah-s1/?v=9", lokal: "fk-s1.v1", ikon: "📘" },
   s2: { jenjang: "S2", kampus: "Shofwa", jurusan: "Ulumul Qur'an", arab: "علوم القرآن", semester: 4, aktif: "1",
-        matkul: "Ushul Tafsir · Ulumul Qur'an · Nasikh Mansukh · Aqidah · Nahwu · Tajwid", src: "kuliah-s2/?v=2", lokal: "fk-uq.v1", ikon: "🌙" },
+        matkul: "Ushul Tafsir · Ulumul Qur'an · Nasikh Mansukh · Aqidah · Nahwu · Tajwid", src: "kuliah-s2/?v=3", lokal: "fk-uq.v1", ikon: "🌙" },
 };
 const KUL = { set: {}, lama: [], siap: false, galat: "", sinkron: "" };
 let KUL_AKSES = (() => { try { return JSON.parse(localStorage.getItem("kulAkses") || "null") || {}; } catch (e) { return {}; } })();
@@ -200,6 +200,7 @@ function renderKuliah() {
       <button type="button" onclick="kulFitur('#/profil')"><span>✍️</span><b>Latihan esai</b><small>Lihat rapor & jawaban esai yang tersimpan</small></button>
       <button type="button" onclick="kulFitur('#/murajaah')"><span>🃏</span><b>Muraja'ah berjarak</b><small>Ulang kartu istilah yang jatuh tempo hari ini</small></button>
       <button type="button" onclick="kulSinkronSekarang()"><span>☁️</span><b>${KUL.siap ? (KUL.sinkron === "gagal" ? "Sinkron tertunda" : "Tersinkron") : "Tersimpan lokal"}</b><small>${KUL.siap ? "Ketuk untuk sinkron sekarang" : "Jalankan SQL agar bisa pindah perangkat"}</small></button>
+      <button type="button" onclick="kulSiapkanOffline(this)"><span>📴</span><b>${_kulOfflineInfo() ? "Siap offline ✓" : "Siapkan offline"}</b><small>${_kulOfflineInfo() ? "Disiapkan " + _kulOfflineInfo() + " · ketuk untuk perbarui" : "Simpan semua modul di perangkat agar bisa dibuka tanpa internet"}</small></button>
     </div>
     <div id="kul-pilih-fitur" class="kul-pilih" hidden></div>
 
@@ -244,7 +245,20 @@ async function _akuSimpan() {
 }
 
 // ── LAPORAN ADMIN: kemajuan belajar per guru (dimuat hanya saat tombol ditekan — hemat kuota) ──
-const KUL_MK_LABEL = { "bahasa-inggris": "ENES101", "psikologi-adiktif": "PPAB301", disabilitas: "PMAD301", "rumus-inggris": "Rumus Mahir", "kisi-inggris": "Kisi ENES", "kisi-disabilitas": "Kisi PMAD" };
+const KUL_MK_LABEL = { "bahasa-inggris": "ENES101", "psikologi-adiktif": "PPAB301", disabilitas: "PMAD301", "rumus-inggris": "Rumus Mahir", "kisi-inggris": "Kisi ENES", "kisi-disabilitas": "Kisi PMAD",
+  aqidah: "Aqidah", "ulumul-quran": "Ulumul Qur'an", "ushul-tafsir": "Ushul Tafsir", "nasikh-mansukh": "Nasikh Mansukh", tajwid: "Tajwid", nahwu: "Nahwu" };
+// modul selesai per pekan (Senin–Ahad), 8 pekan terakhir — untuk tren di laporan admin
+function _kulPekan(s) {
+  const awal = new Date(); awal.setHours(0, 0, 0, 0); awal.setDate(awal.getDate() - (awal.getDay() + 6) % 7);
+  const pekan = Array(8).fill(0), mulai = +awal - 7 * 7 * 864e5;
+  Object.values(s.baca || {}).forEach((b) => { const t = typeof b?.selesai === "number" ? b.selesai : b?.selesai ? b.terakhir : 0; if (t >= mulai) pekan[Math.min(7, Math.floor((t - mulai) / (7 * 864e5)))]++; });
+  const menit7 = Object.entries(s.hari || {}).filter(([k]) => +new Date(k + "T12:00:00") >= +awal).reduce((a, [, v]) => a + (v.menit || 0), 0);
+  return { pekan, menit7: Math.round(menit7) };
+}
+function _kulTrenHtml(p) {
+  const max = Math.max(1, ...(p || [0]));
+  return `<span title="Modul selesai per pekan: ${(p || []).join(", ")}" style="display:inline-flex;align-items:flex-end;gap:2px;height:22px;">${(p || []).map((v, i) => `<i style="display:block;width:6px;height:${Math.max(2, Math.round(v / max * 22))}px;border-radius:2px;background:var(--accent,#0d5c4b);opacity:${i === 7 ? 1 : 0.45};"></i>`).join("")}</span>`;
+}
 function _kulRingkasStore(s) {
   if (!s || typeof s !== "object") return null;
   const baca = s.baca || {}, selesai = Object.entries(baca).filter(([, b]) => b && b.selesai);
@@ -254,7 +268,7 @@ function _kulRingkasStore(s) {
   const ujian = {}; (s.ujian || []).forEach((u) => { if (u && u.id) ujian[u.id] = Math.max(ujian[u.id] || 0, u.pct || 0); });
   const tugas = Object.entries(s.tugas || {}).filter(([k, t]) => !k.endsWith("/_ujian") && t && (t.teks || "").trim().length > 10).length;
   const hari = Object.keys(s.hari || {}).sort(), akhir = s._t || 0;
-  return { selesai: selesai.length, perMk, xp: s.xp || 0, rata, ujian, tugas, aktifHari: hari.length, akhir };
+  return { selesai: selesai.length, perMk, xp: s.xp || 0, rata, ujian, tugas, aktifHari: hari.length, akhir, ..._kulPekan(s) };
 }
 async function kulLaporanAdmin() {
   const box = qs("kul-laporan");
@@ -272,10 +286,32 @@ async function kulLaporanAdmin() {
     const ujianTeks = (u) => Object.entries(u || {}).filter(([k]) => /^(uts|uas)-/.test(k)).map(([k, v]) => k.replace(/^(uts|uas)-(.*)$/, (m, j, mk) => j.toUpperCase() + " " + (KUL_MK_LABEL[mk] || mk)) + " " + v + "%").join(", ") || "–";
     const mkTeks = (p) => Object.entries(p || {}).map(([mk, n]) => (KUL_MK_LABEL[mk] || mk) + " " + n).join(" · ") || "–";
     box.innerHTML = `<div style="overflow-x:auto;border:1px solid var(--border-soft);border-radius:10px;"><table style="width:100%;border-collapse:collapse;font-size:11.5px;">
-      <thead><tr style="background:var(--bg-soft,rgba(0,0,0,.03));text-align:left;">${["Guru", "Prog.", "Modul selesai", "Per mata kuliah", "Rata latihan", "Esai ditulis", "Simulasi ujian terbaik", "Hari aktif", "Terakhir"].map((h) => `<th style="padding:7px 8px;white-space:nowrap;">${h}</th>`).join("")}</tr></thead>
-      <tbody>${baris.map((b) => `<tr style="border-top:1px solid var(--border-soft);"><td style="padding:6px 8px;">${escapeHtml(b.nama)}</td><td style="padding:6px 8px;">${KUL_PROGRAM[b.prog].jenjang}</td><td style="padding:6px 8px;text-align:center;"><b>${b.selesai || 0}</b></td><td style="padding:6px 8px;">${escapeHtml(mkTeks(b.perMk))}</td><td style="padding:6px 8px;text-align:center;">${b.rata != null ? b.rata + "%" : "–"}</td><td style="padding:6px 8px;text-align:center;">${b.tugas || 0}</td><td style="padding:6px 8px;">${escapeHtml(ujianTeks(b.ujian))}</td><td style="padding:6px 8px;text-align:center;">${b.aktifHari || 0}</td><td style="padding:6px 8px;white-space:nowrap;">${tgl(b.akhir)}</td></tr>`).join("")}</tbody></table></div>
+      <thead><tr style="background:var(--bg-soft,rgba(0,0,0,.03));text-align:left;">${["Guru", "Prog.", "Modul selesai", "Per mata kuliah", "Rata latihan", "Esai ditulis", "Simulasi ujian terbaik", "Tren 8 pekan", "Pekan ini", "Hari aktif", "Terakhir"].map((h) => `<th style="padding:7px 8px;white-space:nowrap;">${h}</th>`).join("")}</tr></thead>
+      <tbody>${baris.map((b) => `<tr style="border-top:1px solid var(--border-soft);"><td style="padding:6px 8px;">${escapeHtml(b.nama)}</td><td style="padding:6px 8px;">${KUL_PROGRAM[b.prog].jenjang}</td><td style="padding:6px 8px;text-align:center;"><b>${b.selesai || 0}</b></td><td style="padding:6px 8px;">${escapeHtml(mkTeks(b.perMk))}</td><td style="padding:6px 8px;text-align:center;">${b.rata != null ? b.rata + "%" : "–"}</td><td style="padding:6px 8px;text-align:center;">${b.tugas || 0}</td><td style="padding:6px 8px;">${escapeHtml(ujianTeks(b.ujian))}</td><td style="padding:6px 8px;">${_kulTrenHtml(b.pekan)}</td><td style="padding:6px 8px;white-space:nowrap;">${(b.pekan || [])[7] || 0} modul · ${b.menit7 || 0} mnt</td><td style="padding:6px 8px;text-align:center;">${b.aktifHari || 0}</td><td style="padding:6px 8px;white-space:nowrap;">${tgl(b.akhir)}</td></tr>`).join("")}</tbody></table></div>
       <div style="font-size:10.5px;color:var(--text-secondary);margin-top:6px;">Data dari salinan kemajuan yang tersinkron (±20 detik setelah belajar). ${baris.length} baris · dimuat ${new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}.</div>`;
   } catch (e) { box.innerHTML = `<div style="font-size:12px;color:var(--danger,#c0392b);">Gagal memuat: ${escapeHtml(_kulGalat(e))}</div>`; }
+}
+
+// ── Mode offline: unduh semua berkas program ke cache service worker (sw.js menyimpan setiap GET yang lewat) ──
+function _kulOfflineInfo() { try { const t = +localStorage.getItem("kulOffline"); return t ? new Date(t).toLocaleDateString("id-ID", { day: "numeric", month: "short" }) : ""; } catch (e) { return ""; } }
+async function kulSiapkanOffline(btn) {
+  if (!("serviceWorker" in navigator) || !navigator.serviceWorker.controller) { toast("Mode offline butuh service worker aktif — muat ulang halaman sekali lalu coba lagi.", "warn"); return; }
+  const b = btn && btn.querySelector("b"), set = (t) => { if (b) b.textContent = t; };
+  const url = [];
+  for (const p of kulProgramSaya()) {
+    const src = KUL_PROGRAM[p].src, base = new URL(src, location.href);
+    const html = await fetch(base).then((r) => r.text()).catch(() => "");
+    if (!html) continue;
+    url.push(base.href);
+    for (const m of html.matchAll(/(?:src|href)="([^"#]+\.(?:js|css|png|svg|webp|jpg|json)(?:\?[^"]*)?)"/g)) if (!/^(https?:)?\/\//.test(m[1])) url.push(new URL(m[1], base).href);
+  }
+  if (!url.length) { toast("Tidak bisa mengambil daftar berkas — pastikan sedang online.", "warn"); return; }
+  let ok = 0, gagal = 0, i = 0;
+  const kerja = async () => { while (i < url.length) { const u = url[i++]; try { const r = await fetch(u); r.ok ? ok++ : gagal++; } catch (e) { gagal++; } set("Mengunduh " + (ok + gagal) + "/" + url.length); } };
+  await Promise.all(Array.from({ length: 6 }, kerja));
+  if (!gagal) { try { localStorage.setItem("kulOffline", String(Date.now())); } catch (e) {} }
+  set(gagal ? "Sebagian gagal (" + gagal + ")" : "Siap offline ✓");
+  toast(gagal ? gagal + " berkas gagal diunduh — coba lagi saat sinyal stabil." : ok + " berkas tersimpan. Kuliah bisa dibuka tanpa internet di perangkat ini.", gagal ? "warn" : "ok");
 }
 
 // ── 4 kotak fitur di halaman Kuliah ──

@@ -10,7 +10,7 @@ window.Store = (function () {
   const DEF = () => ({
     profil: null,
     set: { lang: "dual", tema: "auto", palet: (window.SITE && SITE.defaultPalette) || "zamrud", fontAr: "amiri", ukuran: 18, sfx: true, musik: null, vol: 0.45, gerak: true },
-    baca: {}, skor: {}, tugas: {}, catatan: {}, tanda: [], srs: {},
+    baca: {}, skor: {}, tugas: {}, catatan: {}, tanda: [], srs: {}, salah: {},
     xp: 0, riwayat: [], lencana: {}, hari: {}, ujian: [], harian: {}, dilihat: {}
   });
   let s;
@@ -121,6 +121,23 @@ window.Store = (function () {
     if ((d.kartu || 0) <= 60) addXP(2, "Muraja'ah");
   }
 
+  /* Soal latihan yang dijawab keliru → kartu muraja'ah (kotak 1, jatuh tempo hari ini). Dibatasi 200 kartu terbaru agar sinkron tetap ringan. */
+  function catatSalah(list) {
+    const m = /#\/mk\/([^/]+)\/(\d+)/.exec(location.hash) || [];
+    s.salah = s.salah || {};
+    list.forEach(x => {
+      const mk = x.mk || m[1], no = x.no || +m[2], teks = U.plain(x.q || "");
+      if (!mk || !teks) return;
+      let h = 0; for (let i = 0; i < teks.length; i++) h = (h * 31 + teks.charCodeAt(i)) | 0;
+      const key = "x/" + mk + "/" + (h >>> 0).toString(36);
+      s.salah[key] = { q: x.q, a: x.benar, b: x.b, mk, no, t: Date.now() };
+      s.srs[key] = { box: 1, due: U.dayNum(), n: (srs(key).n || 0) };
+    });
+    const keys = Object.keys(s.salah).sort((a, b) => s.salah[b].t - s.salah[a].t);
+    keys.slice(200).forEach(k => { delete s.salah[k]; delete s.srs[k]; });
+    save();
+  }
+
   /* ---------- Ujian & tantangan harian ---------- */
   function catatUjian(id, skorBenar, total, durasi) {
     const pct = Math.round(skorBenar / total * 100);
@@ -192,7 +209,7 @@ window.Store = (function () {
     get s() { return s; }, save, saveNow, onChange, emit,
     LEVELS, level, addXP, streak, catatWaktu, hariIni,
     baca, tandaiBaca, selesaiBaca, catatSkor, skor, tugas, simpanTugas,
-    srs, nilaiKartu, catatUjian, terbaikUjian,
+    srs, nilaiKartu, catatSalah, catatUjian, terbaikUjian,
     LENCANA, beriLencana, cekLencana, ekspor, impor, reset
   };
 })();

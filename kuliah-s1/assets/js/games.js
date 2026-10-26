@@ -41,6 +41,7 @@ window.Games = (function () {
   }
 
   function result(root, r) {
+    if (r.salah && r.salah.length && Store.catatSalah) Store.catatSalah(r.salah);
     const pct = r.total ? Math.round(r.benar / r.total * 100) : 0, st = stars(pct);
     const msg = pct >= 90 ? ["Mumtaz! Luar biasa.", "ممتاز! بارك الله فيك"] : pct >= 70 ? ["Jayyid jiddan! Hampir sempurna.", "جيد جدًا"] : pct >= 40 ? ["Jayyid. Terus berlatih.", "جيد، واصل التدريب"] : ["Jangan menyerah — ulangi materinya ya.", "لا تيأس، راجع الدرس"];
     root.innerHTML = '<div class="g-result">' +
@@ -48,7 +49,7 @@ window.Games = (function () {
       '<div class="gr-pct"><b>' + n(pct) + "</b>%</div>" +
       '<div class="gr-msg">' + lab(msg[0], msg[1]) + "</div>" +
       '<div class="gr-meta">' + lab(n(r.benar) + " dari " + n(r.total) + " benar", n(r.benar) + " من " + n(r.total)) + (r.xp ? ' · <span class="xp-chip">+' + n(r.xp) + " XP</span>" : "") + (r.durasi ? " · " + fmtTime(r.durasi) : "") + "</div>" +
-      (r.salah && r.salah.length ? '<details class="gr-rev"><summary>' + Icon("eye") + lab("Tinjau jawaban yang keliru (" + r.salah.length + ")", "مراجعة الأخطاء") + "</summary>" +
+      (r.salah && r.salah.length ? '<p class="gr-mj">' + Icon("cards") + lab(r.salah.length + " soal yang keliru otomatis masuk Muraja'ah — akan muncul lagi sampai kamu ingat.", "أضيفت الأخطاء إلى المراجعة") + ' <a href="#/murajaah/salah">' + lab("Ulang sekarang", "راجع الآن") + "</a></p>" + '<details class="gr-rev"><summary>' + Icon("eye") + lab("Tinjau jawaban yang keliru (" + r.salah.length + ")", "مراجعة الأخطاء") + "</summary>" +
         r.salah.map(s => '<div class="rev-item"><div class="rev-q">' + bi(s.q) + '</div><div class="rev-a">' + Icon("check") + one(s.benar) + "</div>" + (s.b ? '<div class="rev-b">' + bi(s.b) + "</div>" : "") + "</div>").join("") + "</details>" : "") +
       '<div class="gr-act"><button class="btn" data-act="ulang">' + Icon("refresh") + lab("Ulangi", "أعد") + "</button>" + (r.next ? '<button class="btn gold" data-act="next">' + lab(r.next.label, r.next.ar || "التالي") + Icon("arrowRight") + "</button>" : "") + "</div></div>";
     Audio2.sfx(pct >= 70 ? "done" : pct >= 40 ? "good" : "bad");
@@ -87,7 +88,7 @@ window.Games = (function () {
       if (ok) { benar++; combo++; g.score(benar); g.combo(combo); Audio2.sfx(combo >= 3 ? "combo" : "good"); }
       else {
         btn.classList.add("no"); combo = 0; g.combo(0); Audio2.sfx("bad"); Audio2.vibrate(80);
-        salah.push({ q: q.q, benar: q.o[q.j], b: q.b });
+        salah.push({ q: q.q, benar: q.o[q.j], b: q.b, mk: q.mk, no: q.no });
         if (opt.lives) { lives--; g.lives(lives, opt.lives); }
       }
       const fb = g.stage.querySelector(".q-feed");
@@ -147,7 +148,7 @@ window.Games = (function () {
       card.classList.add(ok ? "fly-ok" : "shake");
       g.stage.querySelectorAll(".bs-btns .btn").forEach(b => { b.disabled = true; if ((b.dataset.v === "1") === !!q.j) b.classList.add("ok"); });
       if (ok) { benar++; combo++; g.score(benar); g.combo(combo); Audio2.sfx(combo >= 3 ? "combo" : "good"); }
-      else { combo = 0; g.combo(0); Audio2.sfx("bad"); Audio2.vibrate(80); salah.push({ q: q.t, benar: q.j ? { id: "Benar", ar: "صحيح" } : { id: "Salah", ar: "خطأ" }, b: q.b }); }
+      else { combo = 0; g.combo(0); Audio2.sfx("bad"); Audio2.vibrate(80); salah.push({ q: q.t, benar: q.j ? { id: "Benar", ar: "صحيح" } : { id: "Salah", ar: "خطأ" }, b: q.b, mk: q.mk, no: q.no }); }
       const fb = g.stage.querySelector(".q-feed");
       if (opt.waktu) { setTimeout(() => { i++; show(); }, ok ? 350 : 900); return; }
       fb.hidden = false; fb.className = "q-feed " + (ok ? "ok" : "no");
@@ -337,7 +338,7 @@ window.Games = (function () {
       }
       const c = qs[i]; g.prog(i, qs.length); g.score(ingat);
       const box = Store.srs(c.key).box;
-      g.stage.innerHTML = '<div class="fc-wrap"><button class="fc" type="button"><span class="fc-in"><span class="fc-f"><span class="fc-box">' + (box ? lab("Kotak " + box, "الصندوق " + arNum(box)) : lab("Baru", "جديدة")) + '</span>' + (c.ar ? '<span class="fc-ar" lang="ar" dir="rtl">' + esc(c.ar) + "</span>" : "") + (c.t ? '<span class="fc-term">' + esc(c.t) + "</span>" : "") + (c.latin ? '<span class="fc-lt">' + esc(c.latin) + "</span>" : "") + '<span class="fc-hint">' + Icon("refresh") + lab("ketuk untuk membalik", "انقر للقلب") + "</span></span>" +
+      g.stage.innerHTML = '<div class="fc-wrap"><button class="fc" type="button"><span class="fc-in"><span class="fc-f"><span class="fc-box">' + (c.qh ? lab("Soal pernah salah", "سؤال أخطأت فيه") + " · " : "") + (box ? lab("Kotak " + box, "الصندوق " + arNum(box)) : lab("Baru", "جديدة")) + '</span>' + (c.qh ? '<span class="fc-q">' + one(c.qh) + "</span>" : "") + (c.ar ? '<span class="fc-ar" lang="ar" dir="rtl">' + esc(c.ar) + "</span>" : "") + (c.t ? '<span class="fc-term">' + esc(c.t) + "</span>" : "") + (c.latin ? '<span class="fc-lt">' + esc(c.latin) + "</span>" : "") + '<span class="fc-hint">' + Icon("refresh") + lab("ketuk untuk membalik", "انقر للقلب") + "</span></span>" +
         '<span class="fc-b"><span class="fc-id">' + one(c.id, "id") + "</span>" + (c.def ? bi(c.def) : "") + (c.src ? '<span class="q-src">' + esc(c.src) + "</span>" : "") + "</span></span></button></div>" +
         '<div class="fc-rate" hidden><button class="btn r0" data-v="0">' + Icon("refresh") + lab("Lupa", "نسيت") + '</button><button class="btn r1" data-v="1">' + Icon("hourglass") + lab("Ragu", "متردد") + '</button><button class="btn r2" data-v="2">' + Icon("check") + lab("Ingat", "تذكرت") + "</button></div>";
       const fc = g.stage.querySelector(".fc"), rate = g.stage.querySelector(".fc-rate");
@@ -349,6 +350,16 @@ window.Games = (function () {
   }
 
   /* ---------- Soal wajib (أسئلة الواجب) ---------- */
+  /* Poin kunci rubrik: pakai it.rubrik bila ada, kalau tidak dipecah dari jawaban model (maks. 6 poin) */
+  function poinRubrik(it) {
+    if (it.rubrik && it.rubrik.length) return it.rubrik.map(x => U.plain(U.pickId(x)));
+    const teks = String(U.pickId(it.j) || "").replace(/<[^>]+>/g, " ").replace(/[*_#>`]/g, "");
+    let kal = teks.split(/\n+|(?<=[.;!?؛])(?<!\b(?:mis|dll|dsb|dst|dkk|cth|spt|e\.g|i\.e|vs|etc|No|Dr|dr|Prof|hlm|St)\.)\s+(?=[A-Z0-9"“‘(؀-ۿ])/).map(x => x.replace(/^\s*([-•–]|\d+[.)])\s*/, "").trim()).filter(x => x.length >= 12 && /\p{L}{4,}/u.test(x.replace(/\bM\d+\b/g, "")));
+    if (kal.length > 6) { const per = Math.ceil(kal.length / 6), g = []; for (let i = 0; i < kal.length; i += per) g.push(kal.slice(i, i + per).join(" ")); kal = g; }
+    return kal.map(x => x.length > 220 ? x.slice(0, 217) + "…" : x);
+  }
+  const KATA_UMUM = /^(dalam|dengan|untuk|adalah|yaitu|bahwa|karena|tetapi|namun|sebagai|secara|kepada|terhadap|antara|setiap|tersebut|which|their|there|these|those|about|would|could|should|being)$/;
+  const kataKunci = t => [...new Set((t.toLowerCase().match(/[\p{L}\p{N}]{5,}/gu) || []).filter(w => !KATA_UMUM.test(w)))];
   function tugas(root, items, keyBase, meta) {
     const save = U.debounce((k, v) => Store.simpanTugas(k, { teks: v }), 400);
     root.innerHTML = '<div class="tugas">' + '<div class="tg-intro">' + Icon("pen") + "<div>" + (SITE.tugasIntro ? SITE.tugasIntro : lab("Soal wajib dari modul (<b>أسئلة الواجب</b>). Tulis jawabanmu sendiri dulu, baru buka kunci jawaban sebagai pembanding, lalu nilai pemahamanmu.", "هذه أسئلة الواجب من المحاضرة: اكتب إجابتك أولًا، ثم قارنها بالإجابة النموذجية، ثم قيّم فهمك.")) + "</div></div>" +
@@ -358,11 +369,34 @@ window.Games = (function () {
           '<textarea class="tg-in" rows="4" placeholder="' + (U.lang === "ar" ? "اكتب إجابتك هنا…" : "Tulis jawabanmu di sini… (tersimpan otomatis)") + '" ' + (U.lang === "ar" ? 'dir="rtl"' : "") + ">" + esc(st.teks || "") + "</textarea>" +
           '<div class="tg-act"><button class="btn ghost sm tg-show">' + Icon("key") + lab("Kunci jawaban", "الإجابة النموذجية") + "</button>" +
           '<div class="tg-rate">' + [["Belum paham", "لم أفهم", "r0"], ["Hampir", "تقريبًا", "r1"], ["Paham", "فهمت", "r2"]].map((r, v) => '<button class="pill ' + r[2] + (st.nilai === v ? " on" : "") + '" data-v="' + v + '">' + lab(r[0], r[1]) + "</button>").join("") + "</div></div>" +
-          '<div class="tg-ans" hidden>' + bi(it.j) + "</div></div>";
+          '<div class="tg-ans" hidden>' + bi(it.j) + rubrikHtml(it, st) + "</div></div>";
       }).join("") +
       '<div class="tg-foot"><button class="btn tg-copy">' + Icon("chat") + lab("Salin jawaban (format WhatsApp)", "نسخ الإجابات") + '</button><button class="btn ghost tg-print">' + Icon("print") + lab("Cetak / PDF", "طباعة") + "</button></div></div>";
+    function rubrikHtml(it, st) {
+      const P = poinRubrik(it); if (P.length < 2) return "";
+      const cek = st.cek || [];
+      return '<div class="tg-rub"><div class="tg-rub-h">' + Icon("list") + "<b>" + lab("Rubrik poin kunci", "نقاط التقييم") + '</b><small class="muted tg-rub-n"></small></div>' +
+        P.map((p, i) => '<label class="tg-rub-i"><input type="checkbox" data-i="' + i + '"' + (cek.includes(i) ? " checked" : "") + '><span>' + esc(p) + '</span><em class="tg-rub-ai" hidden>' + lab("terdeteksi", "موجود") + "</em></label>").join("") +
+        '<p class="muted sm">' + lab("Centang poin yang sudah ada di jawabanmu. Label \"terdeteksi\" = kata kuncinya ditemukan di jawabanmu (bantuan otomatis, tetap periksa sendiri).", "علِّم النقاط الموجودة في إجابتك") + "</p></div>";
+    }
     root.querySelectorAll(".tg-item").forEach(el => {
       const k = +el.dataset.k, key = keyBase + "/" + k;
+      const rub = el.querySelector(".tg-rub");
+      if (rub) {
+        const P = poinRubrik(items[k]), boxes = [...rub.querySelectorAll("input")];
+        const hitung = simpan => {
+          const cek = boxes.filter(b => b.checked).map(b => +b.dataset.i), rasio = cek.length / boxes.length;
+          rub.querySelector(".tg-rub-n").innerHTML =cek.length + "/" + boxes.length + " " + lab("poin", "نقاط");
+          if (!simpan) return;
+          const v = rasio >= 0.8 ? 2 : rasio >= 0.4 ? 1 : 0;
+          Store.simpanTugas(key, { cek, nilai: v });
+          el.querySelectorAll(".tg-rate .pill").forEach(x => x.classList.toggle("on", +x.dataset.v === v)); el.classList.toggle("paham", v === 2);
+        };
+        const deteksi = () => { const jw = (el.querySelector(".tg-in").value || "").toLowerCase(); rub.querySelectorAll(".tg-rub-ai").forEach((m, i) => { const kk = kataKunci(P[i]), ada = kk.filter(w => jw.includes(w)).length; m.hidden = !(jw.length > 10 && kk.length && ada / kk.length >= 0.4); }); };
+        boxes.forEach(b => b.onchange = () => { hitung(true); Audio2.sfx("tap"); });
+        el.querySelector(".tg-in").addEventListener("input", U.debounce(deteksi, 500));
+        hitung(false); deteksi();
+      }
       el.querySelector(".tg-in").addEventListener("input", e => save(key, e.target.value));
       el.querySelector(".tg-show").onclick = () => { const a = el.querySelector(".tg-ans"); a.hidden = !a.hidden; Audio2.sfx(a.hidden ? "tap" : "open"); };
       el.querySelectorAll(".pill").forEach(p => p.onclick = () => {
