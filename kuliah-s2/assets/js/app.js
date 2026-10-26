@@ -280,34 +280,34 @@
         (s.mk.length ? '<div class="mk-row wrap-row">' + s.mk.map(m => mkCard(Object.assign({ semester: s.no }, m))).join("") + "</div>" : '<p class="muted">' + lab("Mata kuliah semester ini akan ditambahkan ketika modulnya tersedia.", "ستضاف المقررات عند توفرها") + "</p>") + "</div></li>").join("") + "</ol></div>";
   }
 
-  /* ===== Tanggal UTS/UAS per mata kuliah (S2) + pengingat WhatsApp ===== */
+  /* ===== Tanggal Ujian Akhir per mata kuliah (S2 Shafwah: tanpa UTS — satu ujian akhir P1–16) + pengingat WhatsApp ===== */
   const rngS2 = r => n(r[0]) + "–" + n(r[1]);
   const UJI2 = m => ({ uts: [1, 8], uas: [1, m.jumlah || 16] });
-  function tglMk(id) { const st = S().set, m = (st.tglMk || {})[id] || {}, d = (mkById(id) || {}).tglUjian || {}; return { uts: m.uts || d.uts || "", uas: m.uas || d.uas || "" }; }
+  function tglMk(id) { const st = S().set, m = (st.tglMk || {})[id] || {}, d = (mkById(id) || {}).tglUjian || {}; return { uas: m.uas || d.uas || m.uts || d.uts || "" }; }
   function kirimPengingatWa(id, j) {
     const m = mkById(id); if (!m) return;
     const t = tglMk(id)[j], h = t ? Math.round((new Date(t + "T00:00:00") - new Date(U.todayKey() + "T00:00:00")) / 864e5) : null, r = UJI2(m)[j];
     const sisa = Kuliah.list(id).filter(p => p.no >= r[0] && p.no <= r[1] && !(S().baca[pKey(id, p.no)] || {}).selesai).length;
     const tglTeks = t ? new Date(t + "T00:00:00").toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : "-";
-    const txt = "⏰ *Pengingat " + j.toUpperCase() + " " + m.nama.id + "* (" + m.nama.ar + ")\n📅 " + tglTeks + (h != null && h >= 0 ? " (" + (h === 0 ? "hari ini" : h + " hari lagi") + ")" : "") +
+    const txt = "⏰ *Pengingat Ujian Akhir " + m.nama.id + "* (" + m.nama.ar + ")\n📅 " + tglTeks + (h != null && h >= 0 ? " (" + (h === 0 ? "hari ini" : h + " hari lagi") + ")" : "") +
       "\n📚 Materi: Pertemuan " + r[0] + "–" + r[1] + (sisa ? "\n✍️ Belum dibaca: " + sisa + " pertemuan → target " + Math.max(1, Math.ceil(sisa / Math.max(h || 1, 1))) + "/hari" : "\n✅ Semua pertemuan sudah dibaca") + "\n\nبالتوفيق — semoga dimudahkan 🤲";
     window.open("https://wa.me/?text=" + encodeURIComponent(txt), "_blank", "noopener");
   }
   function aturTanggalUjian() {
     const sh = $("#sheet"), st = S().set, ujiMk = MKS().filter(m => Kuliah.list(m.id).length);
     sh.innerHTML = '<div class="sheet-bg"></div><div class="sheet-card" role="dialog" aria-modal="true"><div class="sheet-grip"></div><h3>' + Icon("calendar") + " " + lab("Tanggal ujian per mata kuliah", "مواعيد الاختبارات") + '</h3><p class="muted sm">' + lab("Terisi otomatis dari jadwal resmi; ubah bila ada perubahan.", "حسب الجدول الرسمي") + "</p>" +
-      '<form class="onb-f">' + ujiMk.map(m => { const t = tglMk(m.id); return '<fieldset class="tg-fs"><legend><b lang="ar">' + esc(m.nama.ar) + "</b> · " + esc(m.nama.id) + '</legend><label>UTS<input type="date" name="uts-' + esc(m.id) + '" value="' + esc(t.uts) + '"></label><label>UAS<input type="date" name="uas-' + esc(m.id) + '" value="' + esc(t.uas) + '"></label></fieldset>'; }).join("") +
+      '<form class="onb-f">' + ujiMk.map(m => { const t = tglMk(m.id); return '<fieldset class="tg-fs"><legend><b lang="ar">' + esc(m.nama.ar) + "</b> · " + esc(m.nama.id) + '</legend><label>Ujian akhir (P1–' + n(m.jumlah || 16) + ')<input type="date" name="uas-' + esc(m.id) + '" value="' + esc(t.uas) + '"></label></fieldset>'; }).join("") +
       '<button class="btn gold lg" type="submit">' + Icon("check") + lab("Simpan", "حفظ") + "</button></form></div>";
     sh.classList.add("open");
     const close = () => { sh.classList.remove("open"); setTimeout(() => sh.innerHTML = "", 300); };
     sh.querySelector(".sheet-bg").onclick = close;
     sh.querySelector("form").onsubmit = e => { e.preventDefault(); const f = new FormData(e.target); st.tglMk = st.tglMk || {};
-      ujiMk.forEach(m => { st.tglMk[m.id] = { uts: f.get("uts-" + m.id) || "", uas: f.get("uas-" + m.id) || "" }; });
+      ujiMk.forEach(m => { st.tglMk[m.id] = { uas: f.get("uas-" + m.id) || "" }; });
       Store.saveNow(); close(); route(true); U.toast(Icon("check") + " Tanggal ujian disimpan", "ok"); };
   }
   document.addEventListener("click", e => { if (!e.target.closest) return; if (e.target.closest(".tg-set")) aturTanggalUjian(); const w = e.target.closest(".tg-wa"); if (w) { e.preventDefault(); kirimPengingatWa(w.dataset.mk, w.dataset.j); } });
-  const RENC_TGL = m => tglMk(m.id).uts, RENC_RANGE = m => UJI2(m).uts;
-  /* ===== Rencana belajar harian menuju UTS: target modul per hari (earliest-deadline-first) + daftar modul hari ini ===== */
+  const RENC_TGL = m => tglMk(m.id).uas, RENC_RANGE = m => UJI2(m).uas;
+  /* ===== Rencana belajar harian menuju ujian (S2: ujian akhir): target modul per hari (earliest-deadline-first) + daftar modul hari ini ===== */
   function rencanaUts() {
     const today = new Date(U.todayKey() + "T00:00:00"), hk = t => Math.round((new Date(t + "T00:00:00") - today) / 864e5);
     const mk = MKS().filter(m => !m.induk && !m.tanpaUjian && Kuliah.list(m.id).length).map(m => {
@@ -335,17 +335,17 @@
   }
   function rencanaCard() {
     const R = rencanaUts(), SAT = "pertemuan";
-    const judul = Icon("route") + lab("Rencana belajar menuju UTS", "خطة المذاكرة نحو الاختبار") + '<button class="btn ghost sm tg-set" style="margin-left:auto">' + Icon("calendar") + "Atur tanggal</button>";
-    if (!R.mk.length) return '<div class="card rencana"><div class="card-h">' + judul + '</div><p class="muted">Tanggal UTS belum diatur atau sudah lewat. Tekan <b>Atur tanggal</b> untuk mengisinya.</p></div>';
+    const judul = Icon("route") + lab("Rencana belajar menuju Ujian Akhir", "خطة المذاكرة نحو الاختبار") + '<button class="btn ghost sm tg-set" style="margin-left:auto">' + Icon("calendar") + "Atur tanggal</button>";
+    if (!R.mk.length) return '<div class="card rencana"><div class="card-h">' + judul + '</div><p class="muted">Tanggal ujian akhir belum diatur atau sudah lewat. Tekan <b>Atur tanggal</b> untuk mengisinya.</p></div>';
     const tgl = t => new Date(t + "T00:00:00").toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short" });
     const ujianHariIni = R.mk.filter(x => x.h === 0);
     // --- target hari ini
     const pct = R.cap ? Math.min(100, Math.round(R.selesaiHariIni / R.cap * 100)) : 100;
     const target = R.total
       ? '<div class="rc-target"><div class="rc-big"><b>' + n(R.cap) + "</b><span>" + SAT + "<br>hari ini</span></div>" +
-        '<div class="rc-tbody"><div class="rc-bar"><i style="width:' + pct + '%"></i></div><p><b>' + n(R.selesaiHariIni) + " dari " + n(R.cap) + "</b> " + SAT + " selesai hari ini · masih <b>" + n(R.total) + "</b> " + SAT + " lagi sebelum semua UTS</p>" +
+        '<div class="rc-tbody"><div class="rc-bar"><i style="width:' + pct + '%"></i></div><p><b>' + n(R.selesaiHariIni) + " dari " + n(R.cap) + "</b> " + SAT + " selesai hari ini · masih <b>" + n(R.total) + "</b> " + SAT + " lagi sebelum semua ujian akhir</p>" +
         '<ol class="rc-steps"><li><b>Baca</b> materi sampai tuntas, lalu tekan <i>Tandai selesai</i></li><li><b>Latihan</b> pilihan ganda & benar-salah (±5 menit)</li><li><b>Ulang</b> soal yang salah di Muraja\'ah</li></ol></div></div>'
-      : '<div class="rc-target done">' + Icon("checkCircle") + "<p><b>Semua " + SAT + " UTS sudah selesai dibaca.</b> Sekarang perbanyak simulasi UTS & muraja'ah soal yang salah.</p></div>";
+      : '<div class="rc-target done">' + Icon("checkCircle") + "<p><b>Semua " + SAT + " sudah selesai dibaca.</b> Sekarang perbanyak simulasi UAS & muraja'ah soal yang salah.</p></div>";
     // --- daftar hari ini
     const daftar = R.hariIni.map(({ x, p }, i) => '<a class="rc-item st" style="--i:' + i + '" href="#/mk/' + x.m.id + "/" + p.no + '"><span class="rc-no">' + n(p.no) + '</span><div><small>' + esc(x.m.kode || x.m.nama.id) + " · ±" + n(p.durasi || 15) + " menit</small><b>" + one(p.judul, "id") + "</b></div>" + Icon("right", "ac-go") + "</a>").join("");
     // --- jadwal ujian dengan progres per mata kuliah
@@ -355,16 +355,16 @@
       return '<div class="rc-ex' + (x.h === 0 ? " hot" : x.h <= 3 ? " warm" : "") + '"><div class="rc-date"><b>' + tgl(x.t).replace(/,.*/, "") + "</b><span>" + tgl(x.t).replace(/^[^,]*,\s*/, "") + "</span></div>" +
         '<div class="rc-exb"><div class="rc-exh"><b>' + esc(x.m.nama.id) + '</b><span class="rc-kapan">' + kapan + '</span></div><div class="rc-bar sm"><i style="width:' + pr + '%"></i></div>' +
         '<div class="rc-exf"><small>' + n(sdh) + "/" + n(semua) + " " + SAT + " dibaca" + (x.sisa.length ? "" : " ✓") + "</small>" +
-        (x.h <= 14 ? '<button class="btn ghost sm tg-wa rc-wa" type="button" data-mk="' + esc(x.m.id) + '" data-j="uts" title="Kirim pengingat WhatsApp">' + Icon("chat") + "</button>" : "") +
-        (x.h === 0 ? '<a class="btn sm gold" href="#/arena/uts/' + x.m.id + '">Simulasi UTS</a>' : "") + "</div></div></div>";
+        (x.h <= 14 ? '<button class="btn ghost sm tg-wa rc-wa" type="button" data-mk="' + esc(x.m.id) + '" data-j="uas" title="Kirim pengingat WhatsApp">' + Icon("chat") + "</button>" : "") +
+        (x.h === 0 ? '<a class="btn sm gold" href="#/arena/uas/' + x.m.id + '">Simulasi UAS</a>' : "") + "</div></div></div>";
     }).join("");
     const TIPS = ["Ingat-ingat dulu isi materi tanpa melihat (active recall), baru cek — cara ini 2× lebih melekat daripada membaca ulang.", "Belajar 25 menit, istirahat 5 menit. Empat putaran = satu sesi yang kuat.", "Soal yang salah adalah guru terbaik: ulangi di Muraja'ah sampai ingat.", "Jelaskan materi dengan kata-katamu sendiri seolah mengajar orang lain.", "Selingi mata kuliah (interleaving) agar otak terlatih membedakan konsep.", "Tidur cukup sebelum ujian — ingatan dikunci saat tidur."];
     const tip = TIPS[new Date().getDate() % TIPS.length];
     return '<div class="card rencana"><div class="card-h">' + judul + "</div>" +
-      (ujianHariIni.length ? '<div class="rc-alert">' + Icon("bolt") + "<div><b>Hari ini ujian " + ujianHariIni.map(x => esc(x.m.nama.id)).join(", ") + ".</b> Jangan buka materi baru — cukup baca ringkasan & kerjakan simulasi UTS sekali. Bismillah!</div></div>" : "") +
+      (ujianHariIni.length ? '<div class="rc-alert">' + Icon("bolt") + "<div><b>Hari ini ujian " + ujianHariIni.map(x => esc(x.m.nama.id)).join(", ") + ".</b> Jangan buka materi baru — cukup baca ringkasan & kerjakan simulasi UAS sekali. Bismillah!</div></div>" : "") +
       target +
       (daftar ? '<div class="rc-sec">' + Icon("list") + "Yang dipelajari hari ini</div><div class=\"rc-list\">" + daftar + "</div>" : "") +
-      '<div class="rc-sec">' + Icon("calendar") + "Jadwal UTS & kemajuan</div><div class=\"rc-exs\">" + jadwal + "</div>" +
+      '<div class="rc-sec">' + Icon("calendar") + "Jadwal ujian akhir & kemajuan</div><div class=\"rc-exs\">" + jadwal + "</div>" +
       '<p class="rc-tip">' + Icon("sparkle") + "<span><b>Tips:</b> " + tip + "</span></p></div>";
   }
   /* ===================== MATA KULIAH ===================== */
@@ -388,8 +388,8 @@
       (m.tentangPenulis ? '<details class="ak kc-pen"><summary>' + Icon("info") + lab("Tentang penulis", "عن المؤلف") + Icon("down", "ak-ic") + '</summary><div class="ak-b">' + bi(m.tentangPenulis) + "</div></details>" : "") +
       '<div class="kc-act">' + (m.lengkap ? '<a class="btn sm ghost" target="_blank" rel="noopener" href="' + m.lengkap + '">' + Icon("send") + lab("Berkas mata kuliah lengkap", "المقرر كاملًا") + "</a>" : "") +
       (list.length ? '<a class="btn sm" href="#/peta/' + id + '">' + Icon("map") + lab("Peta kitab", "خريطة الكتاب") + '</a><a class="btn sm" href="#/istilah/' + id + '">' + Icon("language") + lab("Istilah", "المصطلحات") + "</a>" : "") + "</div></div></div>" +
-      (list.length ? '<div class="mk-stats"><div><b>' + n(pr.done) + "/" + n(pr.total) + "</b><small>" + lab("selesai dibaca", "مقروءة") + "</small></div><div><b>" + n(pahamN) + "/" + n(tugasN) + "</b><small>" + lab("soal wajib dipahami", "واجبات مفهومة") + "</small></div><div><b>" + (utsB >= 0 ? n(utsB) + "%" : "–") + "</b><small>" + lab("simulasi UTS", "النصفي") + "</small></div><div><b>" + (uasB >= 0 ? n(uasB) + "%" : "–") + "</b><small>" + lab("simulasi UAS", "النهائي") + "</small></div></div>" +
-        '<div class="exam-row"><a class="btn" href="#/arena/uts/' + id + '">' + Icon("medal") + lab("Simulasi UTS (P1–8)", "الاختبار النصفي") + '</a><a class="btn gold" href="#/arena/uas/' + id + '">' + Icon("seal") + lab("Simulasi UAS (P1–16)", "الاختبار النهائي") + "</a>" + (pr.done >= pr.total && uasB >= 70 ? '<a class="btn ghost" href="#/sertifikat/' + id + '">' + Icon("seal") + lab("Sertifikat", "الشهادة") + "</a>" : "") + "</div>" : "") +
+      (list.length ? '<div class="mk-stats"><div><b>' + n(pr.done) + "/" + n(pr.total) + "</b><small>" + lab("selesai dibaca", "مقروءة") + "</small></div><div><b>" + n(pahamN) + "/" + n(tugasN) + "</b><small>" + lab("soal wajib dipahami", "واجبات مفهومة") + "</small></div><div><b>" + (uasB >= 0 ? n(uasB) + "%" : "–") + "</b><small>" + lab("simulasi UAS", "النهائي") + "</small></div></div>" +
+        '<div class="exam-row"><a class="btn gold" href="#/arena/uas/' + id + '">' + Icon("seal") + lab("Simulasi Ujian Akhir (P1–" + n(m.jumlah || 16) + ")", "الاختبار النهائي") + "</a>" + (pr.done >= pr.total && uasB >= 70 ? '<a class="btn ghost" href="#/sertifikat/' + id + '">' + Icon("seal") + lab("Sertifikat", "الشهادة") + "</a>" : "") + "</div>" : "") +
       '<div class="sec-h"><h2>' + lab("Daftar Pertemuan", "المحاضرات") + "</h2></div>" +
       '<div class="p-list">' + Array.from({ length: m.jumlah }, (_, i) => pCard(m, list.find(p => p.no === i + 1), i + 1)).join("") + "</div>" +
       footer() + "</div>";
@@ -694,10 +694,10 @@
       mkPicker(id => bankSoal(id).length, lab("Mata kuliah yang diujikan", "المقررات المختارة")) +
       '<p class="mp-sum">' + Icon("target") + "<span>" + labelPilihan() + " · <b>" + n(bankSoal(sel).length) + "</b> " + lab("soal di bank soal", "سؤالًا") + "</span></p>" +
       '<div class="arena-grid">' + modes.map((md, i) => '<a class="ar-tile st" style="--i:' + i + '" href="#/arena/' + md[0] + '"><span class="at-ic">' + Icon(md[1]) + "</span><b>" + lab(md[2], md[3]) + "</b><small>" + lab(md[4], md[5]) + "</small>" + bestChip(md[0]) + "</a>").join("") + "</div>" +
-      '<div class="sec-h"><h2>' + lab("Simulasi UTS & UAS per mata kuliah", "الاختبارات النصفية والنهائية") + "</h2></div>" +
+      '<div class="sec-h"><h2>' + lab("Simulasi Ujian Akhir per mata kuliah", "الاختبارات النهائية") + "</h2></div>" +
       '<div class="exam-list">' + sel.map((id, i) => { const m = mkById(id), u1 = Store.terbaikUjian("uts-" + id), u2 = Store.terbaikUjian("uas-" + id);
         return '<div class="ex-row st" style="--i:' + i + '"><span class="mk-ic t' + (m.tema || 0) + '">' + Icon(m.ikon) + "</span><div class=\"ex-b\"><b>" + one(m.nama) + "</b><small>" + one(m.dosen) + "</small></div>" +
-          '<a class="btn sm" href="#/arena/uts/' + id + '">' + Icon("medal") + "UTS" + (u1 >= 0 ? " · " + n(u1) + "%" : "") + '</a><a class="btn sm gold" href="#/arena/uas/' + id + '">' + Icon("seal") + "UAS" + (u2 >= 0 ? " · " + n(u2) + "%" : "") + "</a></div>"; }).join("") + "</div>" +
+          '<a class="btn sm gold" href="#/arena/uas/' + id + '">' + Icon("seal") + "Ujian Akhir" + (u2 >= 0 ? " · " + n(u2) + "%" : "") + "</a></div>"; }).join("") + "</div>" +
       '<div class="sec-h"><h2>' + lab("Riwayat ujian", "سجل الاختبارات") + "</h2></div>" +
       (hist.length ? '<div class="hist">' + hist.map(h => '<div class="hist-r"><span class="hist-n">' + esc(namaUjian(h.id)) + '</span><span class="bar"><i style="width:' + Math.min(100, h.pct) + '%"></i></span><b>' + n(h.pct) + (h.id === "cepat" || h.id === "tahan" ? "" : "%") + "</b><small>" + new Date(h.ts).toLocaleDateString("id-ID", { day: "numeric", month: "short" }) + "</small></div>").join("") + "</div>" : empty("trophy", "Belum ada riwayat. Ayo mulai!", "لا يوجد سجل بعد")) + "</div>";
     bindPicker(view, () => route(true));
@@ -740,10 +740,11 @@
       host.innerHTML = '<div class="exam-intro"><div class="ei-rules"><h3>' + Icon("info") + lab("Ketentuan", "التعليمات") + "</h3><ul><li>" + lab("Soal diacak dari seluruh pertemuan mata kuliah yang kamu pilih.", "أسئلة عشوائية من المقررات المختارة") + "</li><li>" + lab("Waktu 40 menit; saat habis, ujian selesai.", "٤٠ دقيقة") + "</li><li>" + lab("Label di tiap soal menunjukkan mata kuliah & pertemuan asalnya.", "يظهر مصدر كل سؤال") + '</li></ul></div><button class="btn gold lg ei-go">' + Icon("play") + lab("Mulai ujian", "ابدأ الاختبار") + "</button></div>";
       $(".ei-go").onclick = () => { Audio2.sfx("open"); ctl = Games.pg(host, pick(all, 30), { waktu: 40 * 60, onDone: r => { const pct = Store.catatUjian("gabungan", r.benar, r.total, r.durasi); if (pct >= 70) Store.addXP(20, "Ujian gabungan"); return { xp: pct >= 70 ? 20 : 0 }; } }); };
     } else if (mode === "uts" || mode === "uas") {
+      if (mode === "uts") { location.replace("#/arena/uas/" + mkId); return; }
       const m = mkById(mkId); if (!m) return notFound();
       const uts = mode === "uts";
       const bank = bankSoal(m.id, 1, uts ? 8 : 16), jumlah = uts ? 25 : 40, menit = uts ? 30 : 50, id = mode + "-" + m.id;
-      H(uts ? "medal" : "seal", (uts ? "Simulasi UTS " : "Simulasi UAS ") + m.nama.id, (uts ? "الاختبار النصفي: " : "الاختبار النهائي: ") + m.nama.ar, lab(n(Math.min(jumlah, bank.length)) + " soal · " + n(menit) + " menit · nilai lulus 70", "النجاح ٧٠٪"));
+      H(uts ? "medal" : "seal", (uts ? "Simulasi UTS " : "Simulasi Ujian Akhir ") + m.nama.id, (uts ? "الاختبار النصفي: " : "الاختبار النهائي: ") + m.nama.ar, lab(n(Math.min(jumlah, bank.length)) + " soal · " + n(menit) + " menit · nilai lulus 70", "النجاح ٧٠٪"));
       host.innerHTML = '<div class="exam-intro"><div class="ei-rules"><h3>' + Icon("info") + lab("Ketentuan", "التعليمات") + "</h3><ul><li>" + lab("Soal diacak dari pertemuan " + (uts ? "1–8" : "1–16") + ".", "أسئلة عشوائية") + "</li><li>" + lab("Waktu berjalan otomatis; saat habis, ujian selesai.", "ينتهي الاختبار بانتهاء الوقت") + "</li><li>" + lab("Penjelasan jawaban muncul setelah tiap soal.", "يظهر الشرح بعد كل سؤال") + "</li><li>" + lab("Nilai ≥ 70 membuka lencana" + (uts ? "." : " dan sertifikat (bila semua pertemuan selesai)."), "٧٠٪ للنجاح") + '</li></ul></div><button class="btn gold lg ei-go">' + Icon("play") + lab("Mulai ujian", "ابدأ الاختبار") + "</button></div>";
       $(".ei-go").onclick = () => {
         Audio2.sfx("open");
@@ -856,7 +857,7 @@
     const totalMenit = Math.round(Object.values(S().hari).reduce((s, d) => s + (d.menit || 0), 0));
     const ada = adaData(), rid = ada.some(m => m.id === S().set.raporMk) ? S().set.raporMk : (ada[0] || {}).id, mk = mkById(rid) || MKS()[0], list = Kuliah.list(mk.id);
     const ringkas = ada.map(m => { const pr = mkProgress(m.id), sk = Object.entries(S().skor).filter(([k, x]) => k.startsWith(m.id + "/") && x.total), avg = sk.length ? Math.round(sk.reduce((s, [, x]) => s + x.best / x.total, 0) / sk.length * 100) : null, u1 = Store.terbaikUjian("uts-" + m.id), u2 = Store.terbaikUjian("uas-" + m.id);
-      return '<tr><td><span class="mk-dot t' + (m.tema || 0) + '">' + Icon(m.ikon) + '</span><a href="#/mk/' + m.id + '">' + esc(m.nama.id) + "</a></td><td>" + n(pr.done) + "/" + n(pr.total) + "</td><td>" + (avg != null ? n(avg) + "%" : "–") + "</td><td>" + (u1 >= 0 ? n(u1) + "%" : "–") + "</td><td>" + (u2 >= 0 ? n(u2) + "%" : "–") + "</td></tr>"; }).join("");
+      return '<tr><td><span class="mk-dot t' + (m.tema || 0) + '">' + Icon(m.ikon) + '</span><a href="#/mk/' + m.id + '">' + esc(m.nama.id) + "</a></td><td>" + n(pr.done) + "/" + n(pr.total) + "</td><td>" + (avg != null ? n(avg) + "%" : "–") + "</td><td>" + (u2 >= 0 ? n(u2) + "%" : "–") + "</td></tr>"; }).join("");
     view.innerHTML = '<div class="wrap">' +
       '<div class="prof-card"><div class="pf-av">' + Icon(pr.avatar || "moonStar") + '</div><div class="pf-b"><h1>' + esc(pr.nama || "Penuntut Ilmu") + "</h1><p class=\"muted\">" + (pr.nim ? "NIM " + esc(pr.nim) + " · " : "") + one(PROGRAM.angkatan) + "</p>" +
       '<div class="pf-lv"><span class="ring" style="--p:' + Math.round(lv.pct * 100) + '"><b>' + n(lv.no) + "</b></span><div><b>" + lab(lv.nama.id, lv.nama.ar) + '</b><div class="bar"><i style="width:' + Math.round(lv.pct * 100) + '%"></i></div><small>' + n(S().xp) + " XP" + (lv.next ? " · " + lab(n(lv.sisa) + " XP menuju " + lv.next.id, "بقي " + arNum(lv.sisa)) : "") + "</small></div></div></div>" +
@@ -864,7 +865,7 @@
       '<div class="stats">' + stat("streak", Icon("flame", "big"), n(st), lab("hari istiqamah", "يوم"), "#/profil") + stat("baca", Icon("clock", "big"), n(totalMenit), lab("menit belajar", "دقيقة"), "#/profil") + stat("skor", Icon("seal", "big"), n(Object.keys(S().lencana).length) + "/" + n(Store.LENCANA.length), lab("lencana", "الأوسمة"), "#/profil") + stat("level", Icon("cards", "big"), n(S().dilihat.kartu || 0), lab("kartu diulang", "بطاقة"), "#/murajaah") + "</div>" +
       '<div class="sec-h"><h2>' + lab("Aktivitas 14 hari", "النشاط") + '</h2></div><div class="act-chart">' + days.map(x => '<div class="ac-col" title="' + x.d.toLocaleDateString("id-ID") + ": " + (x.v.xp || 0) + ' XP"><i style="height:' + Math.round((x.v.xp || 0) / maxXP * 100) + '%"></i><small>' + x.d.toLocaleDateString("id-ID", { weekday: "narrow" }) + "</small></div>").join("") + "</div>" +
       pekananHtml() + '<div class="sec-h"><h2>' + lab("Ringkasan semua mata kuliah", "ملخص المقررات") + '</h2><button class="btn ghost sm rp-print">' + Icon("print") + lab("Cetak rapor", "طباعة") + "</button></div>" +
-      '<div class="tabel-scroll"><table class="tabel rapor"><thead><tr><th>' + lab("Mata kuliah", "المقرر") + "</th><th>" + lab("Dibaca", "مقروءة") + "</th><th>" + lab("Rata-rata latihan", "متوسط التمارين") + "</th><th>UTS</th><th>UAS</th></tr></thead><tbody>" + ringkas + "</tbody></table></div>" +
+      '<div class="tabel-scroll"><table class="tabel rapor"><thead><tr><th>' + lab("Mata kuliah", "المقرر") + "</th><th>" + lab("Dibaca", "مقروءة") + "</th><th>" + lab("Rata-rata latihan", "متوسط التمارين") + "</th><th>Ujian Akhir</th></tr></thead><tbody>" + ringkas + "</tbody></table></div>" +
       '<div class="sec-h"><h2>' + lab("Rapor " + mk.nama.id, "كشف الدرجات: " + mk.nama.ar) + "</h2></div>" +
       '<div class="mp-chips rp-tabs">' + ada.map(m => '<button class="mp-chip t' + (m.tema || 0) + (m.id === mk.id ? " on" : "") + '" data-rp="' + m.id + '"><span class="mp-ic">' + Icon(m.ikon) + "</span><span>" + esc(m.nama.id) + "</span></button>").join("") + "</div>" +
       '<div class="tabel-scroll"><table class="tabel rapor"><thead><tr><th>#</th><th>' + lab("Pertemuan", "المحاضرة") + "</th><th>" + lab("Baca", "قراءة") + "</th><th>PG</th><th>B/S</th><th>" + lab("Lainnya", "أخرى") + "</th><th>" + lab("Wajib", "الواجب") + "</th></tr></thead><tbody>" +

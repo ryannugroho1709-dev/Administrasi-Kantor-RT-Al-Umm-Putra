@@ -47,7 +47,7 @@ window.SITE = {
     ["scroll", "Teks asli tafrigh", "Transkrip Arab lengkap tiap kuliah, bisa dicari kata per kata."],
     ["puzzle", "7 jenis latihan & game", "Pilihan ganda, benar/salah, menjodohkan, urutan, isian, pilah kategori, kartu istilah."],
     ["pen", "Soal wajib + kunci", "أسئلة الواجب dari modul dengan kunci jawaban dwibahasa & penilaian diri."],
-    ["trophy", "Arena ujian", "Tantangan harian, kuis kilat, adu cepat, tahan uji, simulasi UTS & UAS."],
+    ["trophy", "Arena ujian", "Tantangan harian, kuis kilat, adu cepat, tahan uji, simulasi ujian akhir."],
     ["cards", "Muraja'ah berjarak", "Kartu istilah dengan sistem 5 kotak Leitner."],
     ["medal", "XP, level & lencana", "Gelar bertingkat dari Mubtadi' hingga Mudaqqiq, 15 lencana prestasi."],
     ["map", "Peta kitab", "Gambaran besar isi kitab dan posisi tiap pertemuan."],
