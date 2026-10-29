@@ -1273,6 +1273,10 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
               <label class="form-label">Batas absen pulang (menit setelah jam selesai)</label>
               <input id="pg-batas-pulang" type="number" step="1" class="input"/>
             </div>
+            <div class="field">
+              <label class="form-label">Absen pulang terbuka (menit sebelum jam selesai)</label>
+              <input id="pg-pulang-awal" type="number" step="1" min="0" class="input" placeholder="10"/>
+            </div>
           </div>
           <div style="font-size:10.5px;color:var(--text-secondary);margin:-6px 0 14px;">Absen Masuk hanya bisa dilakukan mulai sekian menit sebelum jam mulai jadwal. Absen Pulang harus dilakukan paling lambat sekian menit setelah jam selesai jadwal — kalau lewat, sesi dianggap Tidak Hadir saat berganti hari dan hanya bisa diperbaiki admin.</div>
 
@@ -1648,6 +1652,7 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button class="btn btn-ghost" onclick="openPengaturanKopSurat()">⚙️ <span data-i18n="kopSurat">Kop Surat</span></button>
+            <button class="btn btn-accent" onclick="bukaKesimpulanBulanan()">🧭 Kesimpulan Bulanan</button>
             <button class="btn btn-outline" onclick="eksporRekapLaporanKinerja()">📄 <span data-i18n="eksporRekap">Ekspor Rekap</span></button>
             <button class="btn btn-outline" onclick="bukaDaftarSlipGaji()">🧾 Slip Gaji</button>
           </div>
@@ -1672,10 +1677,6 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
           <div id="kepsek-tukar-antrian" style="margin-top:10px;"></div>
         </div>
         <div class="card" style="margin-bottom:12px;">
-          <b>📜 Riwayat Tukar/Pindah Jadwal</b>
-          <div id="kepsek-tukar-riwayat" style="margin-top:10px;"></div>
-        </div>
-        <div class="card" style="margin-bottom:12px;">
           <b>📝 Jurnal Terlambat — Menunggu Persetujuan</b>
           <div id="kepsek-jurnal-terlambat" style="margin-top:10px;"></div>
         </div>
@@ -1684,10 +1685,14 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
           <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">Sesi yang sudah absen masuk tapi tidak ada jurnal & absen pulang, sehingga jatuh Alpha. Kirim pengingat lewat WA supaya tidak terulang.</div>
           <div id="kepsek-lupa-jurnal" style="margin-top:10px;"></div>
         </div>
-        <div class="card">
-          <b data-i18n="riwayatPengajuan">Riwayat Pengajuan</b>
+        <details class="card kp-lipat" data-render="tukar" style="margin-bottom:12px;" ontoggle="_bukaLipatKepsek(this)">
+          <summary style="cursor:pointer;font-weight:700;">📜 Riwayat Tukar/Pindah Jadwal <span style="font-weight:400;font-size:11px;color:var(--text-secondary);">— ketuk untuk membuka / menutup</span></summary>
+          <div id="kepsek-tukar-riwayat" style="margin-top:10px;"></div>
+        </details>
+        <details class="card kp-lipat" data-render="pengajuan" ontoggle="_bukaLipatKepsek(this)">
+          <summary style="cursor:pointer;font-weight:700;"><span data-i18n="riwayatPengajuan">Riwayat Pengajuan</span> <span style="font-weight:400;font-size:11px;color:var(--text-secondary);">— ketuk untuk membuka / menutup</span></summary>
           <div id="kepsek-riwayat" style="margin-top:10px;"></div>
-        </div>
+        </details>
       </section>
 
       <!-- ══ DATA GURU ══ -->
@@ -3077,7 +3082,7 @@ function refreshCurrentPage() {
 let _konfirmasiPending = null;
 function closeModal() {
   qs("modal-overlay").classList.remove("open");
-  qs("modal-panel").innerHTML = "";
+  qs("modal-panel").innerHTML = ""; qs("modal-panel").classList.remove("modal-lebar");
   if (_konfirmasiPending) { const r = _konfirmasiPending; _konfirmasiPending = null; r(false); }
 }
 function openModal(html, opsi = {}) {
@@ -3313,6 +3318,7 @@ async function boot() {
   try {
     STATE.pengaturan = await apiGetPengaturanSekolah();
   } catch (e) { console.warn("Pengaturan sekolah belum tersedia, pakai default.", e); }
+  await _muatPulangAwal();
   terapkanLogoSekolah();
   muatDaftarMetodeDariPengaturan();
 
@@ -3424,8 +3430,10 @@ function _jadwalPerluJurnal() {
 function htmlPengingatJurnal() {
   const daftar = _jadwalPerluJurnal(), tertunda = STATE.jurnalTertunda || [];
   const bannerTertunda = tertunda.length ? `<div class="pengingat-jurnal" role="alert"><span style="font-size:20px;line-height:1;">📝</span><div style="flex:1;min-width:0;"><b>${tertunda.length} jurnal tertunda</b><div style="margin-top:3px;">Admin sudah membantu absen pulang — lengkapi jurnalnya (batas ${JURNAL_TERTUNDA_BATAS_HARI} hari).${tertunda.some(_lewatBatasJurnalTertunda) ? " <b style=\"color:var(--bad,#c0392b);\">Ada yang lewat batas.</b>" : ""}</div></div><button class="btn btn-accent" style="padding:7px 12px;font-size:11.5px;flex-shrink:0;align-self:center;" onclick="tampilkanJurnalTertunda()">Isi Sekarang</button></div>` : "";
-  if (!daftar.length) return bannerTertunda;
-  return bannerTertunda + `<div class="pengingat-jurnal" role="alert">
+  const tinggal = _sesiTinggalPulang();
+  const bannerPulang = tinggal.length ? `<div class="pengingat-jurnal" role="status" style="border-color:rgba(245,158,11,.45);"><span style="font-size:20px;line-height:1;">🏠</span><div style="flex:1;min-width:0;"><b>Tinggal absen pulang</b>${tinggal.map((d) => `<div style="margin-top:3px;">${escapeHtml(d.j.mapel?.nama_mapel || "-")} · ${escapeHtml(d.j.kelas?.nama_kelas || "-")} — ${d.cek.ok ? "<b>sudah bisa sekarang</b>" : "terbuka pukul <b>" + d.cek.jam + "</b> WITA"}</div>`).join("")}</div>${tinggal.some((d) => d.cek.ok) ? `<button class="btn btn-accent" style="padding:7px 12px;font-size:11.5px;flex-shrink:0;align-self:center;" onclick="handleAbsenPulang('${tinggal.find((d) => d.cek.ok).j.id}')">Absen Pulang</button>` : ""}</div>` : "";
+  if (!daftar.length) return bannerTertunda + bannerPulang;
+  return bannerTertunda + bannerPulang + `<div class="pengingat-jurnal" role="alert">
     <span style="font-size:20px;line-height:1;">📝</span>
     <div style="flex:1;min-width:0;">
       <b>Jurnal belum diisi</b>
@@ -3548,15 +3556,35 @@ async function isiJurnalTertunda(sesiId) {
     });
   } catch (e) { console.error(e); toast("Gagal membuka form: " + e.message, "err"); }
 }
+// "Absen pulang terbuka X menit sebelum kelas selesai" — disimpan di kuliah_pengaturan (kunci-nilai)
+async function _muatPulangAwal() {
+  STATE.pengaturan = STATE.pengaturan || {};
+  try { const c = localStorage.getItem("pulangAwalMenit"); if (c !== null) STATE.pengaturan.pulang_awal_menit = +c; } catch (e) {}
+  try { const r = await supa.from("kuliah_pengaturan").select("nilai").eq("kunci", "absen:pulang_awal_menit").maybeSingle(); if (r.data && typeof r.data.nilai === "number") { STATE.pengaturan.pulang_awal_menit = r.data.nilai; localStorage.setItem("pulangAwalMenit", String(r.data.nilai)); } } catch (e) {}
+}
+function _sesiTinggalPulang() {
+  return (STATE.jadwalHariIni || []).map((j) => { const sesi = sesiUntukJadwal(j.id); if (!sesi || !sesi.jam_masuk || !sesi.jurnal_id || sesi.jam_pulang) return null; return { j, sesi, cek: cekJendelaAbsenPulang(j) }; })
+    .filter((x) => x && (x.cek.ok || x.cek.awal));
+}
 function _cekPengingatJurnal() {
+  _sesiTinggalPulang().forEach((d) => {
+    const kunci = "buka:" + d.sesi.id;
+    if (!d.cek.ok || _PENGINGAT_JURNAL_TERKIRIM.has(kunci)) return;
+    _PENGINGAT_JURNAL_TERKIRIM.add(kunci);
+    if (["absensi-guru", "dashboard"].includes(STATE.currentPage)) refreshCurrentPage();
+    const pesan = `Absen pulang ${d.j.mapel?.nama_mapel || ""} ${d.j.kelas?.nama_kelas || ""} sudah terbuka — jurnal sudah terisi, tinggal absen pulang.`;
+    toast(pesan, "warn");
+    try { if ("Notification" in window && Notification.permission === "granted") new Notification("Saatnya absen pulang", { body: pesan, icon: urlLogoSekolah() }); } catch (e) {}
+  });
   // Tepat saat jam pelajaran selesai: ingatkan isi jurnal & absen pulang (sebelum lupa)
   _jadwalPerluJurnal().forEach((d) => {
-    const kunci = "selesai:" + d.sesi.id, batasMenit = (STATE.pengaturan || {}).batas_pulang_menit ?? 100;
-    if (d.sisaMenit === null || d.sisaMenit > batasMenit || d.sisaMenit <= 20 || _PENGINGAT_JURNAL_TERKIRIM.has(kunci)) return;
+    const kunci = "selesai:" + d.sesi.id, batasMenit = (STATE.pengaturan || {}).batas_pulang_menit ?? 100, awalMenit = (STATE.pengaturan || {}).pulang_awal_menit ?? 10;
+    if (d.sisaMenit === null || d.sisaMenit > batasMenit + awalMenit || d.sisaMenit <= 20 || _PENGINGAT_JURNAL_TERKIRIM.has(kunci)) return;
     _PENGINGAT_JURNAL_TERKIRIM.add(kunci);
-    const pesan = `Kelas ${d.j.mapel?.nama_mapel || ""} ${d.j.kelas?.nama_kelas || ""} sudah selesai — isi jurnal & absen pulang sekarang (batas ${d.batasStr} WITA).`;
+    if (["absensi-guru", "dashboard"].includes(STATE.currentPage)) refreshCurrentPage();
+    const pesan = `Absen pulang ${d.j.mapel?.nama_mapel || ""} ${d.j.kelas?.nama_kelas || ""} sudah terbuka — isi jurnal & absen pulang sekarang (batas ${d.batasStr} WITA).`;
     toast(pesan, "warn");
-    try { if ("Notification" in window && Notification.permission === "granted") new Notification("Kelas selesai — isi jurnal", { body: pesan, icon: urlLogoSekolah() }); } catch (e) {}
+    try { if ("Notification" in window && Notification.permission === "granted") new Notification("Saatnya absen pulang", { body: pesan, icon: urlLogoSekolah() }); } catch (e) {}
   });
   _jadwalPerluJurnal().forEach((d) => {
     if (d.sisaMenit === null || d.sisaMenit > 20 || _PENGINGAT_JURNAL_TERKIRIM.has(d.sesi.id)) return;
@@ -4456,7 +4484,7 @@ function renderAbsensiGuru() {
       <div class="aksi-grid">
         ${aksiTile({ icon: "✅", label: t("absenMasuk"), sub: t("absensiMasukSub"), color: "#16A34A", bg: "rgba(22,163,74,.12)", onclick: `handleAbsenMasuk('${j.id}')`, disabled: !!sudahMasuk, done: !!sudahMasuk })}
         ${aksiTile({ icon: "📝", label: t("formJurnalKelas"), sub: t("materiAbsenSiswaSub"), color: "#3B82F6", bg: "rgba(59,130,246,.12)", onclick: `openJurnalForm('${j.id}')`, disabled: !sudahMasuk, done: !!sudahJurnal })}
-        ${aksiTile({ icon: "🏠", label: t("absenPulang"), sub: t("catatKepulanganSub"), color: "#F59E0B", bg: "rgba(245,158,11,.12)", onclick: `handleAbsenPulang('${j.id}')`, disabled: pulangDisabled, done: !!sudahPulang })}
+        ${aksiTile({ icon: "🏠", label: t("absenPulang"), sub: cekPulang.awal ? "🔒 Terbuka pukul " + cekPulang.jam : (!cekPulang.ok && sudahMasuk && !sudahPulang ? "⛔ Waktu habis — hubungi admin" : t("catatKepulanganSub")), color: "#F59E0B", bg: "rgba(245,158,11,.12)", onclick: `handleAbsenPulang('${j.id}')`, disabled: pulangDisabled, done: !!sudahPulang })}
       </div>
       ${sudahMasuk && !sudahJurnal ? `<div style="margin-top:8px;font-size:11px;color:var(--warn);font-weight:700;">⚠️ ${t("isiJurnalDulu")}</div>` : ""}
       ${sudahMasuk && !sudahPulang && !cekPulang.ok ? `<div style="margin-top:4px;font-size:10.5px;color:var(--text-secondary);">🔒 Waktu absen pulang sudah habis${isAdmin() ? " — hanya admin yang bisa mencatat." : " — hubungi admin."}</div>` : ""}
@@ -4731,7 +4759,7 @@ function cekJendelaAbsenPulang(jadwal) {
   const bolehMulai = jadwalWajar ? new Date(jamSelesai.getTime() - awalMenit * 60000) : jamMulai;
   if (bolehMulai && realNow() < bolehMulai) {
     const jam = new Intl.DateTimeFormat("id-ID", { timeZone: "Asia/Makassar", hour: "2-digit", minute: "2-digit" }).format(bolehMulai);
-    return { ok: false, awal: true, pesan: `Belum waktunya absen pulang — baru bisa mulai pukul ${jam} WITA (${awalMenit} menit sebelum kelas selesai jam ${jadwal.jam_selesai?.slice(0, 5)}).` };
+    return { ok: false, awal: true, jam, pesan: `Belum waktunya absen pulang — baru bisa mulai pukul ${jam} WITA (${awalMenit} menit sebelum kelas selesai jam ${jadwal.jam_selesai?.slice(0, 5)}).` };
   }
   if (!jadwalWajar) return { ok: true };
   const batasAkhir = new Date(jamSelesai.getTime() + batas * 60000);
@@ -7130,6 +7158,7 @@ function renderPengaturanSekolah() {
   qs("pg-radius").value = p.radius_meter ?? p.radius ?? window.GEO_DEFAULT.radius;
   qs("pg-toleransi-masuk").value = p.toleransi_masuk_menit ?? 30;
   qs("pg-batas-pulang").value = p.batas_pulang_menit ?? 100;
+  if (qs("pg-pulang-awal")) qs("pg-pulang-awal").value = p.pulang_awal_menit ?? 10;
   qs("pg-blokir-minggu").checked = p.blokir_hari_minggu !== false;
   if (qs("pg-tahun-ajaran-mulai")) qs("pg-tahun-ajaran-mulai").value = p.tahun_ajaran_mulai || "";
   if (qs("pg-bulan-awal-ta")) qs("pg-bulan-awal-ta").value = String(p.bulan_awal_tahun_ajaran || 7);
@@ -7467,6 +7496,9 @@ async function simpanPengaturanSekolah() {
   setGlobalLoading(true, "Menyimpan pengaturan...");
   try {
     STATE.pengaturan = await apiSimpanPengaturanSekolah(data);
+    const awal = parseInt(qs("pg-pulang-awal")?.value);
+    if (!isNaN(awal) && awal >= 0) { try { await supa.from("kuliah_pengaturan").upsert({ kunci: "absen:pulang_awal_menit", nilai: awal }); localStorage.setItem("pulangAwalMenit", String(awal)); } catch (e) { console.warn(e); } }
+    await _muatPulangAwal();
     terapkanLogoSekolah();
     toast("Pengaturan tersimpan", "ok");
   } catch (e) { console.error(e); toast("Gagal menyimpan: " + e.message, "err"); }
@@ -12459,13 +12491,16 @@ async function renderLaporanKinerja() {
         .filter((gid) => !idGuruAktif.has(gid))
         .map((gid) => guruMusyrifMap[gid] || (LOOKUP.guruAll || []).find((g) => g.id === gid) || { id: gid, nama: "-" });
       const daftarGuruGabungan = [...guruAktif, ...guruMusyrifSaja];
+      // Tukar/pindah jam yang DISETUJUI bulan ini, dihitung per guru pengaju
+      const tukarPerGuru = {};
+      try { (await apiGetRiwayatTukarJadwalSemua(dari, sampai)).filter((x) => x.status === "disetujui").forEach((x) => { tukarPerGuru[x.guru_pengaju_id] = (tukarPerGuru[x.guru_pengaju_id] || 0) + 1; }); } catch (e) { console.warn("Gagal hitung tukar jam:", e); }
       const baris = await Promise.all(daftarGuruGabungan.map(async (g) => {
         const sesi = await apiGetRiwayatAbsenGuru(g.id, dari, sampai);
         const ring = _ringkasKehadiranSesi(sesi);
         const s = slip.find((x) => x.guru_id === g.id);
         const honor = s?.total || 0;
         const honorMusyrif = musyrifPerGuru[g.id] || 0;
-        return { guru: g, ring, jp: s?.jumlah_jp || 0, honor, honorMusyrif, totalGabungan: honor + honorMusyrif };
+        return { guru: g, ring, tukar: tukarPerGuru[g.id] || 0, jp: s?.jumlah_jp || 0, honor, honorMusyrif, totalGabungan: honor + honorMusyrif };
       }));
       const totalJP = baris.reduce((a, b) => a + b.jp, 0);
       const totalHonor = baris.reduce((a, b) => a + b.honor, 0);
@@ -12473,8 +12508,8 @@ async function renderLaporanKinerja() {
       const totalGabunganSemua = baris.reduce((a, b) => a + b.totalGabungan, 0);
       const adaMusyrifBulanIni = totalHonorMusyrif > 0;
       const lkColsPx = adaMusyrifBulanIni
-        ? [32, 130, 55, 45, 40, 40, 45, 55, 55, 90, 90, 100]
-        : [32, 130, 55, 45, 40, 40, 45, 55, 55, 90];
+        ? [32, 130, 55, 45, 40, 40, 45, 50, 55, 55, 90, 90, 100]
+        : [32, 130, 55, 45, 40, 40, 45, 50, 55, 55, 90];
       const lkTableWidth = lkColsPx.reduce((a, w) => a + w, 0);
       const lkColGroup = `<colgroup>${lkColsPx.map((w) => `<col style="width:${w}px;"/>`).join("")}</colgroup>`;
       const lkStatBaris = (label, value, style = "") => `<div><span class="lk-stat-label">${label}</span><span class="lk-stat-value" style="${style}">${value}</span></div>`;
@@ -12485,7 +12520,7 @@ async function renderLaporanKinerja() {
           <thead><tr>
             <th class="sticky-col-1" style="white-space:nowrap;">${t("noKolom")}</th><th class="sticky-col-2" style="left:32px;">${t("namaKolom")}</th>
             <th data-i18n="totalSesi">Total Sesi</th><th data-i18n="hadirKolom">Hadir</th>
-            <th data-i18n="izinKolom">Izin</th><th data-i18n="sakitKolom">Sakit</th><th data-i18n="alphaKolom">Alpha</th>
+            <th data-i18n="izinKolom">Izin</th><th data-i18n="sakitKolom">Sakit</th><th data-i18n="alphaKolom">Alpha</th><th>Tukar Jam</th>
             <th data-i18n="persenHadirKolom">% Hadir</th><th>${t("totalJP")}</th><th data-i18n="honorMengajarLabel">Honor Mengajar</th>
             ${adaMusyrifBulanIni ? `<th data-i18n="insentifMusyrifLabel">Insentif Musyrif</th><th data-i18n="totalGabunganLabel">Total Gabungan</th>` : ""}
           </tr></thead>
@@ -12496,12 +12531,13 @@ async function renderLaporanKinerja() {
             <td style="text-align:center;">${b.ring.izin}</td>
             <td style="text-align:center;">${b.ring.sakit}</td>
             <td style="text-align:center;color:var(--err, #d33);">${b.ring.alpha}</td>
+            <td style="text-align:center;">${b.tukar ? b.tukar + "x" : "–"}</td>
             <td style="text-align:center;font-weight:700;white-space:nowrap;">${b.ring.persenHadir}%</td>
             <td style="text-align:center;">${b.jp}</td>
             <td style="white-space:nowrap;">${formatRupiah(Number(b.honor))}</td>
             ${adaMusyrifBulanIni ? `<td style="white-space:nowrap;">${_rupiahAtauStrip(b.honorMusyrif)}</td><td style="white-space:nowrap;font-weight:800;color:var(--accent);">${formatRupiah(Number(b.totalGabungan))}</td>` : ""}
           </tr>`).join("")}
-          <tr style="font-weight:800;background:var(--accent-soft);"><td colspan="8" style="text-align:right;">Total</td><td style="text-align:center;">${totalJP}</td><td>${formatRupiah(totalHonor)}</td>
+          <tr style="font-weight:800;background:var(--accent-soft);"><td colspan="9" style="text-align:right;">Total</td><td style="text-align:center;">${totalJP}</td><td>${formatRupiah(totalHonor)}</td>
           ${adaMusyrifBulanIni ? `<td>${formatRupiah(totalHonorMusyrif)}</td><td>${formatRupiah(totalGabunganSemua)}</td>` : ""}</tr>
           </tbody>
         </table>
@@ -12519,6 +12555,7 @@ async function renderLaporanKinerja() {
             ${lkStatBaris(t("izinKolom"), b.ring.izin)}
             ${lkStatBaris(t("sakitKolom"), b.ring.sakit)}
             ${lkStatBaris(t("alphaKolom"), b.ring.alpha, "color:var(--err,#d33);")}
+            ${lkStatBaris("Tukar Jam", b.tukar ? b.tukar + "x" : "–")}
             ${lkStatBaris(t("totalJP"), b.jp)}
             ${lkStatBaris(t("honorMengajarLabel"), formatRupiah(Number(b.honor)))}
             ${adaMusyrifBulanIni ? lkStatBaris(t("insentifMusyrifLabel"), _rupiahAtauStrip(b.honorMusyrif)) : ""}
@@ -13069,10 +13106,15 @@ async function renderKepsekInit() {
   try { await apiAutoTutupPengajuanKadaluarsa(); } catch (e) { console.warn("Gagal auto-tutup pengajuan lama", e); }
   await renderKepsekAntrian();
   await renderKepsekTukarAntrian();
-  await renderKepsekTukarRiwayat();
   await renderKepsekJurnalTerlambat();
   await renderKepsekLupaJurnal();
-  await renderKepsekRiwayat();
+  // Riwayat dilipat — baru dimuat saat dibuka (hemat kuota & tidak memanjangkan halaman)
+  qsa("#page-kepsek details.kp-lipat").forEach((d) => { d.dataset.dimuat = ""; if (d.open) _bukaLipatKepsek(d); });
+}
+function _bukaLipatKepsek(d) {
+  if (!d.open || d.dataset.dimuat) return;
+  d.dataset.dimuat = "1";
+  (d.dataset.render === "tukar" ? renderKepsekTukarRiwayat : renderKepsekRiwayat)();
 }
 // ── Rekap "masuk tapi lupa jurnal" per guru (14 hari) + WA pengingat sekali ketuk. ──
 async function renderKepsekLupaJurnal() {
@@ -15728,6 +15770,7 @@ async function handleImportSiswa(evt) {
 <script src="src/kas.js?v=3"></script>
 <script src="src/kuliah.js?v=14"></script>
 <script src="src/modul-baca.js?v=2"></script>
+<script src="src/kesimpulan.js?v=1"></script>
 <script src="src/hp.js?v=2"></script>
 </body>
 </html>
