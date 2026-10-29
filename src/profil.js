@@ -88,22 +88,33 @@ async function bukaProfilGuru(guruId) {
     const inp = (id, label, nilai, type) => `<label class="pf-f"><span>${label}</span><input id="${id}" class="input" type="${type || "text"}" value="${escapeHtml(nilai || "")}" ${bolehUbah ? "" : "disabled"}/></label>`;
     const pilihGuru = isAdmin() ? `<select class="input" style="max-width:260px;margin:-4px 0 12px;" onchange="bukaProfilGuru(this.value)">${(LOOKUP.guruAll || []).filter((x) => x.status_aktif !== false).sort((a, b) => a.nama.localeCompare(b.nama)).map((x) => `<option value="${x.id}"${x.id === guruId ? " selected" : ""}>${escapeHtml(x.nama)}</option>`).join("")}</select>` : "";
     qs("pf-wrap").innerHTML = `<style>
-      .pf-head{display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:16px;border-radius:18px;background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 60%,#000));color:#fff;margin-bottom:14px}
-      .pf-foto{position:relative;width:92px;height:92px;border-radius:50%;background:#fff3;flex:none;overflow:hidden;border:3px solid #fff8}
-      .pf-foto img{width:100%;height:100%;object-fit:cover}.pf-foto span{display:grid;place-items:center;width:100%;height:100%;font-size:36px}
-      .pf-foto label{position:absolute;inset:auto 0 0 0;background:#0008;font-size:10.5px;text-align:center;padding:3px 0;cursor:pointer}
-      .pf-head h2{margin:0;font-size:18px}.pf-head p{margin:2px 0 0;opacity:.9;font-size:12px}
-      .pf-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.pf-chips span{background:#ffffff26;padding:2px 9px;border-radius:999px;font-size:11px}
-      .pf-stat{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:14px}
-      .pf-stat div{border:1px solid var(--border-soft);border-radius:12px;padding:9px;text-align:center}.pf-stat b{display:block;font-size:19px}.pf-stat small{font-size:10.5px;color:var(--text-secondary)}
-      .pf-sec{font-weight:800;font-size:13px;margin:14px 0 8px}
-      .pf-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px 14px}
-      .pf-row{display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:6px 0;border-bottom:1px dashed var(--border-soft)}.pf-row span{color:var(--text-secondary)}.pf-row b{text-align:right}
-      .pf-f{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--text-secondary)}
-      .pf-jd{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px}.pf-jd div{font-size:11.5px;border:1px solid var(--border-soft);border-radius:10px;padding:6px 9px}
-      .pf-kartu-wrap{overflow-x:auto;padding:4px 0}
-      .pf-lengkap{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;font-size:12px;margin-bottom:12px}.pf-lengkap>div{flex:1;min-width:200px}.pf-lengkap span{color:var(--text-secondary)}
-      .pf-lengkap i{display:block;flex-basis:100%;height:8px;border-radius:999px;background:var(--border-soft);overflow:hidden;order:3}.pf-lengkap em{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--ok,#16a34a))}
+      #pf-wrap{--pf-r:18px}
+      .pf-head{position:relative;overflow:hidden;display:flex;gap:18px;align-items:center;flex-wrap:wrap;padding:22px 20px;border-radius:22px;background:radial-gradient(120% 140% at 100% 0,color-mix(in srgb,var(--accent) 55%,#fff0) 0,transparent 55%),linear-gradient(135deg,color-mix(in srgb,var(--accent) 92%,#000),color-mix(in srgb,var(--accent) 55%,#000));color:#fff;margin-bottom:14px;box-shadow:0 14px 34px color-mix(in srgb,var(--accent) 35%,transparent)}
+      .pf-head::after{content:"";position:absolute;right:-60px;top:-60px;width:220px;height:220px;border-radius:50%;border:28px solid #ffffff12}
+      .pf-foto{position:relative;width:104px;height:104px;border-radius:28px;background:#fff3;flex:none;overflow:hidden;border:3px solid #ffffffb0;box-shadow:0 8px 20px #0004}
+      .pf-foto img{width:100%;height:100%;object-fit:cover}.pf-foto span{display:grid;place-items:center;width:100%;height:100%;font-size:42px}
+      .pf-foto label{position:absolute;inset:auto 0 0 0;background:#000a;font-size:10.5px;text-align:center;padding:4px 0;cursor:pointer;font-weight:700}
+      .pf-head h2{margin:0;font-size:20px;line-height:1.2}.pf-head p{margin:4px 0 0;opacity:.92;font-size:12.5px}
+      .pf-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.pf-chips span{background:#ffffff24;border:1px solid #ffffff30;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600;backdrop-filter:blur(4px)}
+      .pf-lengkap{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;font-size:12px;margin-bottom:14px;padding:12px 14px;border-radius:var(--pf-r);background:var(--surface);border:1px solid var(--border-soft)}.pf-lengkap>div{flex:1;min-width:200px}.pf-lengkap span{color:var(--text-secondary)}
+      .pf-lengkap i{display:block;flex-basis:100%;height:10px;border-radius:999px;background:var(--border-soft);overflow:hidden;order:3}.pf-lengkap em{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#f59e0b,var(--accent),#16a34a)}
+      .pf-stat{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:14px}
+      .pf-stat>div{--c:var(--accent);position:relative;overflow:hidden;border-radius:16px;padding:12px 12px 10px;background:color-mix(in srgb,var(--c) 8%,var(--surface));border:1px solid color-mix(in srgb,var(--c) 22%,transparent);text-align:left}
+      .pf-stat>div:nth-child(6n+1){--c:#16a34a}.pf-stat>div:nth-child(6n+2){--c:#2563eb}.pf-stat>div:nth-child(6n+3){--c:#7c3aed}.pf-stat>div:nth-child(6n+4){--c:#dc2626}.pf-stat>div:nth-child(6n+5){--c:#d97706}.pf-stat>div:nth-child(6n+6){--c:#0891b2}
+      .pf-stat .pf-ic{position:absolute;right:10px;top:9px;font-size:20px;opacity:.85}
+      .pf-stat b{display:block;font-size:22px;color:var(--c);line-height:1.1}.pf-stat small{font-size:10.5px;color:var(--text-secondary);font-weight:600}
+      .pf-card{border-radius:var(--pf-r);background:var(--surface);border:1px solid var(--border-soft);padding:14px 16px;margin-bottom:12px;box-shadow:0 4px 14px rgba(15,35,80,.05)}
+      .pf-sec{display:flex;align-items:center;gap:8px;font-weight:800;font-size:13.5px;margin:0 0 12px;padding-bottom:10px;border-bottom:1px solid var(--border-soft)}
+      .pf-sec::before{content:"";width:5px;height:18px;border-radius:4px;background:linear-gradient(var(--accent),color-mix(in srgb,var(--accent) 40%,#fff))}
+      .pf-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px 16px}
+      .pf-row{display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:9px 12px;border-radius:12px;background:var(--bg-soft,rgba(0,0,0,.025))}.pf-row span{color:var(--text-secondary)}.pf-row b{text-align:right}
+      .pf-f{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--text-secondary);font-weight:600}.pf-f .input{border-radius:12px}
+      .pf-jd{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+      .pf-jd>div{--h:var(--accent);font-size:11.5px;border-radius:12px;padding:9px 11px;background:color-mix(in srgb,var(--h) 6%,var(--surface));border:1px solid var(--border-soft);border-left:4px solid var(--h);line-height:1.45}
+      .pf-jd>div[data-hari="Senin"]{--h:#2563eb}.pf-jd>div[data-hari="Selasa"]{--h:#16a34a}.pf-jd>div[data-hari="Rabu"]{--h:#d97706}.pf-jd>div[data-hari="Kamis"]{--h:#7c3aed}.pf-jd>div[data-hari="Jumat"]{--h:#0891b2}.pf-jd>div[data-hari="Sabtu"]{--h:#db2777}.pf-jd>div[data-hari="Minggu"]{--h:#64748b}
+      .pf-jd>div b{color:var(--h)}
+      .pf-kartu-wrap{overflow-x:auto;padding:6px 2px}
+      .pf-card .btn{border-radius:12px}
     </style>
     ${pilihGuru}
     <div class="pf-head">
@@ -112,7 +123,7 @@ async function bukaProfilGuru(guruId) {
         <div class="pf-chips"><span>${g.jenis_guru === "luar" ? "Guru Luar" : "Guru Dalam"}</span>${g.nip_nik ? `<span>NIP/NIK ${escapeHtml(g.nip_nik)}</span>` : ""}<span>Masa kerja ${masaKerja}</span>${pin ? "<span>🔒 PIN aktif</span>" : ""}</div></div>
     </div>
     ${(() => { const k = _kelengkapanProfil(g, pend.length); return `<div class="pf-lengkap"><div><b>Kelengkapan profil ${k.persen}%</b>${k.kurang.length ? ` <span>— lengkapi: ${k.kurang.join(", ")}</span>` : " ✓"}</div><i><em style="width:${k.persen}%"></em></i>${isAdmin() ? `<button class="btn btn-ghost" style="padding:4px 10px;font-size:11px;" onclick="bukaKelengkapanSemua()">📊 Semua guru</button>` : ""}</div>`; })()}
-    <div class="pf-stat"><div><b>${pHadir}%</b><small>Hadir bulan ini</small></div><div><b>${pJurnal}%</b><small>Jurnal lengkap</small></div><div><b>${tot}</b><small>Sesi mengajar</small></div><div><b style="${alpha ? "color:var(--bad)" : ""}">${alpha}</b><small>Alpha</small></div><div><b>${izin}</b><small>Izin/Sakit</small></div><div><b>${jadwal.length}</b><small>Jam/pekan</small></div></div>
+    <div class="pf-stat"><div><span class="pf-ic">✅</span><b>${pHadir}%</b><small>Hadir bulan ini</small></div><div><span class="pf-ic">📝</span><b>${pJurnal}%</b><small>Jurnal lengkap</small></div><div><span class="pf-ic">🗓️</span><b>${tot}</b><small>Sesi mengajar</small></div><div><span class="pf-ic">⛔</span><b>${alpha}</b><small>Alpha</small></div><div><span class="pf-ic">✉️</span><b>${izin}</b><small>Izin/Sakit</small></div><div><span class="pf-ic">⏱️</span><b>${jadwal.length}</b><small>Jam/pekan</small></div></div>
     <div class="pf-sec">📋 Data diri</div>
     <div class="pf-grid">
       ${baris("Nama lengkap", escapeHtml(g.nama))}${baris("Jabatan", escapeHtml(jabTeks))}${baris("TMT", tgl(g.tmt))}${baris("Status", g.jenis_guru === "luar" ? "Guru Luar" : "Guru Dalam")}
@@ -125,9 +136,9 @@ async function bukaProfilGuru(guruId) {
     <div style="font-size:10.5px;color:var(--text-secondary);margin-top:4px;">${milikSendiri && !isAdmin() ? "Setiap perubahan dilaporkan ke admin. " : ""}Nama, jabatan & TMT diubah admin lewat menu Data Guru.</div>
     ${pend.length ? `<div class="pf-sec">🎓 Pendidikan</div><div class="pf-grid">${pend.map((p) => baris(escapeHtml(p.jenjang), escapeHtml(p.nama_institusi + (p.jurusan ? " · " + p.jurusan : "") + (p.tahun_lulus ? " (" + p.tahun_lulus + ")" : "")))).join("")}</div>` : ""}
     <div class="pf-sec">🗓️ Jadwal mengajar (${jadwal.length} jam/pekan · ${mapelUnik.length} mapel · ${kelasUnik.length} kelas)</div>
-    <div class="pf-jd">${jadwalUrut.map((j) => `<div><b>${j.hari}</b> ${String(j.jam_mulai).slice(0, 5)}–${String(j.jam_selesai).slice(0, 5)}<br/><span style="color:var(--text-secondary);">${escapeHtml(j.mapel?.nama_mapel || "-")} · ${escapeHtml(formatKelasLabel(j.kelas?.nama_kelas) || "-")}</span></div>`).join("") || `<div style="color:var(--text-secondary);">Belum ada jadwal aktif.</div>`}</div>
+    <div class="pf-jd">${jadwalUrut.map((j) => `<div data-hari="${j.hari}"><b>${j.hari}</b> ${String(j.jam_mulai).slice(0, 5)}–${String(j.jam_selesai).slice(0, 5)}<br/><span style="color:var(--text-secondary);">${escapeHtml(j.mapel?.nama_mapel || "-")} · ${escapeHtml(formatKelasLabel(j.kelas?.nama_kelas) || "-")}</span></div>`).join("") || `<div style="color:var(--text-secondary);">Belum ada jadwal aktif.</div>`}</div>
     <div class="pf-sec">📈 Portofolio mengajar · bulan ini</div>
-    <div class="pf-stat"><div><b>${jurnalBln.length}</b><small>Jurnal ditulis</small></div><div><b>${statMa ? Object.values(statMa.buku || {}).reduce((a, b) => a + (b.presentasi || 0), 0) : 0}</b><small>Presentasi modul</small></div><div><b>${statMa ? Object.keys(statMa.buku || {}).length : 0}</b><small>Buku dipakai</small></div><div><b>${statMa ? Math.round(Object.values(statMa.buku || {}).reduce((a, b) => a + (b.menit || 0), 0)) : 0}</b><small>Menit di Modul Ajar</small></div></div>
+    <div class="pf-stat"><div><span class="pf-ic">📒</span><b>${jurnalBln.length}</b><small>Jurnal ditulis</small></div><div><span class="pf-ic">🖥️</span><b>${statMa ? Object.values(statMa.buku || {}).reduce((a, b) => a + (b.presentasi || 0), 0) : 0}</b><small>Presentasi modul</small></div><div><span class="pf-ic">📚</span><b>${statMa ? Object.keys(statMa.buku || {}).length : 0}</b><small>Buku dipakai</small></div><div><span class="pf-ic">⏳</span><b>${statMa ? Math.round(Object.values(statMa.buku || {}).reduce((a, b) => a + (b.menit || 0), 0)) : 0}</b><small>Menit di Modul Ajar</small></div></div>
     ${jurnalBln.length ? `<div class="pf-jd">${jurnalBln.slice(0, 6).map((j) => `<div><b>${_tglPendek(j.tanggal)}</b> · ${escapeHtml(j.mapel?.nama_mapel || "-")} ${escapeHtml(formatKelasLabel(j.kelas?.nama_kelas) || "")}<br/><span style="color:var(--text-secondary);">${escapeHtml((j.materi_pokok || "-").slice(0, 80))}</span></div>`).join("")}</div>` : ""}
     <div class="pf-sec">🏅 Prestasi, pelatihan & sertifikat</div>
     <div class="pf-jd">${prestasi.length ? prestasi.map((p) => `<div><b>${{ pelatihan: "📚", prestasi: "🏆", sertifikat: "📜" }[p.jenis] || "📌"} ${escapeHtml(p.judul)}</b>${p.tahun ? " · " + escapeHtml(String(p.tahun)) : ""}<br/>${p.file ? `<a href="${p.file}" target="_blank" rel="noopener">Lihat berkas</a>` : `<span style="color:var(--text-secondary);">tanpa berkas</span>`}${bolehUbah ? ` · <a href="#" onclick="event.preventDefault();_hapusPrestasi('${guruId}','${p.id}')">hapus</a>` : ""}</div>`).join("") : `<div style="color:var(--text-secondary);">Belum ada.</div>`}</div>
@@ -140,6 +151,7 @@ async function bukaProfilGuru(guruId) {
     <div class="pf-kartu-wrap"><div id="pf-kartu">${_htmlKartuPengajar(g, jabTeks, mapelUnik, wali)}</div></div>
     ${(setTimeout(_gambarQrKartu, 50), "")}
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;"><button class="btn btn-accent" onclick="_unduhKartuPengajar('${escapeHtml(_namaSingkatTopbar(g.nama)).replace(/'/g, "")}')">⬇️ Unduh kartu (PNG)</button></div>`;
+    _pfKartukan(qs("pf-wrap"));
   } catch (e) { console.error(e); qs("pf-wrap").innerHTML = `<div style="color:var(--bad);font-size:12px;">Gagal memuat profil: ${escapeHtml(e.message || String(e))}</div>`; }
 }
 function _htmlKartuPengajar(g, jabatan, mapel, wali) {
@@ -306,4 +318,14 @@ async function _gambarQrKartu() {
     const q = qrcode(0, "M"); q.addData(unescape(encodeURIComponent(box.dataset.qr))); q.make();
     box.innerHTML = q.createSvgTag({ cellSize: 2, margin: 0 }).replace("<svg ", '<svg style="width:100%;height:100%;display:block" ');
   } catch (e) { box.remove(); }
+}
+
+// Kelompokkan setiap judul bagian (.pf-sec) beserta isinya ke dalam satu kartu
+function _pfKartukan(wrap) {
+  if (!wrap) return;
+  [...wrap.querySelectorAll(":scope > .pf-sec")].forEach((sec) => {
+    const kartu = document.createElement("section"); kartu.className = "pf-card";
+    sec.before(kartu); kartu.appendChild(sec);
+    while (kartu.nextElementSibling && !kartu.nextElementSibling.classList.contains("pf-sec") && kartu.nextElementSibling.tagName !== "STYLE") kartu.appendChild(kartu.nextElementSibling);
+  });
 }
