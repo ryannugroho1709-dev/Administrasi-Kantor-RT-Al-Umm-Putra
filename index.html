@@ -3819,12 +3819,14 @@ async function renderDashPeran() {
   await ensureLookups();
   const pengelola = isAdmin() || isKepsekOrTU();
   const bendahara = isAdmin() || (typeof _jabatanGuru === "function" && _jabatanGuru(STATE.guruId).some((j) => j.kode === "bendahara"));
-  if (!pengelola && !bendahara) { wadah.innerHTML = ""; return; }
+  const ultah = typeof htmlUlangTahunGuru === "function" ? htmlUlangTahunGuru() : "";
+  if (!pengelola && !bendahara) { wadah.innerHTML = ultah; return; }
   const tile = (ikon, label, nilai, aksi, warna) => `<button type="button" class="peran-tile${typeof nilai === "number" && nilai > 0 ? " ada" : typeof nilai === "number" ? " nol" : ""}" onclick="${aksi}" style="--tile:${warna};">
       <span class="peran-ikon">${ikon}</span><span class="peran-nilai">${nilai}</span><span class="peran-label">${label}</span></button>`;
-  let isi = "";
+  let isi = ultah;
   if (pengelola) {
-    let izin = "…", tukar = "…", belumJurnal = "…", ajuan = "…", lupa = "…", tertunda = "…";
+    let izin = "…", tukar = "…", belumJurnal = "…", ajuan = "…", lupa = "…", tertunda = "…", ubahProfil = "…";
+    try { if (isAdmin() && typeof jumlahPerubahanProfilBaru === "function") ubahProfil = await jumlahPerubahanProfilBaru(); } catch (e) {}
     try {
       const dari14 = tanggalISO(new Date(Date.now() - 14 * 86400000));
       const [a, b, c, d, e2] = await Promise.all([
@@ -3842,7 +3844,7 @@ async function renderDashPeran() {
       lupa = lalu.filter((s) => !s.hadir_bersyarat).length;
       tertunda = lalu.filter((s) => s.hadir_bersyarat && !s.jurnal_id).length;
     } catch (e) { console.warn("Gagal memuat ringkasan peran:", e); }
-    const totalAksi = [izin, tukar, ajuan, lupa].reduce((t, v) => t + (typeof v === "number" ? v : 0), 0);
+    const totalAksi = [izin, tukar, ajuan, lupa, ubahProfil].reduce((t, v) => t + (typeof v === "number" ? v : 0), 0);
     isi += `<div class="peran-judul">📌 Perlu ditindaklanjuti${totalAksi ? ` <span class="peran-total">${totalAksi}</span>` : " · semua beres ✓"}</div><div class="peran-grid">
       ${tile("✉️", "Izin/Sakit menunggu", izin, "showPage('kepsek','page-kepsek','menuKepsek')", "var(--warn)")}
       ${tile("🔀", "Tukar/Pindah jam menunggu", tukar, "showPage('kepsek','page-kepsek','menuKepsek')", "var(--accent)")}
@@ -3850,6 +3852,7 @@ async function renderDashPeran() {
       ${tile("🛠️", "Masuk tapi lupa pulang/jurnal (14 hari)", lupa, "_keLupaJurnalKepsek()", "#ea580c")}
       ${tile("📝", "Sudah masuk, belum isi jurnal hari ini", belumJurnal, "showPage('monitor','page-monitor','menuMonitor')", "var(--bad)")}
       ${tile("⏳", "Jurnal tertunda (menunggu guru)", tertunda, "bukaKedisiplinan('bulan')", "#64748b")}
+      ${isAdmin() ? tile("✏️", "Perubahan data guru (belum dilihat)", ubahProfil, "bukaPerubahanProfil()", "#0891b2") : ""}
     </div>`;
   }
   if (bendahara) {
@@ -15818,7 +15821,7 @@ async function handleImportSiswa(evt) {
 <script src="src/kuliah.js?v=14"></script>
 <script src="src/modul-baca.js?v=2"></script>
 <script src="src/kesimpulan.js?v=2"></script>
-<script src="src/profil.js?v=1"></script>
+<script src="src/profil.js?v=2"></script>
 <script src="src/hp.js?v=2"></script>
 </body>
 </html>

@@ -59,12 +59,15 @@ async function bukaProfilGuru(guruId) {
   try {
     await ensureLookups();
     const bln = bulanIniISO(), { dari, sampai } = rentangBulan(bln);
-    const [g, pend, jadwal, sesi, pin] = await Promise.all([
+    const [g, pend, jadwal, sesi, pin, prestasi, jurnalBln, statMa] = await Promise.all([
       apiGetGuruDetail(guruId),
       apiGetPendidikanGuru(guruId).catch(() => []),
       supa.from("jadwal_pelajaran").select("hari,jam_mulai,jam_selesai,kelas(nama_kelas),mapel(nama_mapel)").eq("guru_id", guruId).eq("aktif", true).then((r) => r.data || []),
       apiGetRiwayatAbsenGuru(guruId, dari, sampai).catch(() => []),
       _ambilPinGuru(guruId),
+      _kvAmbil("profil:prestasi:" + guruId, []),
+      supa.from("jurnal_kelas").select("tanggal,materi_pokok,kelas(nama_kelas),mapel(nama_mapel)").eq("guru_id", guruId).gte("tanggal", dari).lte("tanggal", sampai).order("tanggal", { ascending: false }).then((x) => x.data || []),
+      _kvAmbil(`ma:stat:${bln}:${guruId}`, null),
     ]);
     if (!g) throw new Error("Data guru tidak ditemukan");
     const jab = typeof _jabatanGuru === "function" ? _jabatanGuru(guruId) : [];
@@ -99,6 +102,8 @@ async function bukaProfilGuru(guruId) {
       .pf-f{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--text-secondary)}
       .pf-jd{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px}.pf-jd div{font-size:11.5px;border:1px solid var(--border-soft);border-radius:10px;padding:6px 9px}
       .pf-kartu-wrap{overflow-x:auto;padding:4px 0}
+      .pf-lengkap{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;font-size:12px;margin-bottom:12px}.pf-lengkap>div{flex:1;min-width:200px}.pf-lengkap span{color:var(--text-secondary)}
+      .pf-lengkap i{display:block;flex-basis:100%;height:8px;border-radius:999px;background:var(--border-soft);overflow:hidden;order:3}.pf-lengkap em{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--ok,#16a34a))}
     </style>
     ${pilihGuru}
     <div class="pf-head">
@@ -106,26 +111,34 @@ async function bukaProfilGuru(guruId) {
       <div style="flex:1;min-width:200px;"><h2>${escapeHtml(g.nama)}</h2><p>${escapeHtml(jabTeks)}${wali ? " · Wali " + escapeHtml(formatKelasLabel(wali)) : ""}</p>
         <div class="pf-chips"><span>${g.jenis_guru === "luar" ? "Guru Luar" : "Guru Dalam"}</span>${g.nip_nik ? `<span>NIP/NIK ${escapeHtml(g.nip_nik)}</span>` : ""}<span>Masa kerja ${masaKerja}</span>${pin ? "<span>🔒 PIN aktif</span>" : ""}</div></div>
     </div>
+    ${(() => { const k = _kelengkapanProfil(g, pend.length); return `<div class="pf-lengkap"><div><b>Kelengkapan profil ${k.persen}%</b>${k.kurang.length ? ` <span>— lengkapi: ${k.kurang.join(", ")}</span>` : " ✓"}</div><i><em style="width:${k.persen}%"></em></i>${isAdmin() ? `<button class="btn btn-ghost" style="padding:4px 10px;font-size:11px;" onclick="bukaKelengkapanSemua()">📊 Semua guru</button>` : ""}</div>`; })()}
     <div class="pf-stat"><div><b>${pHadir}%</b><small>Hadir bulan ini</small></div><div><b>${pJurnal}%</b><small>Jurnal lengkap</small></div><div><b>${tot}</b><small>Sesi mengajar</small></div><div><b style="${alpha ? "color:var(--bad)" : ""}">${alpha}</b><small>Alpha</small></div><div><b>${izin}</b><small>Izin/Sakit</small></div><div><b>${jadwal.length}</b><small>Jam/pekan</small></div></div>
     <div class="pf-sec">📋 Data diri</div>
     <div class="pf-grid">
-      ${baris("Nama lengkap", escapeHtml(g.nama))}${baris("NIP / NIK", escapeHtml(g.nip_nik || ""))}${baris("Jabatan", escapeHtml(jabTeks))}${baris("TMT", tgl(g.tmt))}
+      ${baris("Nama lengkap", escapeHtml(g.nama))}${baris("Jabatan", escapeHtml(jabTeks))}${baris("TMT", tgl(g.tmt))}${baris("Status", g.jenis_guru === "luar" ? "Guru Luar" : "Guru Dalam")}
     </div>
     <div class="pf-grid" style="margin-top:8px;">
-      ${inp("pf-wa", "No. WhatsApp", g.no_wa, "tel")}${inp("pf-email", "Email", g.email, "email")}${inp("pf-tempat", "Tempat lahir", g.tempat_lahir)}${inp("pf-tgl", "Tanggal lahir", g.tanggal_lahir, "date")}
+      ${inp("pf-nik", "NIP / NIK", g.nip_nik, "text")}${inp("pf-wa", "No. WhatsApp", g.no_wa, "tel")}${inp("pf-email", "Email", g.email, "email")}${inp("pf-tempat", "Tempat lahir", g.tempat_lahir)}${inp("pf-tgl", "Tanggal lahir", g.tanggal_lahir, "date")}
       <label class="pf-f" style="grid-column:1/-1;"><span>Alamat domisili</span><input id="pf-alamat" class="input" value="${escapeHtml(g.alamat_domisili || "")}" ${bolehUbah ? "" : "disabled"}/></label>
     </div>
     ${bolehUbah ? `<button class="btn btn-accent" style="margin-top:10px;" onclick="_simpanDataProfil('${guruId}')">💾 Simpan data diri</button>` : ""}
-    <div style="font-size:10.5px;color:var(--text-secondary);margin-top:4px;">Nama, NIP, jabatan & TMT diubah admin lewat menu Data Guru.</div>
+    <div style="font-size:10.5px;color:var(--text-secondary);margin-top:4px;">${milikSendiri && !isAdmin() ? "Setiap perubahan dilaporkan ke admin. " : ""}Nama, jabatan & TMT diubah admin lewat menu Data Guru.</div>
     ${pend.length ? `<div class="pf-sec">🎓 Pendidikan</div><div class="pf-grid">${pend.map((p) => baris(escapeHtml(p.jenjang), escapeHtml(p.nama_institusi + (p.jurusan ? " · " + p.jurusan : "") + (p.tahun_lulus ? " (" + p.tahun_lulus + ")" : "")))).join("")}</div>` : ""}
     <div class="pf-sec">🗓️ Jadwal mengajar (${jadwal.length} jam/pekan · ${mapelUnik.length} mapel · ${kelasUnik.length} kelas)</div>
     <div class="pf-jd">${jadwalUrut.map((j) => `<div><b>${j.hari}</b> ${String(j.jam_mulai).slice(0, 5)}–${String(j.jam_selesai).slice(0, 5)}<br/><span style="color:var(--text-secondary);">${escapeHtml(j.mapel?.nama_mapel || "-")} · ${escapeHtml(formatKelasLabel(j.kelas?.nama_kelas) || "-")}</span></div>`).join("") || `<div style="color:var(--text-secondary);">Belum ada jadwal aktif.</div>`}</div>
+    <div class="pf-sec">📈 Portofolio mengajar · bulan ini</div>
+    <div class="pf-stat"><div><b>${jurnalBln.length}</b><small>Jurnal ditulis</small></div><div><b>${statMa ? Object.values(statMa.buku || {}).reduce((a, b) => a + (b.presentasi || 0), 0) : 0}</b><small>Presentasi modul</small></div><div><b>${statMa ? Object.keys(statMa.buku || {}).length : 0}</b><small>Buku dipakai</small></div><div><b>${statMa ? Math.round(Object.values(statMa.buku || {}).reduce((a, b) => a + (b.menit || 0), 0)) : 0}</b><small>Menit di Modul Ajar</small></div></div>
+    ${jurnalBln.length ? `<div class="pf-jd">${jurnalBln.slice(0, 6).map((j) => `<div><b>${_tglPendek(j.tanggal)}</b> · ${escapeHtml(j.mapel?.nama_mapel || "-")} ${escapeHtml(formatKelasLabel(j.kelas?.nama_kelas) || "")}<br/><span style="color:var(--text-secondary);">${escapeHtml((j.materi_pokok || "-").slice(0, 80))}</span></div>`).join("")}</div>` : ""}
+    <div class="pf-sec">🏅 Prestasi, pelatihan & sertifikat</div>
+    <div class="pf-jd">${prestasi.length ? prestasi.map((p) => `<div><b>${{ pelatihan: "📚", prestasi: "🏆", sertifikat: "📜" }[p.jenis] || "📌"} ${escapeHtml(p.judul)}</b>${p.tahun ? " · " + escapeHtml(String(p.tahun)) : ""}<br/>${p.file ? `<a href="${p.file}" target="_blank" rel="noopener">Lihat berkas</a>` : `<span style="color:var(--text-secondary);">tanpa berkas</span>`}${bolehUbah ? ` · <a href="#" onclick="event.preventDefault();_hapusPrestasi('${guruId}','${p.id}')">hapus</a>` : ""}</div>`).join("") : `<div style="color:var(--text-secondary);">Belum ada.</div>`}</div>
+    ${bolehUbah ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;"><select id="pr-jenis" class="input" style="max-width:140px;"><option value="pelatihan">📚 Pelatihan</option><option value="prestasi">🏆 Prestasi</option><option value="sertifikat">📜 Sertifikat</option></select><input id="pr-judul" class="input" placeholder="mis. Diklat Kurikulum Merdeka" style="flex:1;min-width:180px;"/><input id="pr-tahun" class="input" type="number" placeholder="Tahun" style="max-width:90px;"/><label class="btn btn-ghost" style="cursor:pointer;">📎 Berkas<input id="pr-file" type="file" accept="image/*,application/pdf" hidden/></label><button class="btn btn-outline" onclick="_tambahPrestasi('${guruId}')">＋ Tambah</button></div>` : ""}
     <div class="pf-sec">🔒 Keamanan akun</div>
     <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;">${pin ? "Akun ini dikunci PIN. Orang lain tidak bisa masuk dengan memilih nama ini." : "Belum ada PIN — siapa pun yang memilih nama ini di perangkat bisa masuk."} Admin tetap bisa membuka akun untuk membantu absen.</div>
     ${milikSendiri ? `<div style="display:flex;gap:8px;flex-wrap:wrap;"><input id="pf-pin1" class="input" type="password" inputmode="numeric" maxlength="8" placeholder="PIN baru (4–8 angka)" style="max-width:180px;"/><input id="pf-pin2" class="input" type="password" inputmode="numeric" maxlength="8" placeholder="Ulangi PIN" style="max-width:180px;"/><button class="btn btn-outline" onclick="_aturPinProfil('${guruId}')">${pin ? "Ganti PIN" : "Pasang PIN"}</button>${pin ? `<button class="btn btn-ghost" onclick="_hapusPinProfil('${guruId}')">Lepas PIN</button>` : ""}</div>`
       : isAdmin() && pin ? `<button class="btn btn-outline" onclick="_hapusPinProfil('${guruId}')">🔓 Hapus PIN guru ini (lupa PIN)</button>` : ""}
     <div class="pf-sec">🪪 Kartu Pengajar</div>
     <div class="pf-kartu-wrap"><div id="pf-kartu">${_htmlKartuPengajar(g, jabTeks, mapelUnik, wali)}</div></div>
+    ${(setTimeout(_gambarQrKartu, 50), "")}
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;"><button class="btn btn-accent" onclick="_unduhKartuPengajar('${escapeHtml(_namaSingkatTopbar(g.nama)).replace(/'/g, "")}')">⬇️ Unduh kartu (PNG)</button></div>`;
   } catch (e) { console.error(e); qs("pf-wrap").innerHTML = `<div style="color:var(--bad);font-size:12px;">Gagal memuat profil: ${escapeHtml(e.message || String(e))}</div>`; }
 }
@@ -154,6 +167,7 @@ function _htmlKartuPengajar(g, jabatan, mapel, wali) {
         </div>
       </div>
     </div>
+    <div class="pf-qr" data-qr="${escapeHtml(`KARTU PENGAJAR\n${g.nama}\n${jabatan}\nNIP/NIK: ${g.nip_nik || "-"}\n${p.nama_lembaga_kop || "Rumah Tahfizh Al-Umm Putra Barabai"}\nTA ${ta}\nID ${String(g.id).slice(0, 8).toUpperCase()}`)}" style="position:absolute;right:24px;bottom:46px;width:84px;height:84px;background:#fff;border-radius:10px;padding:5px;box-sizing:border-box;"></div>
     <div style="position:absolute;left:0;right:0;bottom:0;padding:10px 24px;background:rgba(0,0,0,.18);font-size:10.5px;display:flex;justify-content:space-between;"><span>${escapeHtml(p.alamat || "Barabai, Hulu Sungai Tengah")}</span><span>ID ${String(g.id).slice(0, 8).toUpperCase()}</span></div>
   </div>`;
 }
@@ -178,6 +192,7 @@ async function _gantiFotoProfil(input, guruId) {
     const lk = (LOOKUP.guruAll || []).find((x) => x.id === guruId); if (lk) lk.foto_url = url;
     const dg = (STATE.daftarGuru || []).find((x) => x.id === guruId); if (dg) dg.foto_url = url;
     if (guruId === STATE.guruId) _perbaruiFotoGuruPill(url);
+    await _catatPerubahanProfil(guruId, (LOOKUP.guruAll || []).find((x) => x.id === guruId)?.nama, [{ k: "foto_url", lama: "", baru: "foto baru" }]);
     toast("Foto profil diperbarui ✓", "ok");
     bukaProfilGuru(guruId);
   } catch (e) { console.error(e); toast("Gagal mengganti foto: " + (e.message || e), "err"); }
@@ -186,8 +201,15 @@ async function _gantiFotoProfil(input, guruId) {
 async function _simpanDataProfil(guruId) {
   const v = (id) => (qs(id)?.value || "").trim() || null;
   try {
-    await apiSimpanGuru({ id: guruId, no_wa: v("pf-wa"), email: v("pf-email"), tempat_lahir: v("pf-tempat"), tanggal_lahir: v("pf-tgl"), alamat_domisili: v("pf-alamat") });
-    toast("Data diri tersimpan ✓", "ok");
+    const baru = { nip_nik: v("pf-nik"), no_wa: v("pf-wa"), email: v("pf-email"), tempat_lahir: v("pf-tempat"), tanggal_lahir: v("pf-tgl"), alamat_domisili: v("pf-alamat") };
+    const lama = await apiGetGuruDetail(guruId);
+    const ubah = Object.keys(baru).filter((k) => (lama?.[k] || null) !== baru[k]);
+    if (!ubah.length) { toast("Tidak ada perubahan", "info"); return; }
+    await apiSimpanGuru({ id: guruId, ...baru });
+    const lk = (LOOKUP.guruAll || []).find((x) => x.id === guruId); if (lk) Object.assign(lk, baru);
+    await _catatPerubahanProfil(guruId, lama?.nama, ubah.map((k) => ({ k, lama: lama?.[k] || "", baru: baru[k] || "" })));
+    toast(`Data diri tersimpan ✓${isAdmin() && guruId === STATE.guruId ? "" : " — admin sudah diberi tahu"}`, "ok");
+    bukaProfilGuru(guruId);
   } catch (e) { toast("Gagal menyimpan: " + (e.message || e), "err"); }
 }
 async function _aturPinProfil(guruId) {
@@ -201,4 +223,96 @@ async function _hapusPinProfil(guruId) {
   if (!(await konfirmasiTema("Lepas PIN dari akun ini?", { ikon: "🔓", judul: "Lepas PIN" }))) return;
   try { await _simpanPinGuru(guruId, null); toast("PIN dilepas", "ok"); bukaProfilGuru(guruId); }
   catch (e) { toast("Gagal: " + (e.message || e), "err"); }
+}
+
+// ── Penyimpanan kunci-nilai umum (kuliah_pengaturan) ──
+async function _kvAmbil(kunci, bawaan) {
+  try { const r = await supa.from("kuliah_pengaturan").select("nilai").eq("kunci", kunci).maybeSingle(); return r.data && r.data.nilai != null ? r.data.nilai : bawaan; }
+  catch (e) { return bawaan; }
+}
+async function _kvSimpan(kunci, nilai) { const { error } = await supa.from("kuliah_pengaturan").upsert({ kunci, nilai }); if (error) throw error; }
+
+// ── Kelengkapan profil ──
+const _PF_WAJIB = [["foto_url", "foto"], ["nip_nik", "NIK"], ["no_wa", "No. WA"], ["email", "email"], ["tempat_lahir", "tempat lahir"], ["tanggal_lahir", "tanggal lahir"], ["alamat_domisili", "alamat"], ["tmt", "TMT"]];
+function _kelengkapanProfil(g, jmlPendidikan) {
+  const kurang = _PF_WAJIB.filter(([k]) => !g[k]).map(([, l]) => l);
+  if (jmlPendidikan === 0) kurang.push("pendidikan");
+  const total = _PF_WAJIB.length + (jmlPendidikan == null ? 0 : 1);
+  return { persen: Math.round((total - kurang.length) / total * 100), kurang };
+}
+async function bukaKelengkapanSemua() {
+  openModal(`<h3>📊 Kelengkapan Profil Guru</h3><div id="kl-isi">${loadingHTML()}</div>`, { lebar: true });
+  const r = await supa.from("guru").select("*").neq("status_aktif", false).order("nama");
+  const daftar = (r.data || []).map((g) => ({ g, ...(_kelengkapanProfil(g, null)) })).sort((a, b) => a.persen - b.persen);
+  qs("kl-isi").innerHTML = `<div style="font-size:11.5px;color:var(--text-secondary);margin:-6px 0 10px;">Diurutkan dari yang paling belum lengkap. Klik nama untuk membuka profilnya.</div>` + daftar.map((x) => `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px dashed var(--border-soft);font-size:12px;">
+    <a href="#" style="flex:1;font-weight:700;" onclick="event.preventDefault();bukaProfilGuru('${x.g.id}')">${escapeHtml(x.g.nama)}</a>
+    <span style="flex:2;color:var(--text-secondary);font-size:11px;">${x.kurang.length ? "kurang: " + x.kurang.join(", ") : "lengkap ✓"}</span>
+    <b style="width:42px;text-align:right;color:${x.persen >= 90 ? "var(--ok)" : x.persen >= 60 ? "#d97706" : "var(--bad)"};">${x.persen}%</b></div>`).join("");
+}
+
+// ── Perubahan data guru → dilaporkan ke admin ──
+const _PF_LABEL = { nip_nik: "NIP/NIK", no_wa: "No. WA", email: "Email", tempat_lahir: "Tempat lahir", tanggal_lahir: "Tanggal lahir", alamat_domisili: "Alamat", foto_url: "Foto profil" };
+async function _catatPerubahanProfil(guruId, nama, perubahan) {
+  if (isAdmin() && guruId !== STATE.guruId) return; // admin mengubah data guru lain — tidak perlu lapor ke diri sendiri
+  if (isAdmin()) return;
+  try {
+    const log = await _kvAmbil("profil:perubahan", []);
+    log.unshift({ id: Date.now().toString(36), guru_id: guruId, nama: nama || STATE.guruNama, perubahan, t: Date.now(), dilihat: false });
+    await _kvSimpan("profil:perubahan", log.slice(0, 150));
+  } catch (e) { console.warn("Gagal mencatat perubahan profil:", e); }
+}
+async function jumlahPerubahanProfilBaru() { return (await _kvAmbil("profil:perubahan", [])).filter((x) => !x.dilihat).length; }
+async function bukaPerubahanProfil() {
+  const log = await _kvAmbil("profil:perubahan", []);
+  const fmt = (k, v) => k === "foto_url" ? "foto baru" : escapeHtml(String(v || "–"));
+  openModal(`<h3>✏️ Perubahan Data Guru</h3>
+    <div style="font-size:11.5px;color:var(--text-secondary);margin:-6px 0 10px;">Diubah sendiri oleh guru lewat Profil. Yang belum dilihat ditandai kuning.</div>
+    <div style="max-height:56vh;overflow-y:auto;">${log.length ? log.map((x) => `<div style="padding:9px 10px;border-radius:10px;margin-bottom:6px;border:1px solid var(--border-soft);${x.dilihat ? "" : "background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.4);"}font-size:12px;">
+      <div style="display:flex;justify-content:space-between;gap:8px;"><a href="#" style="font-weight:800;" onclick="event.preventDefault();bukaProfilGuru('${x.guru_id}')">${escapeHtml(x.nama || "-")}</a><span style="color:var(--text-secondary);font-size:11px;">${new Date(x.t).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span></div>
+      ${(x.perubahan || []).map((p) => `<div style="margin-top:3px;"><b>${_PF_LABEL[p.k] || p.k}:</b> <s style="color:var(--text-secondary);">${fmt(p.k, p.lama)}</s> → <b>${fmt(p.k, p.baru)}</b></div>`).join("")}</div>`).join("") : `<div style="color:var(--text-secondary);font-size:12px;">Belum ada perubahan.</div>`}</div>
+    ${log.some((x) => !x.dilihat) ? `<button class="btn btn-accent" style="width:100%;margin-top:10px;" onclick="_tandaiPerubahanDilihat()">✓ Tandai semua sudah dilihat</button>` : ""}`);
+}
+async function _tandaiPerubahanDilihat() {
+  const log = (await _kvAmbil("profil:perubahan", [])).map((x) => ({ ...x, dilihat: true }));
+  try { await _kvSimpan("profil:perubahan", log); toast("Ditandai sudah dilihat", "ok"); closeModal(); if (typeof renderDashPeran === "function") renderDashPeran(); }
+  catch (e) { toast("Gagal: " + (e.message || e), "err"); }
+}
+
+// ── Prestasi & pelatihan ──
+async function _tambahPrestasi(guruId) {
+  const judul = (qs("pr-judul")?.value || "").trim(); if (!judul) { toast("Isi judul prestasi/pelatihan", "err"); return; }
+  try {
+    setGlobalLoading(true, "Menyimpan…");
+    const f = qs("pr-file")?.files?.[0]; let file = null;
+    if (f) { if (f.size > 5 * 1024 * 1024) throw new Error("Berkas maksimal 5 MB"); file = await apiUploadFoto(f, "guru/prestasi"); }
+    const daftar = await _kvAmbil("profil:prestasi:" + guruId, []);
+    daftar.unshift({ id: Date.now().toString(36), jenis: qs("pr-jenis").value, judul, tahun: +qs("pr-tahun").value || null, file });
+    await _kvSimpan("profil:prestasi:" + guruId, daftar);
+    toast("Tersimpan ✓", "ok"); bukaProfilGuru(guruId);
+  } catch (e) { toast("Gagal: " + (e.message || e), "err"); }
+  finally { setGlobalLoading(false); }
+}
+async function _hapusPrestasi(guruId, id) {
+  if (!(await konfirmasiTema("Hapus item ini?", { ikon: "🗑️", judul: "Hapus" }))) return;
+  try { await _kvSimpan("profil:prestasi:" + guruId, (await _kvAmbil("profil:prestasi:" + guruId, [])).filter((x) => x.id !== id)); bukaProfilGuru(guruId); }
+  catch (e) { toast("Gagal: " + (e.message || e), "err"); }
+}
+
+// ── QR di Kartu Pengajar (qrcode-generator, dimuat saat dibutuhkan) ──
+async function _gambarQrKartu() {
+  const box = document.querySelector(".pf-qr"); if (!box) return;
+  try {
+    if (!window.qrcode) await new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = "https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"; sc.onload = res; sc.onerror = rej; document.head.appendChild(sc); });
+    const q = qrcode(0, "M"); q.addData(unescape(encodeURIComponent(box.dataset.qr))); q.make();
+    box.innerHTML = q.createSvgTag({ cellSize: 2, margin: 0 }).replace("<svg ", '<svg style="width:100%;height:100%;display:block" ');
+  } catch (e) { box.remove(); }
+}
+
+// ── Ulang tahun guru hari ini (untuk Dashboard) ──
+function htmlUlangTahunGuru() {
+  const n = new Date(), md = String(n.getMonth() + 1).padStart(2, "0") + "-" + String(n.getDate()).padStart(2, "0");
+  const ultah = (LOOKUP.guruAll || []).filter((g) => g.status_aktif !== false && g.tanggal_lahir && String(g.tanggal_lahir).slice(5, 10) === md);
+  if (!ultah.length) return "";
+  return `<div class="pengingat-jurnal" role="status" style="border-color:rgba(236,72,153,.4);background:rgba(236,72,153,.06);"><span style="font-size:22px;line-height:1;">🎂</span><div style="flex:1;min-width:0;"><b>Hari ini milad ${ultah.map((g) => escapeHtml(_namaSingkatTopbar(g.nama))).join(", ")}</b><div style="margin-top:3px;font-size:11.5px;">Barakallahu fii umrik — semoga Allah berkahi usia, ilmu, dan amalnya.</div></div>
+    ${ultah.filter((g) => g.no_wa).slice(0, 1).map((g) => `<a class="btn btn-accent" style="padding:7px 12px;font-size:11.5px;flex-shrink:0;align-self:center;" target="_blank" rel="noopener" href="https://wa.me/${String(g.no_wa).replace(/\D/g, "").replace(/^0/, "62")}?text=${encodeURIComponent("Barakallahu fii umrik, " + _namaSingkatTopbar(g.nama) + " 🎉 Semoga Allah memberkahi usia, ilmu, dan amal antum. Aamiin.")}">💬 Ucapkan</a>`).join("")}</div>`;
 }
