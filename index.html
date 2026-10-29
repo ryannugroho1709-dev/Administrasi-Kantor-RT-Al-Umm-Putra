@@ -601,6 +601,11 @@ tr.nl-lengkap .nl-col-nama::after{content:" ✓";color:var(--ok);font-size:11px;
 .peran-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;}
 .peran-tile{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:10px;align-items:center;text-align:start;padding:12px;border-radius:16px;border:1px solid var(--border-soft);background:color-mix(in srgb,var(--tile) 8%,var(--surface));cursor:pointer;font-family:inherit;color:var(--text-primary);transition:transform .15s;}
 .peran-tile:hover{transform:translateY(-2px);}
+.peran-tile.ada{border-color:color-mix(in srgb,var(--tile) 55%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--tile) 14%,transparent);}
+.peran-tile.ada .peran-nilai{color:var(--tile);}
+.peran-tile.nol{opacity:.62;}
+.peran-total{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--bad,#dc2626);color:#fff;font-size:11px;font-weight:800;margin-left:4px;}
+.badge-bersyarat{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;background:rgba(217,119,6,.14)!important;color:#b45309!important;border:1px solid rgba(217,119,6,.35);}
 .peran-ikon{grid-row:1/3;width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:17px;background:color-mix(in srgb,var(--tile) 16%,transparent);}
 .peran-nilai{font-size:20px;font-weight:800;color:var(--tile);line-height:1.1;font-variant-numeric:tabular-nums;}
 .peran-label{font-size:11px;color:var(--text-secondary);font-weight:600;line-height:1.25;}
@@ -3803,6 +3808,10 @@ async function renderDashboard() {
 
 // ── Dasbor sesuai peran: tampilan tetap sama untuk semua, tapi Admin/Kepala Sekolah dapat kartu
 // "Perlu ditindaklanjuti" dan Bendahara dapat jalan pintas keuangan. Guru biasa tidak melihat apa-apa.
+function _keLupaJurnalKepsek() {
+  showPage("kepsek", "page-kepsek", "menuKepsek");
+  setTimeout(() => qs("kepsek-lupa-jurnal")?.closest(".card")?.scrollIntoView({ behavior: "smooth", block: "start" }), 700);
+}
 async function renderDashPeran() {
   const wadah = qs("dash-peran");
   if (!wadah) return;
@@ -3810,24 +3819,36 @@ async function renderDashPeran() {
   const pengelola = isAdmin() || isKepsekOrTU();
   const bendahara = isAdmin() || (typeof _jabatanGuru === "function" && _jabatanGuru(STATE.guruId).some((j) => j.kode === "bendahara"));
   if (!pengelola && !bendahara) { wadah.innerHTML = ""; return; }
-  const tile = (ikon, label, nilai, aksi, warna) => `<button type="button" class="peran-tile" onclick="${aksi}" style="--tile:${warna};">
+  const tile = (ikon, label, nilai, aksi, warna) => `<button type="button" class="peran-tile${typeof nilai === "number" && nilai > 0 ? " ada" : typeof nilai === "number" ? " nol" : ""}" onclick="${aksi}" style="--tile:${warna};">
       <span class="peran-ikon">${ikon}</span><span class="peran-nilai">${nilai}</span><span class="peran-label">${label}</span></button>`;
   let isi = "";
   if (pengelola) {
-    let izin = "…", tukar = "…", belumJurnal = "…";
+    let izin = "…", tukar = "…", belumJurnal = "…", ajuan = "…", lupa = "…", tertunda = "…";
     try {
-      const [a, b, c] = await Promise.all([
+      const dari14 = tanggalISO(new Date(Date.now() - 14 * 86400000));
+      const [a, b, c, d, e2] = await Promise.all([
         apiGetAntrianHariIni(),
         apiGetTukarJadwalMenunggu(),
         supa.from("absensi_sesi").select("id,jam_masuk,jurnal_id,jam_pulang").eq("tanggal", tanggalISO()).or("dihapus.is.null,dihapus.eq.false"),
+        apiGetPengajuanJurnalMenunggu().catch(() => []),
+        // 14 hari terakhir: sudah masuk tapi lupa pulang/jurnal (belum dibantu) + jurnal tertunda (sudah dibantu, guru belum isi)
+        supa.from("absensi_sesi").select("id,jam_masuk,jurnal_id,jam_pulang,hadir_bersyarat,status_kehadiran").gte("tanggal", dari14).lt("tanggal", tanggalISO())
+          .not("jam_masuk", "is", null).or("jurnal_id.is.null,jam_pulang.is.null").or("dihapus.is.null,dihapus.eq.false"),
       ]);
-      izin = a.length; tukar = b.length;
+      izin = a.length; tukar = b.length; ajuan = (d || []).length;
       belumJurnal = (c.data || []).filter((s) => s.jam_masuk && !s.jurnal_id && !s.jam_pulang).length;
+      const lalu = (e2.data || []).filter((s) => !["izin", "sakit"].includes(s.status_kehadiran));
+      lupa = lalu.filter((s) => !s.hadir_bersyarat).length;
+      tertunda = lalu.filter((s) => s.hadir_bersyarat && !s.jurnal_id).length;
     } catch (e) { console.warn("Gagal memuat ringkasan peran:", e); }
-    isi += `<div class="peran-judul">📌 Perlu ditindaklanjuti hari ini</div><div class="peran-grid">
+    const totalAksi = [izin, tukar, ajuan, lupa].reduce((t, v) => t + (typeof v === "number" ? v : 0), 0);
+    isi += `<div class="peran-judul">📌 Perlu ditindaklanjuti${totalAksi ? ` <span class="peran-total">${totalAksi}</span>` : " · semua beres ✓"}</div><div class="peran-grid">
       ${tile("✉️", "Izin/Sakit menunggu", izin, "showPage('kepsek','page-kepsek','menuKepsek')", "var(--warn)")}
       ${tile("🔀", "Tukar/Pindah jam menunggu", tukar, "showPage('kepsek','page-kepsek','menuKepsek')", "var(--accent)")}
-      ${tile("📝", "Sudah masuk, belum isi jurnal", belumJurnal, "showPage('monitor','page-monitor','menuMonitor')", "var(--bad)")}
+      ${tile("🙋", "Ajukan hadir / jurnal terlambat menunggu", ajuan, "showPage('kepsek','page-kepsek','menuKepsek')", "#7c3aed")}
+      ${tile("🛠️", "Masuk tapi lupa pulang/jurnal (14 hari)", lupa, "_keLupaJurnalKepsek()", "#ea580c")}
+      ${tile("📝", "Sudah masuk, belum isi jurnal hari ini", belumJurnal, "showPage('monitor','page-monitor','menuMonitor')", "var(--bad)")}
+      ${tile("⏳", "Jurnal tertunda (menunggu guru)", tertunda, "bukaKedisiplinan('bulan')", "#64748b")}
     </div>`;
   }
   if (bendahara) {
@@ -3987,9 +4008,9 @@ function badgeSesi(sesi) {
     return `<span class="badge badge-red">○ ${t("statusBelumAbsen")}</span>`;
   }
   if (_sesiJurnalTertunda(sesi)) return _lewatBatasJurnalTertunda(sesi)
-    ? `<span class="badge badge-red" title="Dibantu absen pulang oleh admin; jurnal belum dilengkapi guru dan sudah lewat batas ${JURNAL_TERTUNDA_BATAS_HARI} hari">▲ Bersyarat · 📝 jurnal lewat batas</span>`
-    : `<span class="badge badge-yellow" title="Dibantu absen pulang oleh admin; guru wajib melengkapi jurnal">▲ Bersyarat · 📝 jurnal tertunda</span>`;
-  if (sesi.hadir_bersyarat) return `<span class="badge badge-yellow">▲ Hadir Bersyarat</span>`;
+    ? `<span class="badge badge-red" style="white-space:nowrap;" title="Dibantu absen pulang oleh admin; jurnal belum dilengkapi guru dan sudah lewat batas ${JURNAL_TERTUNDA_BATAS_HARI} hari">▲ Bersyarat · 📝 jurnal lewat batas</span>`
+    : `<span class="badge badge-yellow badge-bersyarat" title="Dibantu absen pulang oleh admin; guru wajib melengkapi jurnal">▲ Bersyarat · 📝 jurnal tertunda</span>`;
+  if (sesi.hadir_bersyarat) return `<span class="badge badge-yellow badge-bersyarat">▲ Hadir Bersyarat</span>`;
   if (sesi.status_kehadiran === "izin") return `<span class="badge badge-yellow">✉ ${t("statusIzin")}</span>`;
   if (sesi.status_kehadiran === "sakit") return `<span class="badge badge-yellow">✚ ${t("statusSakit")}</span>`;
   if (sesi.status_kehadiran === "alpha") return `<span class="badge badge-red">✕ ${t("statusAlpha")}</span>`;
@@ -8054,7 +8075,7 @@ async function renderRiwayatAbsen(pakaiCache) {
       // biasa (tidak bisa diklik) untuk status lain, atau untuk baris virtual (belum ada baris asli
       // di DB, jadi tidak ada sesiId nyata untuk dibatalkan).
       const badgeHtml = (isAdmin() && r.hadir_bersyarat && !r._virtual)
-        ? `<span class="badge badge-yellow" style="cursor:pointer;" title="Klik untuk batalkan Hadir Bersyarat" onclick="revertSesiKeAlpha('${r.id}')">▲ Hadir Bersyarat</span>`
+        ? `<span class="badge badge-yellow badge-bersyarat" style="cursor:pointer;" title="Klik untuk batalkan Hadir Bersyarat" onclick="revertSesiKeAlpha('${r.id}')">▲ Hadir Bersyarat</span>`
         : badgeSesi(r);
       return `${badgeHtml}${isAdmin() && (r.status_kehadiran === "alpha" || (!r.status_kehadiran && !r.jam_masuk && r.tanggal && r.tanggal < tanggalISO())) && !r.hadir_bersyarat ? ` <button class="btn btn-outline" style="padding:2px 7px;font-size:13px;line-height:1;" title="${t("perbaikiBtn")}" onclick="${r._virtual ? `perbaikiSesiVirtual('${r.guru_id}','${r.jadwal_id}','${r.kelas_id}','${r.mapel_id}','${r.tanggal}')` : `openPerbaikanAbsenAdmin('${r.id}','${r.guru_id}','${r.tanggal}')`}">🛠️</button>` : ""}${isAdmin() && !r._virtual && r.jam_masuk && r.jurnal_id && !r.jam_pulang ? ` <button class="btn btn-outline" style="padding:2px 7px;font-size:13px;line-height:1;" title="${t("bantuAbsenPulangBtn")}" onclick="bantuAbsenPulangAdmin('${r.id}')">🕒</button>` : ""}${btnLapor}${_tombolWaRiwayat(r)}`;
     };
