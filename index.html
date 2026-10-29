@@ -4396,9 +4396,11 @@ function getLokasiFreshOrWait(maxWaitMs = 15000) {
         if (_GPS.lat && (Date.now() - _GPS.ts) < 5000) {
           clearInterval(iv);
           resolve({ lat: _GPS.lat, lng: _GPS.lng, acc: _GPS.acc });
-        } else if (Date.now() - t0 > maxWaitMs) {
+        } else if (Date.now() - t0 > 4000) {
+          // watchPosition hanya memberi data baru kalau posisi BERUBAH — guru yang diam lama di kelas
+          // tidak pernah dapat titik "segar", dulu ditunggu 15 detik lalu gagal. Ambil posisi sekali.
           clearInterval(iv);
-          reject(new Error("GPS tidak mendapatkan sinyal. Pastikan lokasi perangkat diaktifkan."));
+          getLokasiSaatIni().then(resolve).catch(() => reject(new Error("GPS tidak mendapatkan sinyal. Pastikan lokasi perangkat diaktifkan.")));
         }
       }, 500);
     });
@@ -4720,13 +4722,18 @@ function cekJendelaAbsenPulang(jadwal) {
   const jamMulai = jamJadwalKeDate(jadwal.jam_mulai);
   const jamSelesai = jamJadwalKeDate(jadwal.jam_selesai);
   if (!jamSelesai) return { ok: true };
-  // Batas bawah: tidak boleh absen pulang sebelum kelas dimulai
-  if (jamMulai && realNow() < jamMulai) {
-    return { ok: false, pesan: `Absen Pulang baru bisa dilakukan setelah kelas dimulai (jam ${jadwal.jam_mulai?.slice(0,5)} WITA).` };
-  }
   // Pengaman data keliru: kalau jam selesai <= jam mulai (mis. "00:00" yang seharusnya 12:00), batas
   // atasnya tidak bisa dipercaya — jangan kunci guru gara-gara salah input jadwal, cukup batas bawah.
-  if (jamMulai && jamSelesai <= jamMulai) return { ok: true };
+  const jadwalWajar = !jamMulai || jamSelesai > jamMulai;
+  // Batas bawah: absen pulang (dan jurnal) baru terbuka menjelang kelas SELESAI — dulu cukup setelah
+  // kelas dimulai, sehingga ada yang mengisi jurnal & absen pulang padahal belum mengajar.
+  const awalMenit = p.pulang_awal_menit ?? 10;
+  const bolehMulai = jadwalWajar ? new Date(jamSelesai.getTime() - awalMenit * 60000) : jamMulai;
+  if (bolehMulai && realNow() < bolehMulai) {
+    const jam = new Intl.DateTimeFormat("id-ID", { timeZone: "Asia/Makassar", hour: "2-digit", minute: "2-digit" }).format(bolehMulai);
+    return { ok: false, awal: true, pesan: `Belum waktunya absen pulang. Jurnal & absen pulang baru bisa mulai pukul ${jam} WITA (${awalMenit} menit sebelum kelas selesai jam ${jadwal.jam_selesai?.slice(0, 5)}).` };
+  }
+  if (!jadwalWajar) return { ok: true };
   const batasAkhir = new Date(jamSelesai.getTime() + batas * 60000);
   if (realNow() > batasAkhir) {
     return { ok: false, pesan: `Batas waktu Absen Pulang (${batas} menit setelah jam ${jadwal.jam_selesai?.slice(0,5)}) sudah lewat. Sesi ini akan otomatis tercatat Tidak Hadir — hubungi admin untuk perbaikan.` };
@@ -4773,14 +4780,22 @@ async function handleAbsenMasuk(jadwalId) {
 
 async function handleAbsenPulang(jadwalId) {
   if (absenDiblokirHariIni()) { toast(alasanLiburHariIni(), "err"); return; }
-  const sesi = sesiUntukJadwal(jadwalId);
-  if (!sesi) return;
+  let sesi = sesiUntukJadwal(jadwalId);
+  if (!sesi) {
+    // Dulu diam saja (tombol seperti tidak berfungsi) — muat ulang data sesi lalu coba sekali lagi
+    toast("Memuat ulang data sesi…", "info");
+    await bootDataGuru();
+    sesi = sesiUntukJadwal(jadwalId);
+    if (!sesi) { toast("Data sesi untuk jadwal ini tidak ditemukan. Tutup lalu buka lagi aplikasi, atau hubungi admin.", "err"); return; }
+  }
   if (sesi.jam_pulang) { toast("Anda sudah tercatat absen pulang untuk sesi ini.", "err"); return; }
   if (!sesi.jam_masuk) { toast("Anda belum absen masuk untuk sesi ini.", "err"); return; }
   if (!STATE.pengaturan || !STATE.pengaturan.lokasi_lat || !STATE.pengaturan.lokasi_lng) {
     toast("Pengaturan koordinat lokasi sekolah belum diisi. Hubungi admin.", "err"); return;
   }
   const jadwal = STATE.jadwalHariIni.find((j) => j.id === jadwalId);
+  // Terlalu awal (kelas belum hampir selesai) → jurnal pun belum dibuka
+  if (jadwal && !isAdmin()) { await syncServerTime(); const cekAwal = cekJendelaAbsenPulang(jadwal); if (!cekAwal.ok && cekAwal.awal) { toast(cekAwal.pesan, "err"); return; } }
   if (!sesi.jurnal_id) {
     // Jurnal belum diisi — buka form jurnal; setelah tersimpan langsung lanjut absen pulang otomatis
     // (hanya kalau waktu absen pulang masih terbuka)
@@ -4814,7 +4829,9 @@ async function handleAbsenPulang(jadwalId) {
     const radius = p.radius_meter ?? 150;
     const acc = loc.acc ?? 0;
     const accInfo = acc ? ` (akurasi GPS ±${Math.round(acc)}m)` : "";
-    if (jarak > radius) {
+    // Absen pulang: guru sudah terbukti di sekolah saat absen masuk; di dalam ruangan GPS sering
+    // meleset — beri kelonggaran sebesar akurasi GPS (maks. 50 m).
+    if (jarak - Math.min(acc || 0, 50) > radius) {
       toast(`❌ Di luar radius — jarak ${Math.round(jarak)}m, batas ${radius}m${accInfo}. Tunggu GPS lebih akurat atau pindah ke area terbuka.`, "err");
       return;
     }
@@ -4845,7 +4862,7 @@ function _grupKelasGabungan() {
   });
   return Object.values(grup).filter((g) => g.length > 1);
 }
-async function _ambilLokasiValidAbsen() {
+async function _ambilLokasiValidAbsen(pulang) {
   if (!STATE.pengaturan?.lokasi_lat || !STATE.pengaturan?.lokasi_lng) { toast("Pengaturan koordinat lokasi sekolah belum diisi. Hubungi admin.", "err"); return null; }
   if (!(_GPS.lat && (Date.now() - _GPS.ts) < 30000)) toast(t("sedangMencariLokasi"));
   const loc = await getLokasiFreshOrWait();
@@ -4853,7 +4870,7 @@ async function _ambilLokasiValidAbsen() {
   const jarak = hitungJarakMeter(loc.lat, loc.lng, p.lokasi_lat, p.lokasi_lng);
   const radius = p.radius_meter ?? 150;
   const accInfo = loc.acc ? ` (akurasi GPS ±${Math.round(loc.acc)}m)` : "";
-  if (jarak > radius) { toast(`❌ Di luar radius — jarak ${Math.round(jarak)}m, batas ${radius}m${accInfo}. Tunggu GPS lebih akurat atau pindah ke area terbuka.`, "err"); return null; }
+  if (jarak - (pulang ? Math.min(loc.acc || 0, 50) : 0) > radius) { toast(`❌ Di luar radius — jarak ${Math.round(jarak)}m, batas ${radius}m${accInfo}. Tunggu GPS lebih akurat atau pindah ke area terbuka.`, "err"); return null; }
   return { loc, jarak, accInfo };
 }
 async function handleAbsenMasukGabungan(jadwalIds) {
@@ -4875,13 +4892,14 @@ async function handleAbsenPulangGabungan(jadwalIds) {
   if (absenDiblokirHariIni()) { toast(alasanLiburHariIni(), "err"); return; }
   const semua = jadwalIds.map((id) => ({ j: STATE.jadwalHariIni.find((x) => x.id === id), s: sesiUntukJadwal(id) })).filter((x) => x.j && x.s && x.s.jam_masuk && !x.s.jam_pulang);
   if (!semua.length) { toast("Belum ada kelas yang bisa absen pulang.", "err"); return; }
+  if (!isAdmin()) { await syncServerTime(); const cekAwal = cekJendelaAbsenPulang(semua[0].j); if (!cekAwal.ok && cekAwal.awal) { toast(cekAwal.pesan, "err"); return; } }
   const belumJurnal = semua.filter((x) => !x.s.jurnal_id);
   if (belumJurnal.length) { toast(`Isi jurnal dulu untuk: ${belumJurnal.map((x) => x.j.kelas?.nama_kelas).join(", ")}`, "err"); handleAbsenPulang(belumJurnal[0].j.id); return; }
   await syncServerTime();
   const cek = cekJendelaAbsenPulang(semua[0].j);
   if (!cek.ok && !isAdmin()) { toast(cek.pesan + " Minta admin untuk mencatat.", "err"); return; }
   try {
-    const hasil = await _ambilLokasiValidAbsen();
+    const hasil = await _ambilLokasiValidAbsen(true);
     if (!hasil) return;
     for (const x of semua) await apiAbsenPulang(x.s.id, { lat: hasil.loc.lat, lng: hasil.loc.lng, jarak: hasil.jarak, statusLokasi: "valid" });
     tampilSuksesAbsen("Absen Pulang Berhasil! 🏠", `${STATE.guruNama || "Guru"} absen pulang untuk ${semua.length} kelas gabungan.\n📍 ${Math.round(hasil.jarak)}m dari sekolah${hasil.accInfo}`, "pulang");
