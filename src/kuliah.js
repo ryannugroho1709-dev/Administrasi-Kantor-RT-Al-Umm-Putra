@@ -12,9 +12,9 @@
 
 const KUL_PROGRAM = {
   s1: { jenjang: "S1", kampus: "International Open University (IOU)", jurusan: "Psikologi Islam", arab: "علم النفس الإسلامي", semester: 8, aktif: "1 & 5",
-        matkul: "ENES101 Bahasa Inggris · PPAB301 Psikologi Perilaku Adiktif · PMAD301 Model & Pendekatan Disabilitas", src: "kuliah-s1/?v=12", lokal: "fk-s1.v1", ikon: "📘" },
+        matkul: "ENES101 Bahasa Inggris · PPAB301 Psikologi Perilaku Adiktif · PMAD301 Model & Pendekatan Disabilitas", src: "kuliah-s1/?v=14", lokal: "fk-s1.v1", ikon: "📘" },
   s2: { jenjang: "S2", kampus: "Shofwa", jurusan: "Ulumul Qur'an", arab: "علوم القرآن", semester: 4, aktif: "1",
-        matkul: "Ushul Tafsir · Ulumul Qur'an · Nasikh Mansukh · Aqidah · Nahwu · Tajwid", src: "kuliah-s2/?v=7", lokal: "fk-uq.v1", ikon: "🌙" },
+        matkul: "Ushul Tafsir · Ulumul Qur'an · Nasikh Mansukh · Aqidah · Nahwu · Tajwid", src: "kuliah-s2/?v=9", lokal: "fk-uq.v1", ikon: "🌙" },
 };
 const KUL = { set: {}, lama: [], siap: false, galat: "", sinkron: "" };
 let KUL_AKSES = (() => { try { return JSON.parse(localStorage.getItem("kulAkses") || "null") || {}; } catch (e) { return {}; } })();

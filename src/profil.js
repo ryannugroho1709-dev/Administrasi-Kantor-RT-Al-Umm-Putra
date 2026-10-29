@@ -307,12 +307,3 @@ async function _gambarQrKartu() {
     box.innerHTML = q.createSvgTag({ cellSize: 2, margin: 0 }).replace("<svg ", '<svg style="width:100%;height:100%;display:block" ');
   } catch (e) { box.remove(); }
 }
-
-// ── Ulang tahun guru hari ini (untuk Dashboard) ──
-function htmlUlangTahunGuru() {
-  const n = new Date(), md = String(n.getMonth() + 1).padStart(2, "0") + "-" + String(n.getDate()).padStart(2, "0");
-  const ultah = (LOOKUP.guruAll || []).filter((g) => g.status_aktif !== false && g.tanggal_lahir && String(g.tanggal_lahir).slice(5, 10) === md);
-  if (!ultah.length) return "";
-  return `<div class="pengingat-jurnal" role="status" style="border-color:rgba(236,72,153,.4);background:rgba(236,72,153,.06);"><span style="font-size:22px;line-height:1;">🎂</span><div style="flex:1;min-width:0;"><b>Hari ini milad ${ultah.map((g) => escapeHtml(_namaSingkatTopbar(g.nama))).join(", ")}</b><div style="margin-top:3px;font-size:11.5px;">Barakallahu fii umrik — semoga Allah berkahi usia, ilmu, dan amalnya.</div></div>
-    ${ultah.filter((g) => g.no_wa).slice(0, 1).map((g) => `<a class="btn btn-accent" style="padding:7px 12px;font-size:11.5px;flex-shrink:0;align-self:center;" target="_blank" rel="noopener" href="https://wa.me/${String(g.no_wa).replace(/\D/g, "").replace(/^0/, "62")}?text=${encodeURIComponent("Barakallahu fii umrik, " + _namaSingkatTopbar(g.nama) + " 🎉 Semoga Allah memberkahi usia, ilmu, dan amal antum. Aamiin.")}">💬 Ucapkan</a>`).join("")}</div>`;
-}

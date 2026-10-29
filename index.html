@@ -3819,11 +3819,10 @@ async function renderDashPeran() {
   await ensureLookups();
   const pengelola = isAdmin() || isKepsekOrTU();
   const bendahara = isAdmin() || (typeof _jabatanGuru === "function" && _jabatanGuru(STATE.guruId).some((j) => j.kode === "bendahara"));
-  const ultah = typeof htmlUlangTahunGuru === "function" ? htmlUlangTahunGuru() : "";
-  if (!pengelola && !bendahara) { wadah.innerHTML = ultah; return; }
+  if (!pengelola && !bendahara) { wadah.innerHTML = ""; return; }
   const tile = (ikon, label, nilai, aksi, warna) => `<button type="button" class="peran-tile${typeof nilai === "number" && nilai > 0 ? " ada" : typeof nilai === "number" ? " nol" : ""}" onclick="${aksi}" style="--tile:${warna};">
       <span class="peran-ikon">${ikon}</span><span class="peran-nilai">${nilai}</span><span class="peran-label">${label}</span></button>`;
-  let isi = ultah;
+  let isi = "";
   if (pengelola) {
     let izin = "…", tukar = "…", belumJurnal = "…", ajuan = "…", lupa = "…", tertunda = "…", ubahProfil = "…";
     try { if (isAdmin() && typeof jumlahPerubahanProfilBaru === "function") ubahProfil = await jumlahPerubahanProfilBaru(); } catch (e) {}
@@ -15818,10 +15817,10 @@ async function handleImportSiswa(evt) {
 }
 </script>
 <script src="src/kas.js?v=3"></script>
-<script src="src/kuliah.js?v=14"></script>
+<script src="src/kuliah.js?v=16"></script>
 <script src="src/modul-baca.js?v=2"></script>
 <script src="src/kesimpulan.js?v=2"></script>
-<script src="src/profil.js?v=2"></script>
+<script src="src/profil.js?v=3"></script>
 <script src="src/hp.js?v=2"></script>
 </body>
 </html>

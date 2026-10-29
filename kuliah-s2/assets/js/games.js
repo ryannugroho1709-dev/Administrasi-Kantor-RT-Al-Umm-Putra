@@ -40,7 +40,16 @@ window.Games = (function () {
     el.appendChild(box); setTimeout(() => box.remove(), 1800);
   }
 
+  // Soal baru: gulir ke atas sampai soalnya terlihat (dulu tetap di posisi tombol "Lanjut")
+  function keAtas(el) {
+    if (!el || !el.getBoundingClientRect) return;
+    const top = el.getBoundingClientRect().top;
+    if (top >= 70 && top <= innerHeight * 0.45) return;
+    el.style.scrollMarginTop = "90px"; // scrollIntoView juga jalan bila yang menggulir bukan window
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
   function result(root, r) {
+    keAtas(root);
     if (r.salah && r.salah.length && Store.catatSalah) Store.catatSalah(r.salah);
     const pct = r.total ? Math.round(r.benar / r.total * 100) : 0, st = stars(pct);
     const msg = pct >= 90 ? ["Mumtaz! Luar biasa.", "ممتاز! بارك الله فيك"] : pct >= 70 ? ["Jayyid jiddan! Hampir sempurna.", "جيد جدًا"] : pct >= 40 ? ["Jayyid. Terus berlatih.", "جيد، واصل التدريب"] : ["Jangan menyerah — ulangi materinya ya.", "لا تيأس، راجع الدرس"];
@@ -71,6 +80,7 @@ window.Games = (function () {
     if (opt.waktu) { g.timer(tLeft); tick = setInterval(() => { tLeft -= 1; g.timer(tLeft); if (tLeft <= 5 && tLeft > 0) Audio2.sfx("tick"); if (tLeft <= 0) { clearInterval(tick); finish(); } }, 1000); }
 
     function show() {
+      keAtas(root);
       if (i >= qs.length) return finish();
       locked = false;
       const q = qs[i];
@@ -132,6 +142,7 @@ window.Games = (function () {
     const g = shell(root, { cls: "g-bs", timer: !!opt.waktu });
     if (opt.waktu) { g.timer(tLeft); tick = setInterval(() => { tLeft--; g.timer(tLeft); if (tLeft <= 5 && tLeft > 0) Audio2.sfx("tick"); if (tLeft <= 0) { clearInterval(tick); finish(); } }, 1000); }
     function show() {
+      keAtas(root);
       if (i >= qs.length) { if (opt.waktu && tLeft > 0) { qs.push(...shuffle(items)); } else return finish(); }
       locked = false;
       const q = qs[i];
@@ -258,6 +269,7 @@ window.Games = (function () {
         (U.lang === "dual" && q.t.ar ? '<div class="t-ar isi-s2" dir="rtl" lang="ar"><p>' + U.arFmt(q.t.ar).replace(/_{3,}/, '<span class="blank sm">…</span>') + "</p></div>" : "");
     }
     function show() {
+      keAtas(root);
       if (i >= qs.length) return finish();
       locked = false;
       const q = qs[i]; g.prog(i, qs.length);
@@ -292,6 +304,7 @@ window.Games = (function () {
     const g = shell(root, { cls: "g-pilah" });
     const counts = data.kategori.map(() => 0);
     function show() {
+      keAtas(root);
       if (i >= qs.length) return finish();
       locked = false;
       const q = qs[i]; g.prog(i, qs.length);
@@ -329,6 +342,7 @@ window.Games = (function () {
     let i = 0, ingat = 0;
     const g = shell(root, { cls: "g-kartu" });
     function show() {
+      keAtas(root);
       if (i >= qs.length) {
         root.innerHTML = '<div class="g-result"><div class="gr-stars"><span class="on">' + Icon("cards") + '</span></div><div class="gr-msg">' + lab("Muraja'ah selesai!", "انتهت المراجعة") + '</div><div class="gr-meta">' + lab(n(ingat) + " dari " + n(qs.length) + " kartu sudah diingat", n(ingat) + " من " + n(qs.length)) + '</div><div class="gr-act"><button class="btn" data-act="ulang">' + Icon("refresh") + lab("Ulangi", "أعد") + "</button></div></div>";
         Audio2.sfx("done");

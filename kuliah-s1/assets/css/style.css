@@ -1359,3 +1359,13 @@ body.focus .reader { grid-template-columns: 1fr !important; max-width: 860px; ma
 .rc-item.done .rc-no { background: var(--ok); color: #fff; }
 .rc-item.done .rc-no .ic { width: 16px; height: 16px; }
 .rc-item.done b { text-decoration: line-through; text-decoration-color: color-mix(in srgb, currentColor 40%, transparent); }
+/* ===== Pemutar Dengarkan ===== */
+.tts-bar { position: fixed; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 60; display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 999px; background: var(--c1d, #062f27); color: #fff; box-shadow: 0 10px 30px rgba(0,0,0,.3); max-width: calc(100vw - 20px); }
+.tts-bar button { width: 36px; height: 36px; border-radius: 50%; border: 0; background: rgba(255,255,255,.12); color: #fff; font-size: 15px; cursor: pointer; flex: none; }
+.tts-bar .tts-main { width: 44px; height: 44px; background: var(--c2, #c9a24a); font-size: 18px; }
+.tts-bar .tts-info { font-size: 12px; font-weight: 700; padding: 0 4px; white-space: nowrap; }
+.tts-bar select { background: rgba(255,255,255,.12); color: #fff; border: 0; border-radius: 999px; padding: 6px 8px; font: inherit; font-size: 12px; }
+.tts-bar select option { color: #111; }
+.tts-sec { margin-left: 8px; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--line); background: var(--sf); color: var(--c1); font-size: 11px; cursor: pointer; vertical-align: middle; }
+.tts-sec:hover { background: var(--c1); color: #fff; }
+.judul-blk.tts-now { outline: 2px solid var(--c2); outline-offset: 6px; border-radius: 10px; }
