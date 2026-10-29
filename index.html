@@ -45,7 +45,7 @@ function _logoAwal(){try{return localStorage.getItem("logoSekolahUrl")||"assets/
 <!-- pdf.js — hanya dipakai fitur "Ambil sampul dari halaman pertama PDF" di Modul Ajar (render page 1 ke canvas) -->
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script>if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";</script>
-<script src="src/api.js?v=12"></script>
+<script src="src/api.js?v=13"></script>
 <script>
 // ── Override apiPerbaikanAbsenAdmin: pakai RPC SECURITY DEFINER (bypass RLS) ──
 // Blok ini di index.html mengoverride versi dari api.js agar pasti termuat,
@@ -519,6 +519,7 @@ table.simple-table.nl-tabel td{padding:5px 4px;text-align:center;vertical-align:
 table.simple-table.nl-tabel .nl-col-nama{text-align:start;position:sticky;left:0;z-index:2;background:var(--surface);min-width:150px;max-width:200px;font-weight:700;font-size:12px;box-shadow:2px 0 4px rgba(0,0,0,.06);white-space:normal;}
 table.simple-table.nl-tabel th.nl-col-nama{z-index:4;background:var(--accent-soft);vertical-align:middle;}
 .nl-no{display:inline-block;min-width:20px;font-size:10px;color:var(--text-secondary);font-weight:600;}
+.nl-nis{display:inline-block;min-width:52px;margin-right:6px;font-size:10.5px;color:var(--text-secondary);font-variant-numeric:tabular-nums;}
 .nl-g-uh{box-shadow:inset 0 3px 0 #2f6fbf;} .nl-g-tugas{box-shadow:inset 0 3px 0 #7b55c7;}
 .nl-g-ujian{box-shadow:inset 0 3px 0 #cf8317;} .nl-g-hasil{box-shadow:inset 0 3px 0 var(--ok);}
 .nl-in{width:52px;padding:5px 2px !important;text-align:center;font-weight:700;font-variant-numeric:tabular-nums;-moz-appearance:textfield;}
@@ -8123,7 +8124,7 @@ async function renderRiwayatAbsen(pakaiCache) {
         <th class="sticky-col-2" style="left:32px;" data-i18n="tanggal">Tanggal</th><th data-i18n="guru">Guru</th><th data-i18n="mapel">Mapel</th><th data-i18n="kelas">Kelas</th><th>Masuk</th><th>Pulang</th><th>Status</th></tr></thead>
       <tbody>${tampil.map((r, i) => `<tr${r._virtual ? ` title="${t("belumPernahDiabsenKeterangan")}"` : ""}>
         <td class="sticky-col-1" style="text-align:center;color:var(--text-secondary);font-size:11px;">${bulkMode ? `<input type="checkbox" class="ra-pilih-baris" value="${r.id}"${r._virtual ? ` data-virtual="1"` : ""}/>` : (i + 1)}</td>
-        <td class="sticky-col-2" style="left:32px;">${r.tanggal}</td><td>${escapeHtml(r.guru?.nama || "-")}</td><td>${escapeHtml(r.mapel?.nama_mapel || "-")}</td><td>${escapeHtml(r.kelas?.nama_kelas || "-")}</td>
+        <td class="sticky-col-2" style="left:32px;white-space:nowrap;">${_tglHari(r.tanggal)}</td><td>${escapeHtml(r.guru?.nama || "-")}</td><td>${escapeHtml(r.mapel?.nama_mapel || "-")}</td><td>${escapeHtml(r.kelas?.nama_kelas || "-")}</td>
         <td>${formatJam(r.jam_masuk)}</td><td>${formatJam(r.jam_pulang)}</td>
         <td><div class="ra-status">${aksiBaris(r)}</div></td>
       </tr>`).join("")}</tbody>
@@ -10036,7 +10037,7 @@ async function gambarTabelNilai() {
       <tbody>
         ${rows.map(({ siswa, nilai }, idx) => `
         <tr data-siswa="${siswa.id}">
-          <td class="nl-col-nama"><span class="nl-no">${idx + 1}</span>${escapeHtml(siswa.nama)}</td>
+          <td class="nl-col-nama"><span class="nl-no">${idx + 1}</span>${siswa.nis ? `<span class="nl-nis">${escapeHtml(siswa.nis)}</span>` : ""}${escapeHtml(siswa.nama)}</td>
           ${kolomUH.map((k) => sel("nilai-uh", k, nilaiDariKolom(nilai?.ulangan_harian, k), k)).join("")}
           <td class="rata-uh nl-rata" data-label="Rata UH">${hitungTotalKomponen(nilai?.ulangan_harian) || "-"}</td>
           ${kolomTugas.map((k) => sel("nilai-tugas", k, nilaiDariKolom(nilai?.tugas, k), k)).join("")}
@@ -13189,6 +13190,13 @@ async function renderKepsekLupaJurnal() {
 }
 // ── Kartu Tukar/Pindah Jadwal (dipakai antrian + riwayat) — blok "Dari → Ke" berdampingan supaya
 // sekali lihat langsung jelas jam & tanggal mana yang dipindah ke mana, bukan satu baris panjang. ──
+// "Kamis, 29-10-2026" — nama hari + tanggal untuk kolom tabel
+function _tglHari(iso) {
+  if (!iso) return "-";
+  const d = new Date(String(iso).slice(0, 10) + "T12:00:00");
+  if (isNaN(d)) return escapeHtml(String(iso));
+  return `<b>${d.toLocaleDateString("id-ID", { weekday: "long" })}</b>, ${String(d.getDate()).padStart(2, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
+}
 function _tglPendek(iso) {
   if (!iso) return "-";
   const [y, m, d] = iso.split("-").map(Number);
@@ -13476,7 +13484,7 @@ async function renderAbsenTerhapus(dari, sampai) {
       <thead><tr><th style="width:30px;"><input type="checkbox" id="rt-absen-pilih-semua" onchange="qsa('.rt-absen-baris').forEach(el=>el.checked=this.checked)"/></th><th data-i18n="tanggal">Tanggal</th><th data-i18n="guru">Guru</th><th data-i18n="mapel">Mapel</th><th data-i18n="kelas">Kelas</th><th>Status</th></tr></thead>
       <tbody>${rows.map((r) => `<tr>
         <td><input type="checkbox" class="rt-absen-baris" value="${r.id}"/></td>
-        <td>${r.tanggal}</td><td>${escapeHtml(r.guru?.nama || "-")}</td><td>${escapeHtml(r.mapel?.nama_mapel || "-")}</td><td>${escapeHtml(r.kelas?.nama_kelas || "-")}</td>
+        <td style="white-space:nowrap;">${_tglHari(r.tanggal)}</td><td>${escapeHtml(r.guru?.nama || "-")}</td><td>${escapeHtml(r.mapel?.nama_mapel || "-")}</td><td>${escapeHtml(r.kelas?.nama_kelas || "-")}</td>
         <td>${badgeSesi(r)}</td>
       </tr>`).join("")}</tbody></table>`;
   } catch (e) { console.error(e); target.innerHTML = `<div class="empty-state">Gagal memuat.</div>`; }
@@ -13491,7 +13499,7 @@ async function renderIzinSakitTerhapus(dari, sampai) {
       <thead><tr><th style="width:30px;"><input type="checkbox" id="rt-izinsakit-pilih-semua" onchange="qsa('.rt-izinsakit-baris').forEach(el=>el.checked=this.checked)"/></th><th data-i18n="tanggal">Tanggal</th><th data-i18n="guru">Guru</th><th>Jenis</th><th data-i18n="alasanLabel">Alasan</th></tr></thead>
       <tbody>${rows.map((r) => `<tr>
         <td><input type="checkbox" class="rt-izinsakit-baris" value="${r.id}"/></td>
-        <td>${r.tanggal}</td><td>${escapeHtml(r.guru?.nama || "-")}</td><td>${r.jenis === "sakit" ? t("statusSakit") : t("statusIzin")}</td>
+        <td style="white-space:nowrap;">${_tglHari(r.tanggal)}</td><td>${escapeHtml(r.guru?.nama || "-")}</td><td>${r.jenis === "sakit" ? t("statusSakit") : t("statusIzin")}</td>
         <td style="max-width:220px;white-space:normal;">${escapeHtml(r.alasan || "-")}</td>
       </tr>`).join("")}</tbody></table>`;
   } catch (e) { console.error(e); target.innerHTML = `<div class="empty-state">Gagal memuat.</div>`; }

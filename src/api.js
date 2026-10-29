@@ -335,9 +335,11 @@ async function apiCekJurnalTerisi(sesiId) {
 // ── JURNAL KELAS + ABSENSI SISWA ──
 async function apiGetSiswaByKelas(kelasId) {
   try {
-    return unwrap(
-      await supa.from("siswa").select("id,nama").eq("kelas_id", kelasId).eq("status_aktif", true).order("nama")
+    // Urut NIS (angka dibandingkan sebagai angka); santri tanpa NIS di akhir, urut nama
+    const rows = unwrap(
+      await supa.from("siswa").select("id,nama,nis").eq("kelas_id", kelasId).eq("status_aktif", true).order("nama")
     );
+    return rows.sort((x, y) => (x.nis ? 0 : 1) - (y.nis ? 0 : 1) || String(x.nis || "").localeCompare(String(y.nis || ""), "id", { numeric: true }) || x.nama.localeCompare(y.nama, "id"));
   } catch (e) {
     throw new Error(_pesanErrorRamah(e) || e.message);
   }
