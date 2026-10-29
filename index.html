@@ -4731,7 +4731,7 @@ function cekJendelaAbsenPulang(jadwal) {
   const bolehMulai = jadwalWajar ? new Date(jamSelesai.getTime() - awalMenit * 60000) : jamMulai;
   if (bolehMulai && realNow() < bolehMulai) {
     const jam = new Intl.DateTimeFormat("id-ID", { timeZone: "Asia/Makassar", hour: "2-digit", minute: "2-digit" }).format(bolehMulai);
-    return { ok: false, awal: true, pesan: `Belum waktunya absen pulang. Jurnal & absen pulang baru bisa mulai pukul ${jam} WITA (${awalMenit} menit sebelum kelas selesai jam ${jadwal.jam_selesai?.slice(0, 5)}).` };
+    return { ok: false, awal: true, pesan: `Belum waktunya absen pulang — baru bisa mulai pukul ${jam} WITA (${awalMenit} menit sebelum kelas selesai jam ${jadwal.jam_selesai?.slice(0, 5)}).` };
   }
   if (!jadwalWajar) return { ok: true };
   const batasAkhir = new Date(jamSelesai.getTime() + batas * 60000);
@@ -4794,8 +4794,6 @@ async function handleAbsenPulang(jadwalId) {
     toast("Pengaturan koordinat lokasi sekolah belum diisi. Hubungi admin.", "err"); return;
   }
   const jadwal = STATE.jadwalHariIni.find((j) => j.id === jadwalId);
-  // Terlalu awal (kelas belum hampir selesai) → jurnal pun belum dibuka
-  if (jadwal && !isAdmin()) { await syncServerTime(); const cekAwal = cekJendelaAbsenPulang(jadwal); if (!cekAwal.ok && cekAwal.awal) { toast(cekAwal.pesan, "err"); return; } }
   if (!sesi.jurnal_id) {
     // Jurnal belum diisi — buka form jurnal; setelah tersimpan langsung lanjut absen pulang otomatis
     // (hanya kalau waktu absen pulang masih terbuka)
@@ -4810,6 +4808,7 @@ async function handleAbsenPulang(jadwalId) {
           const jadwalCek = STATE.jadwalHariIni.find((j) => j.id === jadwalId);
           const cekW = jadwalCek ? cekJendelaAbsenPulang(jadwalCek) : { ok: false };
           if (cekW.ok || isAdmin()) { handleAbsenPulang(jadwalId); }
+          else if (cekW.awal) { toast("✅ Jurnal tersimpan. " + cekW.pesan.replace("Belum waktunya absen pulang. Jurnal & absen pulang", "Absen pulang"), "ok"); }
           else { toast("✅ Jurnal tersimpan. Waktu absen pulang sudah habis — minta admin untuk mencatat.", "ok"); }
         },
       });
@@ -4819,7 +4818,7 @@ async function handleAbsenPulang(jadwalId) {
   // Sinkronisasi waktu server (anti-curang) sebelum cek jendela waktu
   await syncServerTime();
   // Admin boleh absen pulang kapan saja (lewat batas waktu); guru tidak boleh
-  if (jadwal) { const cek = cekJendelaAbsenPulang(jadwal); if (!cek.ok && !isAdmin()) { toast(cek.pesan + " Minta admin untuk mencatat.", "err"); return; } }
+  if (jadwal) { const cek = cekJendelaAbsenPulang(jadwal); if (!cek.ok && !isAdmin()) { toast(cek.awal ? cek.pesan.replace("Jurnal & absen pulang", "Absen pulang") + " Jurnal sudah tersimpan ✓." : cek.pesan + " Minta admin untuk mencatat.", "err"); return; } }
   const _locFreshP = (_GPS.lat && (Date.now() - _GPS.ts) < 30000);
   if (!_locFreshP) toast(t("sedangMencariLokasi"));
   try {
@@ -4892,12 +4891,11 @@ async function handleAbsenPulangGabungan(jadwalIds) {
   if (absenDiblokirHariIni()) { toast(alasanLiburHariIni(), "err"); return; }
   const semua = jadwalIds.map((id) => ({ j: STATE.jadwalHariIni.find((x) => x.id === id), s: sesiUntukJadwal(id) })).filter((x) => x.j && x.s && x.s.jam_masuk && !x.s.jam_pulang);
   if (!semua.length) { toast("Belum ada kelas yang bisa absen pulang.", "err"); return; }
-  if (!isAdmin()) { await syncServerTime(); const cekAwal = cekJendelaAbsenPulang(semua[0].j); if (!cekAwal.ok && cekAwal.awal) { toast(cekAwal.pesan, "err"); return; } }
   const belumJurnal = semua.filter((x) => !x.s.jurnal_id);
   if (belumJurnal.length) { toast(`Isi jurnal dulu untuk: ${belumJurnal.map((x) => x.j.kelas?.nama_kelas).join(", ")}`, "err"); handleAbsenPulang(belumJurnal[0].j.id); return; }
   await syncServerTime();
   const cek = cekJendelaAbsenPulang(semua[0].j);
-  if (!cek.ok && !isAdmin()) { toast(cek.pesan + " Minta admin untuk mencatat.", "err"); return; }
+  if (!cek.ok && !isAdmin()) { toast(cek.awal ? cek.pesan.replace("Jurnal & absen pulang", "Absen pulang") : cek.pesan + " Minta admin untuk mencatat.", "err"); return; }
   try {
     const hasil = await _ambilLokasiValidAbsen(true);
     if (!hasil) return;
