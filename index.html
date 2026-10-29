@@ -1653,6 +1653,7 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button class="btn btn-ghost" onclick="openPengaturanKopSurat()">⚙️ <span data-i18n="kopSurat">Kop Surat</span></button>
             <button class="btn btn-accent" onclick="bukaKesimpulanBulanan()">🧭 Kesimpulan Bulanan</button>
+            <button class="btn btn-ghost admin-only" onclick="bukaInsentifTambahan()">➕ Insentif Tambahan</button>
             <button class="btn btn-outline" onclick="eksporRekapLaporanKinerja()">📄 <span data-i18n="eksporRekap">Ekspor Rekap</span></button>
             <button class="btn btn-outline" onclick="bukaDaftarSlipGaji()">🧾 Slip Gaji</button>
           </div>
@@ -12490,7 +12491,10 @@ async function renderLaporanKinerja() {
       const guruMusyrifSaja = Object.keys(musyrifPerGuru)
         .filter((gid) => !idGuruAktif.has(gid))
         .map((gid) => guruMusyrifMap[gid] || (LOOKUP.guruAll || []).find((g) => g.id === gid) || { id: gid, nama: "-" });
-      const daftarGuruGabungan = [...guruAktif, ...guruMusyrifSaja];
+      const tambahanBulan = await _ambilInsentifTambahan(bulanYM);
+      const idSudah = new Set([...guruAktif, ...guruMusyrifSaja].map((g) => g.id));
+      const guruTambahanSaja = [...new Set(tambahanBulan.map((x) => x.guru_id))].filter((gid) => !idSudah.has(gid)).map((gid) => (LOOKUP.guruAll || []).find((g) => g.id === gid) || { id: gid, nama: "-" });
+      const daftarGuruGabungan = [...guruAktif, ...guruMusyrifSaja, ...guruTambahanSaja];
       // Tukar/pindah jam yang DISETUJUI bulan ini, dihitung per guru pengaju
       const tukarPerGuru = {};
       try { (await apiGetRiwayatTukarJadwalSemua(dari, sampai)).filter((x) => x.status === "disetujui").forEach((x) => { tukarPerGuru[x.guru_pengaju_id] = (tukarPerGuru[x.guru_pengaju_id] || 0) + 1; }); } catch (e) { console.warn("Gagal hitung tukar jam:", e); }
@@ -12500,16 +12504,19 @@ async function renderLaporanKinerja() {
         const s = slip.find((x) => x.guru_id === g.id);
         const honor = s?.total || 0;
         const honorMusyrif = musyrifPerGuru[g.id] || 0;
-        return { guru: g, ring, tukar: tukarPerGuru[g.id] || 0, jp: s?.jumlah_jp || 0, honor, honorMusyrif, totalGabungan: honor + honorMusyrif };
+        const tambahanRows = tambahanBulan.filter((x) => x.guru_id === g.id), tambahan = tambahanRows.reduce((a, x) => a + Number(x.jumlah || 0), 0);
+        return { guru: g, ring, tukar: tukarPerGuru[g.id] || 0, jp: s?.jumlah_jp || 0, honor, honorMusyrif, tambahan, tambahanRows, totalGabungan: honor + honorMusyrif + tambahan };
       }));
       const totalJP = baris.reduce((a, b) => a + b.jp, 0);
       const totalHonor = baris.reduce((a, b) => a + b.honor, 0);
       const totalHonorMusyrif = baris.reduce((a, b) => a + b.honorMusyrif, 0);
       const totalGabunganSemua = baris.reduce((a, b) => a + b.totalGabungan, 0);
-      const adaMusyrifBulanIni = totalHonorMusyrif > 0;
+      const totalTambahan = baris.reduce((a, b) => a + (b.tambahan || 0), 0), adaTambahan = totalTambahan > 0;
+      const adaMusyrifBulanIni = totalHonorMusyrif > 0 || adaTambahan;
       const lkColsPx = adaMusyrifBulanIni
         ? [32, 130, 55, 45, 40, 40, 45, 50, 55, 55, 90, 90, 100]
         : [32, 130, 55, 45, 40, 40, 45, 50, 55, 55, 90];
+      if (adaTambahan) lkColsPx.splice(lkColsPx.length - 1, 0, 95);
       const lkTableWidth = lkColsPx.reduce((a, w) => a + w, 0);
       const lkColGroup = `<colgroup>${lkColsPx.map((w) => `<col style="width:${w}px;"/>`).join("")}</colgroup>`;
       const lkStatBaris = (label, value, style = "") => `<div><span class="lk-stat-label">${label}</span><span class="lk-stat-value" style="${style}">${value}</span></div>`;
@@ -12522,7 +12529,7 @@ async function renderLaporanKinerja() {
             <th data-i18n="totalSesi">Total Sesi</th><th data-i18n="hadirKolom">Hadir</th>
             <th data-i18n="izinKolom">Izin</th><th data-i18n="sakitKolom">Sakit</th><th data-i18n="alphaKolom">Alpha</th><th>Tukar Jam</th>
             <th data-i18n="persenHadirKolom">% Hadir</th><th>${t("totalJP")}</th><th data-i18n="honorMengajarLabel">Honor Mengajar</th>
-            ${adaMusyrifBulanIni ? `<th data-i18n="insentifMusyrifLabel">Insentif Musyrif</th><th data-i18n="totalGabunganLabel">Total Gabungan</th>` : ""}
+            ${adaMusyrifBulanIni ? `<th data-i18n="insentifMusyrifLabel">Insentif Musyrif</th>${adaTambahan ? "<th>Tambahan</th>" : ""}<th data-i18n="totalGabunganLabel">Total Gabungan</th>` : ""}
           </tr></thead>
           <tbody>${baris.map((b, i) => `<tr>
             <td class="sticky-col-1" style="white-space:nowrap;">${i + 1}</td><td class="sticky-col-2" style="font-weight:700;left:32px;">${escapeHtml(b.guru.nama)}</td>
@@ -12535,10 +12542,10 @@ async function renderLaporanKinerja() {
             <td style="text-align:center;font-weight:700;white-space:nowrap;">${b.ring.persenHadir}%</td>
             <td style="text-align:center;">${b.jp}</td>
             <td style="white-space:nowrap;">${formatRupiah(Number(b.honor))}</td>
-            ${adaMusyrifBulanIni ? `<td style="white-space:nowrap;">${_rupiahAtauStrip(b.honorMusyrif)}</td><td style="white-space:nowrap;font-weight:800;color:var(--accent);">${formatRupiah(Number(b.totalGabungan))}</td>` : ""}
+            ${adaMusyrifBulanIni ? `<td style="white-space:nowrap;">${_rupiahAtauStrip(b.honorMusyrif)}</td>${adaTambahan ? `<td style="white-space:nowrap;" title="${escapeHtml((b.tambahanRows || []).map((x) => x.ket).join(", "))}">${_rupiahAtauStrip(b.tambahan)}</td>` : ""}<td style="white-space:nowrap;font-weight:800;color:var(--accent);">${formatRupiah(Number(b.totalGabungan))}</td>` : ""}
           </tr>`).join("")}
           <tr style="font-weight:800;background:var(--accent-soft);"><td colspan="9" style="text-align:right;">Total</td><td style="text-align:center;">${totalJP}</td><td>${formatRupiah(totalHonor)}</td>
-          ${adaMusyrifBulanIni ? `<td>${formatRupiah(totalHonorMusyrif)}</td><td>${formatRupiah(totalGabunganSemua)}</td>` : ""}</tr>
+          ${adaMusyrifBulanIni ? `<td>${formatRupiah(totalHonorMusyrif)}</td>${adaTambahan ? `<td>${formatRupiah(totalTambahan)}</td>` : ""}<td>${formatRupiah(totalGabunganSemua)}</td>` : ""}</tr>
           </tbody>
         </table>
       </div>
@@ -12559,6 +12566,7 @@ async function renderLaporanKinerja() {
             ${lkStatBaris(t("totalJP"), b.jp)}
             ${lkStatBaris(t("honorMengajarLabel"), formatRupiah(Number(b.honor)))}
             ${adaMusyrifBulanIni ? lkStatBaris(t("insentifMusyrifLabel"), _rupiahAtauStrip(b.honorMusyrif)) : ""}
+            ${b.tambahan ? lkStatBaris("Tambahan", formatRupiah(b.tambahan)) : ""}
             ${adaMusyrifBulanIni ? lkStatBaris(t("totalGabunganLabel"), formatRupiah(Number(b.totalGabungan)), "font-weight:800;color:var(--accent);") : ""}
           </div>
         </div>`).join("")}
@@ -12589,7 +12597,8 @@ async function renderLaporanKinerja() {
     const ring = _ringkasKehadiranSesi(sesi);
     const s = slip.find((x) => x.guru_id === guruId);
     const honorMusyrif = musyrifRows.reduce((a, r) => a + Number(r.jumlah || 0), 0);
-    const totalGabungan = Number(s?.total || 0) + honorMusyrif;
+    const tambahanRows = (await _ambilInsentifTambahan(bulanYM)).filter((x) => x.guru_id === guruId), tambahan = tambahanRows.reduce((a, x) => a + Number(x.jumlah || 0), 0);
+    const totalGabungan = Number(s?.total || 0) + honorMusyrif + tambahan;
 
     // Rangkuman per mapel yang diajarkan bulan ini: berapa kali hadir/izin/sakit/alpha di tiap mapel.
     const perMapel = {};
@@ -12625,7 +12634,8 @@ async function renderLaporanKinerja() {
           <div><div style="font-size:20px;font-weight:800;">${formatRupiah(Number(s?.total || 0))}</div><div style="font-size:10.5px;color:var(--text-secondary);" data-i18n="honorMengajarLabel">Honor Mengajar</div></div>
           ${honorMusyrif > 0 ? `<div><div style="font-size:20px;font-weight:800;color:var(--accent);">${formatRupiah(honorMusyrif)}</div><div style="font-size:10.5px;color:var(--text-secondary);" data-i18n="insentifMusyrifLabel">Insentif Musyrif</div></div>` : ""}
           <div><div style="font-size:20px;font-weight:800;">${jurnal.length}</div><div style="font-size:10.5px;color:var(--text-secondary);" data-i18n="jumlahJurnal">Jurnal Terisi</div></div>
-          ${honorMusyrif > 0 ? `<div><div style="font-size:20px;font-weight:800;color:var(--ok);">${formatRupiah(totalGabungan)}</div><div style="font-size:10.5px;color:var(--text-secondary);" data-i18n="totalGabunganLabel">Total Gabungan</div></div>` : ""}
+          ${tambahan > 0 ? `<div><div style="font-size:20px;font-weight:800;">${formatRupiah(tambahan)}</div><div style="font-size:10.5px;color:var(--text-secondary);">Tambahan: ${escapeHtml(tambahanRows.map((x) => x.ket).join(", "))}</div></div>` : ""}
+          ${honorMusyrif > 0 || tambahan > 0 ? `<div><div style="font-size:20px;font-weight:800;color:var(--ok);">${formatRupiah(totalGabungan)}</div><div style="font-size:10.5px;color:var(--text-secondary);" data-i18n="totalGabunganLabel">Total Gabungan</div></div>` : ""}
         </div>
         ${barChart}
       </div>
@@ -12664,7 +12674,7 @@ async function renderLaporanKinerja() {
           </tr>`).join("") : `<tr><td colspan="5" style="text-align:center;color:var(--text-secondary);">${t("belumAdaData") || "Belum ada data"}</td></tr>`}</tbody>
         </table>
       </div>`;
-    _LK_CACHE = { bulan: bulanYM, mode, guruId, guru, ring, jp: s?.jumlah_jp || 0, honor: s?.total || 0, jurnal, daftarMapel, musyrifRows, honorMusyrif, totalGabungan, catatan: qs("lk-catatan").value || "" };
+    _LK_CACHE = { bulan: bulanYM, mode, guruId, guru, ring, jp: s?.jumlah_jp || 0, honor: s?.total || 0, jurnal, daftarMapel, musyrifRows, honorMusyrif, tambahan, tambahanRows, totalGabungan, catatan: qs("lk-catatan").value || "" };
   } catch (e) {
     console.error(e);
     target.innerHTML = `<div class="card empty-state">Gagal memuat laporan kinerja.</div>`;
@@ -12818,7 +12828,7 @@ async function bukaDaftarSlipGaji() {
     toast(t("eksporLaporanKinerjaPilihSemuaGuru"), "err");
     return;
   }
-  const baris = _LK_CACHE.guru.filter((b) => (b.honor || 0) > 0 || (b.honorMusyrif || 0) > 0);
+  const baris = _LK_CACHE.guru.filter((b) => (b.honor || 0) > 0 || (b.honorMusyrif || 0) > 0 || (b.tambahan || 0) > 0);
   if (!baris.length) { toast("Tidak ada guru dengan honor/insentif bulan ini untuk dibuatkan slip.", "err"); return; }
   const bulanYM = _LK_CACHE.bulan || qs("lk-bulan").value || bulanIniISO();
   const [tahun, bulan] = bulanYM.split("-").map(Number);
@@ -12899,7 +12909,7 @@ async function _hitungDataSlipGuru(b, bulan, tahun, rates) {
 
   return {
     guru, jenisGuru, ring: b.ring, jpB, jpC, rateB, rateC, honorB, honorC, selisihLain,
-    honorMengajar: b.honor || 0, musyrifRows, honorMusyrifTotal: b.honorMusyrif || 0, totalDiterima: b.totalGabungan || 0,
+    honorMengajar: b.honor || 0, musyrifRows, honorMusyrifTotal: b.honorMusyrif || 0, tambahanRows: b.tambahanRows || [], totalDiterima: b.totalGabungan || 0,
     nomorSlip: _SLIP_NOMOR_MAP[guru.id] || null,
   };
 }
@@ -12930,6 +12940,13 @@ function _htmlKartuSlipGaji(d, ctx) {
             <span>Subtotal</span><span>${formatRupiah(m.jumlah)}</span>
           </div>
         </div>`).join("")}
+    </div>` : "";
+  const sectionTambahan = (d.tambahanRows || []).length ? `
+    <div style="margin-top:18px;">
+      <div style="font-weight:800;font-size:13px;color:#132A20;margin-bottom:8px;">➕ Insentif Tambahan</div>
+      <div style="background:#F5F7F3;border-radius:12px;padding:12px 14px;">
+        ${d.tambahanRows.map((x) => `<div style="display:flex;justify-content:space-between;gap:12px;font-size:11.5px;color:#5E7267;padding:3px 0;"><span>${escapeHtml(x.ket)}</span><span style="font-weight:700;color:#132A20;">${formatRupiah(Number(x.jumlah || 0))}</span></div>`).join("")}
+      </div>
     </div>` : "";
 
   return `
@@ -12968,6 +12985,7 @@ function _htmlKartuSlipGaji(d, ctx) {
       </div>
 
       ${sectionMusyrif}
+      ${sectionTambahan}
 
       <div style="background:linear-gradient(135deg,${_warnaDok().tua},${_warnaDok().utama});border-radius:16px;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;margin-top:20px;color:#fff;">
         <div style="font-size:13px;font-weight:700;">TOTAL DITERIMA</div>
@@ -15770,7 +15788,7 @@ async function handleImportSiswa(evt) {
 <script src="src/kas.js?v=3"></script>
 <script src="src/kuliah.js?v=14"></script>
 <script src="src/modul-baca.js?v=2"></script>
-<script src="src/kesimpulan.js?v=1"></script>
+<script src="src/kesimpulan.js?v=2"></script>
 <script src="src/hp.js?v=2"></script>
 </body>
 </html>

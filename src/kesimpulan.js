@@ -186,3 +186,69 @@ function _kbCetak() {
   w.document.write(`<!doctype html><html lang="id"><head><meta charset="utf-8"><title>Kesimpulan Bulanan ${namaBulanIndo(_KB.bulanYM)}</title><style>body{font:12px/1.45 system-ui,'Segoe UI',sans-serif;color:#111;margin:16px}h3{margin:0 0 6px}@page{size:A4;margin:12mm}:root{--border-soft:#ddd;--text-secondary:#666;--surface:#fff;--bg-soft:#f3f4f6}</style></head><body>${klon.innerHTML}<script>onload=function(){setTimeout(function(){print()},300)}<\/script></body></html>`);
   w.document.close();
 }
+
+// ============================================================
+//  INSENTIF TAMBAHAN — baris di luar JP mengajar & musyrif (mis. Tahsin Musyrif 8x @50.000).
+//  slip_gaji dihitung ulang server (Edge Function) sehingga tidak bisa ditambah kolom dari sini;
+//  tambahan disimpan per bulan di kuliah_pengaturan (kunci "insentif:tambahan:YYYY-MM") lalu
+//  dijumlahkan ke Total Gabungan Laporan Kinerja, Slip Gaji, dan nomor slip.
+// ============================================================
+async function _ambilInsentifTambahan(bulanYM) {
+  try {
+    const r = await supa.from("kuliah_pengaturan").select("nilai").eq("kunci", "insentif:tambahan:" + bulanYM).maybeSingle();
+    return Array.isArray(r.data && r.data.nilai) ? r.data.nilai : [];
+  } catch (e) { console.warn("Gagal ambil insentif tambahan:", e); return []; }
+}
+async function _simpanInsentifTambahan(bulanYM, daftar) {
+  const { error } = await supa.from("kuliah_pengaturan").upsert({ kunci: "insentif:tambahan:" + bulanYM, nilai: daftar });
+  if (error) throw error;
+}
+async function bukaInsentifTambahan() {
+  if (!isAdmin()) { toast(t("hanyaAdminHapus"), "err"); return; }
+  const bulanYM = qs("lk-bulan")?.value || bulanIniISO();
+  const daftar = await _ambilInsentifTambahan(bulanYM);
+  const guru = (LOOKUP.guruAll || []).filter((g) => g.status_aktif !== false).sort((a, b) => a.nama.localeCompare(b.nama));
+  const nama = (id) => (LOOKUP.guruAll || []).find((g) => g.id === id)?.nama || "-";
+  const total = daftar.reduce((a, x) => a + Number(x.jumlah || 0), 0);
+  openModal(`<h3>➕ Insentif Tambahan · ${namaBulanIndo(bulanYM)}</h3>
+    <div style="font-size:11.5px;color:var(--text-secondary);margin:-8px 0 10px;line-height:1.45;">Untuk honor di luar jam mengajar & musyrif (tahsin musyrif, ekskul, panitia, dll.). Otomatis masuk <b>Total Gabungan</b> dan tercetak di <b>Slip Gaji</b> bulan ini.</div>
+    <div style="max-height:34vh;overflow-y:auto;border:1px solid var(--border-soft);border-radius:12px;padding:0 10px;margin-bottom:12px;">
+      ${daftar.length ? daftar.map((x) => `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px dashed var(--border-soft);font-size:12px;">
+        <div style="flex:1;min-width:0;"><b>${escapeHtml(nama(x.guru_id))}</b><br/><span style="color:var(--text-secondary);">${escapeHtml(x.ket)}</span></div>
+        <b style="white-space:nowrap;">${formatRupiah(Number(x.jumlah || 0))}</b>
+        <button class="btn btn-ghost" style="padding:4px 8px;font-size:11px;" onclick="_hapusInsentifTambahan('${bulanYM}','${x.id}')">🗑️</button></div>`).join("") + `<div style="display:flex;justify-content:space-between;padding:8px 0;font-weight:800;font-size:12.5px;"><span>Total</span><span>${formatRupiah(total)}</span></div>`
+      : `<div style="font-size:12px;color:var(--text-secondary);padding:12px 0;">Belum ada insentif tambahan bulan ini.</div>`}
+    </div>
+    <div class="field"><label class="form-label">Guru</label><select id="it-guru" class="input">${guru.map((g) => `<option value="${g.id}">${escapeHtml(g.nama)}</option>`).join("")}</select></div>
+    <div class="field"><label class="form-label">Keterangan</label><input id="it-ket" class="input" placeholder="mis. Tahsin Musyrif Senin malam (Sep–Okt)"/></div>
+    <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:8px;">
+      <div class="field"><label class="form-label">Jumlah kali</label><input id="it-qty" type="number" min="1" value="1" class="input" oninput="_itHitung()"/></div>
+      <div class="field"><label class="form-label">Tarif per kali (Rp)</label><input id="it-tarif" type="number" min="0" step="1000" class="input" placeholder="50000" oninput="_itHitung()"/></div>
+    </div>
+    <div id="it-total" style="font-size:12.5px;font-weight:800;margin:-4px 0 10px;">Total: Rp0</div>
+    <button class="btn btn-accent" style="width:100%;" onclick="_tambahInsentifTambahan('${bulanYM}')">💾 Tambahkan ke ${namaBulanIndo(bulanYM)}</button>`);
+}
+function _itHitung() { const el = qs("it-total"); if (el) el.textContent = "Total: " + formatRupiah((+qs("it-qty").value || 0) * (+qs("it-tarif").value || 0)); }
+async function _tambahInsentifTambahan(bulanYM) {
+  const guruId = qs("it-guru").value, qty = +qs("it-qty").value || 0, tarif = +qs("it-tarif").value || 0, ket0 = qs("it-ket").value.trim();
+  if (!ket0) { toast("Isi keterangannya dulu", "err"); qs("it-ket").focus(); return; }
+  if (qty <= 0 || tarif <= 0) { toast("Isi jumlah kali dan tarif", "err"); return; }
+  const ket = qty > 1 ? `${ket0} — ${qty}x @ ${formatRupiah(tarif)}` : ket0;
+  try {
+    const daftar = await _ambilInsentifTambahan(bulanYM);
+    daftar.push({ id: Date.now().toString(36), guru_id: guruId, ket, qty, tarif, jumlah: qty * tarif, oleh: STATE.guruNama || null, t: Date.now() });
+    await _simpanInsentifTambahan(bulanYM, daftar);
+    toast("Insentif tambahan disimpan ✓", "ok");
+    await bukaInsentifTambahan();
+    if (typeof renderLaporanKinerja === "function") renderLaporanKinerja();
+  } catch (e) { console.error(e); toast("Gagal menyimpan: " + (e.message || e), "err"); }
+}
+async function _hapusInsentifTambahan(bulanYM, id) {
+  if (!(await konfirmasiTema("Hapus baris insentif tambahan ini?", { ikon: "🗑️", judul: "Hapus Tambahan" }))) return;
+  try {
+    const daftar = (await _ambilInsentifTambahan(bulanYM)).filter((x) => x.id !== id);
+    await _simpanInsentifTambahan(bulanYM, daftar);
+    toast("Dihapus", "ok"); await bukaInsentifTambahan();
+    if (typeof renderLaporanKinerja === "function") renderLaporanKinerja();
+  } catch (e) { toast("Gagal menghapus: " + (e.message || e), "err"); }
+}
