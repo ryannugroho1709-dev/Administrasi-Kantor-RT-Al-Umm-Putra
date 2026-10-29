@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="src/kas.css?v=3">
 <link rel="stylesheet" href="src/hp.css?v=2">
 <link rel="stylesheet" href="src/kuliah.css?v=6">
-<link rel="stylesheet" href="src/modul-baca.css?v=1">
+<link rel="stylesheet" href="src/modul-baca.css?v=2">
 
 <script>
 // Logo gagal dimuat → coba logo bawaan; kalau bawaan pun gagal, tampilkan ikon 🎓 (bukan huruf "G").
@@ -45,7 +45,7 @@ function _logoAwal(){try{return localStorage.getItem("logoSekolahUrl")||"assets/
 <!-- pdf.js — hanya dipakai fitur "Ambil sampul dari halaman pertama PDF" di Modul Ajar (render page 1 ke canvas) -->
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script>if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";</script>
-<script src="src/api.js?v=11"></script>
+<script src="src/api.js?v=12"></script>
 <script>
 // ── Override apiPerbaikanAbsenAdmin: pakai RPC SECURITY DEFINER (bypass RLS) ──
 // Blok ini di index.html mengoverride versi dari api.js agar pasti termuat,
@@ -3588,7 +3588,7 @@ async function bootDataGuru() {
 
 // ── Pengumuman "Fitur Baru" — muncul SEKALI per perangkat (versi dicatat di localStorage). Naikkan
 // VERSI_INFO_FITUR kalau nanti ada rilis baru yang perlu diumumkan lagi. ──
-const VERSI_INFO_FITUR = "2026-10-tampilan-baru";
+const VERSI_INFO_FITUR = "2026-10-modul-presentasi";
 function tampilkanInfoFiturBaru() {
   try { if (localStorage.getItem("infoFiturBaru") === VERSI_INFO_FITUR) return; } catch (e) { return; }
   if (!STATE.guruId || qs("modal-overlay")?.classList.contains("open")) return;
@@ -3596,19 +3596,19 @@ function tampilkanInfoFiturBaru() {
   openModal(`
     <div class="fb-kepala">
       <div class="fb-lencana">✨ Fitur Baru</div>
-      <h3 style="margin:8px 0 4px;">Tampilan baru, lebih nyaman dipakai</h3>
-      <div style="font-size:12px;color:var(--text-secondary);">Assalamu'alaikum ${escapeHtml(_namaSingkatTopbar(STATE.guruNama))}, aplikasi kita sekarang punya beberapa hal baru:</div>
+      <h3 style="margin:8px 0 4px;">Mengajar jadi lebih praktis</h3>
+      <div style="font-size:12px;color:var(--text-secondary);">Assalamu'alaikum ${escapeHtml(_namaSingkatTopbar(STATE.guruNama))}, ini fitur baru di aplikasi kita:</div>
     </div>
     <div class="fb-daftar">
-      ${item("🎨", "Pilih warna sendiri", "Biru, Hijau, Maroon, Ungu, atau Klasik (hijau lama) + mode Gelap — tombol ✨ di pojok atas.")}
-      ${item("📱", "Menu bawah di HP", "Beranda, Absen, Jurnal, Riwayat sekarang di bawah layar, mudah dijangkau jempol.")}
-      ${item("📝", "Pengingat jurnal", "Diingatkan sebelum batas absen pulang kalau jurnal belum diisi, supaya tidak tercatat Alpha.")}
-      ${item("💬", "Kabari admin lewat WA", "Setelah ajukan izin/sakit/tukar jam, pesan WA ke admin sudah tersusun otomatis.")}
-      ${item("✍️", "Input nilai lebih praktis", "Nilai akhir langsung terhitung, Enter untuk turun ke siswa berikutnya.")}
-      ${item("🔎", "Cari cepat", "Tombol 🔎 (atau Ctrl+K di komputer) untuk mencari menu, guru, dan siswa.")}
+      ${item("🖥️", "Presentasi langsung dari Modul Ajar", "Buka menu Modul Ajar → tombol <b>Presentasi</b>: layar penuh untuk santri, pindah slide dengan panah/klik/remote, pena & stabilo untuk mencoret, laser, layar hitam (B), dan tombol <b>Proyektor</b> untuk layar kedua.")}
+      ${item("📖", "Baca buku tanpa mengunduh", "Tombol <b>Baca</b> membuka buku/PDF langsung di aplikasi, halaman terakhir diingat, dan tetap bisa dibuka tanpa internet setelah dibuka sekali.")}
+      ${item("📝", "Jurnal lebih cepat diisi", "Di form jurnal ada tombol <b>Lanjutan materi sebelumnya</b> dan <b>Dari presentasi hari ini</b> — sekali ketuk, materi langsung terisi.")}
+      ${item("⏰", "Pengingat saat kelas selesai", "Begitu jam pelajaran selesai, aplikasi mengingatkan untuk isi jurnal & absen pulang supaya tidak lupa.")}
+      ${item("📌", "Jurnal tertunda", "Kalau admin membantu absen pulang Anda, jurnalnya tetap wajib Anda lengkapi saat login (batas 3 hari). Sesi Alpha bisa diajukan hadir sendiri.")}
+      ${item("📊", "Skor kedisiplinan", "Menu Riwayat Absen → <b>Skor Kedisiplinan Saya</b>: lihat kelengkapan absen & jurnal pekan/bulan ini.")}
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px;">
-      <button class="btn btn-outline" onclick="_tutupInfoFiturBaru();bukaPilihPalet()">🎨 Pilih Warna</button>
+      <button class="btn btn-outline" onclick="_tutupInfoFiturBaru();showPage('modul-ajar','page-modul-ajar','menuModulAjar')">📚 Lihat Modul Ajar</button>
       <button class="btn btn-accent" onclick="_tutupInfoFiturBaru()">Mulai Pakai</button>
     </div>
   `);
@@ -8682,6 +8682,7 @@ function slotModulHtml(slot, bukuList) {
         </div>
       </div>
       <div class="ma-book-title">${m.judul}</div>
+      ${(() => { const n = MODUL_AJAR_BUKU_CACHE.filter((x) => x.file_url === m.file_url).length; return n > 1 ? `<div class="ma-book-bersama" title="Satu file dipakai bersama — hemat memori">📚 dipakai ${n} kelas</div>` : ""; })()}
       <div class="ma-book-buka">
         <button type="button" onclick="event.stopPropagation();bukaModulAjar('${m.id}','baca')" title="Baca di tempat tanpa mengunduh">📖 Baca</button>
         <button type="button" class="utama" onclick="event.stopPropagation();bukaModulAjar('${m.id}','presentasi')" title="Tampilkan layar penuh untuk santri (proyektor/TV)">🖥️ Presentasi</button>
@@ -8713,9 +8714,11 @@ function bukaModalUploadModul(kelasIdAwal, mapelIdAwal) {
   openModal(`
     <h3 style="margin-bottom:14px;">📤 ${t("unggahModul")}</h3>
     <div class="field"><label class="form-label" data-i18n="kelas">Kelas</label>
-      <select id="mf-kelas" class="input" onchange="_isiMapelUploadModul()">${kelasUnik.map((k) => `<option value="${k.kelas_id}" ${k.kelas_id === kelasTerpilih ? "selected" : ""}>${escapeHtml(k.nama_kelas)}</option>`).join("")}</select>
+      <select id="mf-kelas" class="input" onchange="_isiMapelUploadModul(qs('mf-mapel')?.value)">${kelasUnik.map((k) => `<option value="${k.kelas_id}" ${k.kelas_id === kelasTerpilih ? "selected" : ""}>${escapeHtml(k.nama_kelas)}</option>`).join("")}</select>
     </div>
-    <div class="field"><label class="form-label" data-i18n="mapel">Mapel</label><select id="mf-mapel" class="input"></select></div>
+    <div class="field"><label class="form-label" data-i18n="mapel">Mapel</label><select id="mf-mapel" class="input" onchange="_isiKelasLainModul('mf')"></select></div>
+    <div class="field" id="mf-kelas-lain-wrap" style="display:none;"><label class="form-label">📚 Pakai juga untuk kelas lain <span style="font-size:10.5px;color:var(--text-secondary);">(file diunggah sekali, hemat memori)</span></label>
+      <div id="mf-kelas-lain" style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;"></div></div>
     <div class="field"><label class="form-label" data-i18n="judulModulLabel">Judul (opsional)</label>
       <input id="mf-judul" class="input" placeholder="${t("judulModulPlaceholder")}"/>
     </div>
@@ -8750,6 +8753,17 @@ function _isiMapelUploadModul(mapelIdAwal) {
   const selMapel = qs("mf-mapel");
   if (!selMapel) return;
   selMapel.innerHTML = mapelUnik.map((m) => `<option value="${m.mapel_id}" ${m.mapel_id === mapelIdAwal ? "selected" : ""}>${escapeHtml(m.nama_mapel)}</option>`).join("");
+  _isiKelasLainModul("mf");
+}
+// Kelas lain yang juga punya mapel ini di jadwal → satu file buku dipakai bersama (baris DB saja, file tidak diunggah ulang)
+function _isiKelasLainModul(prefix, kelasUtama, mapelId, tercentang) {
+  kelasUtama = kelasUtama ?? qs(`${prefix}-kelas`)?.value; mapelId = mapelId ?? qs(`${prefix}-mapel`)?.value;
+  const wrap = qs(`${prefix}-kelas-lain-wrap`), box = qs(`${prefix}-kelas-lain`);
+  if (!wrap || !box) return;
+  const lain = MODUL_AJAR_PETA_CACHE.filter((p) => p.mapel_id === mapelId && p.kelas_id !== kelasUtama)
+    .sort((a, b) => _kelasAngkaUrut(a.nama_kelas) - _kelasAngkaUrut(b.nama_kelas));
+  wrap.style.display = lain.length ? "" : "none";
+  box.innerHTML = lain.map((p) => `<label style="display:flex;align-items:center;gap:5px;cursor:pointer;"><input type="checkbox" class="${prefix}-kl" value="${p.kelas_id}" ${(tercentang || []).includes(p.kelas_id) ? "checked" : ""}/> ${escapeHtml(p.nama_kelas)}</label>`).join("");
 }
 // Dipanggil saat file dipilih — tampilkan info ukuran + sembunyikan opsi auto-cover untuk PPT
 function _onGantiFileModul(input, prefix) {
@@ -8851,12 +8865,15 @@ async function simpanModulAjar() {
       const coverFileOtomatis = await _ekstrakSampulDariPdf(fileModul);
       if (coverFileOtomatis) { coverUrl = await apiUploadFoto(coverFileOtomatis, "modul-ajar/cover"); coverSumber = "auto"; }
     }
-    await apiSimpanModulAjar({
-      kelas_id: kelasId, mapel_id: mapelId, judul,
+    const semuaKelas = [kelasId, ...qsa(".mf-kl").filter((c) => c.checked).map((c) => c.value)];
+    const judulFinal = qs("mf-judul").value.trim() || (semuaKelas.length > 1 ? slot?.nama_mapel || judul : judul);
+    for (const k of semuaKelas) await apiSimpanModulAjar({
+      kelas_id: k, mapel_id: mapelId, judul: judulFinal,
       file_url: fileUrl, file_nama: fileModul.name,
       cover_url: coverUrl, cover_sumber: coverSumber,
       diunggah_oleh: STATE.guruNama || null,
     });
+    if (semuaKelas.length > 1) toast(`📚 Satu file dipakai untuk ${semuaKelas.length} kelas`, "ok");
     closeModal();
     toast(t("jurnalTersimpan"), "ok");
     renderModulAjar();
@@ -8900,9 +8917,13 @@ function bukaModalEditModul(id) {
       </div>
       <input id="me-cover-file" type="file" class="input" accept="image/*" style="display:none;margin-top:8px;"/>
     </div>
+    <div class="field" id="me-kelas-lain-wrap" style="display:none;"><label class="form-label">📚 Kelas lain yang memakai buku ini <span style="font-size:10.5px;color:var(--text-secondary);">(perubahan judul/file/sampul berlaku untuk semua)</span></label>
+      <div id="me-kelas-lain" style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;"></div></div>
     <button class="btn btn-accent" style="width:100%;margin-top:6px;" onclick="simpanEditModulAjar('${id}')">💾 <span data-i18n="simpan">Simpan</span></button>
   `);
+  _isiKelasLainModul("me", m.kelas_id, m.mapel_id, _bukuSekelompok(m).map((x) => x.kelas_id));
 }
+function _bukuSekelompok(m) { return MODUL_AJAR_BUKU_CACHE.filter((x) => x.file_url === m.file_url && x.mapel_id === m.mapel_id); }
 function _toggleSampulModeEdit() {
   const mode = document.querySelector('input[name="me-sampul-mode"]:checked')?.value;
   const coverInput = qs("me-cover-file");
@@ -8943,7 +8964,11 @@ async function simpanEditModulAjar(id) {
         else toast(t("gagalAmbilSampulOtomatis"), "err");
       }
     }
-    await apiSimpanModulAjar({ id, judul, file_url: fileUrl, file_nama: fileNama, cover_url: coverUrl, cover_sumber: coverSumber });
+    // Berlaku untuk semua baris yang memakai file yang sama; tambah/lepas kelas sesuai centang
+    const grup = _bukuSekelompok(m), dipilih = new Set([m.kelas_id, ...qsa(".me-kl").filter((c) => c.checked).map((c) => c.value)]);
+    const isi = { judul, file_url: fileUrl, file_nama: fileNama, cover_url: coverUrl, cover_sumber: coverSumber };
+    for (const x of grup) { if (dipilih.has(x.kelas_id)) await apiSimpanModulAjar({ id: x.id, ...isi }); else await apiHapusModulAjar(x.id); }
+    for (const k of dipilih) if (!grup.some((x) => x.kelas_id === k)) await apiSimpanModulAjar({ kelas_id: k, mapel_id: m.mapel_id, ...isi, diunggah_oleh: STATE.guruNama || null });
     closeModal();
     toast(t("jurnalTersimpan"), "ok");
     renderModulAjar();
@@ -8951,7 +8976,10 @@ async function simpanEditModulAjar(id) {
 }
 async function hapusModulAjar(id) {
   if (!isAdmin()) { toast(t("hanyaAdminHapus"), "err"); return; }
-  hapusDenganBatal({ pesan: "Modul ajar dihapus", jalankan: () => apiHapusModulAjar(id), setelah: () => renderModulAjar() });
+  const m = MODUL_AJAR_BUKU_CACHE.find((x) => x.id === id), bersama = m ? MODUL_AJAR_BUKU_CACHE.filter((x) => x.file_url === m.file_url).length : 1;
+  hapusDenganBatal({ pesan: bersama > 1 ? `Modul dilepas dari kelas ini (masih dipakai ${bersama - 1} kelas lain)` : "Modul ajar dihapus",
+    jalankan: async () => { await apiHapusModulAjar(id); if (m) { try { await apiHapusFileModulJikaYatim(m.file_url); await apiHapusFileModulJikaYatim(m.cover_url); } catch (e) { console.warn(e); } } },
+    setelah: () => renderModulAjar() });
 }
 </script>
 <script>

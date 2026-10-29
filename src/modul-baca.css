@@ -56,3 +56,4 @@ body.mv-buka { overflow: hidden; }
 .ma-book-buka button { flex: 1; font: inherit; font-size: 10.5px; font-weight: 700; padding: 5px 4px; border-radius: 8px; border: 1px solid var(--border-soft, #e3e8f2); background: var(--surface, #fff); color: var(--text-primary, #111); cursor: pointer; }
 .ma-book-buka button.utama { background: var(--accent, #1e40af); border-color: var(--accent, #1e40af); color: #fff; }
 .ma-book-buka button:hover { filter: brightness(1.05); transform: translateY(-1px); }
+.ma-book-bersama { font-size: 10px; font-weight: 700; color: var(--accent, #1e40af); margin-top: 3px; }

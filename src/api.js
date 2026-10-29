@@ -1917,6 +1917,14 @@ async function apiSimpanModulAjar(row) {
 async function apiHapusModulAjar(id) {
   return unwrap(await supa.from("modul_ajar").delete().eq("id", id));
 }
+// Hapus file di Storage HANYA bila tidak ada baris modul_ajar lain yang masih memakainya (buku dipakai bersama antar kelas)
+async function apiHapusFileModulJikaYatim(url) {
+  if (!url || !url.includes("/object/public/foto/")) return;
+  for (const kolom of ["file_url", "cover_url"]) if (unwrap(await supa.from("modul_ajar").select("id").eq(kolom, url).limit(1)).length) return;
+  const path = decodeURIComponent(url.split("/object/public/foto/")[1].split("?")[0]);
+  const { error } = await supa.storage.from("foto").remove([path]);
+  if (error) console.warn("Gagal hapus file storage:", error.message);
+}
 
 // ── CP-ATP (dokumen Capaian Pembelajaran - Alur Tujuan Pembelajaran) ──
 // Beda dengan Modul Ajar: satu dokumen CP-ATP bisa berlaku untuk BANYAK kelas sekaligus (mis. Nahwu
