@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="src/kas.css?v=3">
 <link rel="stylesheet" href="src/hp.css?v=2">
 <link rel="stylesheet" href="src/kuliah.css?v=6">
-<link rel="stylesheet" href="src/modul-baca.css?v=2">
+<link rel="stylesheet" href="src/modul-baca.css?v=3">
 
 <script>
 // Logo gagal dimuat → coba logo bawaan; kalau bawaan pun gagal, tampilkan ikon 🎓 (bukan huruf "G").
@@ -1478,6 +1478,7 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
             <div><label class="form-label" data-i18n="kelas">Kelas</label><select id="ma-filter-kelas" class="input" onchange="ubahFilterModulAjar()"></select></div>
             <div><label class="form-label" data-i18n="mapel">Mapel</label><select id="ma-filter-mapel" class="input" onchange="ubahFilterModulAjar()"></select></div>
           </div>
+          <button class="btn btn-accent admin-only" style="display:none;" onclick="bukaStatistikModulAjar()" title="Buku & guru yang paling sering memakai Modul Ajar">📊 Statistik</button>
           <button class="btn btn-accent admin-only" style="display:none;" onclick="bukaModalUploadModul()">📤 <span data-i18n="unggahModul">Unggah Modul</span></button>
         </div>
         <div id="modul-ajar-rak"></div>
@@ -3588,7 +3589,7 @@ async function bootDataGuru() {
 
 // ── Pengumuman "Fitur Baru" — muncul SEKALI per perangkat (versi dicatat di localStorage). Naikkan
 // VERSI_INFO_FITUR kalau nanti ada rilis baru yang perlu diumumkan lagi. ──
-const VERSI_INFO_FITUR = "2026-10-modul-presentasi";
+const VERSI_INFO_FITUR = "2026-10-modul-presentasi-2";
 function tampilkanInfoFiturBaru() {
   try { if (localStorage.getItem("infoFiturBaru") === VERSI_INFO_FITUR) return; } catch (e) { return; }
   if (!STATE.guruId || qs("modal-overlay")?.classList.contains("open")) return;
@@ -3601,6 +3602,7 @@ function tampilkanInfoFiturBaru() {
     </div>
     <div class="fb-daftar">
       ${item("🖥️", "Presentasi langsung dari Modul Ajar", "Buka menu Modul Ajar → tombol <b>Presentasi</b>: layar penuh untuk santri, pindah slide dengan panah/klik/remote, pena & stabilo untuk mencoret, laser, layar hitam (B), dan tombol <b>Proyektor</b> untuk layar kedua.")}
+      ${item("🔖", "Penanda, catatan & kuis saat presentasi", "Tandai halaman tiap pertemuan, tulis catatan per slide (hanya terlihat di laptop saat memakai Proyektor), dan tampilkan <b>kuis cepat</b> pilihan ganda di layar untuk dijawab santri bersama.")}
       ${item("📖", "Baca buku tanpa mengunduh", "Tombol <b>Baca</b> membuka buku/PDF langsung di aplikasi, halaman terakhir diingat, dan tetap bisa dibuka tanpa internet setelah dibuka sekali.")}
       ${item("📝", "Jurnal lebih cepat diisi", "Di form jurnal ada tombol <b>Lanjutan materi sebelumnya</b> dan <b>Dari presentasi hari ini</b> — sekali ketuk, materi langsung terisi.")}
       ${item("⏰", "Pengingat saat kelas selesai", "Begitu jam pelajaran selesai, aplikasi mengingatkan untuk isi jurnal & absen pulang supaya tidak lupa.")}
@@ -8628,6 +8630,9 @@ async function renderModulAjar() {
       petaBuku.get(kunci).push(m);
     });
 
+    const rakUmum = semuaModul.filter((m) => !m.kelas_id);
+    const htmlUmum = (rakUmum.length || isAdmin()) && !MODUL_AJAR_FILTER.kelas && !MODUL_AJAR_FILTER.mapel ? `<div class="ma-rak-umum"><div class="ma-kelas-judul">🌐 Rak Umum · semua kelas</div><p>Buku yang berlaku untuk seluruh kelas — diunggah sekali, tampil untuk semua.</p>
+      ${slotModulHtml({ kelas_id: "umum", mapel_id: "", nama_mapel: "Umum" }, rakUmum).replace(/<div style="font-size:11.5px;font-weight:700;[^"]*">Umum<\/div>/, "")}</div>` : "";
     let peta = MODUL_AJAR_PETA_CACHE;
     if (MODUL_AJAR_FILTER.kelas) peta = peta.filter((p) => p.kelas_id === MODUL_AJAR_FILTER.kelas);
     if (MODUL_AJAR_FILTER.mapel) peta = peta.filter((p) => p.mapel_id === MODUL_AJAR_FILTER.mapel);
@@ -8653,7 +8658,7 @@ async function renderModulAjar() {
       return `<div class="ma-subgrup-label">${label}</div><div class="ma-slot-row">${slotHtml}</div>`;
     };
 
-    target.innerHTML = kelasUrut.map(([, grp]) => {
+    target.innerHTML = htmlUmum + kelasUrut.map(([, grp]) => {
       const umum = grp.items.filter((p) => p.masuk_umum);
       const diniyyah = grp.items.filter((p) => p.masuk_diniyyah);
       const lainnya = grp.items.filter((p) => !p.masuk_umum && !p.masuk_diniyyah);
@@ -8710,15 +8715,18 @@ function bukaModalUploadModul(kelasIdAwal, mapelIdAwal) {
   if (!MODUL_AJAR_PETA_CACHE.length) { toast(t("belumAdaJadwalUntukModul"), "err"); return; }
   const kelasUnik = Array.from(new Map(MODUL_AJAR_PETA_CACHE.map((p) => [p.kelas_id, p])).values())
     .sort((a, b) => _kelasAngkaUrut(a.nama_kelas) - _kelasAngkaUrut(b.nama_kelas));
-  const kelasTerpilih = kelasIdAwal || kelasUnik[0]?.kelas_id || "";
+  const kelasTerpilih = (kelasIdAwal !== "umum" && kelasIdAwal) || kelasUnik[0]?.kelas_id || "";
   openModal(`
     <h3 style="margin-bottom:14px;">📤 ${t("unggahModul")}</h3>
+    <label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;margin-bottom:10px;cursor:pointer;padding:8px 10px;border-radius:10px;background:var(--accent-dim,rgba(30,64,175,.07));"><input type="checkbox" id="mf-umum" ${kelasIdAwal === "umum" ? "checked" : ""} onchange="qs('mf-slot').style.display=this.checked?'none':''"/> 🌐 Rak Umum — untuk semua kelas <span style="font-weight:400;color:var(--text-secondary);font-size:11px;">(doa harian, adab, panduan, dll.)</span></label>
+    <div id="mf-slot" style="${kelasIdAwal === "umum" ? "display:none;" : ""}">
     <div class="field"><label class="form-label" data-i18n="kelas">Kelas</label>
       <select id="mf-kelas" class="input" onchange="_isiMapelUploadModul(qs('mf-mapel')?.value)">${kelasUnik.map((k) => `<option value="${k.kelas_id}" ${k.kelas_id === kelasTerpilih ? "selected" : ""}>${escapeHtml(k.nama_kelas)}</option>`).join("")}</select>
     </div>
     <div class="field"><label class="form-label" data-i18n="mapel">Mapel</label><select id="mf-mapel" class="input" onchange="_isiKelasLainModul('mf')"></select></div>
     <div class="field" id="mf-kelas-lain-wrap" style="display:none;"><label class="form-label">📚 Pakai juga untuk kelas lain <span style="font-size:10.5px;color:var(--text-secondary);">(file diunggah sekali, hemat memori)</span></label>
       <div id="mf-kelas-lain" style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;"></div></div>
+    </div>
     <div class="field"><label class="form-label" data-i18n="judulModulLabel">Judul (opsional)</label>
       <input id="mf-judul" class="input" placeholder="${t("judulModulPlaceholder")}"/>
     </div>
@@ -8726,6 +8734,7 @@ function bukaModalUploadModul(kelasIdAwal, mapelIdAwal) {
       <label class="form-label">File Modul <span style="font-size:10.5px;color:var(--text-secondary);">(PDF atau PPT/PPTX, maks ${_MODUL_MAKS_MB}MB)</span></label>
       <input id="mf-file" type="file" class="input" accept="${_ACCEPT_FILE_MODUL}" onchange="_onGantiFileModul(this,'mf')"/>
       <div id="mf-file-info" style="font-size:10.5px;color:var(--text-secondary);margin-top:3px;"></div>
+      <label style="display:flex;align-items:flex-start;gap:6px;font-size:11px;margin-top:6px;cursor:pointer;"><input type="checkbox" id="mf-kompres" checked style="margin-top:2px;"/><span>🗜️ <b>Kompres otomatis</b> PDF di atas 4 MB sebelum diunggah (hemat memori Supabase & cepat dibuka di HP; teks jadi gambar)</span></label>
       <div style="font-size:10.5px;color:var(--text-secondary);margin-top:4px;line-height:1.45;">💡 Untuk <b>Presentasi</b> terbaik (cepat, bisa offline, bisa dicoret): di PowerPoint/Canva pilih <i>Simpan sebagai PDF</i>, lalu unggah PDF-nya. File PPT tetap bisa diputar lewat penampil Office Online (perlu internet, maks ±10 MB).</div>
     </div>
     <div class="field">
@@ -8776,7 +8785,9 @@ function _onGantiFileModul(input, prefix) {
   if (infoEl) {
     const lebih = file.size > _MODUL_MAKS_MB * 1024 * 1024;
     infoEl.style.color = lebih ? "var(--bad)" : "var(--text-secondary)";
-    infoEl.textContent = lebih
+    infoEl.textContent = lebih && jenis === "pdf" && qs(`${prefix}-kompres`)?.checked
+      ? `📄 PDF · ${ukuranMB}MB — akan dikompres dulu (harus ≤ ${_MODUL_MAKS_MB}MB setelah kompres)`
+      : lebih
       ? `⚠️ File ${ukuranMB}MB melebihi batas ${_MODUL_MAKS_MB}MB`
       : `📄 ${jenis?.toUpperCase() || "File"} · ${ukuranMB}MB`;
   }
@@ -8839,11 +8850,14 @@ async function _ekstrakSampulDariPdf(fileObjekPdf) {
 }
 async function simpanModulAjar() {
   if (!isAdmin()) { toast(t("hanyaAdminHapus"), "err"); return; }
-  const kelasId = qs("mf-kelas").value;
-  const mapelId = qs("mf-mapel").value;
-  const fileModul = qs("mf-file").files[0];
-  if (!kelasId || !mapelId) { toast(t("pilihKelasMapelDulu"), "err"); return; }
+  const umum = !!qs("mf-umum")?.checked;
+  const kelasId = umum ? null : qs("mf-kelas").value;
+  const mapelId = umum ? null : qs("mf-mapel").value;
+  let fileModul = qs("mf-file").files[0];
+  if (!umum && (!kelasId || !mapelId)) { toast(t("pilihKelasMapelDulu"), "err"); return; }
   if (!fileModul) { toast(t("fileModulWajib"), "err"); return; }
+  if (umum && !qs("mf-judul").value.trim()) { toast("Isi judul untuk buku Rak Umum", "err"); qs("mf-judul").focus(); return; }
+  { const tb = document.querySelector("#modal-panel .btn-accent"); if (tb) tb.disabled = true; fileModul = await _maSiapkanFile(fileModul, "mf", tb); if (tb) { tb.disabled = false; tb.innerHTML = "💾 " + t("simpan"); } }
   const jenisFile = _jenisFileModul(fileModul);
   if (!jenisFile) { toast("Format file tidak didukung. Gunakan PDF atau PPT/PPTX.", "err"); return; }
   if (fileModul.size > _MODUL_MAKS_MB * 1024 * 1024) {
@@ -8865,7 +8879,7 @@ async function simpanModulAjar() {
       const coverFileOtomatis = await _ekstrakSampulDariPdf(fileModul);
       if (coverFileOtomatis) { coverUrl = await apiUploadFoto(coverFileOtomatis, "modul-ajar/cover"); coverSumber = "auto"; }
     }
-    const semuaKelas = [kelasId, ...qsa(".mf-kl").filter((c) => c.checked).map((c) => c.value)];
+    const semuaKelas = umum ? [null] : [kelasId, ...qsa(".mf-kl").filter((c) => c.checked).map((c) => c.value)];
     const judulFinal = qs("mf-judul").value.trim() || (semuaKelas.length > 1 ? slot?.nama_mapel || judul : judul);
     for (const k of semuaKelas) await apiSimpanModulAjar({
       kelas_id: k, mapel_id: mapelId, judul: judulFinal,
@@ -8897,6 +8911,7 @@ function bukaModalEditModul(id) {
       <div style="font-size:10.5px;color:var(--text-secondary);margin-bottom:6px;">${t("fileSaatIni")}: <b>${m.file_nama || "-"}</b></div>
       <input id="me-file" type="file" class="input" accept="${_ACCEPT_FILE_MODUL}" onchange="_onGantiFileModul(this,'me')"/>
       <div id="me-file-info" style="font-size:10.5px;color:var(--text-secondary);margin-top:3px;"></div>
+      <label style="display:flex;align-items:flex-start;gap:6px;font-size:11px;margin-top:6px;cursor:pointer;"><input type="checkbox" id="me-kompres" checked style="margin-top:2px;"/><span>🗜️ <b>Kompres otomatis</b> PDF di atas 4 MB sebelum diunggah (hemat memori Supabase & cepat dibuka di HP; teks jadi gambar)</span></label>
       <div style="font-size:10.5px;color:var(--text-secondary);margin-top:4px;">${t("kosongkanTetapPakaiFileLama")}</div>
     </div>
     <div class="field">
@@ -8934,7 +8949,8 @@ async function simpanEditModulAjar(id) {
   const m = MODUL_AJAR_BUKU_CACHE.find((x) => x.id === id);
   if (!m) return;
   const judul = qs("me-judul").value.trim() || `${m.mapel?.nama_mapel || ""} - ${m.kelas?.nama_kelas || ""}`.trim();
-  const fileBaru = qs("me-file").files[0];
+  let fileBaru = qs("me-file").files[0];
+  if (fileBaru) { const tb = document.querySelector("#modal-panel .btn-accent"); if (tb) tb.disabled = true; fileBaru = await _maSiapkanFile(fileBaru, "me", tb); if (tb) { tb.disabled = false; tb.innerHTML = "💾 " + t("simpan"); } }
   if (fileBaru) {
     const jenisFileBaru = _jenisFileModul(fileBaru);
     if (!jenisFileBaru) { toast("Format file tidak didukung. Gunakan PDF atau PPT/PPTX.", "err"); return; }
@@ -15695,7 +15711,7 @@ async function handleImportSiswa(evt) {
 </script>
 <script src="src/kas.js?v=3"></script>
 <script src="src/kuliah.js?v=14"></script>
-<script src="src/modul-baca.js?v=1"></script>
+<script src="src/modul-baca.js?v=2"></script>
 <script src="src/hp.js?v=2"></script>
 </body>
 </html>
