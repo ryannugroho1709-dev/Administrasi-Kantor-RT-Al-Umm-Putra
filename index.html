@@ -23,6 +23,7 @@
 <link rel="stylesheet" href="src/kas.css?v=3">
 <link rel="stylesheet" href="src/hp.css?v=2">
 <link rel="stylesheet" href="src/kuliah.css?v=6">
+<link rel="stylesheet" href="src/modul-baca.css?v=1">
 
 <script>
 // Logo gagal dimuat → coba logo bawaan; kalau bawaan pun gagal, tampilkan ikon 🎓 (bukan huruf "G").
@@ -5207,7 +5208,7 @@ async function bukaFormJurnalUnified(opts) {
     </div>` : ""}
     <button class="btn btn-accent" style="width:100%" onclick="submitJurnal()">${ajukanHadir ? "📤 Kirim Pengajuan Hadir" : isLaporTerlambat ? "📤 Kirim ke Admin" : `<span data-i18n="simpanJurnal">Simpan Jurnal</span>`}</button>
   `);
-  if (!existing && !ajukanHadir) _tawarkanLanjutanMateri(kelasId, mapelId, tanggal);
+  if (!existing && !ajukanHadir) { _tawarkanLanjutanMateri(kelasId, mapelId, tanggal); _tawarkanMateriPresentasi(kelasId, mapelId, tanggal); }
 }
 // Isian cepat: tawarkan "Lanjutan" dari jurnal terakhir di kelas & mapel yang sama (materi + metode)
 async function _tawarkanLanjutanMateri(kelasId, mapelId, tanggal) {
@@ -8671,7 +8672,7 @@ function slotModulHtml(slot, bukuList) {
   const kartuBuku = bukuList.map((m) => {
     const ikonFile = _jenisFileModul({ name: m.file_nama || "" }) === "pptx" ? "📊" : "📘";
     return `
-    <div class="ma-book" onclick="unduhModulAjar('${m.file_url}')" title="${t("klikUntukUnduh")}">
+    <div class="ma-book" onclick="bukaModulAjar('${m.id}','baca')" title="Klik untuk membaca di tempat">
       <div class="ma-book-cover" style="${m.cover_url ? `background-image:url('${m.cover_url}');` : ""}">
         ${!m.cover_url ? `<div class="ma-book-cover-fallback"><span class="ma-book-icon">${ikonFile}</span><span>${escapeHtml(slot.nama_mapel)}</span></div>` : ""}
         <div class="ma-book-actions">
@@ -8681,6 +8682,10 @@ function slotModulHtml(slot, bukuList) {
         </div>
       </div>
       <div class="ma-book-title">${m.judul}</div>
+      <div class="ma-book-buka">
+        <button type="button" onclick="event.stopPropagation();bukaModulAjar('${m.id}','baca')" title="Baca di tempat tanpa mengunduh">📖 Baca</button>
+        <button type="button" class="utama" onclick="event.stopPropagation();bukaModulAjar('${m.id}','presentasi')" title="Tampilkan layar penuh untuk santri (proyektor/TV)">🖥️ Presentasi</button>
+      </div>
     </div>`;
   }).join("");
   const tambahTile = isAdmin() ? `
@@ -8718,6 +8723,7 @@ function bukaModalUploadModul(kelasIdAwal, mapelIdAwal) {
       <label class="form-label">File Modul <span style="font-size:10.5px;color:var(--text-secondary);">(PDF atau PPT/PPTX, maks ${_MODUL_MAKS_MB}MB)</span></label>
       <input id="mf-file" type="file" class="input" accept="${_ACCEPT_FILE_MODUL}" onchange="_onGantiFileModul(this,'mf')"/>
       <div id="mf-file-info" style="font-size:10.5px;color:var(--text-secondary);margin-top:3px;"></div>
+      <div style="font-size:10.5px;color:var(--text-secondary);margin-top:4px;line-height:1.45;">💡 Untuk <b>Presentasi</b> terbaik (cepat, bisa offline, bisa dicoret): di PowerPoint/Canva pilih <i>Simpan sebagai PDF</i>, lalu unggah PDF-nya. File PPT tetap bisa diputar lewat penampil Office Online (perlu internet, maks ±10 MB).</div>
     </div>
     <div class="field">
       <label class="form-label" data-i18n="sampulBukuLabel">Sampul Buku</label>
@@ -15661,6 +15667,7 @@ async function handleImportSiswa(evt) {
 </script>
 <script src="src/kas.js?v=3"></script>
 <script src="src/kuliah.js?v=14"></script>
+<script src="src/modul-baca.js?v=1"></script>
 <script src="src/hp.js?v=2"></script>
 </body>
 </html>
