@@ -3466,7 +3466,12 @@ function _lewatBatasJurnalTertunda(r) { return _batasJurnalTertunda(r) < realNow
 async function _muatJurnalTertunda() {
   if (!STATE.guruId) return;
   try { STATE.jurnalTertunda = await apiGetJurnalTertunda(STATE.guruId); } catch (e) { console.warn("Gagal cek jurnal tertunda:", e); STATE.jurnalTertunda = STATE.jurnalTertunda || []; }
-  try { STATE.alphaKlarifikasi = await apiGetAlphaPerluKlarifikasi(STATE.guruId, tanggalISO(new Date(Date.now() - AJUKAN_HADIR_MAKS_HARI * 86400000))); } catch (e) { STATE.alphaKlarifikasi = []; }
+  try {
+    const daftar = await apiGetAlphaPerluKlarifikasi(STATE.guruId, tanggalISO(new Date(Date.now() - AJUKAN_HADIR_MAKS_HARI * 86400000)));
+    // sesi yang sudah dikonfirmasi guru "memang tidak hadir" tidak ditanyakan lagi
+    const sudah = new Set((typeof _kvAmbil === "function" ? await _kvAmbil("alpha:dikonfirmasi:" + STATE.guruId, []) : []).map((x) => x.id));
+    STATE.alphaKlarifikasi = daftar.filter((s) => !sudah.has(s.id));
+  } catch (e) { STATE.alphaKlarifikasi = []; }
 }
 function _jurnalTertundaMengunci() { return !!(STATE.jurnalTertunda?.length) && !isAdmin(); }
 function tampilkanJurnalTertunda() {
@@ -3476,7 +3481,7 @@ function tampilkanJurnalTertunda() {
   const sisa = (r) => { const ms = _batasJurnalTertunda(r) - realNow(); if (ms < 0) return `<span style="color:var(--bad,#c0392b);font-weight:700;">lewat batas</span>`; const j = Math.ceil(ms / 3600000); return j > 24 ? `sisa ${Math.ceil(j / 24)} hari` : `sisa ${j} jam`; };
   const baris = (r, tombol) => `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--border-soft);font-size:12px;">
       <span style="flex:1;min-width:0;"><b>${_tglPendek(r.tanggal)}</b> · ${escapeHtml(r.mapel?.nama_mapel || "-")} · ${escapeHtml(r.kelas?.nama_kelas ? formatKelasLabel(r.kelas.nama_kelas) : "-")}<br/><span style="color:var(--text-secondary);font-size:11px;">${tombol.ket}</span></span>
-      <button class="btn ${tombol.cls}" style="padding:6px 12px;font-size:11.5px;flex-shrink:0;" onclick="${tombol.fn}">${tombol.label}</button></div>`;
+      <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;"><button class="btn ${tombol.cls}" style="padding:6px 12px;font-size:11.5px;" onclick="${tombol.fn}">${tombol.label}</button>${tombol.tidak ? `<button class="btn btn-ghost" style="padding:5px 10px;font-size:11px;" onclick="${tombol.tidak}">Memang tidak hadir</button>` : ""}</div></div>`;
   openModal(`
     <h3>📝 Jurnal Tertunda</h3>
     ${daftar.length ? `<div style="font-size:11.5px;color:var(--text-secondary);margin:-8px 0 10px;line-height:1.5;">Admin sudah membantu absen pulang untuk sesi di bawah, tapi jurnalnya belum ada. Silakan lengkapi sekarang (±1 menit per sesi, batas ${JURNAL_TERTUNDA_BATAS_HARI} hari).${_jurnalTertundaMengunci() ? " Menu lain terbuka lagi setelah semua jurnal terisi." : ""}</div>
@@ -3486,7 +3491,7 @@ function tampilkanJurnalTertunda() {
     ${alpha.length ? `<div style="font-weight:700;font-size:12.5px;margin:14px 0 4px;">🙋 Sesi tercatat Alpha (${alpha.length})</div>
     <div style="font-size:11px;color:var(--text-secondary);margin-bottom:6px;">Kalau sebenarnya Anda mengajar, ajukan hadir + isi jurnalnya. Admin tinggal menyetujui.</div>
     <div style="max-height:26vh;overflow-y:auto;border:1px solid var(--border-soft);border-radius:12px;padding:0 10px;">
-      ${alpha.map((r) => baris(r, { ket: `${r.jadwal_pelajaran?.jam_mulai?.slice(0, 5) || ""}–${r.jadwal_pelajaran?.jam_selesai?.slice(0, 5) || ""} · tidak ada absen masuk`, cls: "btn-outline", label: "Ajukan Hadir",
+      ${alpha.map((r) => baris(r, { ket: `${r.jadwal_pelajaran?.jam_mulai?.slice(0, 5) || ""}–${r.jadwal_pelajaran?.jam_selesai?.slice(0, 5) || ""} · tidak ada absen masuk`, cls: "btn-outline", label: "Ajukan Hadir", tidak: `_konfirmasiTidakHadir('${r.id}')`,
         fn: `closeModal();ajukanHadirGuru('${r.id}','${r.guru_id}','${r.jadwal_id}','${r.kelas_id}','${r.mapel_id}','${r.tanggal}','${escapeHtml((r.mapel?.nama_mapel || "") + " " + (r.kelas?.nama_kelas || "")).replace(/'/g, "")}')` })).join("")}
     </div>` : ""}
     <div style="display:flex;gap:8px;margin-top:12px;">
@@ -3544,6 +3549,18 @@ async function bukaKedisiplinan(periode) {
 let _REKAP_DISIPLIN_TEKS = "";
 function _salinRekapDisiplin() {
   (navigator.clipboard ? navigator.clipboard.writeText(_REKAP_DISIPLIN_TEKS) : Promise.reject()).then(() => toast("Rekap disalin — tempel di grup WA", "ok")).catch(() => prompt("Salin teks berikut:", _REKAP_DISIPLIN_TEKS));
+}
+// Guru menyatakan sesi Alpha memang tidak diajar → tidak ditanyakan lagi (status tetap Alpha)
+async function _konfirmasiTidakHadir(sesiId) {
+  if (!(await konfirmasiTema("Konfirmasi bahwa Anda memang tidak mengajar di sesi ini? Status tetap Alpha dan tidak akan ditanyakan lagi.", { ikon: "🙏", judul: "Memang tidak hadir", teksYa: "Ya, tidak hadir" }))) { tampilkanJurnalTertunda(); return; }
+  try {
+    const k = "alpha:dikonfirmasi:" + STATE.guruId, daftar = await _kvAmbil(k, []);
+    daftar.unshift({ id: sesiId, t: Date.now() });
+    await _kvSimpan(k, daftar.slice(0, 200));
+    STATE.alphaKlarifikasi = (STATE.alphaKlarifikasi || []).filter((x) => x.id !== sesiId);
+    toast("Dicatat — tidak akan ditanyakan lagi", "ok");
+    if ((STATE.jurnalTertunda || []).length || STATE.alphaKlarifikasi.length) tampilkanJurnalTertunda(); else closeModal();
+  } catch (e) { toast("Gagal menyimpan: " + (e.message || e), "err"); }
 }
 async function isiJurnalTertunda(sesiId) {
   const r = (STATE.jurnalTertunda || []).find((x) => x.id === sesiId);
@@ -15817,7 +15834,7 @@ async function handleImportSiswa(evt) {
 }
 </script>
 <script src="src/kas.js?v=3"></script>
-<script src="src/kuliah.js?v=16"></script>
+<script src="src/kuliah.js?v=19"></script>
 <script src="src/modul-baca.js?v=2"></script>
 <script src="src/kesimpulan.js?v=2"></script>
 <script src="src/profil.js?v=4"></script>

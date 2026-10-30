@@ -1279,3 +1279,5 @@ body.focus .reader { grid-template-columns: 1fr !important; max-width: 860px; ma
 .tts-sec { margin-left: 8px; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--line); background: var(--sf); color: var(--c1); font-size: 11px; cursor: pointer; vertical-align: middle; }
 .tts-sec:hover { background: var(--c1); color: #fff; }
 .judul-blk.tts-now { outline: 2px solid var(--c2); outline-offset: 6px; border-radius: 10px; }
+.tts-now { outline: 2px solid var(--c2); outline-offset: 6px; border-radius: 12px; background-color: color-mix(in srgb, var(--c2) 7%, transparent); transition: background-color .3s; }
+.tts-bar .tts-info { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }

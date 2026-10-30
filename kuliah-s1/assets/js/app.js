@@ -673,23 +673,28 @@
       const ambil = (x) => (x == null ? "" : typeof x === "string" ? x : useAr ? (x.ar || "") : (x.id || x.en || ""));
       let t = ambil(b.judul ? { id: b.judul.id || b.judul, ar: b.judul.ar } : null) + " " + ambil(b) + " " + ambil(b.q) + " " + ambil(b.a) + " " + ambil(b.istilah) + " " + (b.item || []).map((x) => ambil(x.judul ? x.judul : x) + " " + (x.judul ? ambil(x) : "")).join(". ");
       t = t.replace(/<[^>]+>/g, " ").replace(/[*\[\]{}#_`]/g, "").replace(/\s+/g, " ").trim();
-      if (t) out.push({ i, t });
+      if (!t) return;
+      const kal = t.match(/[^.!?؟。]+[.!?؟。]*\s*/g) || [t];
+      let buf = "";
+      kal.forEach((k) => { if ((buf + k).length > 220 && buf) { out.push({ i, t: buf.trim() }); buf = ""; } buf += k; });
+      if (buf.trim()) out.push({ i, t: buf.trim() });
     });
     return out;
   }
-  function ttsKunci(p) { return "tts:" + (p.mk || location.hash.split("/")[2]) + "/" + p.no; }
+  function ttsKunci(p) { return "tts2:" + (p.mk || location.hash.split("/")[2]) + "/" + p.no; }
   function ttsBar() {
     let bar = $("#tts-bar");
     if (!bar) {
       bar = document.createElement("div"); bar.id = "tts-bar"; bar.className = "tts-bar";
-      bar.innerHTML = '<button data-t="awal" title="Ulang dari awal">⏮</button><button data-t="mundur" title="Bagian sebelumnya">⏪</button><button data-t="main" class="tts-main" title="Putar / jeda">⏸</button><button data-t="maju" title="Bagian berikutnya">⏩</button><span class="tts-info"></span><select title="Kecepatan">' + [0.75, 1, 1.25, 1.5].map((r) => '<option value="' + r + '"' + (r === TTS.rate ? " selected" : "") + ">" + r + "×</option>").join("") + '</select><button data-t="tutup" title="Tutup">✕</button>';
+      bar.innerHTML = '<button data-t="awal" title="Ulang dari awal">⏮</button><button data-t="mundur" title="Bagian sebelumnya">⏪</button><button data-t="main" class="tts-main" title="Putar / jeda">⏸</button><button data-t="maju" title="Bagian berikutnya">⏩</button><span class="tts-info" data-t="lihat" title="Ketuk untuk menuju bagian yang sedang dibaca"></span><select title="Kecepatan">' + [0.75, 1, 1.25, 1.5].map((r) => '<option value="' + r + '"' + (r === TTS.rate ? " selected" : "") + ">" + r + "×</option>").join("") + '</select><button data-t="tutup" title="Tutup">✕</button>';
       document.body.appendChild(bar);
       bar.onclick = (e) => { const b = e.target.closest("[data-t]"); if (!b) return; const a = b.dataset.t;
-        if (a === "main") TTS.main ? ttsJeda() : ttsPutar(TTS.idx);
+        if (a === "main") TTS.main ? ttsJeda() : ttsPutar(TTS.idx, TTS.ch || 0);
         else if (a === "maju") ttsPutar(Math.min(TTS.parts.length - 1, TTS.idx + 1));
         else if (a === "mundur") ttsPutar(Math.max(0, TTS.idx - 1));
         else if (a === "awal") ttsPutar(0);
-        else if (a === "tutup") ttsStop(true); };
+        else if (a === "tutup") ttsStop(true);
+        else if (a === "lihat") ttsLihat(); };
       bar.querySelector("select").onchange = (e) => { TTS.rate = +e.target.value; try { localStorage.setItem("ttsRate", TTS.rate); } catch (er) {} if (TTS.main) ttsPutar(TTS.idx); };
       cleanup.push(() => ttsStop(true));
     }
@@ -697,33 +702,51 @@
     bar.querySelector(".tts-info").innerHTML = lab("Bagian ", "الجزء ") + (TTS.idx + 1) + "/" + TTS.parts.length;
     return bar;
   }
-  function ttsSorot() {
-    $$(".judul-blk.tts-now").forEach((x) => x.classList.remove("tts-now"));
-    const cur = TTS.parts[TTS.idx]; if (!cur || cur.i < 0) return;
-    let k = cur.i; while (k >= 0 && !document.getElementById("sec-" + k)) k--;
-    const el = k >= 0 && document.getElementById("sec-" + k); if (el) el.classList.add("tts-now");
+  function ttsElemen() {
+    const cur = TTS.parts[TTS.idx]; if (!cur) return null;
+    if (cur.i < 0) return $(".p-title") || null;
+    const persis = document.querySelector('[data-b="' + cur.i + '"]') || document.getElementById("sec-" + cur.i);
+    if (persis) return persis;
+    for (let k = cur.i; k >= 0; k--) { const el = document.querySelector('[data-b="' + k + '"]') || document.getElementById("sec-" + k); if (el) return el; }
+    return $(".materi .lead") || $(".materi .blk");
   }
-  function ttsPutar(idx) {
+  function ttsSorot() {
+    $$(".tts-now").forEach((x) => x.classList.remove("tts-now"));
+    const el = ttsElemen(); if (el) el.classList.add("tts-now");
+  }
+  function ttsLihat() {
+    const el = ttsElemen();
+    if (!el) { if (TTS.p && !$(".materi")) { location.hash = "#/mk/" + (TTS.p.mk || location.hash.split("/")[2]) + "/" + TTS.p.no; } return; }
+    el.style.scrollMarginTop = "120px"; el.scrollIntoView({ behavior: "smooth", block: "start" }); el.classList.add("tts-now");
+  }
+  function ttsSimpanPos(ch) { try { localStorage.setItem(TTS.key, JSON.stringify({ idx: TTS.idx, ch: ch || 0 })); } catch (e) {} }
+  function ttsBacaPos() { try { const v = JSON.parse(localStorage.getItem(TTS.key) || "null"); return v && typeof v === "object" ? v : { idx: +v || 0, ch: 0 }; } catch (e) { return { idx: 0, ch: 0 }; } }
+  function ttsPutar(idx, mulaiHuruf) {
     const ss = window.speechSynthesis; if (!ss || !TTS.parts.length) return;
-    ss.cancel(); TTS.idx = Math.max(0, Math.min(idx, TTS.parts.length - 1)); TTS.main = true;
-    try { localStorage.setItem(TTS.key, TTS.idx); } catch (e) {}
+    ss.cancel(); TTS.idx = Math.max(0, Math.min(idx, TTS.parts.length - 1)); TTS.main = true; TTS.ch = 0;
+    const teksPenuh = TTS.parts[TTS.idx].t;
+    // mundur ke awal kata supaya tidak terpotong di tengah kata
+    let ch = Math.max(0, Math.min(mulaiHuruf || 0, teksPenuh.length - 1)); while (ch > 0 && !/\s/.test(teksPenuh[ch - 1])) ch--;
+    TTS.offset = ch; ttsSimpanPos(ch);
     const useAr = U.lang === "ar", v = ss.getVoices().find((x) => x.lang && x.lang.toLowerCase().startsWith(useAr ? "ar" : "id"));
-    const u = new SpeechSynthesisUtterance(TTS.parts[TTS.idx].t);
+    const u = new SpeechSynthesisUtterance(teksPenuh.slice(ch));
+    u.onboundary = (e) => { if (TTS.main && TTS.idx === saya0 && e.charIndex != null) { TTS.ch = TTS.offset + e.charIndex; ttsSimpanPos(TTS.ch); } };
+    const saya0 = TTS.idx;
     u.lang = useAr ? "ar-SA" : "id-ID"; if (v) u.voice = v; u.rate = (useAr ? 0.9 : 1) * TTS.rate;
     const saya = TTS.idx;
     u.onend = () => { if (!TTS.main || TTS.idx !== saya) return; if (TTS.idx + 1 < TTS.parts.length) ttsPutar(TTS.idx + 1); else { TTS.main = false; try { localStorage.removeItem(TTS.key); } catch (e) {} ttsBar(); $(".tts-btn")?.classList.remove("on"); U.toast(Icon("check") + " Selesai didengarkan", "ok"); } };
     ss.speak(u); ttsBar(); ttsSorot(); $(".tts-btn")?.classList.add("on");
   }
-  function ttsJeda() { TTS.main = false; window.speechSynthesis && window.speechSynthesis.cancel(); ttsBar(); $(".tts-btn")?.classList.remove("on"); }
-  function ttsStop(hapusBar) { TTS.main = false; window.speechSynthesis && window.speechSynthesis.cancel(); $$(".judul-blk.tts-now").forEach((x) => x.classList.remove("tts-now")); if (hapusBar) $("#tts-bar")?.remove(); $(".tts-btn")?.classList.remove("on"); }
+  function ttsJeda() { if (TTS.key) ttsSimpanPos(TTS.ch || TTS.offset || 0); TTS.main = false; window.speechSynthesis && window.speechSynthesis.cancel(); ttsBar(); $(".tts-btn")?.classList.remove("on"); }
+  function ttsStop(hapusBar) { TTS.main = false; window.speechSynthesis && window.speechSynthesis.cancel(); $$(".tts-now").forEach((x) => x.classList.remove("tts-now")); if (hapusBar) $("#tts-bar")?.remove(); $(".tts-btn")?.classList.remove("on"); }
   function ttsSiapkan(p) { if (TTS.p !== p) { TTS.p = p; TTS.parts = ttsParts(p); TTS.key = ttsKunci(p); TTS.idx = 0; } }
   function speakPertemuan(p, btn) {
     if (!window.speechSynthesis) return U.toast("Perangkat ini belum mendukung fitur suara.", "warn");
     ttsSiapkan(p);
     if (TTS.main) return ttsJeda();
-    const simpan = +(localStorage.getItem(TTS.key) || 0);
-    if (simpan > 0 && simpan < TTS.parts.length) U.toast(Icon("ear") + " Melanjutkan dari bagian " + (simpan + 1) + " · tekan ⏮ untuk ulang dari awal", "", 3500);
-    ttsPutar(simpan > 0 && simpan < TTS.parts.length ? simpan : 0);
+    const pos = ttsBacaPos(), ok = pos.idx >= 0 && pos.idx < TTS.parts.length && (pos.idx > 0 || pos.ch > 0);
+    if (ok) U.toast(Icon("ear") + " Melanjutkan dari bagian " + (pos.idx + 1) + " (posisi terakhir) · ⏮ untuk ulang dari awal", "", 3500);
+    ttsPutar(ok ? pos.idx : 0, ok ? pos.ch : 0);
   }
   // Tombol ▶ di samping setiap subjudul materi: dengarkan mulai dari bagian itu
   function ttsTombolBagian(p) {
