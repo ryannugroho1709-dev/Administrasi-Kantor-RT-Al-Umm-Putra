@@ -58,6 +58,19 @@ function _kdTerapkan() {
   set("--kd-font-besar", custom && KD_FONT[d.fontBesar]); set("--kd-font-skrip", custom && KD_FONT[d.fontSkrip]);
   set("--kd-warna-besar", custom && d.warnaBesar); set("--kd-warna-skrip", custom && d.warnaSkrip); set("--kd-pita-bg", custom && d.pitaBg);
   pg.dataset.kdBulan = _kdOpsi("judulBulan");
+  // Tahap 2: ornamen sudut, bentuk sel, jumlah kolom, posisi keterangan, filter foto kop
+  set("--kd-ornamen", custom && d.ornamen && d.ornamen !== "none" ? JSON.stringify(d.ornamen) : "");
+  set("--kd-sel-radius", custom && d.bentukSel ? ({ kotak: "2px", bulat: "8px", lingkaran: "50%" }[d.bentukSel]) : "");
+  set("--kd-kolom", custom && d.kolom ? "repeat(" + d.kolom + ",1fr)" : "");
+  pg.dataset.kdLegenda = _kdOpsi("posLegenda") || "bulan";
+  const hd = document.getElementById("kaldik-header");
+  if (hd) {
+    const f = custom ? (d.filterFoto || "tanpa") : "tanpa";
+    const mode = { tanpa: "", gelap: "multiply", terang: "screen", sepia: "multiply", hitamputih: "luminosity", duotone: "multiply" }[f] || "";
+    const warna = { gelap: "#6b6b6b", terang: "#9a9a9a", sepia: "#e2c48f", hitamputih: "#808080", duotone: d.pitaBg || "#8B6B3E" }[f] || "";
+    hd.style.backgroundBlendMode = mode && hd.style.backgroundImage ? "normal, " + mode : "";
+    hd.style.backgroundColor = mode && hd.style.backgroundImage ? warna : "";
+  }
 }
 
 // ── Panel Studio ──
@@ -93,11 +106,23 @@ function _kdGambarPanel() {
       ${pilih("sel", "Warna tanggal kegiatan", [["gradasi", "Gradasi lembut"], ["polos", "Polos"]])}
       ${pilih("legenda", "Keterangan", [["kotak", "Kotak berisi tanggal"], ["titik", "Titik warna"]])}
       <label class="kd-f"><span>Sudut kartu: <b>${d.radius ?? 12}px</b></span><input type="range" min="0" max="26" data-k="radius" value="${d.radius ?? 12}"/></label>
-      <label class="kd-cek"><input type="checkbox" data-k="judulSmt"${d.judulSmt ? " checked" : ""}/> Tampilkan judul besar "Semester ${smt === "genap" ? "Genap" : "Ganjil"}" di kop</label>`}
+      <label class="kd-cek"><input type="checkbox" data-k="judulSmt"${d.judulSmt ? " checked" : ""}/> Tampilkan judul besar "Semester ${smt === "genap" ? "Genap" : "Ganjil"}" di kop</label>
+      <div class="kd-sec">✨ Hiasan & tata letak</div>
+      ${pilih("ornamen", "Ornamen sudut kartu", [["none", "Tanpa ornamen"], ["✦", "✦ Bintang"], ["❀", "❀ Bunga"], ["۞", "۞ Bintang Islami"], ["✿", "✿ Bunga kecil"], ["☾", "☾ Bulan sabit"], ["❖", "❖ Wajik"]])}
+      ${pilih("bentukSel", "Bentuk tanggal kegiatan", [["bulat", "Membulat"], ["kotak", "Kotak tegas"], ["lingkaran", "Lingkaran"]])}
+      ${pilih("kolom", "Bulan per baris (layar lebar)", [["3", "3 bulan"], ["2", "2 bulan"], ["4", "4 bulan"]])}
+      ${pilih("posLegenda", "Letak keterangan kegiatan", [["bulan", "Di bawah tiap bulan"], ["gabung", "Digabung di bawah kalender"]])}
+      ${pilih("filterFoto", "Filter foto kop", [["tanpa", "Asli"], ["gelap", "Lebih gelap"], ["terang", "Lebih terang"], ["sepia", "Hangat (sepia)"], ["hitamputih", "Hitam-putih"], ["duotone", "Duotone warna pita"]])}
+      <div class="kd-sec">✍️ Teks bebas</div>
+      <label class="kd-f"><span>Motto / ayat / hadits (tampil di atas kalender)</span><textarea data-k="teksMotto" rows="2" placeholder="mis. وَقُلْ رَبِّ زِدْنِي عِلْمًا — Ya Rabb, tambahkanlah ilmu kepadaku">${escapeHtml(d.teksMotto || "")}</textarea></label>
+      <label class="kd-cek"><input type="checkbox" data-k="ttdTampil"${d.ttdTampil ? " checked" : ""}/> Tampilkan tanda tangan di bawah kalender</label>
+      ${d.ttdTampil ? `<label class="kd-f"><span>Tempat & tanggal</span><input data-k="ttdKota" value="${escapeHtml(d.ttdKota || "")}" placeholder="Barabai, 1 Januari 2027"/></label>
+      <label class="kd-f"><span>Jabatan</span><input data-k="ttdJabatan" value="${escapeHtml(d.ttdJabatan || "Kepala Sekolah")}"/></label>
+      <label class="kd-f"><span>Nama</span><input data-k="ttdNama" value="${escapeHtml(d.ttdNama || "")}" placeholder="Nama penandatangan"/></label>` : ""}`}
     </div>
     <div class="kd-aksi"><button type="button" class="btn btn-ghost" onclick="_kdReset()">↺ Bawaan</button><button type="button" class="btn btn-outline" onclick="tutupStudioKaldik(false)">Batal</button><button type="button" class="btn btn-accent" onclick="simpanStudioKaldik()">💾 Simpan</button></div>`;
   p.querySelectorAll("[data-k]").forEach((el) => {
-    const ev = el.type === "range" || el.type === "color" ? "input" : "change";
+    const ev = el.type === "range" || el.type === "color" || el.tagName === "TEXTAREA" || el.type === "text" || (el.tagName === "INPUT" && !el.type) ? "input" : "change";
     el.addEventListener(ev, () => {
       const k = el.dataset.k;
       _KD_DRAFT[k] = el.type === "checkbox" ? el.checked : el.type === "range" ? +el.value : el.value;
@@ -110,6 +135,8 @@ function _kdGambarPanel() {
 let _kdTRender = null;
 function _kdPratinjau(k) {
   _kdTerapkan();
+  if (k === "ttdTampil") _kdGambarPanel();
+  if (["posLegenda", "teksMotto", "ttdTampil", "ttdKota", "ttdJabatan", "ttdNama"].includes(k)) { _kdTambahan(document.getElementById("kaldik-grid")); return; }
   if (!k || ["judulBulan", "sel", "legenda", "judulSmt"].includes(k)) { clearTimeout(_kdTRender); _kdTRender = setTimeout(() => renderKaldik(), 120); }
 }
 function _kdPilihTema(k) {
@@ -134,4 +161,18 @@ async function simpanStudioKaldik() {
     toast(`Desain Semester ${smt === "genap" ? "Genap" : "Ganjil"} tersimpan ✓`, "ok");
     tutupStudioKaldik(true);
   } catch (e) { toast("Gagal menyimpan desain: " + (e.message || e), "err"); }
+}
+
+// ── Tahap 2: motto di atas kalender, keterangan gabungan, tanda tangan di bawah (ikut ekspor gambar) ──
+function _kdTambahan(gridEl) {
+  if (!gridEl) return;
+  const d = _kdAktif(), custom = d.tema && d.tema !== "asli";
+  gridEl.querySelectorAll(".kd-motto,.kd-legenda-gabung,.kd-ttd").forEach((x) => x.remove());
+  if (!custom) return;
+  if ((d.teksMotto || "").trim()) gridEl.insertAdjacentHTML("afterbegin", `<div class="kd-motto" dir="auto">${escapeHtml(d.teksMotto.trim()).replace(/\n/g, "<br/>")}</div>`);
+  if (d.posLegenda === "gabung") {
+    const blok = [...gridEl.querySelectorAll(".kaldik-bulan-card")].map((c) => { const lg = c.querySelector(".kaldik-legend"); return lg ? `<div class="kd-lg-bln"><b>${escapeHtml(c.querySelector(".kaldik-bulan-judul")?.textContent.replace(/\s+/g, " ").trim() || "")}</b>${lg.innerHTML}</div>` : ""; }).join("");
+    if (blok) gridEl.insertAdjacentHTML("beforeend", `<div class="kd-legenda-gabung"><div class="kd-lg-judul">Keterangan Kegiatan</div><div class="kd-lg-isi">${blok}</div></div>`);
+  }
+  if (d.ttdTampil && (d.ttdNama || "").trim()) gridEl.insertAdjacentHTML("beforeend", `<div class="kd-ttd"><div>${escapeHtml(d.ttdKota || "")}</div><div>${escapeHtml(d.ttdJabatan || "Kepala Sekolah")}</div><div class="kd-ttd-ruang"></div><b>${escapeHtml(d.ttdNama)}</b></div>`);
 }
