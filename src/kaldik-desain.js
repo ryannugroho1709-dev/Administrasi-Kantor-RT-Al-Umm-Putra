@@ -29,7 +29,8 @@ const KD_TEMA = {
 };
 KD_BAWAAN.genap = Object.assign({ tema: "krem" }, KD_TEMA.krem.d);
 const KD_DESAIN = { ganjil: null, genap: null };
-let _KD_DRAFT = null, _KD_SIMPANAN = null, _KD_RIWAYAT = [], _KD_MAJU = [], _KD_TEMPLATE = [];
+let _KD_DRAFT = null, _KD_SIMPANAN = null, _KD_RIWAYAT = [], _KD_MAJU = [], _KD_TEMPLATE = [], _KD_VERSI = [], _KD_BINGKAI = "", _KD_PIPET = [];
+const KD_WARNA_JENIS = { libur: "#EF4444", ujian: "#7C3AED", semester: "#F59E0B", agenda: "#10B981" };
 
 function _kdSemester() { return typeof KALDIK_SEMESTER !== "undefined" ? KALDIK_SEMESTER : "ganjil"; }
 function _kdAktif() { return _KD_DRAFT || KD_DESAIN[_kdSemester()] || KD_BAWAAN[_kdSemester()]; }
@@ -84,7 +85,9 @@ async function bukaStudioKaldik() {
   try { const r = await supa.from("kuliah_pengaturan").select("nilai").eq("kunci", "kaldik:template").maybeSingle(); _KD_TEMPLATE = (r.data && r.data.nilai) || []; } catch (e) { _KD_TEMPLATE = []; }
   let p = document.getElementById("kd-studio");
   if (!p) { p = document.createElement("aside"); p.id = "kd-studio"; document.body.appendChild(p); }
-  document.body.classList.add("kd-studio-buka"); // halaman menyempit di samping panel (seperti DevTools), tidak tertimpa
+  document.body.classList.add("kd-studio-buka");
+  try { const w = +localStorage.getItem("kdStudioW"); if (w >= 300) document.body.style.setProperty("--kd-studio-w", w + "px"); } catch (e) {}
+  try { const r = await supa.from("kuliah_pengaturan").select("nilai").eq("kunci", "kaldik:versi:" + smt).maybeSingle(); _KD_VERSI = (r.data && r.data.nilai) || []; } catch (e) { _KD_VERSI = []; } // halaman menyempit di samping panel (seperti DevTools), tidak tertimpa
   _kdGambarPanel();
 }
 function _kdGambarPanel() {
@@ -95,7 +98,7 @@ function _kdGambarPanel() {
   const pilih = (k, label, opsi) => `<label class="kd-f"><span>${label}</span><select data-k="${k}">${opsi.map(([v, l]) => `<option value="${v}"${String(d[k]) === String(v) ? " selected" : ""}>${l}</option>`).join("")}</select></label>`;
   const skrip = ["Great Vibes", "Dancing Script", "Pacifico", "Satisfy", "Lobster"];
   const asli = !d.tema || d.tema === "asli";
-  p.innerHTML = `<div class="kd-h"><b>🖌️ Studio Desain · ${smt === "genap" ? "Genap" : "Ganjil"}</b><span class="kd-ur"><button type="button" onclick="_kdUrung()" title="Urungkan (Ctrl+Z)"${_KD_RIWAYAT.length ? "" : " disabled"}>↶</button><button type="button" onclick="_kdUlang()" title="Ulangi (Ctrl+Y)"${_KD_MAJU.length ? "" : " disabled"}>↷</button><button type="button" onclick="tutupStudioKaldik(false)" title="Tutup tanpa menyimpan">✕</button></span></div>
+  p.innerHTML = `<div class="kd-geser" title="Tarik untuk mengubah lebar panel"></div><div class="kd-h"><b>🖌️ Studio Desain · ${smt === "genap" ? "Genap" : "Ganjil"}</b><span class="kd-ur"><button type="button" onclick="_kdPratinjauPenuh(true)" title="Pratinjau penuh (sembunyikan panel)">👁️</button><button type="button" onclick="_kdUrung()" title="Urungkan (Ctrl+Z)"${_KD_RIWAYAT.length ? "" : " disabled"}>↶</button><button type="button" onclick="_kdUlang()" title="Ulangi (Ctrl+Y)"${_KD_MAJU.length ? "" : " disabled"}>↷</button><button type="button" onclick="tutupStudioKaldik(false)" title="Tutup tanpa menyimpan">✕</button></span></div>
     <div class="kd-isi">
       <div class="kd-sec">🎨 Tema siap pakai</div>
       <div class="kd-tema">${Object.entries(KD_TEMA).map(([k, tm]) => `<button type="button" class="${d.tema === k ? "on" : ""}" onclick="_kdPilihTema('${k}')" style="--a:${tm.d.halBg || "#e5e7eb"};--b:${tm.d.hariBg || "#2563eb"}"><i></i><span>${tm.ikon} ${tm.nama}</span></button>`).join("")}</div>
@@ -125,8 +128,29 @@ function _kdGambarPanel() {
       ${d.ttdTampil ? `<label class="kd-f"><span>Tempat & tanggal</span><input data-k="ttdKota" value="${escapeHtml(d.ttdKota || "")}" placeholder="Barabai, 1 Januari 2027"/></label>
       <label class="kd-f"><span>Jabatan</span><input data-k="ttdJabatan" value="${escapeHtml(d.ttdJabatan || "Kepala Sekolah")}"/></label>
       <label class="kd-f"><span>Nama</span><input data-k="ttdNama" value="${escapeHtml(d.ttdNama || "")}" placeholder="Nama penandatangan"/></label>` : ""}`}
+      ${asli ? "" : `
+      <div class="kd-sec">🪄 Palet otomatis</div>
+      <div class="kd-baris2"><input type="color" id="kd-utama" value="${d.hariBg || "#2563eb"}" title="Warna utama"/><button type="button" class="btn btn-ghost" onclick="_kdPaletDari('mono')">Monokrom</button><button type="button" class="btn btn-ghost" onclick="_kdPaletDari('kompl')">Komplementer</button><button type="button" class="btn btn-ghost" onclick="_kdPaletDari('analog')">Analog</button></div>
+      <p class="kd-ket">Pilih satu warna utama, lalu satu klik — semua warna kartu, pita hari, judul & tulisan diselaraskan.</p>
+      <button type="button" class="btn btn-ghost kd-lebar" onclick="_kdPipetFoto()">🎯 Ambil warna dari foto kop</button>
+      <div id="kd-pipet">${_KD_PIPET.length ? `<div class="kd-pipet-w">${_KD_PIPET.map((c) => `<i style="background:${c}" title="${c}"></i>`).join("")}</div><button type="button" class="btn btn-accent kd-lebar" onclick="_kdTerapPipet()">Terapkan warna foto sebagai palet</button>` : ""}</div>
+      <div class="kd-sec">🏷️ Warna per jenis kegiatan</div>
+      <label class="kd-cek"><input type="checkbox" data-k="warnaJenisAktif"${d.warnaJenisAktif ? " checked" : ""}/> Warnai tanggal otomatis berdasarkan jenis kegiatan</label>
+      ${d.warnaJenisAktif ? `<div class="kd-wgrid">${[["libur", "Libur"], ["ujian", "Ujian"], ["semester", "Semester"], ["agenda", "Agenda"]].map(([j, l]) => `<label class="kd-w"><input type="color" data-kj="${j}" value="${(d.warnaJenis || {})[j] || KD_WARNA_JENIS[j]}"/><span>${l}</span></label>`).join("")}</div>` : ""}
+      <div class="kd-sec">📐 Bingkai pratinjau ekspor</div>
+      <label class="kd-f"><span>Tampilkan batas kertas di halaman (tidak disimpan)</span><select id="kd-bingkai">${[["", "Tanpa bingkai"]].concat(Object.entries(KD_UKURAN).filter(([k]) => k !== "asli").map(([k, v]) => [k, v[0]])).map(([k, l]) => `<option value="${k}"${_KD_BINGKAI === k ? " selected" : ""}>${l}</option>`).join("")}</select></label>`}
+      <div class="kd-sec">🔗 Bagikan desain</div>
+      <div class="kd-baris2"><button type="button" class="btn btn-ghost" onclick="_kdSalinKode()">📋 Salin kode desain</button><button type="button" class="btn btn-ghost" onclick="_kdTempelKode()">📥 Tempel kode</button></div>
+      <div class="kd-sec">🕘 Riwayat versi</div>
+      <div class="kd-versi">${_KD_VERSI.length ? _KD_VERSI.map((v, i) => `<div><span>${new Date(v.t).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })} · ${escapeHtml((KD_TEMA[v.d.tema] || {}).nama || v.d.tema || "-")}</span><button type="button" class="btn btn-ghost" onclick="_kdPulihkanVersi(${i})">Pulihkan</button></div>`).join("") : `<p class="kd-ket">Setiap kali disimpan, versi sebelumnya tercatat di sini.</p>`}</div>
     </div>
     <div class="kd-aksi"><button type="button" class="btn btn-ghost" onclick="_kdReset()">↺ Bawaan</button><button type="button" class="btn btn-outline" onclick="tutupStudioKaldik(false)">Batal</button><button type="button" class="btn btn-accent" onclick="simpanStudioKaldik()">💾 Simpan</button></div>`;
+  p.querySelectorAll("[data-kj]").forEach((el) => {
+    el.addEventListener("focus", () => _kdCatatRiwayat());
+    el.addEventListener("input", () => { _KD_DRAFT.warnaJenis = Object.assign({}, KD_WARNA_JENIS, _KD_DRAFT.warnaJenis || {}, { [el.dataset.kj]: el.value }); clearTimeout(_kdTRender); _kdTRender = setTimeout(() => renderKaldik(), 150); });
+  });
+  const bk = p.querySelector("#kd-bingkai"); if (bk) bk.onchange = () => { _KD_BINGKAI = bk.value; _kdGambarBingkai(); };
+  _kdPasangGeser(p.querySelector(".kd-geser"));
   p.querySelectorAll("[data-k]").forEach((el) => {
     const ev = el.type === "range" || el.type === "color" || el.tagName === "TEXTAREA" || el.type === "text" || (el.tagName === "INPUT" && !el.type) ? "input" : "change";
     el.addEventListener("focus", () => _kdCatatRiwayat(), { once: false });
@@ -142,7 +166,8 @@ function _kdGambarPanel() {
 let _kdTRender = null;
 function _kdPratinjau(k) {
   _kdTerapkan();
-  if (k === "ttdTampil") _kdGambarPanel();
+  if (k === "ttdTampil" || k === "warnaJenisAktif") _kdGambarPanel();
+  if (k === "warnaJenisAktif") { clearTimeout(_kdTRender); _kdTRender = setTimeout(() => renderKaldik(), 120); return; }
   if (["posLegenda", "teksMotto", "ttdTampil", "ttdKota", "ttdJabatan", "ttdNama"].includes(k)) { _kdTambahan(document.getElementById("kaldik-grid")); return; }
   if (!k || ["judulBulan", "sel", "legenda", "judulSmt"].includes(k)) { clearTimeout(_kdTRender); _kdTRender = setTimeout(() => renderKaldik(), 120); }
 }
@@ -157,7 +182,8 @@ function tutupStudioKaldik(simpan) {
   if (!simpan && _KD_SIMPANAN) KD_DESAIN[_kdSemester()] = _KD_SIMPANAN;
   _KD_DRAFT = null; _KD_SIMPANAN = null;
   document.getElementById("kd-studio")?.remove();
-  document.body.classList.remove("kd-studio-buka");
+  document.body.classList.remove("kd-studio-buka", "kd-studio-sembunyi");
+  document.getElementById("kd-balik")?.remove(); _KD_BINGKAI = ""; _KD_PIPET = []; document.querySelectorAll(".kd-bingkai").forEach((x) => x.remove());
   _kdTerapkan(); renderKaldik();
 }
 async function simpanStudioKaldik() {
@@ -165,6 +191,10 @@ async function simpanStudioKaldik() {
   try {
     const { error } = await supa.from("kuliah_pengaturan").upsert({ kunci: "kaldik:desain:" + smt, nilai });
     if (error) throw error;
+    const lama = _KD_SIMPANAN;
+    if (lama && lama.tema && JSON.stringify(lama) !== JSON.stringify(nilai)) {
+      try { _KD_VERSI.unshift({ t: Date.now(), d: lama }); _KD_VERSI = _KD_VERSI.slice(0, 15); await supa.from("kuliah_pengaturan").upsert({ kunci: "kaldik:versi:" + smt, nilai: _KD_VERSI }); } catch (e) { console.warn("Gagal mencatat versi:", e); }
+    }
     KD_DESAIN[smt] = nilai; _KD_SIMPANAN = null;
     toast(`Desain Semester ${smt === "genap" ? "Genap" : "Ganjil"} tersimpan ✓`, "ok");
     tutupStudioKaldik(true);
@@ -174,6 +204,7 @@ async function simpanStudioKaldik() {
 // ── Tahap 2: motto di atas kalender, keterangan gabungan, tanda tangan di bawah (ikut ekspor gambar) ──
 function _kdTambahan(gridEl) {
   if (!gridEl) return;
+  setTimeout(_kdGambarBingkai, 60);
   const d = _kdAktif(), custom = d.tema && d.tema !== "asli";
   gridEl.querySelectorAll(".kd-motto,.kd-legenda-gabung,.kd-ttd").forEach((x) => x.remove());
   if (!custom) return;
@@ -260,3 +291,95 @@ function _kdBingkaiUkuran(kanvas, ukuran, latar) {
   x.drawImage(kanvas, Math.round((W - kanvas.width) / 2), Math.round((H - kanvas.height) / 2));
   return c;
 }
+
+// ── Saran lanjutan: warna per jenis, geser lebar panel, pratinjau penuh, bingkai ekspor, palet, pipet, kode, versi ──
+function _kdWarnaItem(it) {
+  const d = _kdAktif();
+  if (d && d.tema && d.tema !== "asli" && d.warnaJenisAktif) return (d.warnaJenis || {})[it.jenis] || KD_WARNA_JENIS[it.jenis] || it.warna || "#93C5FD";
+  return it.warna || "#93C5FD";
+}
+function _kdPasangGeser(h) {
+  if (!h) return;
+  h.addEventListener("pointerdown", (e) => {
+    e.preventDefault(); h.setPointerCapture(e.pointerId); document.body.classList.add("kd-menggeser");
+    const gerak = (ev) => { const w = Math.max(300, Math.min(innerWidth * 0.7, innerWidth - ev.clientX)); document.body.style.setProperty("--kd-studio-w", Math.round(w) + "px"); };
+    const lepas = () => { h.removeEventListener("pointermove", gerak); document.body.classList.remove("kd-menggeser"); try { localStorage.setItem("kdStudioW", parseInt(getComputedStyle(document.body).getPropertyValue("--kd-studio-w")) || 360); } catch (er) {} setTimeout(_kdGambarBingkai, 260); };
+    h.addEventListener("pointermove", gerak); h.addEventListener("pointerup", lepas, { once: true });
+  });
+}
+function _kdPratinjauPenuh(on) {
+  document.body.classList.toggle("kd-studio-sembunyi", on);
+  document.getElementById("kd-balik")?.remove();
+  if (on) { const b = document.createElement("button"); b.id = "kd-balik"; b.className = "btn btn-accent"; b.textContent = "🖌️ Kembali ke Studio"; b.onclick = () => _kdPratinjauPenuh(false); document.body.appendChild(b); }
+  setTimeout(_kdGambarBingkai, 300);
+}
+function _kdGambarBingkai() {
+  document.querySelectorAll(".kd-bingkai").forEach((x) => x.remove());
+  const pg = document.getElementById("page-kaldik"), hd = document.getElementById("kaldik-header"), gr = document.getElementById("kaldik-grid");
+  if (!_KD_BINGKAI || !document.getElementById("kd-studio") || !pg || !hd || !gr) return;
+  const r = (KD_UKURAN[_KD_BINGKAI] || [])[1]; if (!r) return;
+  if (getComputedStyle(pg).position === "static") pg.style.position = "relative";
+  const pr = pg.getBoundingClientRect(), a = hd.getBoundingClientRect(), b = gr.getBoundingClientRect();
+  const kiri = Math.min(a.left, b.left) - pr.left, atas = a.top - pr.top, w = Math.max(a.right, b.right) - Math.min(a.left, b.left), h = b.bottom - a.top;
+  const pad = w * 0.04; let W = w + pad * 2, H = W / r; if (H < h + pad * 2) { H = h + pad * 2; W = H * r; }
+  const el = document.createElement("div"); el.className = "kd-bingkai";
+  el.style.cssText = `left:${kiri + (w - W) / 2}px;top:${atas + (h - H) / 2}px;width:${W}px;height:${H}px;`;
+  el.innerHTML = `<span>${KD_UKURAN[_KD_BINGKAI][0]} — area gambar ekspor</span>`;
+  pg.appendChild(el);
+}
+// warna: hex ↔ hsl
+function _kdHsl(hex) { let [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255); const mx = Math.max(r, g, b), mn = Math.min(r, g, b); let h = 0, s = 0; const l = (mx + mn) / 2; if (mx !== mn) { const d = mx - mn; s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn); h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; } return [h, s * 100, l * 100]; }
+function _kdHex(h, s, l) { h = ((h % 360) + 360) % 360; s /= 100; l /= 100; const k = (n) => (n + h / 30) % 12, a = s * Math.min(l, 1 - l), f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1))); return "#" + [f(0), f(8), f(4)].map((x) => Math.round(x * 255).toString(16).padStart(2, "0")).join(""); }
+function _kdKontras(hex) { const [, , l] = _kdHsl(hex); return l > 60 ? "#1F2937" : "#FFFFFF"; }
+function _kdPaletDari(jenis) {
+  const utama = document.getElementById("kd-utama")?.value || "#2563EB", [h, s] = _kdHsl(utama), sat = Math.max(40, s);
+  const aksen = jenis === "kompl" ? h + 180 : jenis === "analog" ? h + 35 : h;
+  _kdCatatRiwayat();
+  Object.assign(_KD_DRAFT, {
+    halBg: _kdHex(h, Math.min(sat, 45), 95), kartuBg: _kdHex(h, Math.min(sat, 40), 98.5), kartuBorder: _kdHex(h, Math.min(sat, 55), 82),
+    bulanWarna: _kdHex(h, sat, 24), hariBg: utama, hariWarna: _kdKontras(utama), warnaBesar: _kdHex(h, sat, 22),
+    warnaSkrip: _kdHex(aksen, jenis === "mono" ? sat : 75, jenis === "mono" ? 58 : 55), pitaBg: _kdHex(aksen, sat, 36),
+  });
+  _kdGambarPanel(); _kdPratinjau(); toast("Palet " + ({ mono: "monokrom", kompl: "komplementer", analog: "analog" }[jenis]) + " diterapkan", "ok");
+}
+async function _kdPipetFoto() {
+  const url = (typeof _pKaldik === "function" ? _pKaldik() : STATE.pengaturan || {}).kaldik_latar_url;
+  if (!url) { toast("Belum ada foto latar kop untuk semester ini", "err"); return; }
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => res(i); i.onerror = rej; i.src = url; });
+    const c = document.createElement("canvas"); c.width = 80; c.height = 80; const x = c.getContext("2d"); x.drawImage(img, 0, 0, 80, 80);
+    const px = x.getImageData(0, 0, 80, 80).data, ember = {};
+    for (let i = 0; i < px.length; i += 4) { const k = (px[i] >> 4) + "," + (px[i + 1] >> 4) + "," + (px[i + 2] >> 4); const e = (ember[k] = ember[k] || { n: 0, r: 0, g: 0, b: 0 }); e.n++; e.r += px[i]; e.g += px[i + 1]; e.b += px[i + 2]; }
+    const calon = Object.values(ember).sort((p, q) => q.n - p.n).map((e) => [e.r / e.n, e.g / e.n, e.b / e.n]), pilih = [];
+    for (const c2 of calon) { if (pilih.every((p) => Math.hypot(p[0] - c2[0], p[1] - c2[1], p[2] - c2[2]) > 55)) pilih.push(c2); if (pilih.length === 5) break; }
+    _KD_PIPET = pilih.map((p) => "#" + p.map((v) => Math.round(v).toString(16).padStart(2, "0")).join(""));
+    _kdGambarPanel();
+  } catch (e) { toast("Foto tidak bisa dibaca warnanya (izin akses gambar)", "err"); }
+}
+function _kdTerapPipet() {
+  if (!_KD_PIPET.length) return;
+  const urut = _KD_PIPET.slice().sort((a, b) => _kdHsl(a)[2] - _kdHsl(b)[2]), gelap = urut[0], terang = urut[urut.length - 1];
+  const hidup = _KD_PIPET.slice().sort((a, b) => _kdHsl(b)[1] - _kdHsl(a)[1])[0], [ht, st] = _kdHsl(terang), [hh, sh] = _kdHsl(hidup);
+  _kdCatatRiwayat();
+  Object.assign(_KD_DRAFT, { bulanWarna: gelap, warnaBesar: gelap, hariBg: urut[Math.min(1, urut.length - 1)], hariWarna: _kdKontras(urut[Math.min(1, urut.length - 1)]), warnaSkrip: hidup, pitaBg: _kdHex(hh, sh, 36), halBg: _kdHex(ht, Math.min(st, 40), 95), kartuBg: _kdHex(ht, Math.min(st, 35), 98.5), kartuBorder: _kdHex(ht, Math.min(st, 45), 80) });
+  _kdGambarPanel(); _kdPratinjau(); toast("Palet dari foto kop diterapkan", "ok");
+}
+function _kdSalinKode() {
+  const kode = "KALDIK1:" + btoa(unescape(encodeURIComponent(JSON.stringify(_KD_DRAFT))));
+  (navigator.clipboard ? navigator.clipboard.writeText(kode) : Promise.reject()).then(() => toast("Kode desain disalin — tempel di perangkat lain lewat 📥 Tempel kode", "ok")).catch(() => prompt("Salin kode desain berikut:", kode));
+}
+function _kdTempelKode() {
+  const kode = (prompt("Tempel kode desain (diawali KALDIK1:)") || "").trim(); if (!kode) return;
+  try {
+    if (!kode.startsWith("KALDIK1:")) throw new Error("format");
+    const d = JSON.parse(decodeURIComponent(escape(atob(kode.slice(8)))));
+    if (!d || typeof d !== "object" || !d.tema) throw new Error("isi");
+    _kdCatatRiwayat(); _KD_DRAFT = d; _kdGambarPanel(); _kdPratinjau(); toast("Desain dari kode diterapkan — tekan Simpan untuk menetapkan", "ok");
+  } catch (e) { toast("Kode desain tidak valid", "err"); }
+}
+function _kdPulihkanVersi(i) {
+  const v = _KD_VERSI[i]; if (!v) return;
+  _kdCatatRiwayat(); _KD_DRAFT = JSON.parse(JSON.stringify(v.d)); _kdGambarPanel(); _kdPratinjau();
+  toast("Versi " + new Date(v.t).toLocaleDateString("id-ID") + " dipulihkan — tekan Simpan untuk menetapkan", "info");
+}
+addEventListener("resize", () => { if (_KD_BINGKAI) { clearTimeout(window._kdTB); window._kdTB = setTimeout(_kdGambarBingkai, 200); } });
