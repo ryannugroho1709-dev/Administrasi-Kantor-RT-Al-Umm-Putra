@@ -84,6 +84,7 @@ async function bukaStudioKaldik() {
   try { const r = await supa.from("kuliah_pengaturan").select("nilai").eq("kunci", "kaldik:template").maybeSingle(); _KD_TEMPLATE = (r.data && r.data.nilai) || []; } catch (e) { _KD_TEMPLATE = []; }
   let p = document.getElementById("kd-studio");
   if (!p) { p = document.createElement("aside"); p.id = "kd-studio"; document.body.appendChild(p); }
+  document.body.classList.add("kd-studio-buka"); // halaman menyempit di samping panel (seperti DevTools), tidak tertimpa
   _kdGambarPanel();
 }
 function _kdGambarPanel() {
@@ -156,6 +157,7 @@ function tutupStudioKaldik(simpan) {
   if (!simpan && _KD_SIMPANAN) KD_DESAIN[_kdSemester()] = _KD_SIMPANAN;
   _KD_DRAFT = null; _KD_SIMPANAN = null;
   document.getElementById("kd-studio")?.remove();
+  document.body.classList.remove("kd-studio-buka");
   _kdTerapkan(); renderKaldik();
 }
 async function simpanStudioKaldik() {
