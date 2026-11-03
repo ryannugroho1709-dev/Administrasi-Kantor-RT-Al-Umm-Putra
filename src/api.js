@@ -767,6 +767,10 @@ async function apiGetRekapKehadiranSiswa(kelasId, dari, sampai) {
 //  FASE 2 — API tambahan
 // ============================================================
 
+// Admin Kedua boleh membuka Insentif & Insentif Musyrif untuk melihat, mencetak & mengekspor saja
+function _tolakAdminKeduaInsentif() {
+  if (typeof isAdminKedua === "function" && isAdminKedua()) throw new Error("Admin Kedua hanya bisa melihat, mencetak & mengekspor data insentif.");
+}
 // ── UPLOAD FOTO (Supabase Storage, bucket "foto") ──
 async function apiUploadFoto(file, folder) {
   const ext = file.name.split(".").pop();
@@ -1130,6 +1134,7 @@ async function apiGetInsentifRate() {
   }
 }
 async function apiSimpanInsentifRate(row) {
+  _tolakAdminKeduaInsentif();
   try {
     // row: { jenis_guru, paket, rate_per_jp } — upsert berdasar kombinasi jenis_guru+paket
     return unwrap(await supa.from("insentif_rate").upsert(row, { onConflict: "jenis_guru,paket" }).select());
@@ -1954,10 +1959,12 @@ async function apiGetJabatanMusyrif() {
   return unwrap(await supa.from("jabatan_musyrif").select("*").order("urutan").order("nama_jabatan"));
 }
 async function apiSimpanJabatanMusyrif(row) {
+  _tolakAdminKeduaInsentif();
   if (row.id) return unwrap(await supa.from("jabatan_musyrif").update(row).eq("id", row.id).select())[0];
   return unwrap(await supa.from("jabatan_musyrif").insert(row).select())[0];
 }
 async function apiHapusJabatanMusyrif(id) {
+  _tolakAdminKeduaInsentif();
   return unwrap(await supa.from("jabatan_musyrif").delete().eq("id", id));
 }
 
@@ -1970,6 +1977,7 @@ async function apiGetMusyrifPenugasan() {
   );
 }
 async function apiSimpanMusyrifPenugasan(row) {
+  _tolakAdminKeduaInsentif();
   if (row.id) return unwrap(await supa.from("musyrif_penugasan").update(row).eq("id", row.id).select())[0];
   return unwrap(await supa.from("musyrif_penugasan").insert(row).select())[0];
 }
@@ -1977,6 +1985,7 @@ async function apiSimpanMusyrifPenugasan(row) {
 // lalu yang sudah tercatat tidak ikut hilang/rusak (beda dari cp_atp/modul_ajar yang memang hapus
 // permanen tanpa histori bulanan terkait).
 async function apiHapusMusyrifPenugasan(id) {
+  _tolakAdminKeduaInsentif();
   return unwrap(await supa.from("musyrif_penugasan").update({ aktif: false }).eq("id", id).select());
 }
 

@@ -230,6 +230,7 @@ async function bukaInsentifTambahan() {
 }
 function _itHitung() { const el = qs("it-total"); if (el) el.textContent = "Total: " + formatRupiah((+qs("it-qty").value || 0) * (+qs("it-tarif").value || 0)); }
 async function _tambahInsentifTambahan(bulanYM) {
+  if (!isAdmin()) { toast("Hanya admin utama yang bisa menambah insentif", "err"); return; }
   const guruId = qs("it-guru").value, qty = +qs("it-qty").value || 0, tarif = +qs("it-tarif").value || 0, ket0 = qs("it-ket").value.trim();
   if (!ket0) { toast("Isi keterangannya dulu", "err"); qs("it-ket").focus(); return; }
   if (qty <= 0 || tarif <= 0) { toast("Isi jumlah kali dan tarif", "err"); return; }
@@ -244,6 +245,7 @@ async function _tambahInsentifTambahan(bulanYM) {
   } catch (e) { console.error(e); toast("Gagal menyimpan: " + (e.message || e), "err"); }
 }
 async function _hapusInsentifTambahan(bulanYM, id) {
+  if (!isAdmin()) { toast("Hanya admin utama yang bisa menghapus insentif", "err"); return; }
   if (!(await konfirmasiTema("Hapus baris insentif tambahan ini?", { ikon: "🗑️", judul: "Hapus Tambahan" }))) return;
   try {
     const daftar = (await _ambilInsentifTambahan(bulanYM)).filter((x) => x.id !== id);

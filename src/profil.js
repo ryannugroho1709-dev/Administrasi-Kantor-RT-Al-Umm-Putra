@@ -277,10 +277,10 @@ async function jumlahPerubahanProfilBaru() { return (await _kvAmbil("profil:peru
 async function bukaPerubahanProfil() {
   const log = await _kvAmbil("profil:perubahan", []);
   const fmt = (k, v) => k === "foto_url" ? "foto baru" : escapeHtml(String(v || "–"));
-  openModal(`<h3>✏️ Perubahan Data Guru</h3>
-    <div style="font-size:11.5px;color:var(--text-secondary);margin:-6px 0 10px;">Diubah sendiri oleh guru lewat Profil. Yang belum dilihat ditandai kuning.</div>
+  openModal(`<h3>✏️ Perubahan Data Guru &amp; Siswa</h3>
+    <div style="font-size:11.5px;color:var(--text-secondary);margin:-6px 0 10px;">Perubahan oleh guru (lewat Profil) dan oleh Admin Kedua (Data Guru/Data Siswa). Yang belum dilihat ditandai kuning.</div>
     <div style="max-height:56vh;overflow-y:auto;">${log.length ? log.map((x) => `<div style="padding:9px 10px;border-radius:10px;margin-bottom:6px;border:1px solid var(--border-soft);${x.dilihat ? "" : "background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.4);"}font-size:12px;">
-      <div style="display:flex;justify-content:space-between;gap:8px;"><a href="#" style="font-weight:800;" onclick="event.preventDefault();bukaProfilGuru('${x.guru_id}')">${escapeHtml(x.nama || "-")}</a><span style="color:var(--text-secondary);font-size:11px;">${new Date(x.t).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span></div>
+      <div style="display:flex;justify-content:space-between;gap:8px;">${x.oleh ? `<span><b>${escapeHtml(_namaSingkatTopbar(x.oleh))}</b> <span class="badge badge-yellow" style="font-size:9.5px;">Admin Kedua</span> ${escapeHtml(x.aksi || "mengubah data")}: ${x.guru_id ? `<a href="#" onclick="event.preventDefault();bukaProfilGuru('${x.guru_id}')">${escapeHtml(x.nama || "-")}</a>` : `<b>${escapeHtml(x.nama || "-")}</b>`}</span>` : `<a href="#" style="font-weight:800;" onclick="event.preventDefault();bukaProfilGuru('${x.guru_id}')">${escapeHtml(x.nama || "-")}</a>`}<span style="color:var(--text-secondary);font-size:11px;">${new Date(x.t).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span></div>
       ${(x.perubahan || []).map((p) => `<div style="margin-top:3px;"><b>${_PF_LABEL[p.k] || p.k}:</b> <s style="color:var(--text-secondary);">${fmt(p.k, p.lama)}</s> → <b>${fmt(p.k, p.baru)}</b></div>`).join("")}</div>`).join("") : `<div style="color:var(--text-secondary);font-size:12px;">Belum ada perubahan.</div>`}</div>
     ${log.some((x) => !x.dilihat) ? `<button class="btn btn-accent" style="width:100%;margin-top:10px;" onclick="_tandaiPerubahanDilihat()">✓ Tandai semua sudah dilihat</button>` : ""}`);
 }
@@ -328,4 +328,13 @@ function _pfKartukan(wrap) {
     sec.before(kartu); kartu.appendChild(sec);
     while (kartu.nextElementSibling && !kartu.nextElementSibling.classList.contains("pf-sec") && kartu.nextElementSibling.tagName !== "STYLE") kartu.appendChild(kartu.nextElementSibling);
   });
+}
+
+// Admin Kedua menambah/mengubah Data Guru atau Data Siswa → dilaporkan ke admin utama
+async function _catatAksiAdminKedua(jenis, id, nama, aksi) {
+  try {
+    const log = await _kvAmbil("profil:perubahan", []);
+    log.unshift({ id: Date.now().toString(36), guru_id: jenis === "guru" ? id : null, nama: nama || "-", oleh: STATE.guruNama, jenis, aksi, perubahan: [], t: Date.now(), dilihat: false });
+    await _kvSimpan("profil:perubahan", log.slice(0, 150));
+  } catch (e) { console.warn("Gagal mencatat aksi Admin Kedua:", e); }
 }

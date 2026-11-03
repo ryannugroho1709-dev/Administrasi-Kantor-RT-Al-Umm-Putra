@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-title" content="RT Putra"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Amiri:wght@400;700&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Amiri:wght@400;700&family=Playfair+Display:wght@600;700;800&display=swap&family=Anton&family=Great+Vibes" rel="stylesheet">
 <!-- Tema elegan + pilihan palet (menu ✨ di topbar). "klasik" = tampilan hijau lama. Dipasang
      sedini mungkin supaya tidak sempat "berkedip" tampilan lain dulu. Disimpan per perangkat. -->
 <link rel="stylesheet" href="src/tema-elegan.css?v=5">
@@ -762,21 +762,38 @@ table.simple-table td{padding:8px 10px;border-bottom:1px solid var(--border-soft
 .kaldik-legend{margin-top:8px;border-top:1px dashed #D4AF6A66;padding-top:6px;}
 .kaldik-legend-item{display:flex;align-items:center;gap:5px;font-size:9.5px;color:var(--text-secondary);margin-bottom:3px;line-height:1.3;}
 .kaldik-dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex-shrink:0;}
-.kaldik-pita{display:inline-block;margin-top:6px;padding:3px 12px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:.6px;background:linear-gradient(90deg,#1E3A8A,#3B5BDB);color:#fff;}
-.kaldik-ringkas{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;}
-.kaldik-ringkas span{font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:999px;background:var(--accent-soft,rgba(30,64,175,.08));color:var(--text-secondary);}
-/* ── Semester Genap: tema hijau-toska & emas, ornamen bunga, matahari ── */
-.kaldik-genap .kaldik-pita,#kaldik-header.kaldik-genap .kaldik-pita{background:linear-gradient(90deg,#047857,#14B8A6);}
-.kaldik-bulan-grid.kaldik-genap .kaldik-bulan-card{background:linear-gradient(180deg,#ECFDF5 0,var(--surface) 46px);}
-.kaldik-bulan-grid.kaldik-genap .kaldik-bulan-card::before,.kaldik-bulan-grid.kaldik-genap .kaldik-bulan-card::after{content:"❀";color:#10B981;font-size:11px;}
-.kaldik-bulan-grid.kaldik-genap .kaldik-bulan-judul{color:#047857;}
-.kaldik-bulan-grid.kaldik-genap .kaldik-hari-header{background:linear-gradient(90deg,#047857,#0D9488)!important;}
-.kaldik-bulan-grid.kaldik-genap .kaldik-hari-header>div:nth-child(5){color:#FEF3C7;text-decoration-color:#FBBF24;}
-.kaldik-bulan-grid.kaldik-genap .kaldik-hari.hari-ini{box-shadow:0 0 0 2px #10B981 inset;}
-.kaldik-bulan-grid.kaldik-genap .kaldik-hari:not(.kosong):not(.ada-item):hover{background:#D1FAE5;}
-.kaldik-bulan-grid.kaldik-genap .kaldik-legend{border-top-color:#10B98166;}
-.kaldik-bulan-grid.kaldik-genap .kaldik-ringkas span{background:#D1FAE5;color:#065F46;}
-#kaldik-header.kaldik-genap .kaldik-header-panel{border:1px solid #10B98155;}
+.kaldik-pita{display:inline-block;margin-top:4px;padding:2px 12px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:#111;color:#fff;}
+#kaldik-header.kaldik-genap .kaldik-pita{background:#8B6B3E;}
+.kaldik-judul-smt{position:relative;display:block;margin:6px auto 0;line-height:1;height:64px;}
+.kaldik-judul-smt .ks-besar{font-family:"Anton",Impact,sans-serif;font-size:44px;letter-spacing:1px;color:#2b2b2b;}
+.kaldik-judul-smt .ks-skrip{position:absolute;left:50%;top:22px;transform:translateX(-30%) rotate(-6deg);font-family:"Great Vibes",cursive;font-size:40px;white-space:nowrap;text-shadow:0 2px 0 rgba(0,0,0,.25);}
+.kaldik-judul-smt.ganjil .ks-skrip{color:#A3E635;-webkit-text-stroke:.6px #3f6212;}
+.kaldik-judul-smt.genap .ks-skrip{color:#D4A24C;-webkit-text-stroke:.6px #7c5a1e;}
+.kaldik-judul-smt.genap .ks-besar{color:#4A3B2A;}
+.kaldik-swatch{display:inline-grid;place-items:center;min-width:26px;height:18px;padding:0 4px;border-radius:3px;font-size:9px;font-weight:800;color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.35);flex-shrink:0;}
+.kb-thn{margin-left:6px;}
+/* ── Tema GANJIL: modern-tegas — kartu putih, judul bulan pita hitam (miring), baris hari abu muda ── */
+.tema-ganjil .kaldik-bulan-card{background:#fff;border:none!important;border-radius:16px;box-shadow:0 8px 22px rgba(15,23,42,.09)!important;}
+.tema-ganjil .kaldik-bulan-card::before,.tema-ganjil .kaldik-bulan-card::after{content:none;}
+.tema-ganjil .kaldik-bulan-judul{display:flex;justify-content:space-between;align-items:center;background:#111;color:#fff;border-radius:12px;padding:6px 14px;font-style:italic;font-weight:600;font-size:15px;letter-spacing:.3px;}
+.tema-ganjil .kaldik-hari-header{background:#ECEEF2!important;border-radius:6px;}
+.tema-ganjil .kaldik-hari-header>div{color:#1f2937;font-weight:800;letter-spacing:.8px;}
+.tema-ganjil .kaldik-hari.ada-item{border-radius:4px;}
+.tema-ganjil .kaldik-legend{border-top:none;}
+.tema-ganjil .kaldik-legend-item{font-family:"Oswald","Plus Jakarta Sans",sans-serif;font-weight:600;color:#111;font-size:10.5px;}
+/* ── Tema GENAP: klasik-elegan — kertas krem, judul bulan kapital di tengah, pita hari cokelat muda, huruf serif ── */
+.tema-genap .kaldik-bulan-card{background:#FBF7EE;border:none!important;border-radius:6px;box-shadow:0 4px 14px rgba(120,90,40,.12)!important;}
+.tema-genap .kaldik-bulan-card::before,.tema-genap .kaldik-bulan-card::after{content:none;}
+.tema-genap .kaldik-bulan-judul{color:#2b2118;text-transform:uppercase;letter-spacing:2px;font-size:13px;font-weight:800;}
+.tema-genap .kaldik-bulan-judul .kb-thn{font-weight:500;color:#8B6B3E;letter-spacing:1px;}
+.tema-genap .kaldik-hari-header{background:#E6D9C3!important;border-radius:0;}
+.tema-genap .kaldik-hari-header>div{color:#3b2f22;font-weight:800;}
+.tema-genap .kaldik-hari-header>div:nth-child(5){color:#3b2f22;text-decoration-color:#8B6B3E;}
+.tema-genap .kaldik-hari{font-family:Georgia,"Times New Roman",serif;}
+.tema-genap .kaldik-hari.ada-item{border-radius:2px;}
+.tema-genap .kaldik-hari.hari-ini{box-shadow:0 0 0 2px #8B6B3E inset;}
+.tema-genap .kaldik-legend{border-top:1px solid #E6D9C3;}
+.tema-genap .kaldik-legend-item{font-family:Georgia,"Times New Roman",serif;color:#2b2118;font-size:10.5px;}
 @media (max-width:820px){.kaldik-bulan-grid{grid-template-columns:1fr 1fr;}}
 @media (max-width:520px){.kaldik-bulan-grid{grid-template-columns:1fr;}}
 /* ── SPLASH / LAUNCH SCREEN ── */
@@ -3883,7 +3900,7 @@ async function renderDashPeran() {
       ${tile("🛠️", "Masuk tapi lupa pulang/jurnal (14 hari)", lupa, "_keLupaJurnalKepsek()", "#ea580c")}
       ${tile("📝", "Sudah masuk, belum isi jurnal hari ini", belumJurnal, "showPage('monitor','page-monitor','menuMonitor')", "var(--bad)")}
       ${tile("⏳", "Jurnal tertunda (menunggu guru)", tertunda, "bukaKedisiplinan('bulan')", "#64748b")}
-      ${isAdmin() ? tile("✏️", "Perubahan data guru (belum dilihat)", ubahProfil, "bukaPerubahanProfil()", "#0891b2") : ""}
+      ${isAdmin() ? tile("✏️", "Perubahan data guru/siswa (belum dilihat)", ubahProfil, "bukaPerubahanProfil()", "#0891b2") : ""}
     </div>`;
   }
   if (bendahara) {
@@ -9203,7 +9220,8 @@ async function renderKaldik() {
         <div class="kaldik-header-judul" style="font-weight:800;font-size:${judulPx}px;letter-spacing:.3px;color:${warnaJudul};">✦ ${t("kalenderPendidikan").toUpperCase()} ✦</div>
         <div style="font-size:${lembagaPx}px;font-weight:700;margin-top:2px;color:${warnaTeks};">${(p.nama_lembaga_kop || "PKBM AL-UMM BARABAI").toUpperCase()}</div>
         <div style="font-size:${tahunPx}px;margin-top:2px;color:${warnaTeks};opacity:.85;">Tahun Ajaran ${tahunAjaran}</div>
-        <div class="kaldik-pita">${genap ? "☀️ SEMESTER GENAP · JANUARI – JUNI " + thnAkhir : "🌙 SEMESTER GANJIL · JULI – DESEMBER " + thnAwal}</div>
+        <div class="kaldik-judul-smt ${genap ? "genap" : "ganjil"}"><span class="ks-besar">Semester</span><span class="ks-skrip">${genap ? "Genap" : "Ganjil"}</span></div>
+        <div class="kaldik-pita">${genap ? "Januari – Juni " + thnAkhir : "Juli – Desember " + thnAwal}</div>
       </div>
     </div>`;
 
@@ -9218,7 +9236,7 @@ async function renderKaldik() {
     const bulanList = KALDIK_SEMESTER === "ganjil"
       ? [[thnAwal, 7], [thnAwal, 8], [thnAwal, 9], [thnAwal, 10], [thnAwal, 11], [thnAwal, 12]]
       : [[thnAkhir, 1], [thnAkhir, 2], [thnAkhir, 3], [thnAkhir, 4], [thnAkhir, 5], [thnAkhir, 6]];
-    grid.innerHTML = `<div class="kaldik-bulan-grid${KALDIK_SEMESTER === "genap" ? " kaldik-genap" : ""}">${bulanList.map(([y, m]) => renderMiniBulanKaldik(y, m)).join("")}</div>`;
+    grid.innerHTML = `<div class="kaldik-bulan-grid tema-${KALDIK_SEMESTER}">${bulanList.map(([y, m]) => renderMiniBulanKaldik(y, m)).join("")}</div>`;
   } catch (e) { console.error(e); grid.innerHTML = `<div class="card empty-state">Gagal memuat kaldik.</div>`; }
 }
 
@@ -9430,7 +9448,7 @@ function _itemBulanKaldik(y, m) {
 // langsung kelihatan ada beberapa agenda tanpa perlu klik dulu.
 function _backgroundKaldikHari(items) {
   if (!items.length) return "";
-  if (items.length === 1) return items[0].warna || "#93C5FD";
+  if (items.length === 1) { const c = items[0].warna || "#93C5FD"; return `linear-gradient(135deg, ${c}, color-mix(in srgb, ${c} 55%, #fff))`; }
   const n = items.length;
   const stops = [];
   items.forEach((it, i) => {
@@ -9466,23 +9484,17 @@ function renderMiniBulanKaldik(y, m, modeEkspor) {
   const legend = items.length
     ? `<div class="kaldik-legend">${items.map((it) => {
         const berlangsung = !modeEkspor && hariIni && it.tanggal_mulai && it.tanggal_mulai <= hariIni && (!it.tanggal_selesai || it.tanggal_selesai >= hariIni);
-        return `<div class="kaldik-legend-item${berlangsung ? " berlangsung" : ""}"><span class="kaldik-dot" style="background:${it.warna || "#93C5FD"}"></span>${it.judul}${berlangsung ? " • sedang berlangsung" : ""}</div>`;
+        const awalBln = `${y}-${String(m).padStart(2, "0")}-01`, akhirBln = `${y}-${String(m).padStart(2, "0")}-${String(jumlahHari).padStart(2, "0")}`;
+        const d1 = +String(it.tanggal_mulai < awalBln ? awalBln : it.tanggal_mulai).slice(8, 10), d2 = +String(!it.tanggal_selesai ? d1 : it.tanggal_selesai > akhirBln ? akhirBln : it.tanggal_selesai).slice(8, 10);
+        const c = it.warna || "#93C5FD";
+        return `<div class="kaldik-legend-item${berlangsung ? " berlangsung" : ""}"><span class="kaldik-swatch" style="background:linear-gradient(135deg,${c},color-mix(in srgb,${c} 50%,#fff))">${d1}${d2 && d2 !== d1 ? "–" + d2 : ""}</span><span>${it.judul}${berlangsung ? " • sedang berlangsung" : ""}</span></div>`;
       }).join("")}</div>`
     : "";
   const warnaBulan = KALDIK_WARNA_BULAN[m] || "#D4AF6A";
-  // Ringkasan: hari efektif (Senin–Sabtu yang bukan libur), hari libur, hari berkegiatan
-  let efektif = 0, libur = 0, acara = 0;
-  for (let d = 1; d <= jumlahHari; d++) {
-    const tgl = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`, it = _itemUntukTanggalKaldik(tgl), minggu = new Date(y, m - 1, d).getDay() === 0;
-    if (it.some((x) => x.jenis === "libur")) libur++; else if (!minggu) efektif++;
-    if (it.some((x) => x.jenis !== "libur")) acara++;
-  }
-  const ringkas = `<div class="kaldik-ringkas"><span>📚 ${efektif} hari efektif</span><span>🏖️ ${libur} libur</span>${acara ? `<span>📌 ${acara} hari kegiatan</span>` : ""}</div>`;
   return `<div class="kaldik-bulan-card" style="border-color:${warnaBulan};box-shadow:0 0 0 1px ${warnaBulan}55, 0 0 0 4px ${warnaBulan}22, 4px 4px 10px var(--neu-dark), -4px -4px 10px var(--neu-light);">
-    <div class="kaldik-bulan-judul">${m <= 6 ? "☀️" : "🌙"} ${NAMA_BULAN_KALDIK[m]} ${y}</div>
+    <div class="kaldik-bulan-judul"><span class="kb-bln">${NAMA_BULAN_KALDIK[m]}</span><span class="kb-thn">${y}</span></div>
     <div class="kaldik-hari-header">${HARI_MINI_KALDIK.map((h) => `<div>${h}</div>`).join("")}</div>
     <div class="kaldik-hari-grid">${cells}</div>
-    ${ringkas}
     ${legend}
   </div>`;
 }
@@ -9743,7 +9755,7 @@ async function eksporKaldikJPG() {
     const bulanList = KALDIK_SEMESTER === "ganjil"
       ? [[thnAwal, 7], [thnAwal, 8], [thnAwal, 9], [thnAwal, 10], [thnAwal, 11], [thnAwal, 12]]
       : [[thnAkhir, 1], [thnAkhir, 2], [thnAkhir, 3], [thnAkhir, 4], [thnAkhir, 5], [thnAkhir, 6]];
-    gridEl.innerHTML = `<div class="kaldik-bulan-grid">${bulanList.map(([y, m]) => renderMiniBulanKaldik(y, m, true)).join("")}</div>`;
+    gridEl.innerHTML = `<div class="kaldik-bulan-grid tema-${KALDIK_SEMESTER}">${bulanList.map(([y, m]) => renderMiniBulanKaldik(y, m, true)).join("")}</div>`;
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     // 1) Grid bulan — tetap lewat html2canvas, ini selalu render benar.
@@ -15103,6 +15115,7 @@ async function simpanFormGuru(id) {
       if (guruLain) await apiSimpanGuru({ id: guruLain.id, wali_kelas_id: null });
     }
     const savedRow = (await apiSimpanGuru(row))[0];
+    if (isAdminKedua() && typeof _catatAksiAdminKedua === "function") _catatAksiAdminKedua("guru", savedRow?.id || id, row.nama, id ? "mengubah data guru" : "menambah guru baru");
     try {
       await apiSimpanGuruJabatanBulk(savedRow.id, jabatanIdsTerpilih.map((jid) => ({ jabatan_id: jid, is_utama: jid === jabatanUtamaIdTerpilih })));
     } catch (e) { console.warn("Gagal menyimpan relasi jabatan (migrasi SQL belum dijalankan?):", e.message); }
@@ -15762,6 +15775,7 @@ async function simpanFormSiswa(id) {
     const fotoFile = qs("sf-foto").files[0];
     if (fotoFile) { try { row.foto_url = await apiUploadFoto(fotoFile, "siswa"); } catch (e) { console.warn("Upload foto gagal:", e); } }
     await apiSimpanSiswa(row);
+    if (isAdminKedua() && typeof _catatAksiAdminKedua === "function") _catatAksiAdminKedua("siswa", id || null, row.nama, id ? "mengubah data siswa" : "menambah siswa baru");
     closeModal(); toast("Data siswa berhasil disimpan.", "ok");
     renderDataSiswa();
   } catch (e) { console.error(e); toast("Gagal menyimpan data siswa: " + e.message, "err"); }
