@@ -29,7 +29,7 @@ const KD_TEMA = {
 };
 KD_BAWAAN.genap = Object.assign({ tema: "krem" }, KD_TEMA.krem.d);
 const KD_DESAIN = { ganjil: null, genap: null };
-let _KD_DRAFT = null, _KD_SIMPANAN = null;
+let _KD_DRAFT = null, _KD_SIMPANAN = null, _KD_RIWAYAT = [], _KD_MAJU = [], _KD_TEMPLATE = [];
 
 function _kdSemester() { return typeof KALDIK_SEMESTER !== "undefined" ? KALDIK_SEMESTER : "ganjil"; }
 function _kdAktif() { return _KD_DRAFT || KD_DESAIN[_kdSemester()] || KD_BAWAAN[_kdSemester()]; }
@@ -80,6 +80,8 @@ async function bukaStudioKaldik() {
   await _kdMuat(smt); _kdMuatFont();
   _KD_SIMPANAN = JSON.parse(JSON.stringify(KD_DESAIN[smt]));
   _KD_DRAFT = JSON.parse(JSON.stringify(KD_DESAIN[smt]));
+  _KD_RIWAYAT = []; _KD_MAJU = [];
+  try { const r = await supa.from("kuliah_pengaturan").select("nilai").eq("kunci", "kaldik:template").maybeSingle(); _KD_TEMPLATE = (r.data && r.data.nilai) || []; } catch (e) { _KD_TEMPLATE = []; }
   let p = document.getElementById("kd-studio");
   if (!p) { p = document.createElement("aside"); p.id = "kd-studio"; document.body.appendChild(p); }
   _kdGambarPanel();
@@ -92,10 +94,13 @@ function _kdGambarPanel() {
   const pilih = (k, label, opsi) => `<label class="kd-f"><span>${label}</span><select data-k="${k}">${opsi.map(([v, l]) => `<option value="${v}"${String(d[k]) === String(v) ? " selected" : ""}>${l}</option>`).join("")}</select></label>`;
   const skrip = ["Great Vibes", "Dancing Script", "Pacifico", "Satisfy", "Lobster"];
   const asli = !d.tema || d.tema === "asli";
-  p.innerHTML = `<div class="kd-h"><b>🖌️ Studio Desain · Semester ${smt === "genap" ? "Genap" : "Ganjil"}</b><button type="button" onclick="tutupStudioKaldik(false)" title="Tutup tanpa menyimpan">✕</button></div>
+  p.innerHTML = `<div class="kd-h"><b>🖌️ Studio Desain · ${smt === "genap" ? "Genap" : "Ganjil"}</b><span class="kd-ur"><button type="button" onclick="_kdUrung()" title="Urungkan (Ctrl+Z)"${_KD_RIWAYAT.length ? "" : " disabled"}>↶</button><button type="button" onclick="_kdUlang()" title="Ulangi (Ctrl+Y)"${_KD_MAJU.length ? "" : " disabled"}>↷</button><button type="button" onclick="tutupStudioKaldik(false)" title="Tutup tanpa menyimpan">✕</button></span></div>
     <div class="kd-isi">
       <div class="kd-sec">🎨 Tema siap pakai</div>
       <div class="kd-tema">${Object.entries(KD_TEMA).map(([k, tm]) => `<button type="button" class="${d.tema === k ? "on" : ""}" onclick="_kdPilihTema('${k}')" style="--a:${tm.d.halBg || "#e5e7eb"};--b:${tm.d.hariBg || "#2563eb"}"><i></i><span>${tm.ikon} ${tm.nama}</span></button>`).join("")}</div>
+      <div class="kd-sec">⭐ Template saya</div>
+      <div class="kd-tpl">${_KD_TEMPLATE.length ? _KD_TEMPLATE.map((tp) => `<div class="kd-tpl-i"><button type="button" onclick="_kdPakaiTemplate('${tp.id}')" style="--a:${tp.d.halBg || "#e5e7eb"};--b:${tp.d.hariBg || "#2563eb"}"><i></i><span>${escapeHtml(tp.nama)}</span></button><button type="button" class="kd-tpl-x" title="Hapus template" onclick="_kdHapusTemplate('${tp.id}')">✕</button></div>`).join("") : `<p class="kd-ket">Belum ada. Simpan desain yang Anda suka supaya bisa dipakai lagi tahun depan.</p>`}</div>
+      <div class="kd-baris"><button type="button" class="btn btn-ghost" onclick="_kdSimpanTemplate()">⭐ Simpan desain ini sebagai template</button><button type="button" class="btn btn-ghost" onclick="_kdSalinSemester()">📋 Salin dari Semester ${smt === "genap" ? "Ganjil" : "Genap"}</button></div>
       ${asli ? `<p class="kd-ket">Tema "Bawaan Aplikasi" memakai tampilan asli. Pilih tema lain untuk mengatur font & warna.</p>` : `
       <div class="kd-sec">🔤 Huruf</div>
       ${pilihFont("fontBesar", "Judul besar \"Semester\"")}${pilihFont("fontSkrip", "Tulisan sambung (Ganjil/Genap)", skrip)}${pilihFont("fontBulan", "Nama bulan")}${pilihFont("fontAngka", "Angka tanggal")}${pilihFont("fontLegenda", "Keterangan kegiatan")}
@@ -123,6 +128,7 @@ function _kdGambarPanel() {
     <div class="kd-aksi"><button type="button" class="btn btn-ghost" onclick="_kdReset()">↺ Bawaan</button><button type="button" class="btn btn-outline" onclick="tutupStudioKaldik(false)">Batal</button><button type="button" class="btn btn-accent" onclick="simpanStudioKaldik()">💾 Simpan</button></div>`;
   p.querySelectorAll("[data-k]").forEach((el) => {
     const ev = el.type === "range" || el.type === "color" || el.tagName === "TEXTAREA" || el.type === "text" || (el.tagName === "INPUT" && !el.type) ? "input" : "change";
+    el.addEventListener("focus", () => _kdCatatRiwayat(), { once: false });
     el.addEventListener(ev, () => {
       const k = el.dataset.k;
       _KD_DRAFT[k] = el.type === "checkbox" ? el.checked : el.type === "range" ? +el.value : el.value;
@@ -140,12 +146,12 @@ function _kdPratinjau(k) {
   if (!k || ["judulBulan", "sel", "legenda", "judulSmt"].includes(k)) { clearTimeout(_kdTRender); _kdTRender = setTimeout(() => renderKaldik(), 120); }
 }
 function _kdPilihTema(k) {
-  const lama = _KD_DRAFT || {};
+  _kdCatatRiwayat();
   _KD_DRAFT = Object.assign({}, KD_BAWAAN[_kdSemester()], KD_TEMA[k].d, { tema: k });
   if (k === "asli") _KD_DRAFT = Object.assign({}, KD_BAWAAN.ganjil, { tema: "asli" });
   _kdGambarPanel(); _kdPratinjau();
 }
-function _kdReset() { _KD_DRAFT = JSON.parse(JSON.stringify(KD_BAWAAN[_kdSemester()])); _kdGambarPanel(); _kdPratinjau(); }
+function _kdReset() { _kdCatatRiwayat(); _KD_DRAFT = JSON.parse(JSON.stringify(KD_BAWAAN[_kdSemester()])); _kdGambarPanel(); _kdPratinjau(); }
 function tutupStudioKaldik(simpan) {
   if (!simpan && _KD_SIMPANAN) KD_DESAIN[_kdSemester()] = _KD_SIMPANAN;
   _KD_DRAFT = null; _KD_SIMPANAN = null;
@@ -175,4 +181,80 @@ function _kdTambahan(gridEl) {
     if (blok) gridEl.insertAdjacentHTML("beforeend", `<div class="kd-legenda-gabung"><div class="kd-lg-judul">Keterangan Kegiatan</div><div class="kd-lg-isi">${blok}</div></div>`);
   }
   if (d.ttdTampil && (d.ttdNama || "").trim()) gridEl.insertAdjacentHTML("beforeend", `<div class="kd-ttd"><div>${escapeHtml(d.ttdKota || "")}</div><div>${escapeHtml(d.ttdJabatan || "Kepala Sekolah")}</div><div class="kd-ttd-ruang"></div><b>${escapeHtml(d.ttdNama)}</b></div>`);
+}
+
+// ── Tahap 3: urungkan/ulangi, template sendiri, salin antar semester ──
+function _kdCatatRiwayat() {
+  if (!_KD_DRAFT) return;
+  const snap = JSON.stringify(_KD_DRAFT);
+  if (_KD_RIWAYAT[_KD_RIWAYAT.length - 1] === snap) return;
+  _KD_RIWAYAT.push(snap); if (_KD_RIWAYAT.length > 40) _KD_RIWAYAT.shift();
+  _KD_MAJU = [];
+  document.querySelectorAll("#kd-studio .kd-ur button").forEach((b, i) => { if (i === 0) b.disabled = false; if (i === 1) b.disabled = true; });
+}
+function _kdUrung() {
+  if (!_KD_RIWAYAT.length) return;
+  _KD_MAJU.push(JSON.stringify(_KD_DRAFT)); _KD_DRAFT = JSON.parse(_KD_RIWAYAT.pop());
+  _kdGambarPanel(); _kdPratinjau();
+}
+function _kdUlang() {
+  if (!_KD_MAJU.length) return;
+  _KD_RIWAYAT.push(JSON.stringify(_KD_DRAFT)); _KD_DRAFT = JSON.parse(_KD_MAJU.pop());
+  _kdGambarPanel(); _kdPratinjau();
+}
+document.addEventListener("keydown", (e) => {
+  if (!document.getElementById("kd-studio") || !(e.ctrlKey || e.metaKey) || e.target.matches?.("input[type=text],textarea,input:not([type])")) return;
+  const k = e.key.toLowerCase();
+  if (k === "z" && !e.shiftKey) { e.preventDefault(); _kdUrung(); }
+  else if (k === "y" || (k === "z" && e.shiftKey)) { e.preventDefault(); _kdUlang(); }
+});
+async function _kdSimpanDaftarTemplate() {
+  const { error } = await supa.from("kuliah_pengaturan").upsert({ kunci: "kaldik:template", nilai: _KD_TEMPLATE });
+  if (error) throw error;
+}
+async function _kdSimpanTemplate() {
+  if (!_KD_DRAFT || !_KD_DRAFT.tema || _KD_DRAFT.tema === "asli") { toast("Pilih tema dulu (selain Bawaan Aplikasi) sebelum menyimpan template", "err"); return; }
+  const nama = (prompt("Nama template:", "Desain " + (_kdSemester() === "genap" ? "Genap" : "Ganjil") + " " + new Date().getFullYear()) || "").trim();
+  if (!nama) return;
+  try {
+    _KD_TEMPLATE.unshift({ id: Date.now().toString(36), nama, d: JSON.parse(JSON.stringify(_KD_DRAFT)), t: Date.now() });
+    _KD_TEMPLATE = _KD_TEMPLATE.slice(0, 20);
+    await _kdSimpanDaftarTemplate();
+    toast("Template \"" + nama + "\" tersimpan ⭐", "ok"); _kdGambarPanel();
+  } catch (e) { toast("Gagal menyimpan template: " + (e.message || e), "err"); }
+}
+function _kdPakaiTemplate(id) {
+  const tp = _KD_TEMPLATE.find((x) => x.id === id); if (!tp) return;
+  _kdCatatRiwayat(); _KD_DRAFT = JSON.parse(JSON.stringify(tp.d));
+  _kdGambarPanel(); _kdPratinjau(); toast("Template \"" + tp.nama + "\" dipakai — tekan Simpan untuk menetapkan", "info");
+}
+async function _kdHapusTemplate(id) {
+  if (!(await konfirmasiTema("Hapus template ini?", { ikon: "🗑️", judul: "Hapus template" }))) return;
+  try { _KD_TEMPLATE = _KD_TEMPLATE.filter((x) => x.id !== id); await _kdSimpanDaftarTemplate(); _kdGambarPanel(); }
+  catch (e) { toast("Gagal: " + (e.message || e), "err"); }
+}
+async function _kdSalinSemester() {
+  const lain = _kdSemester() === "genap" ? "ganjil" : "genap";
+  const d = await _kdMuat(lain);
+  if (!d || !d.tema || d.tema === "asli") { toast("Semester " + (lain === "genap" ? "Genap" : "Ganjil") + " masih memakai tampilan bawaan", "info"); return; }
+  _kdCatatRiwayat(); _KD_DRAFT = JSON.parse(JSON.stringify(d));
+  _kdGambarPanel(); _kdPratinjau(); toast("Desain disalin — tekan Simpan untuk menetapkan", "info");
+}
+// ── Tahap 3: pilihan ukuran ekspor gambar ──
+const KD_UKURAN = { asli: ["Asli (sesuai isi)", 0], a4: ["A4 tegak", 210 / 297], f4: ["F4 tegak", 215 / 330], a4l: ["A4 mendatar", 297 / 210], story: ["Story / status 9:16", 9 / 16], persegi: ["Persegi 1:1", 1] };
+function pilihUkuranEksporKaldik() {
+  openModal(`<h3>🖼️ Ekspor Gambar Kalender</h3><div style="font-size:11.5px;color:var(--text-secondary);margin:-6px 0 12px;">Pilih ukuran. Kalender diletakkan di tengah dengan latar sesuai desain.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">${Object.entries(KD_UKURAN).map(([k, [nama, r]]) => `<button class="btn btn-outline" style="flex-direction:column;gap:6px;padding:12px 8px;" onclick="closeModal();eksporKaldikJPG('${k}')"><span style="display:block;width:${r ? Math.round(34 * Math.min(1, r)) : 34}px;height:${r ? Math.round(34 * Math.min(1, 1 / r)) : 26}px;border:2px solid currentColor;border-radius:3px;margin:0 auto;"></span>${nama}</button>`).join("")}</div>`);
+}
+// Bingkai gambar akhir ke rasio terpilih (isi diletakkan di tengah, tidak terpotong)
+function _kdBingkaiUkuran(kanvas, ukuran, latar) {
+  const r = (KD_UKURAN[ukuran] || [])[1];
+  if (!r) return kanvas;
+  const pad = Math.round(kanvas.width * 0.04);
+  let W = kanvas.width + pad * 2, H = Math.round(W / r);
+  if (H < kanvas.height + pad * 2) { H = kanvas.height + pad * 2; W = Math.round(H * r); }
+  const c = document.createElement("canvas"); c.width = W; c.height = H;
+  const x = c.getContext("2d"); x.fillStyle = latar || "#ffffff"; x.fillRect(0, 0, W, H);
+  x.drawImage(kanvas, Math.round((W - kanvas.width) / 2), Math.round((H - kanvas.height) / 2));
+  return c;
 }
