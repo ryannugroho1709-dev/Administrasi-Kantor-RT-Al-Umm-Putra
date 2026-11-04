@@ -538,11 +538,11 @@ async function _maKompresPdf(file, onProg) {
   const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise, out = await PDFLib.PDFDocument.create();
   for (let i = 1; i <= pdf.numPages; i++) {
     if (onProg) onProg(i, pdf.numPages);
-    const page = await pdf.getPage(i), v1 = page.getViewport({ scale: 1 }), v = page.getViewport({ scale: Math.min(2.2, 1600 / Math.max(v1.width, v1.height)) });
+    const page = await pdf.getPage(i), v1 = page.getViewport({ scale: 1 }), v = page.getViewport({ scale: Math.min(3.2, 2600 / Math.max(v1.width, v1.height)) });
     const c = document.createElement("canvas"); c.width = Math.ceil(v.width); c.height = Math.ceil(v.height);
     const ctx = c.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height);
     await page.render({ canvasContext: ctx, viewport: v }).promise;
-    const blob = await new Promise((r) => c.toBlob(r, "image/jpeg", 0.72));
+    const blob = await new Promise((r) => c.toBlob(r, "image/jpeg", 0.88));
     const img = await out.embedJpg(await blob.arrayBuffer());
     out.addPage([v1.width, v1.height]).drawImage(img, { x: 0, y: 0, width: v1.width, height: v1.height });
     page.cleanup();
@@ -551,7 +551,7 @@ async function _maKompresPdf(file, onProg) {
 }
 // Dipakai form Unggah/Edit: kompres bila PDF > 4 MB dan pilihan "Kompres otomatis" dicentang
 async function _maSiapkanFile(file, prefix, tombol) {
-  if (!file || _jenisFileModul(file) !== "pdf" || file.size <= 4 * 1024 * 1024 || !(qs(`${prefix}-kompres`) || {}).checked) return file;
+  if (!file || _jenisFileModul(file) !== "pdf" || file.size <= 15 * 1024 * 1024 || !(qs(`${prefix}-kompres`) || {}).checked) return file;
   const mb = (b) => (b / 1024 / 1024).toFixed(1) + " MB";
   try {
     const hasil = await _maKompresPdf(file, (i, n) => { if (tombol) tombol.textContent = `🗜️ Mengompres halaman ${i}/${n}…`; });

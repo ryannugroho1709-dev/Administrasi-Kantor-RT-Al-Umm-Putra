@@ -8906,7 +8906,7 @@ function bukaModalUploadModul(kelasIdAwal, mapelIdAwal) {
       <label class="form-label">File Modul <span style="font-size:10.5px;color:var(--text-secondary);">(PDF atau PPT/PPTX, maks ${_MODUL_MAKS_MB}MB)</span></label>
       <input id="mf-file" type="file" class="input" accept="${_ACCEPT_FILE_MODUL}" onchange="_onGantiFileModul(this,'mf')"/>
       <div id="mf-file-info" style="font-size:10.5px;color:var(--text-secondary);margin-top:3px;"></div>
-      <label style="display:flex;align-items:flex-start;gap:6px;font-size:11px;margin-top:6px;cursor:pointer;"><input type="checkbox" id="mf-kompres" checked style="margin-top:2px;"/><span>🗜️ <b>Kompres otomatis</b> PDF di atas 4 MB sebelum diunggah (hemat memori Supabase & cepat dibuka di HP; teks jadi gambar)</span></label>
+      <label style="display:flex;align-items:flex-start;gap:6px;font-size:11px;margin-top:6px;cursor:pointer;"><input type="checkbox" id="mf-kompres" checked style="margin-top:2px;"/><span>🗜️ <b>Kompres otomatis</b> hanya untuk PDF di atas 15 MB (agar muat batas 20 MB; teks jadi gambar resolusi tinggi). PDF di bawah 15 MB diunggah asli supaya tetap tajam di proyektor</span></label>
       <div style="font-size:10.5px;color:var(--text-secondary);margin-top:4px;line-height:1.45;">💡 Untuk <b>Presentasi</b> terbaik (cepat, bisa offline, bisa dicoret): di PowerPoint/Canva pilih <i>Simpan sebagai PDF</i>, lalu unggah PDF-nya. File PPT tetap bisa diputar lewat penampil Office Online (perlu internet, maks ±10 MB).</div>
     </div>
     <div class="field">
@@ -9083,7 +9083,7 @@ function bukaModalEditModul(id) {
       <div style="font-size:10.5px;color:var(--text-secondary);margin-bottom:6px;">${t("fileSaatIni")}: <b>${m.file_nama || "-"}</b></div>
       <input id="me-file" type="file" class="input" accept="${_ACCEPT_FILE_MODUL}" onchange="_onGantiFileModul(this,'me')"/>
       <div id="me-file-info" style="font-size:10.5px;color:var(--text-secondary);margin-top:3px;"></div>
-      <label style="display:flex;align-items:flex-start;gap:6px;font-size:11px;margin-top:6px;cursor:pointer;"><input type="checkbox" id="me-kompres" checked style="margin-top:2px;"/><span>🗜️ <b>Kompres otomatis</b> PDF di atas 4 MB sebelum diunggah (hemat memori Supabase & cepat dibuka di HP; teks jadi gambar)</span></label>
+      <label style="display:flex;align-items:flex-start;gap:6px;font-size:11px;margin-top:6px;cursor:pointer;"><input type="checkbox" id="me-kompres" checked style="margin-top:2px;"/><span>🗜️ <b>Kompres otomatis</b> hanya untuk PDF di atas 15 MB (agar muat batas 20 MB; teks jadi gambar resolusi tinggi). PDF di bawah 15 MB diunggah asli supaya tetap tajam di proyektor</span></label>
       <div style="font-size:10.5px;color:var(--text-secondary);margin-top:4px;">${t("kosongkanTetapPakaiFileLama")}</div>
     </div>
     <div class="field">
@@ -15957,7 +15957,7 @@ async function handleImportSiswa(evt) {
 </script>
 <script src="src/kas.js?v=3"></script>
 <script src="src/kuliah.js?v=19"></script>
-<script src="src/modul-baca.js?v=2"></script>
+<script src="src/modul-baca.js?v=3"></script>
 <script src="src/kesimpulan.js?v=2"></script>
 <script src="src/profil.js?v=4"></script>
 <script src="src/kaldik-desain.js?v=5"></script>
