@@ -12,90 +12,162 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2"></script>
 <script src="src/config.js?v=4"></script>
 <style>
-  :root{--hijau:#0b4a3c;--hijau2:#13715b;--emas:#c9a227;--latar:#f3f6f4;--kartu:#fff;--teks:#1d2a26;--abu:#6b7c76;--garis:#dfe7e3;--merah:#c0392b;--biru:#1f5fbf;--pilih:#e3f3ec}
+  :root{--hijau:#0b4a3c;--hijau2:#13715b;--hijau3:#1f9c7c;--emas:#d4a72c;--latar:#eef4f1;--kartu:#fff;--teks:#1d2a26;--abu:#6b7c76;--garis:#dfe7e3;--merah:#d64545;--biru:#2563eb;--ungu:#7c3aed;--oranye:#ea7a1a;--pilih:#e3f3ec;
+    --c-pg:#2563eb;--c-pgk:#7c3aed;--c-uraian:#ea7a1a}
   *{box-sizing:border-box}
-  html,body{margin:0;background:var(--latar);color:var(--teks);font-family:"Plus Jakarta Sans",system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
-  button{font:inherit;cursor:pointer}
-  .atas{background:linear-gradient(135deg,var(--hijau),var(--hijau2));color:#fff;padding:18px 16px 46px;text-align:center}
-  .atas h1{margin:0;font-size:21px;font-weight:800;letter-spacing:.2px}
-  .atas p{margin:4px 0 0;font-size:13px;opacity:.85}
-  .wadah{max-width:720px;margin:-30px auto 40px;padding:0 14px}
-  .kartu{background:var(--kartu);border-radius:16px;box-shadow:0 6px 24px rgba(11,74,60,.10);padding:18px;margin-bottom:14px}
-  .judul-langkah{font-size:12px;font-weight:700;color:var(--hijau2);text-transform:uppercase;letter-spacing:.8px;margin:0 0 4px}
-  h2{font-size:18px;margin:0 0 12px}
+  html,body{margin:0;color:var(--teks);font-family:"Plus Jakarta Sans",system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+  body{background:var(--latar);background-image:radial-gradient(circle at 10% 0%,rgba(31,156,124,.10),transparent 40%),radial-gradient(circle at 100% 30%,rgba(212,167,44,.10),transparent 35%);min-height:100vh}
+  button{font:inherit;cursor:pointer;color:inherit}
+  @keyframes naik{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  @keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.04)}100%{transform:scale(1)}}
+  @keyframes jatuh{0%{transform:translateY(-20px) rotate(0);opacity:1}100%{transform:translateY(105vh) rotate(540deg);opacity:.9}}
+  .anim{animation:naik .35s ease both}
+  .atas{position:relative;overflow:hidden;background:linear-gradient(135deg,#0b4a3c,#13715b 60%,#1f9c7c);color:#fff;padding:22px 16px 56px;text-align:center}
+  .atas::before,.atas::after{content:"";position:absolute;border-radius:50%;background:rgba(255,255,255,.07)}
+  .atas::before{width:220px;height:220px;right:-60px;top:-90px}.atas::after{width:140px;height:140px;left:-40px;bottom:-70px}
+  .atas h1{margin:0;font-size:22px;font-weight:800;position:relative}
+  .atas p{margin:5px 0 0;font-size:13px;opacity:.88;position:relative}
+  .wadah{max-width:760px;margin:-36px auto 40px;padding:0 14px;position:relative}
+  .kartu{background:var(--kartu);border-radius:20px;box-shadow:0 10px 30px rgba(11,74,60,.10);padding:18px;margin-bottom:14px;animation:naik .35s ease both}
+  .judul-langkah{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:800;color:var(--hijau2);background:rgba(19,113,91,.1);padding:4px 10px;border-radius:99px;text-transform:uppercase;letter-spacing:.6px;margin:0 0 8px}
+  h2{font-size:19px;margin:0 0 14px}
   .daftar{display:grid;gap:10px}
-  .pilihan{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:#fff;border:1.5px solid var(--garis);border-radius:12px;padding:13px 14px;transition:.15s}
-  .pilihan:hover{border-color:var(--hijau2);background:#f7fbf9}
-  .pilihan .ikon{font-size:22px;width:34px;text-align:center;flex:none}
+  .pilihan{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:#fff;border:1.5px solid var(--garis);border-radius:16px;padding:12px 14px;transition:transform .15s,border-color .15s,box-shadow .15s}
+  .pilihan:hover{border-color:var(--hijau3);box-shadow:0 6px 16px rgba(19,113,91,.12);transform:translateY(-1px)}
+  .badge{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-size:22px;flex:none}
+  .avatar{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#fff;font-size:14px;flex:none}
   .pilihan .isi{flex:1;min-width:0}
   .pilihan b{display:block;font-size:15px}
   .pilihan small{color:var(--abu);font-size:12.5px}
-  .lencana{font-size:11px;font-weight:700;padding:3px 8px;border-radius:99px;white-space:nowrap}
-  .l-ujian{background:#fdecea;color:var(--merah)} .l-latihan{background:#e6f0fd;color:var(--biru)} .l-selesai{background:#e3f3ec;color:var(--hijau2)} .l-proses{background:#fff4d6;color:#8a6500}
-  .cari{width:100%;padding:12px 14px;border:1.5px solid var(--garis);border-radius:12px;font:inherit;margin-bottom:10px}
-  .tombol{border:0;border-radius:12px;padding:13px 18px;font-weight:700;font-size:15px;background:var(--hijau);color:#fff}
-  .tombol.garis{background:#fff;color:var(--hijau);border:1.5px solid var(--hijau)}
+  .chip{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:99px;background:#f1f5f3;color:#44514c;margin:4px 4px 0 0}
+  .lencana{font-size:11px;font-weight:800;padding:4px 9px;border-radius:99px;white-space:nowrap}
+  .l-ujian{background:#fdecea;color:var(--merah)} .l-latihan{background:#e6effe;color:var(--biru)} .l-selesai{background:#e3f3ec;color:var(--hijau2)} .l-proses{background:#fff4d6;color:#8a6500} .l-susulan{background:#f3e8ff;color:var(--ungu)}
+  .cari{width:100%;padding:13px 14px;border:1.5px solid var(--garis);border-radius:14px;font:inherit;margin-bottom:12px;background:#fbfdfc}
+  .cari:focus{outline:none;border-color:var(--hijau3)}
+  .tombol{border:0;border-radius:14px;padding:13px 18px;font-weight:800;font-size:15px;background:linear-gradient(135deg,var(--hijau2),var(--hijau3));color:#fff;box-shadow:0 6px 16px rgba(19,113,91,.25);transition:transform .12s}
+  .tombol:active{transform:scale(.97)}
+  .tombol.garis{background:#fff;color:var(--hijau);border:1.5px solid var(--hijau2);box-shadow:none}
+  .tombol.emas{background:linear-gradient(135deg,#e2b53a,#c99613);color:#2b2205;box-shadow:0 6px 16px rgba(201,150,19,.3)}
   .tombol.lebar{width:100%}
-  .tombol:disabled{opacity:.5;cursor:not-allowed}
-  .kembali{background:none;border:0;color:var(--hijau2);font-weight:700;padding:0;margin-bottom:10px}
-  .kosong{text-align:center;color:var(--abu);padding:26px 8px;font-size:14px}
-  .kosong .besar{font-size:40px;margin-bottom:6px}
+  .tombol:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+  .kembali{background:none;border:0;color:var(--hijau2);font-weight:800;padding:0;margin-bottom:12px}
+  .kosong{text-align:center;color:var(--abu);padding:26px 8px;font-size:14px;line-height:1.6}
+  .kosong .besar{font-size:44px;margin-bottom:6px}
   .memuat{text-align:center;padding:30px;color:var(--abu)}
-  .bilah{position:sticky;top:0;z-index:5;background:var(--hijau);color:#fff;padding:10px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 10px rgba(0,0,0,.15)}
-  .bilah .nm{flex:1;min-width:0;font-size:13px;line-height:1.25}
+  .memuat::before{content:"";display:block;width:34px;height:34px;margin:0 auto 10px;border-radius:50%;border:4px solid var(--garis);border-top-color:var(--hijau3);animation:putar 0.8s linear infinite}
+  @keyframes putar{to{transform:rotate(360deg)}}
+  /* ── layar ujian ── */
+  .bilah{position:sticky;top:0;z-index:5;background:linear-gradient(135deg,#0b4a3c,#13715b);color:#fff;padding:10px 14px 0;box-shadow:0 4px 14px rgba(0,0,0,.15)}
+  .bilah-isi{display:flex;align-items:center;gap:10px;max-width:760px;margin:0 auto}
+  .bilah .nm{flex:1;min-width:0;font-size:12px;line-height:1.3;opacity:.95}
   .bilah .nm b{display:block;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .waktu{font-variant-numeric:tabular-nums;font-weight:800;background:rgba(255,255,255,.15);padding:6px 10px;border-radius:10px;font-size:15px}
-  .waktu.kritis{background:var(--merah)}
-  .simpan-info{font-size:11px;opacity:.8}
-  .stimulus{background:#f7f4e8;border-left:4px solid var(--emas);border-radius:10px;padding:12px 14px;font-size:14.5px;line-height:1.65;margin-bottom:14px;white-space:pre-wrap}
-  .stimulus .jdl{font-weight:800;text-align:center;margin-bottom:6px}
-  .no-soal{font-size:12px;font-weight:700;color:var(--abu);margin-bottom:6px}
-  .teks-soal{font-size:16px;line-height:1.6;margin-bottom:14px;white-space:pre-wrap}
-  .opsi{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;background:#fff;border:1.5px solid var(--garis);border-radius:12px;padding:12px 14px;margin-bottom:9px;font-size:15px;line-height:1.5}
-  .opsi .huruf{flex:none;width:28px;height:28px;border-radius:50%;border:2px solid var(--garis);display:grid;place-items:center;font-weight:800;font-size:13px;color:var(--abu)}
-  .opsi.dipilih{border-color:var(--hijau2);background:var(--pilih)}
-  .opsi.dipilih .huruf{background:var(--hijau2);border-color:var(--hijau2);color:#fff}
-  .pgk .opsi .huruf{border-radius:7px}
-  textarea{width:100%;min-height:150px;border:1.5px solid var(--garis);border-radius:12px;padding:12px;font:inherit;font-size:15px;line-height:1.55;resize:vertical}
-  .petunjuk{font-size:12.5px;color:var(--abu);margin:-6px 0 10px}
-  .navi{display:flex;gap:10px;margin-top:6px}
+  .waktu{font-variant-numeric:tabular-nums;font-weight:800;background:rgba(255,255,255,.16);padding:7px 11px;border-radius:12px;font-size:15px}
+  .waktu.kritis{background:var(--merah);animation:pop 1s infinite}
+  .progres{height:6px;background:rgba(255,255,255,.18);border-radius:99px;margin:10px auto 0;max-width:760px;overflow:hidden}
+  .progres i{display:block;height:100%;background:linear-gradient(90deg,#f6d365,#fda085);border-radius:99px;transition:width .3s}
+  .progres-teks{max-width:760px;margin:4px auto 0;font-size:11px;opacity:.85;padding-bottom:8px;display:flex;justify-content:space-between}
+  .kartu-soal{border-top:5px solid var(--warna,var(--c-pg))}
+  .kepala-soal{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .no-bulat{width:40px;height:40px;border-radius:12px;background:var(--warna);color:#fff;display:grid;place-items:center;font-weight:800;font-size:16px;flex:none;box-shadow:0 4px 10px rgba(0,0,0,.12)}
+  .jenis-soal{font-size:12px;font-weight:800;color:var(--warna);text-transform:uppercase;letter-spacing:.5px}
+  .sub-soal{font-size:11.5px;color:var(--abu)}
+  .ragu-btn{margin-left:auto;border:1.5px solid #f0d58a;background:#fffaf0;color:#8a6500;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:800}
+  .ragu-btn.aktif{background:#f6c344;border-color:#f6c344;color:#3d2c00}
+  .stimulus{background:linear-gradient(180deg,#fbf7ea,#f7f2e1);border:1px solid #efe3bd;border-radius:14px;padding:14px 16px;font-size:14.5px;line-height:1.75;margin-bottom:14px;white-space:pre-wrap}
+  .stimulus .lbl{font-size:11.5px;font-weight:800;color:#8a6500;margin-bottom:6px;display:block;white-space:normal}
+  .teks-soal{font-size:16.5px;line-height:1.65;margin-bottom:14px;white-space:pre-wrap;font-weight:500}
+  .gambar-soal{display:block;max-width:100%;max-height:340px;margin:0 auto 14px;border-radius:14px;border:1px solid var(--garis);cursor:zoom-in;background:#f6f8f7}
+  .opsi{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;background:#fff;border:2px solid var(--garis);border-radius:14px;padding:12px 14px;margin-bottom:10px;font-size:15.5px;line-height:1.5;transition:border-color .15s,background .15s,transform .12s}
+  .opsi:hover{border-color:color-mix(in srgb,var(--warna) 45%,#fff)}
+  .opsi .huruf{flex:none;width:30px;height:30px;border-radius:50%;border:2px solid var(--garis);display:grid;place-items:center;font-weight:800;font-size:13px;color:var(--abu);background:#fff}
+  .opsi.dipilih{border-color:var(--warna);background:color-mix(in srgb,var(--warna) 9%,#fff);animation:pop .25s ease}
+  .opsi.dipilih .huruf{background:var(--warna);border-color:var(--warna);color:#fff}
+  .pgk .opsi .huruf{border-radius:8px}
+  textarea{width:100%;min-height:170px;border:2px solid var(--garis);border-radius:14px;padding:13px;font:inherit;font-size:15.5px;line-height:1.6;resize:vertical;background:#fcfdfc}
+  textarea:focus{outline:none;border-color:var(--warna)}
+  .hitung-kata{text-align:right;font-size:11.5px;color:var(--abu);margin-top:4px}
+  .petunjuk{font-size:12.5px;color:var(--abu);margin:-6px 0 12px;background:#f3eefe;color:#5b2bb5;padding:7px 10px;border-radius:10px;font-weight:600}
+  .navi{display:flex;gap:10px}
   .navi .tombol{flex:1}
-  .grid-no{display:grid;grid-template-columns:repeat(auto-fill,minmax(40px,1fr));gap:7px}
-  .grid-no button{height:40px;border-radius:10px;border:1.5px solid var(--garis);background:#fff;font-weight:700;font-size:13px}
-  .grid-no button.terjawab{background:var(--pilih);border-color:var(--hijau2);color:var(--hijau)}
-  .grid-no button.aktif{outline:3px solid var(--emas);outline-offset:1px}
-  .grup-label{font-size:12px;font-weight:700;color:var(--abu);margin:12px 0 6px}
-  .hasil{text-align:center;padding:26px 16px}
-  .hasil .angka{font-size:72px;font-weight:800;color:var(--hijau);line-height:1;margin:8px 0}
-  .hasil .ket{color:var(--abu);font-size:14px;line-height:1.6}
-  .lapis{position:fixed;inset:0;background:rgba(10,30,25,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:20}
+  .navi-bawah{position:sticky;bottom:0;z-index:4;background:rgba(238,244,241,.92);backdrop-filter:blur(8px);padding:10px 14px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--garis)}
+  .navi-bawah .navi{max-width:760px;margin:0 auto}
+  .navi-bawah .grid-btn{flex:0 0 auto;padding:13px 14px}
+  .grid-no{display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:7px}
+  .grid-no button{height:42px;border-radius:12px;border:2px solid var(--garis);background:#fff;font-weight:800;font-size:13px;position:relative}
+  .grid-no button.terjawab{background:var(--hijau2);border-color:var(--hijau2);color:#fff}
+  .grid-no button.ragu{background:#f6c344;border-color:#f6c344;color:#3d2c00}
+  .grid-no button.aktif{outline:3px solid var(--biru);outline-offset:2px}
+  .grup-label{font-size:12px;font-weight:800;margin:14px 0 7px;display:flex;align-items:center;gap:6px}
+  .grup-label i{width:10px;height:10px;border-radius:3px;display:inline-block}
+  .legenda{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--abu);margin-top:12px}
+  .legenda span::before{content:"";display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px;background:var(--c)}
+  /* ── petunjuk awal ── */
+  .bagian-info{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0 16px}
+  .bagian-info div{border-radius:16px;padding:12px;color:#fff;background:var(--warna);box-shadow:0 6px 14px rgba(0,0,0,.1)}
+  .bagian-info b{display:block;font-size:22px}.bagian-info span{font-size:12px;opacity:.92}
+  .aturan{margin:0;padding-left:20px;font-size:13.5px;line-height:1.8;color:#44514c}
+  /* ── hasil ── */
+  .hasil-atas{text-align:center;padding:8px 0 4px}
+  .cincin{position:relative;width:170px;height:170px;margin:6px auto 4px}
+  .cincin svg{transform:rotate(-90deg)}
+  .cincin .angka{position:absolute;inset:0;display:grid;place-items:center;font-size:48px;font-weight:800;color:var(--hijau)}
+  .cincin .angka small{display:block;font-size:12px;color:var(--abu);font-weight:600;margin-top:-6px}
+  .pesan-hasil{font-weight:800;font-size:17px;margin:4px 0}
+  .ket{color:var(--abu);font-size:13.5px;line-height:1.6}
+  .statistik{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0}
+  .statistik div{border-radius:14px;padding:10px 6px;text-align:center;background:var(--bg);border:1px solid rgba(0,0,0,.04)}
+  .statistik b{display:block;font-size:20px}.statistik span{font-size:11px;color:#44514c}
+  .bar-baris{margin:10px 0}
+  .bar-label{display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-bottom:5px}
+  .bar{height:12px;border-radius:99px;background:#edf1ef;overflow:hidden}
+  .bar i{display:block;height:100%;border-radius:99px;transition:width 1s ease}
+  .judul-seksi{font-weight:800;font-size:15px;margin:4px 0 10px;display:flex;align-items:center;gap:8px}
+  .judul-seksi .ikon{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;font-size:15px}
+  .soal-chip{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:7px}
+  .soal-chip button{border:0;border-radius:12px;padding:8px 2px;font-weight:800;font-size:12.5px;line-height:1.2}
+  .soal-chip button small{display:block;font-size:14px}
+  .s-benar{background:#dcf5ea;color:#11704f}.s-sebagian{background:#fff1cc;color:#8a6500}.s-salah{background:#fde2e2;color:#b42318}.s-kosong{background:#eef0f2;color:#5b6670}.s-tidak_dinilai{background:#eef0f2;color:#8a949c}
+  .detail-soal{border-radius:14px;background:#f8faf9;border:1px solid var(--garis);padding:12px;margin-top:10px;font-size:14px;line-height:1.6;white-space:pre-wrap;animation:naik .25s ease both}
+  .grafik-kelas{display:flex;align-items:flex-end;gap:8px;height:130px;padding:0 4px;margin-top:6px}
+  .grafik-kelas div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;font-size:11px;color:var(--abu)}
+  .grafik-kelas .tiang{width:100%;border-radius:10px 10px 4px 4px;background:#cfe3db;transition:height 1s ease;min-height:4px;position:relative}
+  .grafik-kelas .kamu .tiang{background:linear-gradient(180deg,#f6d365,#ea7a1a)}
+  .grafik-kelas .kamu b{color:var(--oranye)}
+  .serpih{position:fixed;top:-20px;font-size:22px;pointer-events:none;z-index:30;animation:jatuh 2.6s linear forwards}
+  /* ── dialog ── */
+  .lapis{position:fixed;inset:0;background:rgba(10,30,25,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:20;backdrop-filter:blur(3px)}
   .lapis.buka{display:flex}
-  .dialog{background:#fff;border-radius:16px;max-width:420px;width:100%;padding:20px}
+  .dialog{background:#fff;border-radius:22px;max-width:460px;width:100%;padding:20px;max-height:88vh;overflow:auto;animation:naik .25s ease both}
   .dialog h3{margin:0 0 8px}
-  .dialog p{margin:0 0 16px;color:#44514c;line-height:1.55;font-size:14.5px}
-  .dialog .navi{margin:0}
-  input.token{width:100%;padding:14px;font-size:22px;text-align:center;letter-spacing:6px;text-transform:uppercase;border:1.5px solid var(--garis);border-radius:12px;font-weight:800;margin-bottom:14px}
+  .dialog p{margin:0 0 16px;color:#44514c;line-height:1.6;font-size:14.5px}
+  .lapis.gambar{cursor:zoom-out}.lapis.gambar img{max-width:100%;max-height:92vh;border-radius:12px;background:#fff}
+  input.token{width:100%;padding:14px;font-size:24px;text-align:center;letter-spacing:8px;text-transform:uppercase;border:2px solid var(--garis);border-radius:14px;font-weight:800;margin-bottom:14px}
   .galat{color:var(--merah);font-size:13px;margin-top:-6px;margin-bottom:10px;min-height:1em}
-  .catatan-kaki{text-align:center;font-size:12px;color:var(--abu);margin-top:10px}
-  @media (max-width:420px){.teks-soal{font-size:15.5px}.hasil .angka{font-size:60px}}
+  .catatan-kaki{text-align:center;font-size:12px;color:var(--abu);margin-top:10px;line-height:1.7}
+  @media (max-width:420px){.teks-soal{font-size:15.5px}.statistik b{font-size:17px}.cincin{width:150px;height:150px}}
 </style>
 </head>
 <body>
 <div id="akar"></div>
 <div class="lapis" id="lapis"><div class="dialog" id="dialog"></div></div>
+<div class="lapis gambar" id="lapis-gambar" onclick="this.classList.remove('buka')"><img id="gambar-besar" alt=""></div>
 
 <script>
 // =====================================================================
 //  RUANG SANTRI — latihan & ujian per bab (tanpa login; santri pilih namanya)
 //  Kunci jawaban tidak pernah dikirim ke halaman ini: penilaian dilakukan
-//  di server (RPC ujian_kirim), santri hanya menerima nilai akhir.
+//  di server (RPC ujian_kirim). Rincian hasil (ujian_hasil_rinci) hanya berisi
+//  status benar/belum tepat per soal — tanpa jawaban yang benar.
 // =====================================================================
 const supa = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const HURUF = "abcdefghij";
-const fmt = (s) => esc(s).replace(/\*\*(.+?)\*\*/g,"<b><u>$1</u></b>"); // **kata** = dicetak tebal di soal asli
-const S = { sesiList: [], kelasId: null, sesi: null, siswa: [], status: {}, murid: null, token: "", soal: [], idx: 0, jawab: { pg: {}, pgk: {}, uraian: {} }, sisa: null, timer: null, simpanT: null, pindahTab: 0, terkirim: false };
+const HURUF = "ABCDEFGHIJ";
+const fmt = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, "<b><u>$1</u></b>"); // **kata** = dicetak tebal di soal asli
+const WARNA = { pg: "var(--c-pg)", pgk: "var(--c-pgk)", uraian: "var(--c-uraian)" };
+const HEX = { pg: "#2563eb", pgk: "#7c3aed", uraian: "#ea7a1a" };
+const LABEL = { pg: "Pilihan Ganda", pgk: "Pilihan Ganda Kompleks", uraian: "Uraian" };
+const S = { sesiList: [], kelasId: null, sesi: null, siswa: [], status: {}, murid: null, token: "", soal: [], bagian: [], idx: 0, jawab: { pg: {}, pgk: {}, uraian: {} }, ragu: new Set(), sisa: null, timer: null, simpanT: null, pindahTab: 0, terkirim: false };
 
 function pesanGalat(e) {
   const m = (e && (e.message || e.error_description)) || String(e);
@@ -104,21 +176,29 @@ function pesanGalat(e) {
   return m;
 }
 function render(html) { $("akar").innerHTML = html; window.scrollTo(0, 0); }
-function kepala(sub) { return `<div class="atas"><h1>📝 Ruang Santri</h1><p>${esc(sub || "PKBM Al-Umm Barabai · Latihan & Ujian")}</p></div>`; }
+function kepala(sub, judul) { return `<div class="atas"><h1>${judul || "📝 Ruang Santri"}</h1><p>${esc(sub || "PKBM Al-Umm Barabai · Latihan & Ujian")}</p></div>`; }
 function dialog(html) { $("dialog").innerHTML = html; $("lapis").classList.add("buka"); }
 function tutupDialog() { $("lapis").classList.remove("buka"); }
 function rpc(nama, arg) { return supa.rpc(nama, arg).then(({ data, error }) => { if (error) throw error; return data; }); }
+function warnaNama(nama) { let h = 0; for (const c of String(nama)) h = (h * 31 + c.charCodeAt(0)) % 360; return `hsl(${h} 55% 45%)`; }
+function inisial(nama) { return String(nama).split(/\s+/).filter(Boolean).slice(0, 2).map((x) => x[0]).join("").toUpperCase(); }
+function perbesar(src) { $("gambar-besar").src = src; $("lapis-gambar").classList.add("buka"); }
+// Teks dengan tautan gambar: [gambar: https://...] → <img>
+function gambarHTML(url) { return url ? `<img class="gambar-soal" src="${esc(url)}" alt="Gambar soal" loading="lazy" onclick="perbesar(this.src)">` : ""; }
 
 // ── Langkah 1: pilih kelas ──
+async function ambilSesi() {
+  const kolom = "id,mode,durasi_menit,acak,kelas_id,bank_id,created_at,dibuka,kelas:kelas(nama_kelas),bank:ujian_bank(judul,bab,tingkat,mapel:mapel(nama_mapel))";
+  // sesi dibuka + sesi tertutup yang punya peserta susulan / hasilnya sudah dibuka guru
+  let r = await supa.from("ujian_sesi").select(kolom + ",susulan,tampil_hasil").or("dibuka.eq.true,susulan.neq.{},tampil_hasil.eq.true").order("created_at", { ascending: false }).limit(40);
+  if (r.error && /susulan|tampil_hasil/.test(r.error.message || "")) r = await supa.from("ujian_sesi").select(kolom).eq("dibuka", true).order("created_at", { ascending: false });
+  if (r.error) throw r.error;
+  return r.data || [];
+}
 async function mulai() {
-  render(kepala() + `<div class="wadah"><div class="kartu"><div class="memuat">Memuat ujian & latihan yang dibuka…</div></div></div>`);
-  try {
-    const { data, error } = await supa.from("ujian_sesi")
-      .select("id,mode,durasi_menit,acak,kelas_id,bank_id,created_at,kelas:kelas(nama_kelas),bank:ujian_bank(judul,bab,tingkat,mapel:mapel(nama_mapel))")
-      .eq("dibuka", true).order("created_at", { ascending: false });
-    if (error) throw error;
-    S.sesiList = data || [];
-  } catch (e) {
+  render(kepala() + `<div class="wadah"><div class="kartu"><div class="memuat">Memuat ujian & latihan…</div></div></div>`);
+  try { S.sesiList = await ambilSesi(); }
+  catch (e) {
     render(kepala() + `<div class="wadah"><div class="kartu kosong"><div class="besar">⚠️</div>${esc(pesanGalat(e))}<br><br><button class="tombol" onclick="mulai()">Coba lagi</button></div></div>`);
     return;
   }
@@ -127,10 +207,10 @@ async function mulai() {
   const ids = Object.keys(kelas).sort((a, b) => kelas[a].nama.localeCompare(kelas[b].nama, "id", { numeric: true }));
   if (ids.length === 1) { pilihKelas(ids[0]); return; }
   render(kepala() + `<div class="wadah"><div class="kartu">
-    <p class="judul-langkah">Langkah 1</p><h2>Kamu kelas berapa?</h2>
-    ${ids.length ? `<div class="daftar">${ids.map((id) => `<button class="pilihan" onclick="pilihKelas('${id}')"><span class="ikon">🏫</span><span class="isi"><b>${esc(kelas[id].nama)}</b><small>${kelas[id].n} latihan/ujian dibuka</small></span><span>›</span></button>`).join("")}</div>`
+    <p class="judul-langkah">🏫 Langkah 1</p><h2>Kamu kelas berapa?</h2>
+    ${ids.length ? `<div class="daftar">${ids.map((id, i) => `<button class="pilihan anim" style="animation-delay:${i * 50}ms" onclick="pilihKelas('${id}')"><span class="badge" style="background:rgba(19,113,91,.12)">🏫</span><span class="isi"><b>${esc(kelas[id].nama)}</b><small>${kelas[id].n} latihan/ujian</small></span><span style="font-size:20px;color:var(--abu)">›</span></button>`).join("")}</div>`
       : `<div class="kosong"><div class="besar">📭</div>Belum ada latihan atau ujian yang dibuka guru.<br>Tunggu arahan ustadz, lalu muat ulang.<br><br><button class="tombol garis" onclick="mulai()">↻ Muat ulang</button></div>`}
-  </div><p class="catatan-kaki">Nilai akhir yang tampil adalah nilai resmi dari guru.<br><a href="./" style="color:var(--hijau2);font-weight:700">‹ Masuk sebagai guru</a></p></div>`);
+  </div><p class="catatan-kaki">Nilai akhir yang tampil adalah nilai resmi dari guru.<br><a href="./" style="color:var(--hijau2);font-weight:800">‹ Masuk sebagai guru</a></p></div>`);
 }
 
 // ── Langkah 2: pilih ujian/latihan ──
@@ -141,11 +221,15 @@ function pilihKelas(kelasId) {
   const adaPilihanKelas = new Set(S.sesiList.map((s) => s.kelas_id)).size > 1;
   render(kepala(namaKelas) + `<div class="wadah"><div class="kartu">
     ${adaPilihanKelas ? `<button class="kembali" onclick="mulai()">‹ Ganti kelas</button>` : ""}
-    <p class="judul-langkah">Langkah ${adaPilihanKelas ? 2 : 1}</p><h2>Pilih yang mau dikerjakan</h2>
-    <div class="daftar">${list.map((s) => `<button class="pilihan" onclick="pilihSesi('${s.id}')">
-      <span class="ikon">${s.mode === "ujian" ? "📝" : "🎯"}</span>
-      <span class="isi"><b>${esc(s.bank?.judul || "Soal")}</b><small>${esc(s.bank?.mapel?.nama_mapel || "")}${s.bank?.bab ? " · Bab " + s.bank.bab : ""}${s.durasi_menit ? " · " + s.durasi_menit + " menit" : ""}</small></span>
-      <span class="lencana ${s.mode === "ujian" ? "l-ujian" : "l-latihan"}">${s.mode === "ujian" ? "UJIAN" : "LATIHAN"}</span></button>`).join("")}</div>
+    <p class="judul-langkah">📚 Langkah ${adaPilihanKelas ? 2 : 1}</p><h2>Pilih yang mau dikerjakan</h2>
+    <div class="daftar">${list.map((s, i) => {
+      const ujian = s.mode === "ujian", tutup = s.dibuka === false;
+      const lab = tutup ? ((s.susulan || []).length ? ["l-susulan", s.tampil_hasil ? "SUSULAN · HASIL" : "SUSULAN"] : ["l-selesai", "LIHAT HASIL"]) : ujian ? ["l-ujian", "UJIAN"] : ["l-latihan", "LATIHAN"];
+      return `<button class="pilihan anim" style="animation-delay:${i * 50}ms" onclick="pilihSesi('${s.id}')">
+      <span class="badge" style="background:${ujian ? "linear-gradient(135deg,#fde2e2,#fbd0c2)" : "linear-gradient(135deg,#dbe8ff,#e7dcff)"}">${ujian ? "📝" : "🎯"}</span>
+      <span class="isi"><b>${esc(s.bank?.judul || "Soal")}</b>
+        <span class="chip">📘 ${esc(s.bank?.mapel?.nama_mapel || "-")}</span>${s.bank?.bab ? `<span class="chip">🔖 Bab ${s.bank.bab}</span>` : ""}${s.durasi_menit ? `<span class="chip">⏱ ${s.durasi_menit} menit</span>` : `<span class="chip">⏱ bebas</span>`}</span>
+      <span class="lencana ${lab[0]}">${lab[1]}</span></button>`; }).join("")}</div>
   </div></div>`);
 }
 
@@ -166,7 +250,7 @@ async function pilihSesi(sesiId) {
   }
   render(kepala(S.sesi.bank?.judul) + `<div class="wadah"><div class="kartu">
     <button class="kembali" onclick="pilihKelas('${S.kelasId}')">‹ Kembali</button>
-    <p class="judul-langkah">Pilih namamu</p><h2>Siapa namamu?</h2>
+    <p class="judul-langkah">👤 Pilih namamu</p><h2>Siapa namamu?</h2>
     <input class="cari" id="cari" placeholder="🔍 Ketik namamu…" oninput="saringNama()">
     <div class="daftar" id="daftar-nama"></div>
   </div></div>`);
@@ -174,19 +258,23 @@ async function pilihSesi(sesiId) {
 }
 function saringNama() {
   const k = ($("cari")?.value || "").toLowerCase().trim();
-  const lab = { mengerjakan: ["l-proses", "Sedang dikerjakan"], dikirim: ["l-selesai", "Terkirim ✓"], dinilai: ["l-selesai", "Selesai ✓"] };
+  const lab = { mengerjakan: ["l-proses", "⏳ Sedang dikerjakan"], dikirim: ["l-selesai", "📨 Terkirim"], dinilai: ["l-selesai", "✅ Selesai"] };
+  const susulan = S.sesi.susulan || [];
   const html = S.siswa.filter((s) => !k || s.nama.toLowerCase().includes(k)).map((s) => {
-    const st = lab[S.status[s.id]];
-    return `<button class="pilihan" onclick="konfirmasiNama('${s.id}')"><span class="ikon">👤</span><span class="isi"><b>${esc(s.nama)}</b>${s.nis ? `<small>NIS ${esc(s.nis)}</small>` : ""}</span>${st ? `<span class="lencana ${st[0]}">${st[1]}</span>` : ""}</button>`;
+    const st = lab[S.status[s.id]] || (susulan.includes(s.id) ? ["l-susulan", "🩺 Susulan"] : null);
+    return `<button class="pilihan" onclick="konfirmasiNama('${s.id}')"><span class="avatar" style="background:${warnaNama(s.nama)}">${esc(inisial(s.nama))}</span><span class="isi"><b>${esc(s.nama)}</b>${s.nis ? `<small>NIS ${esc(s.nis)}</small>` : ""}</span>${st ? `<span class="lencana ${st[0]}">${st[1]}</span>` : ""}</button>`;
   }).join("");
   $("daftar-nama").innerHTML = html || `<div class="kosong">Nama tidak ditemukan.</div>`;
 }
 function konfirmasiNama(id) {
   S.murid = S.siswa.find((s) => s.id === id);
+  const st = S.status[id];
+  if (st && st !== "mengerjakan") { masuk(); return; } // sudah selesai → langsung ke hasil
   const ujian = S.sesi.mode === "ujian";
-  dialog(`<h3>Benar ini kamu?</h3>
-    <p><b style="font-size:17px">${esc(S.murid.nama)}</b><br>${ujian ? "Ini <b>UJIAN</b>: jawaban hanya bisa dikirim satu kali. Jangan pakai nama temanmu." : "Ini <b>latihan</b>: boleh diulang untuk memperbaiki nilai."}${S.sesi.durasi_menit ? `<br>Waktu: <b>${S.sesi.durasi_menit} menit</b>, dihitung sejak mulai.` : ""}</p>
-    <div class="navi"><button class="tombol garis" onclick="tutupDialog()">Bukan</button><button class="tombol" onclick="masuk()">Ya, mulai</button></div>`);
+  dialog(`<div style="text-align:center"><span class="avatar" style="margin:0 auto 10px;width:64px;height:64px;font-size:22px;background:${warnaNama(S.murid.nama)}">${esc(inisial(S.murid.nama))}</span>
+    <h3>Benar ini kamu?</h3>
+    <p><b style="font-size:18px">${esc(S.murid.nama)}</b><br>${ujian ? "Ini <b>UJIAN</b>: jawaban hanya bisa dikirim satu kali. Jangan pakai nama temanmu." : "Ini <b>latihan</b>: boleh diulang untuk memperbaiki nilai."}</p></div>
+    <div class="navi"><button class="tombol garis" onclick="tutupDialog()">Bukan</button><button class="tombol" onclick="masuk()">Ya, ini saya</button></div>`);
 }
 
 // ── Langkah 4: masuk (cek token, lanjutkan draf) ──
@@ -207,97 +295,145 @@ async function masuk(ulang) {
       setTimeout(() => $("isi-token")?.focus(), 50);
       return;
     }
+    if (/ditutup/i.test(m)) { dialog(`<h3>⏹ Sesi sudah ditutup</h3><p>Ustadz sudah menutup ujian ini. Kalau kamu kemarin izin atau sakit, minta ustadz membukakan <b>ujian susulan</b> untuk namamu.</p><div class="navi"><button class="tombol" onclick="tutupDialog()">Mengerti</button></div>`); return; }
     dialog(`<h3>Tidak bisa mulai</h3><p>${esc(m)}</p><div class="navi"><button class="tombol" onclick="tutupDialog()">Tutup</button></div>`);
     return;
   }
   if (r.status !== "mengerjakan") { tutupDialog(); tampilHasil(r); return; }
-  try {
-    const { data, error } = await supa.from("ujian_bank").select("soal,judul").eq("id", S.sesi.bank_id).single();
-    if (error) throw error;
-    siapkanSoal(data.soal);
-  } catch (e) {
+  try { await muatBank(); }
+  catch (e) {
     dialog(`<h3>Soal gagal dimuat</h3><p>${esc(pesanGalat(e))}</p><div class="navi"><button class="tombol" onclick="masuk()">Coba lagi</button></div>`);
     return;
   }
   tutupDialog();
-  // jawaban tersimpan: server dulu, cadangan lokal kalau lebih baru (mis. internet sempat putus)
+  // jawaban tersimpan: server dulu, cadangan lokal kalau lebih banyak (mis. internet sempat putus)
   const lokal = bacaLokal();
   S.jawab = normalJawab(r.jawaban);
   if (lokal && hitungTerjawab(lokal) > hitungTerjawab(S.jawab)) S.jawab = normalJawab(lokal);
+  S.ragu = new Set(bacaRagu());
   S.sisa = r.sisa_detik == null ? null : Number(r.sisa_detik);
   S.pindahTab = 0; S.terkirim = false; S.idx = 0;
   if (S.sisa !== null && S.sisa <= 0) { kirim(true); return; }
-  tampilSoal();
-  mulaiTimer();
+  if (hitungTerjawab(S.jawab) === 0) { tampilPetunjuk(r); return; }
+  mulaiKerja();
+}
+async function muatBank() {
+  const { data, error } = await supa.from("ujian_bank").select("soal,judul").eq("id", S.sesi.bank_id).single();
+  if (error) throw error;
+  S.bagian = data.soal || [];
+  siapkanSoal(S.bagian);
+}
+function mulaiKerja() { tampilSoal(); mulaiTimer(); }
+
+function tampilPetunjuk(r) {
+  const ujian = S.sesi.mode === "ujian";
+  const jum = (j) => S.soal.filter((s) => s.jenis === j).length;
+  render(kepala(S.sesi.bank?.judul, ujian ? "📝 Ujian" : "🎯 Latihan") + `<div class="wadah"><div class="kartu">
+    <div style="display:flex;align-items:center;gap:12px"><span class="avatar" style="width:48px;height:48px;background:${warnaNama(S.murid.nama)}">${esc(inisial(S.murid.nama))}</span>
+      <div><div style="font-size:12px;color:var(--abu)">Bismillah, selamat mengerjakan</div><b style="font-size:17px">${esc(S.murid.nama)}</b></div></div>
+    <div class="bagian-info">${["pg", "pgk", "uraian"].filter(jum).map((j) => `<div style="--warna:${WARNA[j]}"><b>${jum(j)}</b><span>${LABEL[j]}</span></div>`).join("")}</div>
+    <div class="judul-seksi"><span class="ikon" style="background:#e6effe">📋</span>Petunjuk</div>
+    <ol class="aturan">
+      <li>${S.sisa !== null ? `Waktu <b>${Math.round(S.sisa / 60)} menit</b> — sudah mulai berjalan, jadi segera tekan Mulai.` : "Tidak ada batas waktu."}</li>
+      <li>Ketuk jawaban untuk memilih. Soal <b style="color:var(--ungu)">PG Kompleks</b> boleh lebih dari satu jawaban.</li>
+      <li>Belum yakin? Tekan <b>🚩 Ragu-ragu</b>, lalu periksa lagi sebelum mengirim.</li>
+      <li>Jawaban tersimpan otomatis. Kalau HP mati atau internet putus, buka lagi dan pilih namamu — jawaban tidak hilang.</li>
+      ${ujian ? "<li>Tetap di halaman ini. Keluar dari halaman ujian akan tercatat oleh ustadz.</li>" : "<li>Latihan boleh diulang. Setelah kirim, kamu bisa melihat soal mana yang belum tepat.</li>"}
+    </ol>
+    <button class="tombol lebar" style="margin-top:16px" onclick="mulaiKerja()">Bismillah, mulai ▶</button>
+  </div></div>`);
 }
 function normalJawab(j) { j = j || {}; return { pg: j.pg || {}, pgk: j.pgk || {}, uraian: j.uraian || {} }; }
 function kunciLokal() { return "ujianDraf:" + S.sesi.id + ":" + S.murid.id; }
 function bacaLokal() { try { return JSON.parse(localStorage.getItem(kunciLokal()) || "null"); } catch (e) { return null; } }
-function simpanLokal() { try { localStorage.setItem(kunciLokal(), JSON.stringify(S.jawab)); } catch (e) {} }
-function hapusLokal() { try { localStorage.removeItem(kunciLokal()); } catch (e) {} }
+function simpanLokal() { try { localStorage.setItem(kunciLokal(), JSON.stringify(S.jawab)); localStorage.setItem(kunciLokal() + ":ragu", JSON.stringify([...S.ragu])); } catch (e) {} }
+function bacaRagu() { try { return JSON.parse(localStorage.getItem(kunciLokal() + ":ragu") || "[]"); } catch (e) { return []; } }
+function hapusLokal() { try { localStorage.removeItem(kunciLokal()); localStorage.removeItem(kunciLokal() + ":ragu"); } catch (e) {} }
 function hitungTerjawab(j) {
   j = normalJawab(j);
   return Object.keys(j.pg).length + Object.values(j.pgk).filter((v) => v && v.length).length + Object.values(j.uraian).filter((v) => String(v || "").trim()).length;
 }
 
-// Ratakan bagian → daftar soal. Acak urutan (per santri, tetap sama walau dibuka ulang) kalau guru memilih.
+// Generator acak yang tetap sama untuk santri & benih yang sama (urutan tidak berubah walau dibuka ulang).
+function acakDengan(benih) {
+  let seed = [...benih].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
+  return () => ((seed = (seed * 1103515245 + 12345) >>> 0) / 4294967296);
+}
+// Ratakan bagian → daftar soal. Kalau guru memilih acak: urutan soal & urutan pilihan diacak per santri.
+// Pilihan yang diacak tetap disimpan dengan nomor ASLINYA, jadi penilaian di server tidak terpengaruh.
 function siapkanSoal(bagian) {
   const out = [];
   (bagian || []).forEach((b) => {
-    let soal = (b.soal || []).map((s) => ({ ...s, jenis: b.jenis, judulBagian: b.judul, stimulusBagian: b.stimulus || null }));
+    let soal = (b.soal || []).map((s) => ({ ...s, jenis: b.jenis, stimulusBagian: b.stimulus || null, urutanOpsi: (s.o || []).map((_, i) => i) }));
     if (S.sesi.acak && b.jenis !== "uraian") {
-      let seed = [...(S.murid.id + b.jenis)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
-      const acak = () => ((seed = (seed * 1103515245 + 12345) >>> 0) / 4294967296);
+      const acak = acakDengan(S.murid.id + b.jenis);
       for (let i = soal.length - 1; i > 0; i--) { const j = Math.floor(acak() * (i + 1)); [soal[i], soal[j]] = [soal[j], soal[i]]; }
+      soal.forEach((s) => {
+        const a2 = acakDengan(S.murid.id + b.jenis + s.no), u = s.urutanOpsi;
+        for (let i = u.length - 1; i > 0; i--) { const j = Math.floor(a2() * (i + 1)); [u[i], u[j]] = [u[j], u[i]]; }
+      });
     }
     out.push(...soal);
   });
   S.soal = out;
 }
-const LABEL = { pg: "Pilihan Ganda", pgk: "Pilihan Ganda Kompleks", uraian: "Uraian" };
 function sudahDijawab(s) {
   if (s.jenis === "pg") return S.jawab.pg[s.no] !== undefined;
   if (s.jenis === "pgk") return (S.jawab.pgk[s.no] || []).length > 0;
   return String(S.jawab.uraian[s.no] || "").trim() !== "";
 }
+const kunciRagu = (s) => s.jenis + "-" + s.no;
 
 function tampilSoal() {
   const s = S.soal[S.idx];
   if (!s) return;
-  const total = S.soal.length, n = S.idx + 1;
+  const total = S.soal.length, n = S.idx + 1, terjawab = hitungTerjawab(S.jawab);
+  const noDiBagian = S.soal.filter((x, k) => x.jenis === s.jenis && k <= S.idx).length;
   const stimulus = s.stimulus || s.stimulusBagian;
   let isi = "";
   if (s.jenis === "pg" || s.jenis === "pgk") {
     const pilih = s.jenis === "pg" ? [S.jawab.pg[s.no]] : (S.jawab.pgk[s.no] || []);
-    isi = `${s.jenis === "pgk" ? `<p class="petunjuk">Pilih <b>lebih dari satu</b> jawaban yang benar.</p>` : ""}
-      <div class="${s.jenis}">${(s.o || []).map((o, i) => `<button class="opsi ${pilih.includes(i) ? "dipilih" : ""}" onclick="pilihOpsi(${i})"><span class="huruf">${HURUF[i].toUpperCase()}</span><span>${fmt(o)}</span></button>`).join("")}</div>`;
+    isi = `${s.jenis === "pgk" ? `<div class="petunjuk">☑️ Pilih <b>lebih dari satu</b> jawaban yang benar.</div>` : ""}
+      <div class="${s.jenis}">${s.urutanOpsi.map((asli, tampil) => `<button class="opsi ${pilih.includes(asli) ? "dipilih" : ""}" onclick="pilihOpsi(${asli})"><span class="huruf">${HURUF[tampil]}</span><span>${fmt(s.o[asli])}${s.og && s.og[asli] ? gambarHTML(s.og[asli]) : ""}</span></button>`).join("")}</div>`;
   } else {
-    isi = `<textarea id="uraian" placeholder="Tulis jawabanmu di sini…" oninput="ketikUraian(this.value)">${esc(S.jawab.uraian[s.no] || "")}</textarea>`;
+    const v = S.jawab.uraian[s.no] || "";
+    isi = `<textarea id="uraian" placeholder="✍️ Tulis jawabanmu di sini…" oninput="ketikUraian(this.value)">${esc(v)}</textarea><div class="hitung-kata" id="hitung-kata">${v.trim() ? v.trim().split(/\s+/).length : 0} kata</div>`;
   }
-  const stimJudul = typeof stimulus === "object" && stimulus ? stimulus.judul : "";
   const stimTeks = typeof stimulus === "object" && stimulus ? stimulus.teks : stimulus;
-  render(`<div class="bilah">
-      <div class="nm"><b>${esc(S.murid.nama)}</b>${esc(S.sesi.bank?.judul || "")} · <span class="simpan-info" id="simpan-info">tersimpan</span></div>
-      ${S.sisa !== null ? `<span class="waktu" id="waktu">--:--</span>` : ""}
-      <button class="tombol" style="padding:8px 12px;font-size:13px;background:var(--emas);color:#1d2a26" onclick="tanyaKirim()">Kirim</button>
+  const ragu = S.ragu.has(kunciRagu(s));
+  render(`<div class="bilah"><div class="bilah-isi">
+      <div class="nm"><b>${esc(S.murid.nama)}</b>${esc(S.sesi.bank?.judul || "")}</div>
+      ${S.sisa !== null ? `<span class="waktu" id="waktu">⏱ --:--</span>` : ""}
+      <button class="tombol emas" style="padding:8px 13px;font-size:13px" onclick="tanyaKirim()">Kirim ✓</button></div>
+      <div class="progres"><i style="width:${Math.round((terjawab * 100) / total)}%"></i></div>
+      <div class="progres-teks"><span>${terjawab} dari ${total} terjawab</span><span id="simpan-info">☁️ tersimpan</span></div>
     </div>
-    <div class="wadah" style="margin-top:14px"><div class="kartu">
-      <div class="no-soal">${LABEL[s.jenis]} · Soal ${n} dari ${total}</div>
-      ${stimTeks ? `<div class="stimulus">${stimJudul ? `<div class="jdl">${esc(stimJudul)}</div>` : ""}${fmt(stimTeks)}</div>` : ""}
+    <div class="wadah" style="margin-top:14px"><div class="kartu kartu-soal" style="--warna:${WARNA[s.jenis]}">
+      <div class="kepala-soal"><span class="no-bulat">${n}</span>
+        <div><div class="jenis-soal">${LABEL[s.jenis]}</div><div class="sub-soal">Soal ${noDiBagian} dari ${S.soal.filter((x) => x.jenis === s.jenis).length} · ${n}/${total}</div></div>
+        <button class="ragu-btn ${ragu ? "aktif" : ""}" onclick="toggleRagu()">🚩 ${ragu ? "Ragu" : "Ragu-ragu"}</button></div>
+      ${stimTeks ? `<div class="stimulus"><span class="lbl">📖 Bacalah teks berikut</span>${fmt(stimTeks)}</div>` : ""}
+      ${s.sg ? gambarHTML(s.sg) : ""}
       <div class="teks-soal">${fmt(s.t)}</div>
+      ${gambarHTML(s.g)}
       ${isi}
-      <div class="navi" style="margin-top:14px">
-        <button class="tombol garis" onclick="geser(-1)" ${S.idx === 0 ? "disabled" : ""}>‹ Sebelumnya</button>
-        ${S.idx < total - 1 ? `<button class="tombol" onclick="geser(1)">Berikutnya ›</button>` : `<button class="tombol" style="background:var(--emas);color:#1d2a26" onclick="tanyaKirim()">Selesai & kirim</button>`}
-      </div>
-    </div>
-    <div class="kartu"><div style="font-weight:700;font-size:14px">Nomor soal <span style="color:var(--abu);font-weight:500">(${hitungTerjawab(S.jawab)}/${total} terjawab)</span></div>
-      ${["pg", "pgk", "uraian"].filter((j) => S.soal.some((x) => x.jenis === j)).map((j) => `<div class="grup-label">${LABEL[j]}</div><div class="grid-no">${S.soal.map((x, i) => x.jenis !== j ? "" : `<button class="${sudahDijawab(x) ? "terjawab" : ""} ${i === S.idx ? "aktif" : ""}" onclick="lompat(${i})">${S.soal.filter((y, k) => y.jenis === j && k <= i).length}</button>`).join("")}</div>`).join("")}
+    </div></div>
+    <div class="navi-bawah"><div class="navi">
+      <button class="tombol garis" onclick="geser(-1)" ${S.idx === 0 ? "disabled" : ""}>‹ Sebelumnya</button>
+      <button class="tombol garis grid-btn" onclick="bukaDaftarSoal()" title="Daftar soal">🔢</button>
+      ${S.idx < total - 1 ? `<button class="tombol" onclick="geser(1)">Berikutnya ›</button>` : `<button class="tombol emas" onclick="tanyaKirim()">Selesai ✓</button>`}
     </div></div>`);
   perbaruiWaktu();
 }
+function bukaDaftarSoal() {
+  dialog(`<h3>🔢 Daftar soal</h3>
+    ${["pg", "pgk", "uraian"].filter((j) => S.soal.some((x) => x.jenis === j)).map((j) => `<div class="grup-label"><i style="background:${HEX[j]}"></i>${LABEL[j]}</div><div class="grid-no">${S.soal.map((x, i) => x.jenis !== j ? "" : `<button class="${S.ragu.has(kunciRagu(x)) ? "ragu" : sudahDijawab(x) ? "terjawab" : ""} ${i === S.idx ? "aktif" : ""}" onclick="tutupDialog();lompat(${i})">${i + 1}</button>`).join("")}</div>`).join("")}
+    <div class="legenda"><span style="--c:var(--hijau2)">Sudah dijawab</span><span style="--c:#f6c344">Ragu-ragu</span><span style="--c:#dfe7e3">Belum</span></div>
+    <div class="navi" style="margin-top:16px"><button class="tombol garis" onclick="tutupDialog()">Tutup</button><button class="tombol emas" onclick="tanyaKirim()">Kirim jawaban</button></div>`);
+}
 function geser(d) { S.idx = Math.max(0, Math.min(S.soal.length - 1, S.idx + d)); tampilSoal(); }
 function lompat(i) { S.idx = i; tampilSoal(); }
+function toggleRagu() { const k = kunciRagu(S.soal[S.idx]); S.ragu.has(k) ? S.ragu.delete(k) : S.ragu.add(k); simpanLokal(); tampilSoal(); }
 function pilihOpsi(i) {
   const s = S.soal[S.idx];
   if (s.jenis === "pg") S.jawab.pg[s.no] = i;
@@ -312,12 +448,13 @@ function pilihOpsi(i) {
 function ketikUraian(v) {
   const s = S.soal[S.idx];
   if (String(v).trim()) S.jawab.uraian[s.no] = v; else delete S.jawab.uraian[s.no];
+  const hk = $("hitung-kata"); if (hk) hk.textContent = (v.trim() ? v.trim().split(/\s+/).length : 0) + " kata";
   berubah();
 }
 // Simpan ke HP seketika, ke server 3 detik setelah berhenti mengubah (hemat kuota).
 function berubah() {
   simpanLokal();
-  const el = $("simpan-info"); if (el) el.textContent = "menyimpan…";
+  const el = $("simpan-info"); if (el) el.textContent = "⏳ menyimpan…";
   clearTimeout(S.simpanT);
   S.simpanT = setTimeout(simpanServer, 3000);
 }
@@ -325,9 +462,9 @@ async function simpanServer() {
   if (S.terkirim) return;
   try {
     await rpc("ujian_simpan_draf", { p_sesi: S.sesi.id, p_siswa: S.murid.id, p_jawaban: S.jawab, p_pindah_tab: S.pindahTab });
-    const el = $("simpan-info"); if (el) el.textContent = "tersimpan";
+    const el = $("simpan-info"); if (el) el.textContent = "☁️ tersimpan";
   } catch (e) {
-    const el = $("simpan-info"); if (el) el.textContent = "tersimpan di HP (offline)";
+    const el = $("simpan-info"); if (el) el.textContent = "📱 tersimpan di HP (offline)";
   }
 }
 
@@ -344,7 +481,7 @@ function mulaiTimer() {
 function perbaruiWaktu() {
   const el = $("waktu"); if (!el || S.sisa === null) return;
   const m = Math.floor(S.sisa / 60), d = S.sisa % 60;
-  el.textContent = `${String(m).padStart(2, "0")}:${String(d).padStart(2, "0")}`;
+  el.textContent = `⏱ ${String(m).padStart(2, "0")}:${String(d).padStart(2, "0")}`;
   el.classList.toggle("kritis", S.sisa <= 60);
 }
 document.addEventListener("visibilitychange", () => {
@@ -354,9 +491,14 @@ window.addEventListener("beforeunload", (e) => { if (S.soal.length && !S.terkiri
 
 function tanyaKirim() {
   const kosong = S.soal.filter((s) => !sudahDijawab(s)).length;
-  dialog(`<h3>Kirim jawaban?</h3>
-    <p>${kosong ? `Masih ada <b>${kosong} soal</b> belum dijawab.<br>` : "Semua soal sudah dijawab. "}${S.sesi.mode === "ujian" ? "Setelah dikirim, jawaban <b>tidak bisa diubah</b>." : "Nilai latihan langsung keluar."}</p>
-    <div class="navi"><button class="tombol garis" onclick="tutupDialog()">Periksa lagi</button><button class="tombol" onclick="kirim()">Kirim</button></div>`);
+  const ragu = S.soal.filter((s) => S.ragu.has(kunciRagu(s))).length;
+  dialog(`<div style="text-align:center;font-size:44px">📨</div><h3 style="text-align:center">Kirim jawaban?</h3>
+    <div class="statistik" style="grid-template-columns:repeat(3,1fr)">
+      <div style="--bg:#dcf5ea"><b style="color:#11704f">${S.soal.length - kosong}</b><span>dijawab</span></div>
+      <div style="--bg:#fff1cc"><b style="color:#8a6500">${ragu}</b><span>ragu-ragu</span></div>
+      <div style="--bg:#fde2e2"><b style="color:#b42318">${kosong}</b><span>kosong</span></div></div>
+    <p style="text-align:center">${S.sesi.mode === "ujian" ? "Setelah dikirim, jawaban <b>tidak bisa diubah</b>." : "Nilai latihan langsung keluar."}</p>
+    <div class="navi"><button class="tombol garis" onclick="${kosong || ragu ? "tutupDialog();bukaDaftarSoal()" : "tutupDialog()"}">Periksa lagi</button><button class="tombol" onclick="kirim()">Kirim</button></div>`);
 }
 async function kirim(otomatis) {
   if (S.terkirim) return;
@@ -373,31 +515,113 @@ async function kirim(otomatis) {
   }
 }
 
-// Hasil: hanya nilai akhir (tanpa kunci, tanpa benar/salah per soal).
-function tampilHasil(r) {
+// ── Hasil: nilai + (kalau dibuka guru / latihan) rincian per soal tanpa kunci ──
+function cincin(n) {
+  const r = 70, k = 2 * Math.PI * r, warna = n >= 80 ? "#13715b" : n >= 60 ? "#d4a72c" : "#d64545";
+  return `<div class="cincin"><svg width="100%" height="100%" viewBox="0 0 170 170"><circle cx="85" cy="85" r="${r}" fill="none" stroke="#edf1ef" stroke-width="14"/>
+    <circle id="busur" cx="85" cy="85" r="${r}" fill="none" stroke="${warna}" stroke-width="14" stroke-linecap="round" stroke-dasharray="${k}" stroke-dashoffset="${k}" style="transition:stroke-dashoffset 1.2s ease" data-akhir="${k * (1 - n / 100)}"/></svg>
+    <div class="angka"><div>${Math.round(n)}<small>dari 100</small></div></div></div>`;
+}
+function serpihan() {
+  for (let i = 0; i < 26; i++) {
+    const e = document.createElement("div"); e.className = "serpih";
+    e.textContent = ["🌟", "✨", "🎉", "⭐", "💚"][i % 5];
+    e.style.left = Math.random() * 100 + "vw"; e.style.animationDelay = Math.random() * 0.8 + "s";
+    document.body.appendChild(e); setTimeout(() => e.remove(), 3600);
+  }
+}
+async function tampilHasil(r) {
   const latihan = (r.mode || S.sesi.mode) === "latihan";
+  render(kepala(S.sesi.bank?.judul, "📊 Hasil") + `<div class="wadah"><div class="kartu"><div class="memuat">Menyiapkan hasil…</div></div></div>`);
+  let rinci = null;
+  if (r.status === "dinilai") {
+    try { rinci = await rpc("ujian_hasil_rinci", { p_sesi: S.sesi.id, p_siswa: S.murid.id }); } catch (e) { rinci = null; }
+    if (rinci && rinci.boleh && !S.bagian.length) { try { await muatBank(); } catch (e) {} }
+  }
+  S.rinci = rinci;
+  const tombol = `<div class="navi" style="margin-top:18px;flex-wrap:wrap">
+      ${latihan && S.sesi.dibuka !== false ? `<button class="tombol" onclick="masuk(true)">↻ Ulangi latihan</button>` : ""}
+      <button class="tombol garis" onclick="selesai()">Selesai</button></div>`;
   let isi;
   if (r.nilai_akhir !== null && r.nilai_akhir !== undefined) {
     const n = Number(r.nilai_akhir);
     const pesan = n >= 90 ? "Masya Allah, luar biasa! 🌟" : n >= 75 ? "Barakallahu fiik, bagus! 👍" : n >= 60 ? "Lumayan, terus belajar ya 💪" : "Jangan menyerah, pelajari lagi bab ini 📖";
-    isi = `<div style="font-size:15px;color:var(--abu)">${latihan ? "Nilai latihanmu" : "Nilai akhirmu"}</div><div class="angka">${Math.round(n)}</div>
-      <div style="font-weight:700;margin-bottom:8px">${pesan}</div>
-      ${latihan && r.nilai_terbaik != null ? `<div class="ket">Nilai terbaikmu: <b>${Math.round(r.nilai_terbaik)}</b>${r.percobaan ? ` · percobaan ke-${r.percobaan}` : ""}</div>` : ""}
-      ${latihan ? `<div class="ket">Soal uraian tidak dinilai di latihan.</div>` : ""}`;
+    isi = `<div class="kartu"><div class="hasil-atas">
+        <div style="font-weight:800;font-size:16px">${esc(S.murid.nama)}</div>
+        <div class="ket">${latihan ? "Nilai latihanmu" : "Nilai akhirmu"}</div>
+        ${cincin(n)}
+        <div class="pesan-hasil">${pesan}</div>
+        ${latihan && r.nilai_terbaik != null ? `<div class="ket">🏆 Nilai terbaikmu: <b>${Math.round(r.nilai_terbaik)}</b>${(rinci && rinci.percobaan) || r.percobaan ? ` · percobaan ke-${(rinci && rinci.percobaan) || r.percobaan}` : ""}</div>` : ""}
+      </div>${!(rinci && rinci.boleh) ? tombol : ""}</div>
+      ${rinci && rinci.boleh ? rincianHTML(rinci) + `<div class="kartu">${tombol}</div>` : `<div class="kartu ket" style="text-align:center">🔒 Rincian soal yang benar & belum tepat akan muncul setelah ustadz membukanya.</div>`}`;
   } else if (r.status === "mengerjakan") {
-    isi = `<div style="font-size:40px">⏳</div><div class="ket">Kamu belum selesai mengerjakan.</div>`;
+    isi = `<div class="kartu kosong"><div class="besar">⏳</div>Kamu belum selesai mengerjakan.${tombol}</div>`;
   } else {
-    isi = `<div style="font-size:46px">✅</div><h2 style="margin:6px 0">Jawaban terkirim</h2>
-      <div class="ket">Nilai akhir keluar setelah ustadz menilai soal uraian.<br>Cek lagi nanti: buka halaman ini, pilih ujian yang sama, lalu pilih namamu.</div>`;
+    isi = `<div class="kartu" style="text-align:center"><div style="font-size:52px">✅</div><h2 style="margin:6px 0">Jawaban terkirim</h2>
+      <div class="ket">Nilai akhir keluar setelah ustadz menilai soal uraian.<br>Cek lagi nanti: buka halaman ini, pilih ujian yang sama, lalu pilih namamu.</div>${tombol}</div>`;
   }
-  render(kepala(S.sesi.bank?.judul) + `<div class="wadah"><div class="kartu hasil">
-    <div style="font-weight:700;font-size:16px;margin-bottom:10px">${esc(S.murid.nama)}</div>${isi}
-    <div class="navi" style="margin-top:22px;flex-wrap:wrap">
-      ${latihan && S.sesiList.find((s) => s.id === S.sesi.id) ? `<button class="tombol" onclick="masuk(true)">↻ Ulangi latihan</button>` : ""}
-      <button class="tombol garis" onclick="selesai()">Selesai</button>
-    </div></div></div>`);
+  render(kepala(S.sesi.bank?.judul, "📊 Hasil") + `<div class="wadah">${isi}</div>`);
+  requestAnimationFrame(() => setTimeout(() => {
+    const b = $("busur"); if (b) b.style.strokeDashoffset = b.dataset.akhir;
+    document.querySelectorAll("[data-lebar]").forEach((x) => (x.style.width = x.dataset.lebar));
+    document.querySelectorAll("[data-tinggi]").forEach((x) => (x.style.height = x.dataset.tinggi));
+  }, 60));
+  if (r.nilai_akhir >= 90) serpihan();
 }
-function selesai() { S.murid = null; S.soal = []; S.token = ""; pilihSesi(S.sesi.id); }
+const ST_LABEL = { benar: ["✅", "Benar"], sebagian: ["◐", "Sebagian benar"], salah: ["❌", "Belum tepat"], kosong: ["⭕", "Tidak dijawab"], tidak_dinilai: ["➖", "Tidak dinilai"] };
+function rincianHTML(r) {
+  const hit = (st) => r.soal.filter((x) => x.status === st).length;
+  const bagian = (r.bagian || []).filter((b) => b.maks > 0);
+  const k = r.kelas || {};
+  const ember = ["< 60", "60–69", "70–79", "80–89", "90+"];
+  const n = Number(r.nilai_akhir), punyaku = n < 60 ? 0 : n < 70 ? 1 : n < 80 ? 2 : n < 90 ? 3 : 4;
+  const maxS = Math.max(1, ...(k.sebaran || [0]));
+  const perluBelajar = r.soal.filter((x) => x.status === "salah" || x.status === "kosong" || x.status === "sebagian");
+  const urut = ["pg", "pgk", "uraian"];
+  return `
+  <div class="kartu">
+    <div class="judul-seksi"><span class="ikon" style="background:#dcf5ea">🧮</span>Ringkasan jawaban</div>
+    <div class="statistik">
+      <div style="--bg:#dcf5ea"><b style="color:#11704f">${hit("benar")}</b><span>✅ benar</span></div>
+      <div style="--bg:#fff1cc"><b style="color:#8a6500">${hit("sebagian")}</b><span>◐ sebagian</span></div>
+      <div style="--bg:#fde2e2"><b style="color:#b42318">${hit("salah")}</b><span>❌ belum tepat</span></div>
+      <div style="--bg:#eef0f2"><b style="color:#5b6670">${hit("kosong")}</b><span>⭕ kosong</span></div>
+    </div>
+    <div class="judul-seksi" style="margin-top:14px"><span class="ikon" style="background:#e6effe">📊</span>Nilai per bagian</div>
+    ${bagian.map((b) => { const p = Math.round((b.dapat * 100) / b.maks); return `<div class="bar-baris"><div class="bar-label"><span>${LABEL[b.jenis]}</span><span style="color:${HEX[b.jenis]}">${p}%</span></div><div class="bar"><i style="width:0;background:${HEX[b.jenis]}" data-lebar="${p}%"></i></div></div>`; }).join("")}
+  </div>
+  ${k.n > 1 ? `<div class="kartu">
+    <div class="judul-seksi"><span class="ikon" style="background:#fff1cc">👥</span>Posisimu di kelas</div>
+    <div class="ket" style="margin-bottom:6px">Rata-rata kelas <b>${k.rata}</b> · tertinggi <b>${Math.round(k.tertinggi)}</b> · ${k.n} santri sudah dinilai</div>
+    <div class="grafik-kelas">${(k.sebaran || []).map((v, i) => `<div class="${i === punyaku ? "kamu" : ""}"><b>${v}</b><span class="tiang" style="height:0" data-tinggi="${Math.max(4, (v / maxS) * 100)}%"></span><span>${ember[i]}</span>${i === punyaku ? "<b>⬆ kamu</b>" : "<span>&nbsp;</span>"}</div>`).join("")}</div>
+  </div>` : ""}
+  <div class="kartu">
+    <div class="judul-seksi"><span class="ikon" style="background:#fde2e2">🔎</span>Soal per nomor</div>
+    <div class="ket" style="margin-bottom:8px">${perluBelajar.length ? `Ada <b>${perluBelajar.length} soal</b> yang perlu kamu pelajari lagi. Ketuk nomornya untuk melihat soal & jawabanmu.` : "Semua soal kamu jawab dengan benar. Masya Allah! 🌟"}</div>
+    ${urut.filter((j) => r.soal.some((x) => x.jenis === j)).map((j) => `<div class="grup-label"><i style="background:${HEX[j]}"></i>${LABEL[j]}</div>
+      <div class="soal-chip">${r.soal.filter((x) => x.jenis === j).map((x) => `<button class="s-${x.status}" onclick="lihatRinciSoal('${j}',${esc(JSON.stringify(x.no))})">${x.no}<small>${ST_LABEL[x.status][0]}</small></button>`).join("")}</div>`).join("")}
+    <div id="detail-soal"></div>
+    <div class="legenda">${Object.entries(ST_LABEL).filter(([k2]) => k2 !== "tidak_dinilai" || hit(k2)).map(([, v]) => `<span style="--c:transparent">${v[0]} ${v[1]}</span>`).join("")}</div>
+  </div>`;
+}
+// Tampilkan soal + jawaban santri sendiri + statusnya. Jawaban yang benar TIDAK ditampilkan.
+function lihatRinciSoal(jenis, no) {
+  const r = S.rinci; if (!r) return;
+  const st = r.soal.find((x) => x.jenis === jenis && x.no == no);
+  const bg = (S.bagian || []).find((b) => b.jenis === jenis) || { soal: [] };
+  const s = bg.soal.find((x) => x.no == no) || {};
+  const j = (r.jawaban || {})[jenis] || {};
+  let jawabanku;
+  if (jenis === "pg") jawabanku = j[no] !== undefined ? fmt((s.o || [])[j[no]] || "") : "<i>tidak dijawab</i>";
+  else if (jenis === "pgk") jawabanku = (j[no] || []).length ? j[no].map((i) => "• " + fmt((s.o || [])[i] || "")).join("<br>") : "<i>tidak dijawab</i>";
+  else jawabanku = String(j[no] || "").trim() ? esc(j[no]) : "<i>tidak dijawab</i>";
+  $("detail-soal").innerHTML = `<div class="detail-soal"><b>${LABEL[jenis]} no. ${esc(no)}</b> · <span class="lencana s-${st.status}">${ST_LABEL[st.status][0]} ${ST_LABEL[st.status][1]}${st.dapat != null ? ` · ${st.dapat}/${st.maks} poin` : ""}</span>
+    <div style="margin-top:8px">${fmt(s.t || "")}</div>${gambarHTML(s.g)}
+    <div style="margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff;border:1px dashed var(--garis)"><span style="font-size:12px;color:var(--abu)">Jawabanmu:</span><br>${jawabanku}</div>
+    ${st.status !== "benar" ? `<div class="ket" style="margin-top:6px">💡 Baca lagi materi bab ini atau tanyakan ke ustadz.</div>` : ""}</div>`;
+  $("detail-soal").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+function selesai() { S.murid = null; S.soal = []; S.token = ""; S.rinci = null; pilihSesi(S.sesi.id); }
 
 mulai();
 </script>
