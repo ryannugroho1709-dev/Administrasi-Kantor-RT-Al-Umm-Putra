@@ -1,0 +1,37 @@
+/* ── Ujian & Latihan (sisi guru) ── */
+.uj-hero{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start}
+.uj-tautan{margin-top:8px}
+.uj-tautan code{display:inline-block;max-width:100%;overflow-wrap:anywhere;background:var(--accent-soft,#eef3ff);color:var(--text-primary);padding:5px 9px;border-radius:8px;font-size:12px}
+.uj-judul-bagian{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-weight:800;font-size:14px;margin-bottom:10px}
+.uj-daftar{display:grid;gap:8px}
+.uj-item{display:flex;gap:12px;align-items:center;flex-wrap:wrap;border:1px solid var(--border-soft,#e3e8ef);border-radius:12px;padding:10px 12px;background:var(--surface,#fff)}
+.uj-item.uj-tutup{opacity:.68}
+.uj-ikon{font-size:22px;width:30px;text-align:center}
+.uj-sub{font-size:11.5px;color:var(--text-secondary);line-height:1.6}
+.uj-aksi{display:flex;gap:6px;flex-wrap:wrap}
+.uj-kosong{padding:16px;text-align:center;font-size:12.5px;color:var(--text-secondary)}
+.uj-lencana{font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px}
+.uj-lencana.ujian{background:#fdecea;color:#c0392b}.uj-lencana.latihan{background:#e6f0fd;color:#1f5fbf}
+.btn.btn-sm{padding:6px 10px;font-size:12px;border-radius:9px;min-height:0}
+.uj-mode{display:grid;gap:8px}
+.uj-mode label{display:block;border:1px solid var(--border-soft,#e3e8ef);border-radius:10px;padding:9px 11px;font-size:13px;cursor:pointer}
+.uj-mode label span{display:block;font-size:11.5px;color:var(--text-secondary);margin:2px 0 0 22px}
+.uj-peringatan{background:#fff6dc;color:#7a5800;border-radius:10px;padding:9px 11px;font-size:12px;line-height:1.55;margin-top:6px}
+.uj-statistik{display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:8px}
+.uj-statistik div{background:var(--accent-soft,#eef3ff);border-radius:12px;padding:9px;text-align:center}
+.uj-statistik b{display:block;font-size:19px}.uj-statistik span{font-size:11px;color:var(--text-secondary)}
+.uj-tabel{width:100%;font-size:12.5px}
+.uj-tabel th,.uj-tabel td{padding:6px 8px;text-align:center;vertical-align:middle}
+.uj-tabel td:nth-child(2),.uj-tabel th:nth-child(2){text-align:left}
+.uj-tuntas{color:#1F8A5F}.uj-belum{color:#c0392b}
+.uj-butir{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:6px;margin-bottom:6px}
+.uj-butir div{border-radius:9px;padding:6px 4px;text-align:center;font-size:11px}
+.uj-butir b{display:block;font-size:12px}
+.uj-butir .mudah{background:#e3f3ec;color:#13715b}.uj-butir .sedang{background:#fff4d6;color:#8a6500}.uj-butir .sulit{background:#fdecea;color:#c0392b}
+.uj-kunci-baris{display:flex;gap:10px;padding:8px 0;border-bottom:1px dashed var(--border-soft,#e3e8ef);font-size:12.5px}
+.uj-kunci-baris.uj-cek{background:#fffaf0}
+.uj-no{font-weight:800;min-width:24px}
+.uj-kunci-uraian{background:#f2f8f5;border-left:3px solid #1F8A5F;border-radius:8px;padding:7px 10px;font-size:12.5px;line-height:1.55;margin-top:6px}
+.uj-uraian{border:1px solid var(--border-soft,#e3e8ef);border-radius:12px;padding:11px 12px;margin-bottom:10px}
+.uj-jawaban{background:var(--accent-soft,#eef3ff);border-radius:8px;padding:8px 10px;margin-top:6px;font-size:13px;line-height:1.6;white-space:pre-wrap}
+.uj-cepat{display:inline-flex;gap:4px}

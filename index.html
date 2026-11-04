@@ -24,6 +24,7 @@
 <link rel="stylesheet" href="src/hp.css?v=2">
 <link rel="stylesheet" href="src/kuliah.css?v=6">
 <link rel="stylesheet" href="src/modul-baca.css?v=3">
+<link rel="stylesheet" href="src/ujian.css?v=1">
 
 <script>
 // Logo gagal dimuat → coba logo bawaan; kalau bawaan pun gagal, tampilkan ikon 🎓 (bukan huruf "G").
@@ -32,7 +33,7 @@ function _logoAwal(){try{return localStorage.getItem("logoSekolahUrl")||"assets/
 </script>
 <script>try{var _pw=localStorage.getItem("paletWarna")||"biru";if(_pw!=="klasik"){document.documentElement.classList.add("tema-elegan");document.documentElement.setAttribute("data-palet",_pw);}var _tc=document.querySelector('meta[name="theme-color"]');if(_tc)_tc.setAttribute("content",{klasik:"#1F8A5F",hijau:"#0b4a3c",biru:"#0b2a6b",maroon:"#5c1222",ungu:"#3b2566"}[_pw]||"#0b2a6b");}catch(e){}</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2"></script>
-<script src="src/config.js?v=3"></script>
+<script src="src/config.js?v=4"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <!-- ExcelJS — khusus Ekspor Excel Data BOP yang perlu tampilan (warna header, border, logo): xlsx.js (di atas)
      adalah versi komunitas SheetJS yang TIDAK bisa menulis styling ke .xlsx, jadi dipakai cuma untuk baca
@@ -1874,6 +1875,10 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
       </section>
 
       <!-- ══ KULIAH (pribadi Ryan Nugroho — src/kuliah.js) ══ -->
+      <section class="page" id="page-ujian">
+        <div id="ujian-root"></div>
+      </section>
+
       <section class="page" id="page-kuliah">
         <div id="kuliah-root"></div>
       </section>
@@ -2528,6 +2533,7 @@ const MENU = [
     { key: "kaldik", i18n: "menuKaldik", icon: "📅", page: "page-kaldik", fase1: true },
   ]},
   { group: "Nilai & Rapor", items: [
+    { key: "ujian", i18n: "menuUjian", icon: "📝", page: "page-ujian", fase1: true },
     { key: "kop-soal", i18n: "menuKopSoal", icon: "📋", page: "page-kop-soal", fase1: true },
     { key: "input-nilai", i18n: "menuInputNilai", icon: "✍️", page: "page-input-nilai", fase1: true },
     { key: "rapor-umum", i18n: "menuRaporUmum", icon: "📄", page: "page-rapor-umum", fase1: true },
@@ -3147,6 +3153,7 @@ function refreshCurrentPage() {
     "modul-ajar": renderModulAjarInit,
     "kaldik": renderKaldikInit,
     "kop-soal": renderKopSoalInit,
+    "ujian": () => (typeof renderUjianInit === "function" ? renderUjianInit() : null),
     "input-nilai": renderInputNilaiInit,
     "rapor-umum": renderRaporUmumInit,
     "rapor-diniyyah": renderRaporDiniyyahInit,
@@ -5379,6 +5386,7 @@ async function bukaFormJurnalUnified(opts) {
     <button class="btn btn-accent" style="width:100%" onclick="submitJurnal()">${ajukanHadir ? "📤 Kirim Pengajuan Hadir" : isLaporTerlambat ? "📤 Kirim ke Admin" : `<span data-i18n="simpanJurnal">Simpan Jurnal</span>`}</button>
   `);
   if (!existing && !ajukanHadir) { _tawarkanLanjutanMateri(kelasId, mapelId, tanggal); _tawarkanMateriPresentasi(kelasId, mapelId, tanggal); }
+  if (!existing && typeof _pasangTombolJurnalOtomatis === "function") _pasangTombolJurnalOtomatis(opts);
 }
 // Isian cepat: tawarkan "Lanjutan" dari jurnal terakhir di kelas & mapel yang sama (materi + metode)
 async function _tawarkanLanjutanMateri(kelasId, mapelId, tanggal) {
@@ -15961,6 +15969,8 @@ async function handleImportSiswa(evt) {
 <script src="src/kesimpulan.js?v=2"></script>
 <script src="src/profil.js?v=4"></script>
 <script src="src/kaldik-desain.js?v=5"></script>
+<script src="src/ujian.js?v=1"></script>
+<script src="src/jurnal-otomatis.js?v=1"></script>
 <script src="src/hp.js?v=2"></script>
 </body>
 </html>
