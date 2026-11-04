@@ -130,7 +130,7 @@ async function mulai() {
     <p class="judul-langkah">Langkah 1</p><h2>Kamu kelas berapa?</h2>
     ${ids.length ? `<div class="daftar">${ids.map((id) => `<button class="pilihan" onclick="pilihKelas('${id}')"><span class="ikon">🏫</span><span class="isi"><b>${esc(kelas[id].nama)}</b><small>${kelas[id].n} latihan/ujian dibuka</small></span><span>›</span></button>`).join("")}</div>`
       : `<div class="kosong"><div class="besar">📭</div>Belum ada latihan atau ujian yang dibuka guru.<br>Tunggu arahan ustadz, lalu muat ulang.<br><br><button class="tombol garis" onclick="mulai()">↻ Muat ulang</button></div>`}
-  </div><p class="catatan-kaki">Nilai akhir yang tampil adalah nilai resmi dari guru.</p></div>`);
+  </div><p class="catatan-kaki">Nilai akhir yang tampil adalah nilai resmi dari guru.<br><a href="./" style="color:var(--hijau2);font-weight:700">‹ Masuk sebagai guru</a></p></div>`);
 }
 
 // ── Langkah 2: pilih ujian/latihan ──
