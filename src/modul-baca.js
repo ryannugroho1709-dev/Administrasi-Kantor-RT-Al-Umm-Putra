@@ -363,7 +363,7 @@ function _mvTutup() {
       tg = tanda.filter((x) => skor(x) > 0).sort((a, b) => skor(b) - skor(a))[0] || null;
     }
     let log = []; try { log = JSON.parse(localStorage.getItem("maPresentasi") || "[]"); } catch (e) {}
-    log.unshift({ kelas_id: MV.m.kelas_id, mapel_id: MV.m.mapel_id, judul: MV.m.judul + (tg ? " — " + tg.judul : ""), dari: tg ? tg.dari : hal[0], sampai: tg ? tg.sampai : hal[hal.length - 1], t: Date.now() });
+    log.unshift({ kelas_id: MV.m.kelas_id, mapel_id: MV.m.mapel_id, judul: MV.m.judul + (tg ? " — " + tg.judul : ""), dari: tg ? tg.dari : hal[0], sampai: tg ? tg.sampai : hal[hal.length - 1], t: Date.now(), mulai: MV.mulai, halaman: hal.length });
     try { localStorage.setItem("maPresentasi", JSON.stringify(log.slice(0, 15))); } catch (e) {}
   }
   if (MV.m) _maCatatStat(MV.m, MV.pernahPresentasi, (Date.now() - MV.mulai) / 60000);

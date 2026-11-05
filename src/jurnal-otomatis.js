@@ -33,6 +33,13 @@ function _pasangTombolJurnalOtomatis(ctx) {
 const _joAman = (p) => Promise.resolve(p).then((r) => (r && !r.error ? r.data || [] : []), () => []);
 const _joNorm = (s) => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
 
+// Ajukan Hadir: alasan diisi bukti mengajar dari log presentasi (kalau guru belum menulis alasan sendiri)
+function _joBuktiPresentasi(p) {
+  const ta = qs("aju-alasan"); if (!ta || ta.value.trim()) return;
+  const jam = (t) => new Intl.DateTimeFormat("id-ID", { timeZone: "Asia/Makassar", hour: "2-digit", minute: "2-digit" }).format(new Date(t));
+  ta.value = `Lupa absen masuk. Bukti mengajar: presentasi Modul Ajar "${p.judul}"${p.mulai ? ` pukul ${jam(p.mulai)}–${jam(p.t)} WITA` : ` selesai pukul ${jam(p.t)} WITA`}${p.halaman ? `, ${p.halaman} halaman ditampilkan` : ""}.`;
+  qsa(".aju-alasan-chip button").forEach((b) => b.classList.toggle("aktif", /lupa absen masuk/i.test(b.textContent)));
+}
 async function isiJurnalOtomatis(ctx, btn) {
   const { sesiId, kelasId, mapelId } = ctx;
   const tgl = ctx.tanggal || tanggalISO();
@@ -58,6 +65,7 @@ async function isiJurnalOtomatis(ctx, btn) {
   try {
     const log = JSON.parse(localStorage.getItem("maPresentasi") || "[]");
     const p = log.find((x) => x.kelas_id === kelasId && x.mapel_id === mapelId && tanggalISO(new Date(x.t)) === tgl);
+    if (p) _joBuktiPresentasi(p);
     if (p) { inti = `${p.judul}${p.sampai > 1 ? ` (hal. ${p.dari}${p.sampai !== p.dari ? "–" + p.sampai : ""})` : ""}`; sumber.push("presentasi Modul Ajar"); }
   } catch (e) {}
   if (!inti && modul.length && typeof _maMuatMeta === "function") {
