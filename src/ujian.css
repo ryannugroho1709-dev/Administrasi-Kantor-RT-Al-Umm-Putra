@@ -78,3 +78,9 @@
 .uje-contoh{background:rgba(124,58,237,.06);border:1px dashed rgba(124,58,237,.3);border-radius:10px;padding:10px;font-size:11.5px;line-height:1.5;max-height:170px;overflow:auto;white-space:pre-wrap}
 @keyframes fadeInUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 #modal-panel:has(.uje.tetap){animation:none}
+.uj-penjelasan{margin-top:5px;font-size:12px;line-height:1.55;background:rgba(212,167,44,.1);border-radius:8px;padding:6px 9px}
+.uje-bs{flex:none;border-radius:10px;padding:7px 10px;font-weight:800;font-size:12px;cursor:pointer;border:1px solid}
+.uje-bs.ya{background:rgba(5,150,105,.12);color:#047857;border-color:rgba(5,150,105,.35)}
+.uje-bs.tidak{background:rgba(220,38,38,.09);color:#b91c1c;border-color:rgba(220,38,38,.3)}
+.uje-bs-pilih{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;margin-top:6px;color:var(--text-secondary)}
+.uje-bs-pilih select{border:1px solid var(--border-soft,#e3e8ef);border-radius:8px;padding:3px 6px;background:var(--surface,#fff);color:var(--text-primary)}

@@ -164,8 +164,8 @@ function _ujGambarSesi() {
 // ── Impor bank soal JSON ──
 function _ujPisahKunci(j) {
   const bagian = j.bagian || [];
-  const publik = bagian.map((b) => ({ ...b, soal: (b.soal || []).map(({ k, kunci, poin_kunci, cek, catatan, ...r }) => r) }));
-  const kunci = { skor_maksimal: j.skor_maksimal || 100, bagian: bagian.map((b) => ({ jenis: b.jenis, poin: b.poin, soal: (b.soal || []).map((s) => ({ no: s.no, k: s.k, poin: s.poin, kunci: s.kunci, poin_kunci: s.poin_kunci, cek: s.cek, catatan: s.catatan })) })) };
+  const publik = bagian.map((b) => ({ ...b, soal: (b.soal || []).map(({ k, kunci, poin_kunci, cek, catatan, penjelasan, ...r }) => r) }));
+  const kunci = { skor_maksimal: j.skor_maksimal || 100, bagian: bagian.map((b) => ({ jenis: b.jenis, poin: b.poin, soal: (b.soal || []).map((s) => ({ no: s.no, k: s.k, poin: s.poin, kunci: s.kunci, poin_kunci: s.poin_kunci, cek: s.cek, catatan: s.catatan, penjelasan: s.penjelasan })) })) };
   return { publik, kunci };
 }
 function _ujValidasiBank(j) {
@@ -231,8 +231,9 @@ async function ujLihatKunci(id) {
       return `<div class="uj-judul-bagian" style="margin-top:12px"><span>${UJ_LABEL[bg.jenis]} · ${bg.poin} poin/soal</span></div>` + (bg.soal || []).map((s) => {
         const ks = kb.soal.find((x) => x.no === s.no) || {};
         const jaw = bg.jenis === "uraian" ? `<div class="uj-kunci-uraian">${escapeHtml(ks.kunci || "-")}${(ks.poin_kunci || []).length ? `<div class="uj-sub">Poin penilaian: ${ks.poin_kunci.map(escapeHtml).join(" · ")}</div>` : ""}</div>`
+          : s.bs ? (s.o || []).map((o, i) => `<div style="font-size:12.5px">${ks.k && ks.k[i] ? "✅ " + escapeHtml(s.bs[0]) : "❌ " + escapeHtml(s.bs[1])} — ${escapeHtml(o)}</div>`).join("")
           : `<b>${[].concat(ks.k).map((i) => H[i] + ". " + escapeHtml((s.o || [])[i] || "")).join(" / ")}</b>`;
-        return `<div class="uj-kunci-baris ${ks.cek ? "uj-cek" : ""}"><div class="uj-no">${s.no}</div><div style="flex:1"><div style="font-size:12.5px;margin-bottom:3px">${escapeHtml(String(s.t || "").replace(/\*\*/g, ""))}</div>${jaw}${ks.catatan ? `<div class="uj-sub">📝 ${escapeHtml(ks.catatan)}</div>` : ""}${ks.cek ? `<div class="uj-sub" style="color:#a66a00">🔎 Mohon dicek guru</div>` : ""}</div></div>`;
+        return `<div class="uj-kunci-baris ${ks.cek ? "uj-cek" : ""}"><div class="uj-no">${s.no}</div><div style="flex:1"><div style="font-size:12.5px;margin-bottom:3px">${escapeHtml(String(s.t || "").replace(/\*\*/g, ""))}</div>${jaw}${ks.penjelasan ? `<div class="uj-penjelasan">💡 ${escapeHtml(ks.penjelasan).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")}</div>` : ""}${ks.catatan ? `<div class="uj-sub">📝 ${escapeHtml(ks.catatan)}</div>` : ""}${ks.cek ? `<div class="uj-sub" style="color:#a66a00">🔎 Mohon dicek guru</div>` : ""}</div></div>`;
       }).join("");
     }).join("");
     openModal(`<h3>🔑 Kunci · ${escapeHtml(b.judul)}</h3><div class="uj-sub" style="margin-bottom:6px">Hanya untuk guru. Untuk mengubah soal atau kunci, tekan <b>✏️ Ubah</b> pada bank soal ini.</div>${isi}`, { lebar: true });

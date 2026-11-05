@@ -324,7 +324,14 @@ function _mvTutup() {
   if (!el) return;
   // Catat presentasi (≥ 2 menit) → ditawarkan sebagai isian "Materi Pokok" saat mengisi jurnal kelas
   if (MV.m && MV.dikunjungi.size && Date.now() - MV.mulai > 120000) {
-    const hal = [...MV.dikunjungi].sort((a, b) => a - b), tg = MV.tandaAktif;
+    const hal = [...MV.dikunjungi].sort((a, b) => a - b);
+    // tanpa penanda aktif: pakai penanda pertemuan yang paling banyak halamannya ikut dibuka
+    let tg = MV.tandaAktif;
+    if (!tg) {
+      const tanda = (MA_META[_maKunciBuku(MV.m.file_url)] || {}).tanda || [];
+      const skor = (x) => hal.filter((h) => h >= x.dari && h <= x.sampai).length;
+      tg = tanda.filter((x) => skor(x) > 0).sort((a, b) => skor(b) - skor(a))[0] || null;
+    }
     let log = []; try { log = JSON.parse(localStorage.getItem("maPresentasi") || "[]"); } catch (e) {}
     log.unshift({ kelas_id: MV.m.kelas_id, mapel_id: MV.m.mapel_id, judul: MV.m.judul + (tg ? " — " + tg.judul : ""), dari: tg ? tg.dari : hal[0], sampai: tg ? tg.sampai : hal[hal.length - 1], t: Date.now() });
     try { localStorage.setItem("maPresentasi", JSON.stringify(log.slice(0, 15))); } catch (e) {}

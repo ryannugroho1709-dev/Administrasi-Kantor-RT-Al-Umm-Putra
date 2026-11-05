@@ -10,7 +10,8 @@ const UJE_JENIS = ["pg", "pgk", "uraian"];
 const UJE_LABEL = { pg: "Pilihan Ganda", pgk: "PG Kompleks", uraian: "Uraian" };
 const UJE_WARNA = { pg: "37,99,235", pgk: "124,58,237", uraian: "234,122,26" };
 const UJE_POIN = { pg: 2, pgk: 3, uraian: 10 };
-const _ujeSoalBaru = (jenis) => (jenis === "uraian" ? { t: "", g: "", stimulus: "", kunci: "", poin_kunci: [] } : { t: "", g: "", stimulus: "", o: ["", "", "", "", ""], k: jenis === "pg" ? null : [] });
+const _ujeSoalBaru = (jenis) => (jenis === "uraian" ? { t: "", g: "", stimulus: "", kunci: "", poin_kunci: [], penjelasan: "" } : { t: "", g: "", stimulus: "", o: ["", "", "", "", ""], k: jenis === "pg" ? null : [], bs: null, penjelasan: "" });
+const UJE_BS = [["Benar", "Salah"], ["Tepat", "Tidak Tepat"], ["Setuju", "Tidak Setuju"]];
 
 function _ujeModelKosong() {
   return { bankId: null, kode: "", judul: "", mapel_id: "", tingkat: "", bab: 1,
@@ -28,8 +29,8 @@ function _ujeDariBank(b, kunci) {
     tujuan.soal = (bg.soal || []).map((s) => {
       const ks = kb.soal.find((x) => x.no === s.no) || {};
       return bg.jenis === "uraian"
-        ? { t: s.t || "", g: s.g || "", stimulus: s.stimulus || "", kunci: ks.kunci || "", poin_kunci: ks.poin_kunci || [] }
-        : { t: s.t || "", g: s.g || "", stimulus: s.stimulus || "", o: [...(s.o || [])], k: bg.jenis === "pg" ? (ks.k ?? null) : [].concat(ks.k || []) };
+        ? { t: s.t || "", g: s.g || "", stimulus: s.stimulus || "", kunci: ks.kunci || "", poin_kunci: ks.poin_kunci || [], penjelasan: ks.penjelasan || "" }
+        : { t: s.t || "", g: s.g || "", stimulus: s.stimulus || "", o: [...(s.o || [])], k: bg.jenis === "pg" ? (ks.k ?? null) : [].concat(ks.k || []), bs: s.bs || null, penjelasan: ks.penjelasan || "" };
     });
   });
   return m;
@@ -96,7 +97,7 @@ function _ujeHitungFooter() {
 }
 function _ujeAdaKunci(j, s) {
   if (j === "pg") return s.k !== null && s.k !== undefined && [].concat(s.k).length > 0;
-  if (j === "pgk") return (s.k || []).length > 0;
+  if (j === "pgk") return s.bs ? (s.k || []).length === (s.o || []).length : (s.k || []).length > 0;
   return String(s.kunci || "").trim() !== "";
 }
 function _ujeKartu(j, s, i) {
@@ -119,11 +120,19 @@ function _ujeKartu(j, s, i) {
       <textarea class="input" rows="2" oninput="UJE.m.bagian['${j}'].soal[${i}].kunci=this.value;_ujeTandaKunci('${j}',${i})">${escapeHtml(s.kunci || "")}</textarea>
       <label class="form-label" style="margin-top:6px">✅ Poin penilaian (pisahkan dengan titik koma) — dipakai untuk saran skor otomatis</label>
       <input class="input" value="${escapeHtml((s.poin_kunci || []).join("; "))}" placeholder="mis. menyebut 4 musim; menjelaskan ciri" oninput="UJE.m.bagian['${j}'].soal[${i}].poin_kunci=this.value.split(';').map(x=>x.trim()).filter(Boolean)">`
+    : s.bs ? `<div class="uje-opsi">${(s.o || []).map((o, k) => `<div class="uje-opsi-baris">
+        <input class="input" value="${escapeHtml(o)}" placeholder="Pernyataan ${k + 1}" oninput="UJE.m.bagian['${j}'].soal[${i}].o[${k}]=this.value">
+        <button class="uje-bs ${s.k[k] ? "ya" : "tidak"}" title="Ketuk untuk mengganti kunci" onclick="ujeKunci('${j}',${i},${k})">${s.k[k] ? "✅ " + escapeHtml(s.bs[0]) : "❌ " + escapeHtml(s.bs[1])}</button>
+        ${(s.o || []).length > 2 ? `<button class="uje-ik" title="Hapus pernyataan" onclick="ujeHapusOpsi('${j}',${i},${k})">✕</button>` : ""}</div>`).join("")}
+        <button class="uje-ik" style="margin-top:4px" onclick="UJE.m.bagian['${j}'].soal[${i}].o.push('');UJE.m.bagian['${j}'].soal[${i}].k.push(true);_ujeGambar()">＋ pernyataan</button></div>`
     : `<div class="uje-opsi">${(s.o || []).map((o, k) => `<div class="uje-opsi-baris ${kunciPG.includes(k) ? "benar" : ""}">
         <button class="uje-huruf" title="${j === "pg" ? "Jadikan jawaban benar" : "Tandai benar/salah"}" onclick="ujeKunci('${j}',${i},${k})">${H[k]}</button>
         <input class="input" value="${escapeHtml(o)}" placeholder="Pilihan ${H[k]}" oninput="UJE.m.bagian['${j}'].soal[${i}].o[${k}]=this.value">
         ${(s.o || []).length > 2 ? `<button class="uje-ik" title="Hapus pilihan" onclick="ujeHapusOpsi('${j}',${i},${k})">✕</button>` : ""}</div>`).join("")}
         ${(s.o || []).length < 8 ? `<button class="uje-ik" style="margin-top:4px" onclick="UJE.m.bagian['${j}'].soal[${i}].o.push('');_ujeGambar()">＋ pilihan</button>` : ""}</div>`}
+    ${j === "pgk" ? `<label class="uje-bs-pilih"><input type="checkbox" ${s.bs ? "checked" : ""} onchange="ujeUbahBS(${i},this.checked)"> 📋 Bentuk tabel ${s.bs ? `<select onchange="UJE.m.bagian.pgk.soal[${i}].bs=UJE_BS[this.value];_ujeGambar()">${UJE_BS.map((p, x) => `<option value="${x}" ${s.bs[0] === p[0] ? "selected" : ""}>${p[0]} / ${p[1]}</option>`).join("")}</select>` : "Benar/Salah (tiap pernyataan dinilai sendiri)"}</label>` : ""}
+    <details class="uje-stim" ${s.penjelasan ? "open" : ""}><summary>💡 Penjelasan singkat (tampil di hasil santri setelah ustadz membukanya)</summary>
+      <textarea class="input" rows="2" placeholder="mis. 🏭 Kata kuncinya nilai tambah… 📖 Modul hlm. 21" oninput="UJE.m.bagian['${j}'].soal[${i}].penjelasan=this.value">${escapeHtml(s.penjelasan || "")}</textarea></details>
   </div>`;
 }
 function _ujeTandaKunci(j, i) {
@@ -141,8 +150,15 @@ async function ujeHapus(j, i) {
   if ((s.t || "").trim() && !confirm(`Hapus soal nomor ${i + 1}?`)) return;
   UJE.m.bagian[j].soal.splice(i, 1); _ujeGambar();
 }
+function ujeUbahBS(i, aktif) {
+  const s = UJE.m.bagian.pgk.soal[i];
+  if (aktif) { const lama = new Set(s.k || []); s.bs = UJE_BS[0]; s.o = s.o.filter((o) => String(o).trim()).concat(s.o.filter((o) => String(o).trim()).length ? [] : ["", "", ""]); s.k = s.o.map((_, x) => lama.has(x)); }
+  else { s.k = (s.k || []).map((v, x) => (v ? x : -1)).filter((x) => x >= 0); s.bs = null; }
+  _ujeGambar();
+}
 function ujeKunci(j, i, k) {
   const s = UJE.m.bagian[j].soal[i];
+  if (s.bs) { s.k[k] = !s.k[k]; _ujeGambar(); return; }
   if (j === "pg") s.k = s.k === k ? null : k;
   else { const set = new Set(s.k || []); set.has(k) ? set.delete(k) : set.add(k); s.k = [...set].sort((a, b) => a - b); }
   _ujeGambar();
@@ -150,6 +166,7 @@ function ujeKunci(j, i, k) {
 function ujeHapusOpsi(j, i, k) {
   const s = UJE.m.bagian[j].soal[i];
   s.o.splice(k, 1);
+  if (s.bs) { s.k.splice(k, 1); _ujeGambar(); return; }
   const geser = (x) => (x > k ? x - 1 : x);
   if (j === "pg") s.k = s.k === k ? null : s.k == null ? null : geser(s.k);
   else s.k = (s.k || []).filter((x) => x !== k).map(geser);
@@ -297,15 +314,20 @@ function _ujeKeBank() {
       const no = i + 1;
       if (j === "uraian") {
         if (!String(s.kunci || "").trim()) galat.push(`${UJE_LABEL[j]} no ${no}: kunci kosong`);
-        return { no, t: s.t.trim(), ...(s.g ? { g: s.g } : {}), ...(s.stimulus ? { stimulus: s.stimulus } : {}), kunci: (s.kunci || "").trim(), poin_kunci: s.poin_kunci || [] };
+        return { no, t: s.t.trim(), ...(s.g ? { g: s.g } : {}), ...(s.stimulus ? { stimulus: s.stimulus } : {}), kunci: (s.kunci || "").trim(), poin_kunci: s.poin_kunci || [], ...(s.penjelasan ? { penjelasan: s.penjelasan.trim() } : {}) };
       }
       // buang pilihan kosong & sesuaikan nomor kunci
       const peta = []; const o = [];
       (s.o || []).forEach((t, k) => { if (String(t).trim()) { peta[k] = o.length; o.push(String(t).trim()); } });
+      if (s.bs) {
+        const k = (s.o || []).map((t, x) => (String(t).trim() ? !!s.k[x] : null)).filter((v) => v !== null);
+        if (o.length < 2) galat.push(`${UJE_LABEL[j]} no ${no}: minimal 2 pernyataan`);
+        return { no, t: s.t.trim(), ...(s.g ? { g: s.g } : {}), ...(s.stimulus ? { stimulus: s.stimulus } : {}), o, k, bs: s.bs, ...(s.penjelasan ? { penjelasan: s.penjelasan.trim() } : {}) };
+      }
       let k = [].concat(s.k ?? []).map((x) => peta[x]).filter((x) => x !== undefined);
       if (o.length < 2) galat.push(`${UJE_LABEL[j]} no ${no}: minimal 2 pilihan`);
       if (!k.length) galat.push(`${UJE_LABEL[j]} no ${no}: belum ada kunci`);
-      return { no, t: s.t.trim(), ...(s.g ? { g: s.g } : {}), ...(s.stimulus ? { stimulus: s.stimulus } : {}), o, k: j === "pg" ? k[0] : k };
+      return { no, t: s.t.trim(), ...(s.g ? { g: s.g } : {}), ...(s.stimulus ? { stimulus: s.stimulus } : {}), o, k: j === "pg" ? (k.length > 1 ? k : k[0]) : k, ...(s.penjelasan ? { penjelasan: s.penjelasan.trim() } : {}) };
     });
     bagian.push({ jenis: j, judul: UJE_LABEL[j], poin: Number(bg.poin) || 1, ...(bg.stimulus ? { stimulus: bg.stimulus } : {}), soal: out });
   });

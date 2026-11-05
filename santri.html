@@ -86,6 +86,16 @@
   textarea{width:100%;min-height:170px;border:2px solid var(--garis);border-radius:14px;padding:13px;font:inherit;font-size:15.5px;line-height:1.6;resize:vertical;background:#fcfdfc}
   textarea:focus{outline:none;border-color:var(--warna)}
   .hitung-kata{text-align:right;font-size:11.5px;color:var(--abu);margin-top:4px}
+  .bs-daftar{display:grid;gap:10px}
+  .bs-baris{border:2px solid var(--garis);border-radius:14px;padding:11px 12px;background:#fff}
+  .bs-teks{font-size:15px;line-height:1.55;display:flex;gap:10px;margin-bottom:9px}
+  .bs-no{flex:none;width:24px;height:24px;border-radius:8px;background:color-mix(in srgb,var(--warna) 14%,#fff);color:var(--warna);display:grid;place-items:center;font-weight:800;font-size:12px}
+  .bs-pilih{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .bs-pilih button{border:2px solid var(--garis);background:#fff;border-radius:12px;padding:9px 6px;font-weight:800;font-size:13.5px;color:#44514c;transition:transform .12s}
+  .bs-pilih button.ya{background:#dcf5ea;border-color:#13715b;color:#0b4a3c;animation:pop .25s ease}
+  .bs-pilih button.tidak{background:#fde2e2;border-color:#d64545;color:#8f1d1d;animation:pop .25s ease}
+  .penjelasan{margin-top:10px;border-radius:14px;padding:11px 13px;background:linear-gradient(135deg,#fff8e6,#eef9f4);border:1px solid #f0dfa8;font-size:14px;line-height:1.65;white-space:normal}
+  .penjelasan b:first-child{display:block;color:#8a6500;margin-bottom:4px}
   .petunjuk{font-size:12.5px;color:var(--abu);margin:-6px 0 12px;background:#f3eefe;color:#5b2bb5;padding:7px 10px;border-radius:10px;font-weight:600}
   .navi{display:flex;gap:10px}
   .navi .tombol{flex:1}
@@ -351,7 +361,7 @@ function bacaRagu() { try { return JSON.parse(localStorage.getItem(kunciLokal() 
 function hapusLokal() { try { localStorage.removeItem(kunciLokal()); localStorage.removeItem(kunciLokal() + ":ragu"); } catch (e) {} }
 function hitungTerjawab(j) {
   j = normalJawab(j);
-  return Object.keys(j.pg).length + Object.values(j.pgk).filter((v) => v && v.length).length + Object.values(j.uraian).filter((v) => String(v || "").trim()).length;
+  return Object.keys(j.pg).length + Object.values(j.pgk).filter(adaIsi).length + Object.values(j.uraian).filter((v) => String(v || "").trim()).length;
 }
 
 // Generator acak yang tetap sama untuk santri & benih yang sama (urutan tidak berubah walau dibuka ulang).
@@ -377,9 +387,10 @@ function siapkanSoal(bagian) {
   });
   S.soal = out;
 }
+const adaIsi = (v) => Array.isArray(v) ? v.some((x) => x !== null && x !== undefined) : v !== undefined && v !== null;
 function sudahDijawab(s) {
   if (s.jenis === "pg") return S.jawab.pg[s.no] !== undefined;
-  if (s.jenis === "pgk") return (S.jawab.pgk[s.no] || []).length > 0;
+  if (s.jenis === "pgk") return adaIsi(S.jawab.pgk[s.no] || []);
   return String(S.jawab.uraian[s.no] || "").trim() !== "";
 }
 const kunciRagu = (s) => s.jenis + "-" + s.no;
@@ -391,7 +402,13 @@ function tampilSoal() {
   const noDiBagian = S.soal.filter((x, k) => x.jenis === s.jenis && k <= S.idx).length;
   const stimulus = s.stimulus || s.stimulusBagian;
   let isi = "";
-  if (s.jenis === "pg" || s.jenis === "pgk") {
+  if (s.bs) {
+    const jw = S.jawab.pgk[s.no] || [];
+    isi = `<div class="petunjuk">🟢 Tentukan setiap pernyataan: <b>${esc(s.bs[0])}</b> atau <b>${esc(s.bs[1])}</b>.</div>
+      <div class="bs-daftar">${s.urutanOpsi.map((asli, tampil) => `<div class="bs-baris">
+        <div class="bs-teks"><span class="bs-no">${tampil + 1}</span>${fmt(s.o[asli])}</div>
+        <div class="bs-pilih"><button class="${jw[asli] === true ? "ya" : ""}" onclick="pilihBS(${asli},true)">✔ ${esc(s.bs[0])}</button><button class="${jw[asli] === false ? "tidak" : ""}" onclick="pilihBS(${asli},false)">✖ ${esc(s.bs[1])}</button></div></div>`).join("")}</div>`;
+  } else if (s.jenis === "pg" || s.jenis === "pgk") {
     const pilih = s.jenis === "pg" ? [S.jawab.pg[s.no]] : (S.jawab.pgk[s.no] || []);
     isi = `${s.jenis === "pgk" ? `<div class="petunjuk">☑️ Pilih <b>lebih dari satu</b> jawaban yang benar.</div>` : ""}
       <div class="${s.jenis}">${s.urutanOpsi.map((asli, tampil) => `<button class="opsi ${pilih.includes(asli) ? "dipilih" : ""}" onclick="pilihOpsi(${asli})"><span class="huruf">${HURUF[tampil]}</span><span>${fmt(s.o[asli])}${s.og && s.og[asli] ? gambarHTML(s.og[asli]) : ""}</span></button>`).join("")}</div>`;
@@ -443,6 +460,14 @@ function pilihOpsi(i) {
     S.jawab.pgk[s.no] = [...a].sort((x, y) => x - y);
     if (!S.jawab.pgk[s.no].length) delete S.jawab.pgk[s.no];
   }
+  berubah(); tampilSoal();
+}
+function pilihBS(i, nilai) {
+  const s = S.soal[S.idx], a = (S.jawab.pgk[s.no] || []).slice();
+  while (a.length < s.o.length) a.push(null);
+  a[i] = a[i] === nilai ? null : nilai;
+  S.jawab.pgk[s.no] = a;
+  if (!adaIsi(a)) delete S.jawab.pgk[s.no];
   berubah(); tampilSoal();
 }
 function ketikUraian(v) {
@@ -613,12 +638,14 @@ function lihatRinciSoal(jenis, no) {
   const j = (r.jawaban || {})[jenis] || {};
   let jawabanku;
   if (jenis === "pg") jawabanku = j[no] !== undefined ? fmt((s.o || [])[j[no]] || "") : "<i>tidak dijawab</i>";
+  else if (jenis === "pgk" && s.bs) jawabanku = (s.o || []).map((o, i) => `• ${fmt(o)} → <b>${j[no] && j[no][i] === true ? esc(s.bs[0]) : j[no] && j[no][i] === false ? esc(s.bs[1]) : "—"}</b>`).join("<br>");
   else if (jenis === "pgk") jawabanku = (j[no] || []).length ? j[no].map((i) => "• " + fmt((s.o || [])[i] || "")).join("<br>") : "<i>tidak dijawab</i>";
   else jawabanku = String(j[no] || "").trim() ? esc(j[no]) : "<i>tidak dijawab</i>";
   $("detail-soal").innerHTML = `<div class="detail-soal"><b>${LABEL[jenis]} no. ${esc(no)}</b> · <span class="lencana s-${st.status}">${ST_LABEL[st.status][0]} ${ST_LABEL[st.status][1]}${st.dapat != null ? ` · ${st.dapat}/${st.maks} poin` : ""}</span>
     <div style="margin-top:8px">${fmt(s.t || "")}</div>${gambarHTML(s.g)}
     <div style="margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff;border:1px dashed var(--garis)"><span style="font-size:12px;color:var(--abu)">Jawabanmu:</span><br>${jawabanku}</div>
-    ${st.status !== "benar" ? `<div class="ket" style="margin-top:6px">💡 Baca lagi materi bab ini atau tanyakan ke ustadz.</div>` : ""}</div>`;
+    ${st.penjelasan ? `<div class="penjelasan"><b>💡 Penjelasan singkat</b><div>${fmt(st.penjelasan)}</div></div>`
+      : st.status !== "benar" ? `<div class="ket" style="margin-top:6px">💡 Baca lagi materi bab ini atau tanyakan ke ustadz.</div>` : ""}</div>`;
   $("detail-soal").scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 function selesai() { S.murid = null; S.soal = []; S.token = ""; S.rinci = null; pilihSesi(S.sesi.id); }

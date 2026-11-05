@@ -24,7 +24,7 @@
 <link rel="stylesheet" href="src/hp.css?v=2">
 <link rel="stylesheet" href="src/kuliah.css?v=6">
 <link rel="stylesheet" href="src/modul-baca.css?v=3">
-<link rel="stylesheet" href="src/ujian.css?v=2">
+<link rel="stylesheet" href="src/ujian.css?v=3">
 
 <script>
 // Logo gagal dimuat → coba logo bawaan; kalau bawaan pun gagal, tampilkan ikon 🎓 (bukan huruf "G").
@@ -360,6 +360,10 @@ span[onclick*="aktifkanKembali" i]{color:var(--ok);}
 .ma-subgrup-label{font-size:11px;font-weight:800;letter-spacing:.03em;color:var(--text-secondary);text-transform:uppercase;margin:12px 0 8px;}
 .ma-slot-row{display:flex;flex-wrap:wrap;align-items:flex-start;gap:24px;}
 .ma-slot{flex:0 0 auto;}
+.ma-slot-sub{border:1px solid rgba(var(--sub-rgb),.22);background:linear-gradient(160deg,rgba(var(--sub-rgb),.07),transparent 70%);border-radius:16px;padding:8px 10px 10px;}
+.ma-sub-label{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:rgb(var(--sub-rgb));margin-bottom:8px;}
+.ma-sub-label span{width:24px;height:24px;border-radius:8px;display:grid;place-items:center;background:rgba(var(--sub-rgb),.14);font-size:13px;}
+.ma-sub-label small{margin-left:auto;font-size:10.5px;font-weight:700;color:var(--text-secondary);background:rgba(var(--sub-rgb),.1);padding:2px 7px;border-radius:99px;}
 .ma-rak{display:flex;flex-wrap:wrap;gap:16px;padding:4px 2px 14px;}
 .ma-book{width:118px;flex-shrink:0;cursor:pointer;}
 .ma-book-cover{position:relative;width:118px;height:160px;border-radius:10px;background:var(--surface);background-size:cover;background-position:center;box-shadow:3px 3px 10px var(--neu-dark), -3px -3px 10px var(--neu-light);border:1px solid var(--border-soft);overflow:hidden;transition:transform .18s ease, box-shadow .18s ease;display:flex;align-items:center;justify-content:center;}
@@ -8855,7 +8859,31 @@ async function renderModulAjar() {
 }
 // Satu baris rak untuk satu Mapel dalam satu Kelas: nama mapel + jejeran sampul buku (0 atau lebih),
 // plus tombol "+ Tambah" khusus admin untuk mengunggah buku baru ke slot Kelas+Mapel ini.
+// Mapel gabungan di data (mis. "Geografi/Sosiologi/Ek", "PPKN/Sejarah") tetap SATU mapel untuk jadwal & rapor,
+// tapi rak bukunya dipecah per sub-mapel supaya mudah dicari. Buku masuk ke sub-mapel yang namanya
+// muncul di judul buku (mis. "Ekonomi - Bab 1" → Ekonomi); yang tidak cocok masuk "Lainnya".
+const MA_SUB_NAMA = ["Geografi", "Sosiologi", "Ekonomi", "Sejarah", "PPKN", "Seni Budaya", "Biologi", "Kimia", "Fisika"];
+const MA_SUB_GAYA = { Geografi: ["🌍", "14,116,144"], Sosiologi: ["👥", "124,58,237"], Ekonomi: ["💰", "5,150,105"], Sejarah: ["🏛️", "180,83,9"], PPKN: ["🇮🇩", "220,38,38"], "Seni Budaya": ["🎨", "219,39,119"], Biologi: ["🧬", "22,163,74"], Kimia: ["⚗️", "37,99,235"], Fisika: ["⚛️", "79,70,229"], Lainnya: ["📚", "100,116,139"] };
+function _maSubMapel(namaMapel) {
+  const bagian = String(namaMapel || "").split("/").map((x) => x.trim()).filter(Boolean);
+  if (bagian.length < 2) return null;
+  return bagian.map((b) => MA_SUB_NAMA.find((n) => n.toLowerCase().startsWith(b.toLowerCase().slice(0, Math.max(2, Math.min(b.length, 4))))) || b);
+}
+function _maSubDariJudul(judul, subs) {
+  const j = String(judul || "").toLowerCase();
+  return subs.find((n) => j.includes(n.toLowerCase()) || j.includes(n.toLowerCase().slice(0, 4))) || null;
+}
 function slotModulHtml(slot, bukuList) {
+  const subs = _maSubMapel(slot.nama_mapel);
+  if (subs && slot.kelas_id !== "umum") {
+    const isi = subs.map((n) => [n, bukuList.filter((m) => _maSubDariJudul(m.judul, subs) === n)]);
+    const lain = bukuList.filter((m) => !_maSubDariJudul(m.judul, subs));
+    if (lain.length) isi.push(["Lainnya", lain]);
+    return isi.map(([n, buku]) => {
+      const [ikon, rgb] = MA_SUB_GAYA[n] || MA_SUB_GAYA.Lainnya;
+      return slotModulHtml({ ...slot, nama_mapel: n, _sub: { ikon, rgb, induk: slot.nama_mapel, awalJudul: n === "Lainnya" ? "" : n + " - Bab " } }, buku);
+    }).join("");
+  }
   const kartuBuku = bukuList.map((m) => {
     const ikonFile = _jenisFileModul({ name: m.file_nama || "" }) === "pptx" ? "📊" : "📘";
     return `
@@ -8877,12 +8905,13 @@ function slotModulHtml(slot, bukuList) {
     </div>`;
   }).join("");
   const tambahTile = isAdmin() ? `
-    <div class="ma-book-add" onclick="bukaModalUploadModul('${slot.kelas_id}','${slot.mapel_id}')">
+    <div class="ma-book-add" onclick="bukaModalUploadModul('${slot.kelas_id}','${slot.mapel_id}'${slot._sub && slot._sub.awalJudul ? `,'${slot._sub.awalJudul}'` : ""})">
       <span class="ma-book-icon">➕</span><span>${t("tambah")}</span>
     </div>` : "";
   const kosong = (!bukuList.length && !isAdmin()) ? `<div class="ma-slot-kosong">${t("belumAdaModul")}</div>` : "";
-  return `<div class="ma-slot">
-    <div style="font-size:11.5px;font-weight:700;color:var(--text-secondary);margin-bottom:6px;">${escapeHtml(slot.nama_mapel)}</div>
+  return `<div class="ma-slot${slot._sub ? " ma-slot-sub" : ""}" ${slot._sub ? `style="--sub-rgb:${slot._sub.rgb}" title="Bagian dari mapel ${escapeHtml(slot._sub.induk)}"` : ""}>
+    ${slot._sub ? `<div class="ma-sub-label"><span>${slot._sub.ikon}</span>${escapeHtml(slot.nama_mapel)}<small>${bukuList.length} buku</small></div>`
+      : `<div style="font-size:11.5px;font-weight:700;color:var(--text-secondary);margin-bottom:6px;">${escapeHtml(slot.nama_mapel)}</div>`}
     ${kosong || `<div class="ma-rak">${kartuBuku}${tambahTile}</div>`}
   </div>`;
 }
@@ -8892,7 +8921,7 @@ function unduhModulAjar(fileUrl) {
 }
 
 // ── Unggah Modul (khusus admin) ──
-function bukaModalUploadModul(kelasIdAwal, mapelIdAwal) {
+function bukaModalUploadModul(kelasIdAwal, mapelIdAwal, judulAwal) {
   if (!isAdmin()) { toast(t("hanyaAdminHapus"), "err"); return; }
   if (!MODUL_AJAR_PETA_CACHE.length) { toast(t("belumAdaJadwalUntukModul"), "err"); return; }
   const kelasUnik = Array.from(new Map(MODUL_AJAR_PETA_CACHE.map((p) => [p.kelas_id, p])).values())
@@ -8910,7 +8939,7 @@ function bukaModalUploadModul(kelasIdAwal, mapelIdAwal) {
       <div id="mf-kelas-lain" style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;"></div></div>
     </div>
     <div class="field"><label class="form-label" data-i18n="judulModulLabel">Judul (opsional)</label>
-      <input id="mf-judul" class="input" placeholder="${t("judulModulPlaceholder")}"/>
+      <input id="mf-judul" class="input" placeholder="${t("judulModulPlaceholder")}" value="${escapeHtml(judulAwal || "")}"/>
     </div>
     <div class="field">
       <label class="form-label">File Modul <span style="font-size:10.5px;color:var(--text-secondary);">(PDF atau PPT/PPTX, maks ${_MODUL_MAKS_MB}MB)</span></label>
@@ -15967,12 +15996,12 @@ async function handleImportSiswa(evt) {
 </script>
 <script src="src/kas.js?v=3"></script>
 <script src="src/kuliah.js?v=19"></script>
-<script src="src/modul-baca.js?v=3"></script>
+<script src="src/modul-baca.js?v=4"></script>
 <script src="src/kesimpulan.js?v=2"></script>
 <script src="src/profil.js?v=4"></script>
 <script src="src/kaldik-desain.js?v=5"></script>
-<script src="src/ujian.js?v=2"></script>
-<script src="src/ujian-editor.js?v=1"></script>
+<script src="src/ujian.js?v=3"></script>
+<script src="src/ujian-editor.js?v=2"></script>
 <script src="src/jurnal-otomatis.js?v=1"></script>
 <script src="src/hp.js?v=2"></script>
 </body>
