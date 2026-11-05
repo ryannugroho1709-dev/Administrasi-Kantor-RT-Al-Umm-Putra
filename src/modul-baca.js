@@ -57,7 +57,7 @@ function bukaModulAjar(id, mode) {
         ${tombol("unduh", "⬇️", "Unduh file")}
       </div>
     </div>
-    <div class="mv-stage"><div class="mv-page"><canvas class="mv-cv"></canvas><canvas class="mv-ink"></canvas><div class="mv-laser"></div></div><div class="mv-tirai"></div>
+    <div class="mv-stage"><div class="mv-page"><canvas class="mv-cv"></canvas><canvas class="mv-ink"></canvas><div class="mv-laser"></div></div><div class="mv-tirai"><canvas class="mv-papan"></canvas><div class="mv-papan-info">✏️ Papan tulis — pilih pena lalu coret · E hapus · tekan ⬛/⬜ lagi untuk kembali ke slide</div></div>
       <div class="mv-muat">${loadingHTML("Membuka modul…")}</div></div>
     <div class="mv-next mv-pdf"><small>Berikutnya</small><canvas></canvas></div>
     <aside class="mv-panel" hidden></aside>
@@ -105,10 +105,10 @@ function _mvBukaPpt(el) {
 // ── Render halaman ke layar utama (+ jendela proyektor bila terbuka) ──
 function _mvTarget() {
   const el = document.getElementById("mv"); if (!el) return [];
-  const t = [{ win: window, stage: el.querySelector(".mv-stage"), page: el.querySelector(".mv-page"), cv: el.querySelector(".mv-cv"), ink: el.querySelector(".mv-ink"), laser: el.querySelector(".mv-laser"), tirai: el.querySelector(".mv-tirai"), utama: true }];
+  const t = [{ win: window, stage: el.querySelector(".mv-stage"), page: el.querySelector(".mv-page"), cv: el.querySelector(".mv-cv"), ink: el.querySelector(".mv-ink"), laser: el.querySelector(".mv-laser"), tirai: el.querySelector(".mv-tirai"), papan: el.querySelector(".mv-papan"), utama: true }];
   if (MV.proj && !MV.proj.closed) {
     const d = MV.proj.document;
-    if (d.querySelector(".cv")) t.push({ win: MV.proj, stage: d.querySelector(".st"), page: d.querySelector(".pg"), cv: d.querySelector(".cv"), ink: d.querySelector(".ink"), laser: d.querySelector(".las"), tirai: d.querySelector(".tir") });
+    if (d.querySelector(".cv")) t.push({ win: MV.proj, stage: d.querySelector(".st"), page: d.querySelector(".pg"), cv: d.querySelector(".cv"), ink: d.querySelector(".ink"), laser: d.querySelector(".las"), tirai: d.querySelector(".tir"), papan: d.querySelector(".pap") });
   }
   return t;
 }
@@ -128,8 +128,9 @@ async function _mvRender() {
     if (id !== MV.renderId) return;
     [tg.cv, tg.ink].forEach((c) => { c.width = off.width; c.height = off.height; c.style.width = off.width / dpr + "px"; c.style.height = off.height / dpr + "px"; });
     tg.cv.getContext("2d").drawImage(off, 0, 0);
-    _mvGambarCoret(tg);
     tg.tirai.className = (tg.utama ? "mv-tirai " : "tir ") + MV.layar;
+    if (MV.layar) { const l = MV.layar; MV.layar = ""; _mvGambarCoret(tg); MV.layar = l; }
+    _mvGambarCoret(tg);
   }
   MV.dikunjungi.add(MV.hal);
   _mvLS("maHal:" + MV.m.id, MV.hal);
@@ -158,19 +159,28 @@ function _mvKe(n) {
   if (!MV.doc) return;
   n = Math.max(1, Math.min(MV.total, Math.round(n) || 1));
   if (n === MV.hal) { const inp = document.querySelector("#mv .mv-no input"); if (inp) inp.value = n; return; }
-  MV.hal = n; MV.layar = ""; _mvRender();
+  MV.hal = n; MV.layar = ""; document.getElementById("mv")?.classList.remove("mv-papan-aktif"); _mvRender();
 }
 
 // ── Coretan (pena/stabilo) disimpan per halaman dalam koordinat 0..1 → ikut tampil di proyektor ──
+const _mvKunciCoret = () => (MV.layar ? "papan-" + MV.layar : MV.hal);
+// Kanvas papan mengikuti ukuran layar (tirai); dipanggil saat papan dibuka / layar berubah ukuran.
+function _mvUkurPapan(tg) {
+  if (!tg.papan || !MV.layar) return;
+  const dpr = Math.min(tg.win.devicePixelRatio || 1, 2), W = Math.round(tg.tirai.clientWidth * dpr), H = Math.round(tg.tirai.clientHeight * dpr);
+  if (tg.papan.width !== W || tg.papan.height !== H) { tg.papan.width = W; tg.papan.height = H; }
+}
 function _mvGambarCoret(tg, hanyaTerakhir) {
-  const ctx = tg.ink.getContext("2d"), W = tg.ink.width, H = tg.ink.height;
-  const daftar = (MV.coret[MV.hal] || []).concat(MV.garis ? [MV.garis] : []);
+  const kanvas = MV.layar && tg.papan ? tg.papan : tg.ink;
+  if (MV.layar) _mvUkurPapan(tg);
+  const ctx = kanvas.getContext("2d"), W = kanvas.width, H = kanvas.height;
+  const daftar = (MV.coret[_mvKunciCoret()] || []).concat(MV.garis ? [MV.garis] : []);
   if (!hanyaTerakhir) ctx.clearRect(0, 0, W, H);
   (hanyaTerakhir ? daftar.slice(-1) : daftar).forEach((g) => {
     if (g.pts.length < 1) return;
     ctx.save();
     ctx.globalAlpha = g.alat === "stabilo" ? 0.32 : 1;
-    ctx.strokeStyle = g.warna; ctx.lineWidth = (g.alat === "stabilo" ? 0.022 : 0.0045) * W;
+    ctx.strokeStyle = g.warna; ctx.lineWidth = (g.alat === "stabilo" ? 0.022 : 0.0045) * (MV.layar ? Math.min(W, H) * 1.5 : W);
     ctx.lineCap = "round"; ctx.lineJoin = "round";
     if (hanyaTerakhir && g.pts.length > 1) { const a = g.pts[g.pts.length - 2], b = g.pts[g.pts.length - 1]; if (g.alat === "stabilo") { ctx.restore(); return _mvGambarCoret(tg); } ctx.beginPath(); ctx.moveTo(a[0] * W, a[1] * H); ctx.lineTo(b[0] * W, b[1] * H); ctx.stroke(); ctx.restore(); return; }
     ctx.beginPath(); ctx.moveTo(g.pts[0][0] * W, g.pts[0][1] * H);
@@ -194,8 +204,20 @@ function _mvPasangPointer(el) {
     MV.garis.pts.push(pos(e));
     _mvTarget().forEach((tg) => _mvGambarCoret(tg, true));
   });
-  const selesai = () => { if (!MV.garis) return; (MV.coret[MV.hal] = MV.coret[MV.hal] || []).push(MV.garis); MV.garis = null; };
+  const selesai = () => { if (!MV.garis) return; const k = _mvKunciCoret(); (MV.coret[k] = MV.coret[k] || []).push(MV.garis); MV.garis = null; };
   ink.addEventListener("pointerup", selesai); ink.addEventListener("pointercancel", selesai);
+  const papan = el.querySelector(".mv-papan");
+  const posP = (e) => { const r = papan.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; };
+  papan.addEventListener("pointerdown", (e) => {
+    if (MV.alat === "laser") return;
+    if (!MV.alat) _mvAlat("pena");
+    e.preventDefault(); e.stopPropagation(); papan.setPointerCapture(e.pointerId);
+    MV.garis = { alat: MV.alat, warna: MV.alat === "stabilo" && MV.warna === "#ef4444" ? "#facc15" : MV.warna, pts: [posP(e)] };
+    _mvTarget().forEach((tg) => _mvGambarCoret(tg));
+  });
+  papan.addEventListener("pointermove", (e) => { if (!MV.garis) return; MV.garis.pts.push(posP(e)); _mvTarget().forEach((tg) => _mvGambarCoret(tg, true)); });
+  papan.addEventListener("pointerup", selesai); papan.addEventListener("pointercancel", selesai);
+  papan.addEventListener("click", (e) => e.stopPropagation()); // jangan pindah slide saat mencoret papan
   ink.addEventListener("pointerleave", () => { if (MV.alat === "laser") _mvLaser(null); });
   // Tanpa alat: klik sisi kanan = maju, kiri = mundur (mode presentasi); geser kiri/kanan di layar sentuh
   stage.addEventListener("click", (e) => {
@@ -226,7 +248,15 @@ function _mvAlat(a) {
 }
 function _mvLayar(jenis) {
   MV.layar = MV.layar === jenis ? "" : jenis;
-  _mvTarget().forEach((tg) => tg.tirai.className = (tg.utama ? "mv-tirai " : "tir ") + MV.layar);
+  const el = document.getElementById("mv");
+  if (MV.layar) {
+    const gelap = ["#111827", "#000000", "#1f2937"], terang = ["#ffffff", "#f8fafc"];
+    const ganti = MV.layar === "hitam" && gelap.includes(MV.warna) ? "#ffffff" : MV.layar === "putih" && terang.includes(MV.warna) ? "#111827" : null;
+    if (ganti && el) { const w = [...el.querySelectorAll(".mv-warna i")].find((x) => x.dataset.w.toLowerCase() === ganti); if (w) w.click(); else MV.warna = ganti; }
+    if (!MV.alat || MV.alat === "laser") _mvAlat("pena");
+  }
+  el?.classList.toggle("mv-papan-aktif", !!MV.layar);
+  _mvTarget().forEach((tg) => { tg.tirai.className = (tg.utama ? "mv-tirai " : "tir ") + MV.layar; _mvGambarCoret(tg); });
 }
 
 // ── Jendela proyektor: guru geser ke layar proyektor/TV, laptop jadi tampilan presenter ──
@@ -239,9 +269,9 @@ function _mvBukaProyektor() {
     html,body{margin:0;height:100%;background:#000;overflow:hidden;cursor:none}
     .st{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}.pg{position:relative}.pg canvas{display:block}
     .ink{position:absolute;left:0;top:0}.las{position:absolute;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:#ff2d2d;box-shadow:0 0 16px 7px rgba(255,40,40,.55);display:none}
-    .tir{position:fixed;inset:0;display:none}.tir.hitam{display:block;background:#000}.tir.putih{display:block;background:#fff}
+    .tir{position:fixed;inset:0;display:none}.pap{position:absolute;inset:0;width:100%;height:100%}.tir.hitam{display:block;background:radial-gradient(ellipse at 50% 40%,#1f3b30,#0f241c 75%)}.tir.putih{display:block;background:#fff}
     .fs{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);font:600 14px system-ui,sans-serif;color:#fff;background:rgba(255,255,255,.16);padding:10px 16px;border-radius:999px;cursor:pointer;text-align:center}
-  </style></head><body><div class="st"><div class="pg"><canvas class="cv"></canvas><canvas class="ink"></canvas><div class="las"></div></div></div><div class="tir"></div>
+  </style></head><body><div class="st"><div class="pg"><canvas class="cv"></canvas><canvas class="ink"></canvas><div class="las"></div></div></div><div class="tir"><canvas class="pap"></canvas></div>
   <div class="fs">1) Geser jendela ini ke layar proyektor/TV &nbsp; 2) Klik di sini untuk layar penuh</div></body></html>`);
   w.document.close();
   const fs = w.document.querySelector(".fs");
@@ -273,7 +303,7 @@ function _mvKey(e) {
   else if (/^[pP]$/.test(k)) _mvAlat("pena");
   else if (/^[hH]$/.test(k)) _mvAlat("stabilo");
   else if (/^[lL]$/.test(k)) _mvAlat("laser");
-  else if (/^[eE]$/.test(k)) { delete MV.coret[MV.hal]; _mvTarget().forEach((tg) => _mvGambarCoret(tg)); }
+  else if (/^[eE]$/.test(k)) { delete MV.coret[_mvKunciCoret()]; _mvTarget().forEach((tg) => _mvGambarCoret(tg)); }
   else if (/^[fF]$/.test(k)) _mvLayarPenuh(!document.fullscreenElement);
   else if (k === "Escape") { if (MV.alat) _mvAlat(MV.alat); else if (MV.layar) _mvLayar(MV.layar); else if (!document.fullscreenElement) _mvTutup(); }
 }
@@ -285,7 +315,7 @@ function _mvKlikBar(e) {
   else if (a === "next") _mvKe(MV.hal + 1);
   else if (a === "zin" || a === "zout") { MV.zoom = Math.max(0.5, Math.min(3, MV.zoom * (a === "zin" ? 1.2 : 1 / 1.2))); _mvRender(); }
   else if (["pena", "stabilo", "laser"].includes(a)) _mvAlat(a);
-  else if (a === "hapus") { delete MV.coret[MV.hal]; _mvTarget().forEach((tg) => _mvGambarCoret(tg)); }
+  else if (a === "hapus") { delete MV.coret[_mvKunciCoret()]; _mvTarget().forEach((tg) => _mvGambarCoret(tg)); }
   else if (a === "hitam" || a === "putih") _mvLayar(a);
   else if (a === "proyektor") _mvBukaProyektor();
   else if (a === "tanda" || a === "catatan" || a === "kuis") _mvPanel(MV.panel === a ? null : a);
