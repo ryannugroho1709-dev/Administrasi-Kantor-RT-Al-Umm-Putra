@@ -34,7 +34,7 @@ function bukaModulAjar(id, mode) {
   _mvTutup();
   const pdf = _jenisFileModul({ name: (m.file_nama || m.file_url || "").split("?")[0] }) !== "pptx";
   Object.assign(MV, { m, mode: mode || "baca", alat: null, coret: {}, garis: null, layar: "", zoom: 1, mulai: Date.now(), dikunjungi: new Set(), doc: null, total: 0, pdf,
-    meta: {}, panel: null, tandaAktif: null, kuis: null, pernahPresentasi: mode === "presentasi" });
+    meta: {}, panel: null, tandaAktif: null, kuis: null, pernahPresentasi: mode === "presentasi", lamaHal: {}, halAktif: null, halSejak: 0 });
   MV.hal = pdf ? Math.max(1, +(_mvLS("maHal:" + m.id) || 1)) : 1;
   if (MV.mode === "presentasi") MV.hal = 1;
   const el = document.createElement("div");
@@ -138,6 +138,7 @@ async function _mvRender() {
     _mvGambarCoret(tg);
   }
   MV.dikunjungi.add(MV.hal);
+  _mvCatatLama(MV.hal);
   _mvLS("maHal:" + MV.m.id, MV.hal);
   const el = document.getElementById("mv");
   if (el) {
@@ -362,6 +363,45 @@ function _mvTimer() {
   const s = Math.floor((Date.now() - MV.mulai) / 1000);
   t.textContent = String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
 }
+// Lama tiap halaman dibuka (ms) — patokan "halaman yang diajarkan" untuk jurnal
+function _mvCatatLama(halBaru) {
+  const now = Date.now();
+  if (MV.halAktif != null && MV.halAktif !== halBaru) MV.lamaHal[MV.halAktif] = (MV.lamaHal[MV.halAktif] || 0) + (now - MV.halSejak);
+  if (MV.halAktif !== halBaru) { MV.halAktif = halBaru; MV.halSejak = now; }
+  if (halBaru == null) MV.halAktif = null;
+}
+// Judul/subjudul halaman dari teks PDF (huruf terbesar, atau baris bernomor seperti "1. Pengertian …").
+// PDF hasil gambar/scan tidak punya teks → hasil kosong (lalu dipakai penanda / nomor halaman).
+const _MV_BUKAN_JUDUL = /^(ringkasan materi|apersepsi|daftar isi|kata pengantar|tujuan pembelajaran|dilarang|undang-undang|sumber:|keterangan|info tambahan|pindai|evaluasi|refleksi)/i;
+async function _mvJudulHalaman(doc, halaman) {
+  const hasil = [];
+  for (const h of halaman.slice(0, 15)) {
+    try {
+      const tc = await (await doc.getPage(h)).getTextContent();
+      const baris = [];
+      tc.items.forEach((it) => {
+        const t = String(it.str || "").trim(); if (!t) return;
+        const y = Math.round(it.transform[5]), size = Math.hypot(it.transform[2], it.transform[3]);
+        const b = baris.find((x) => Math.abs(x.y - y) <= 2);
+        if (b) { b.t += " " + t; b.size = Math.max(b.size, size); } else baris.push({ y, t, size });
+      });
+      const ok = baris.map((b) => ({ ...b, t: b.t.replace(/\s+/g, " ").trim() }))
+        .filter((b) => b.t.length >= 4 && b.t.length <= 80 && /[a-z]/i.test(b.t) && !_MV_BUKAN_JUDUL.test(b.t));
+      if (!ok.length) continue;
+      // judul = pendek (≤ 8 kata), tidak diakhiri titik/koma, dan hurufnya lebih besar dari teks isi
+      // (ukuran median halaman) — atau bernomor seperti "1. Pengertian …" / "B. Pertumbuhan …"
+      const miripJudul = (b) => b.t.length <= 60 && b.t.split(" ").length <= 8 && !/[.,;:]$/.test(b.t);
+      const urut = ok.map((b) => b.size).sort((a, b) => a - b), median = urut[Math.floor(urut.length / 2)] || 0;
+      const besar = ok.filter((b) => miripJudul(b) && b.size > median * 1.12);
+      const bernomor = ok.filter((b) => miripJudul(b) && /^([0-9]{1,2}|[A-H])[.)]\s+[A-Z]/.test(b.t));
+      [...besar.slice(0, 1), ...bernomor.slice(0, 2)].forEach((b) => {
+        const j = b.t.replace(/^([0-9]{1,2}|[A-H])[.)]\s+/, "");
+        if (!hasil.some((x) => x.toLowerCase() === j.toLowerCase())) hasil.push(j);
+      });
+    } catch (e) {}
+  }
+  return hasil.slice(0, 6);
+}
 function _mvLS(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, String(v)); } catch (e) { return null; } }
 
 function _mvTutup() {
@@ -369,7 +409,12 @@ function _mvTutup() {
   if (!el) return;
   // Catat presentasi (≥ 2 menit) → ditawarkan sebagai isian "Materi Pokok" saat mengisi jurnal kelas
   if (MV.m && MV.dikunjungi.size && Date.now() - MV.mulai > 120000) {
-    const hal = [...MV.dikunjungi].sort((a, b) => a - b);
+    _mvCatatLama(null);
+    // halaman yang diajarkan = dibuka ≥ 20 detik (halaman yang hanya dilewati tidak dihitung)
+    const lama = Object.entries(MV.lamaHal || {}).map(([h, ms]) => [+h, ms]);
+    const diajar = lama.filter(([, ms]) => ms >= 20000).map(([h]) => h).sort((a, b) => a - b);
+    const hal = diajar.length ? diajar : [...MV.dikunjungi].sort((a, b) => a - b);
+    const terlama = lama.sort((a, b) => b[1] - a[1]).slice(0, 5).map(([h, ms]) => ({ h, mnt: Math.round(ms / 6000) / 10 }));
     // tanpa penanda aktif: pakai penanda pertemuan yang paling banyak halamannya ikut dibuka
     let tg = MV.tandaAktif;
     if (!tg) {
@@ -378,8 +423,32 @@ function _mvTutup() {
       tg = tanda.filter((x) => skor(x) > 0).sort((a, b) => skor(b) - skor(a))[0] || null;
     }
     let log = []; try { log = JSON.parse(localStorage.getItem("maPresentasi") || "[]"); } catch (e) {}
-    log.unshift({ kelas_id: MV.m.kelas_id, mapel_id: MV.m.mapel_id, judul: MV.m.judul + (tg ? " — " + tg.judul : ""), dari: tg ? tg.dari : hal[0], sampai: tg ? tg.sampai : hal[hal.length - 1], t: Date.now(), mulai: MV.mulai, halaman: hal.length });
+    log.unshift({ kelas_id: MV.m.kelas_id, mapel_id: MV.m.mapel_id, judul: MV.m.judul + (tg ? " — " + tg.judul : ""), dari: tg ? tg.dari : hal[0], sampai: tg ? tg.sampai : hal[hal.length - 1], t: Date.now(), mulai: MV.mulai, halaman: hal.length,
+      buku: MV.m.judul, tanda: tg ? tg.judul : null, terlama, judulHal: [] });
     try { localStorage.setItem("maPresentasi", JSON.stringify(log.slice(0, 15))); } catch (e) {}
+    // judul halaman dibaca di belakang layar, lalu disimpan ke catatan presentasi yang sama
+    const doc = MV.doc, kunciT = log[0].t;
+    window._mvJanjiJudul = doc ? _mvJudulHalaman(doc, hal).then((judul) => {
+      try {
+        const l = JSON.parse(localStorage.getItem("maPresentasi") || "[]"), x = l.find((y) => y.t === kunciT);
+        if (x) { x.judulHal = judul; localStorage.setItem("maPresentasi", JSON.stringify(l)); }
+      } catch (e) {}
+      return judul;
+    }) : Promise.resolve([]);
+    // gambar kecil halaman yang paling lama dibuka → membantu guru mengingat & menulis materi
+    window._mvJanjiThumb = doc ? (async () => {
+      const out = [];
+      for (const x of terlama.slice(0, 4)) {
+        try {
+          const pg = await doc.getPage(x.h), v1 = pg.getViewport({ scale: 1 }), v = pg.getViewport({ scale: 220 / v1.width });
+          const c = document.createElement("canvas"); c.width = v.width; c.height = v.height;
+          await pg.render({ canvasContext: c.getContext("2d"), viewport: v }).promise;
+          out.push({ ...x, src: c.toDataURL("image/jpeg", 0.7) });
+        } catch (e) {}
+      }
+      return out;
+    })() : Promise.resolve([]);
+    window._mvTandaBuku = ((MA_META[_maKunciBuku(MV.m.file_url)] || {}).tanda || []).map((x) => x.judul).filter(Boolean);
   }
   if (MV.m) _maCatatStat(MV.m, MV.pernahPresentasi, (Date.now() - MV.mulai) / 60000);
   _mvKuisTutup();

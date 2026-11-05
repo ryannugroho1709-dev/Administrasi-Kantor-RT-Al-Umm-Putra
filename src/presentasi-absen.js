@@ -122,14 +122,29 @@ _mvTutup = function () {
   const sesi = _paSesi(j); if (sesi && sesi.jurnal_id) return;
   setTimeout(() => _paTawarJurnal(m, j, sesi), 300);
 };
-function _paTawarJurnal(m, j, sesi) {
+async function _paTawarJurnal(m, j, sesi) {
+  try { await Promise.race([window._mvJanjiJudul, new Promise((r) => setTimeout(r, 4000))]); } catch (e) {}
+  let thumbs = [];
+  try { thumbs = (await Promise.race([window._mvJanjiThumb, new Promise((r) => setTimeout(() => r([]), 4000))])) || []; } catch (e) {}
   const absen = _paBaca(j.id), log = (() => { try { return JSON.parse(localStorage.getItem("maPresentasi") || "[]")[0]; } catch (e) { return null; } })();
+  const usul = log && typeof _joTeksPresentasi === "function" ? _joTeksPresentasi(log) : (m.judul || "");
+  const pilihan = log ? [...new Set([
+    ...(log.judulHal || []).map((x) => `${log.buku || m.judul}: ${x}`),
+    log.tanda ? `${log.buku || m.judul}: ${log.tanda}` : null,
+    ...(window._mvTandaBuku || []).map((x) => `${log.buku || m.judul}: ${x}`),
+    `${log.buku || m.judul} (hal. ${log.dari}${log.sampai !== log.dari ? "–" + log.sampai : ""})`,
+  ].filter(Boolean))].filter((x) => x !== usul).slice(0, 6) : [];
   const hadir = absen ? Object.values(absen.status).filter((s) => s === "hadir").length : null, total = absen ? Object.keys(absen.status).length : null;
   const bisa = sesi && sesi.jam_masuk;
   openModal(`<h3>📝 Isi jurnal sekarang?</h3>
     <div style="font-size:12.5px;color:var(--text-secondary);margin-bottom:12px">${escapeHtml(j.mapel?.nama_mapel || "")} · ${escapeHtml(j.kelas?.nama_kelas || "")}</div>
     <div class="pa-ringkas-jurnal">
-      <div>📖 <b>Materi</b><span>${escapeHtml(log ? `${log.judul}${log.sampai > 1 ? ` (hal. ${log.dari}–${log.sampai})` : ""}` : m.judul || "-")}</span></div>
+      <div>📖 <b>Materi yang diajarkan</b> <small style="color:var(--text-secondary)">— periksa & ubah bila perlu</small>
+        <textarea id="pa-materi" class="input" rows="2" style="margin-top:4px;font-size:13px">${escapeHtml(usul)}</textarea>
+        ${pilihan.length ? `<div class="pa-chips">${pilihan.map((x) => `<button type="button" onclick="qs('pa-materi').value=this.textContent;_paSimpanMateri()">${escapeHtml(x)}</button>`).join("")}</div>` : ""}
+        ${thumbs.length ? `<small style="color:var(--text-secondary);margin-top:6px">⏱ Halaman yang paling lama Anda buka — tulis judul materinya di atas:</small>
+          <div class="pa-thumbs">${thumbs.map((x) => `<figure><img src="${x.src}" alt=""><figcaption>hal. ${x.h} · ${x.mnt} mnt</figcaption></figure>`).join("")}</div>`
+          : log && (log.terlama || []).length ? `<small style="color:var(--text-secondary);margin-top:4px">⏱ Paling lama dibuka: ${log.terlama.slice(0, 4).map((x) => `hal. ${x.h} (${x.mnt} mnt)`).join(", ")}</small>` : ""}</div>
       <div>📋 <b>Absensi</b><span>${absen ? `${hadir} dari ${total} hadir` : "belum diabsen — semua dianggap hadir"}</span></div>
       <div>🎯 <b>Metode</b><span>mengikuti kebiasaan Anda</span></div>
     </div>
@@ -145,6 +160,8 @@ function _paTawarJurnal(m, j, sesi) {
             + `<button class="btn btn-accent" style="width:100%;margin-top:10px" onclick="closeModal();showPage('riwayat-absen','page-riwayat-absen','menuRiwayatAbsen')">📜 Ke Riwayat Absen</button>`;
         })()}
     <button class="btn btn-outline" style="width:100%;margin-top:8px" onclick="closeModal()">Nanti saja</button>`);
+  qs("pa-materi")?.addEventListener("input", _paSimpanMateri);
+  _paSimpanMateri();
   const bm = qs("pa-masuk-jurnal"); if (bm) bm.onclick = () => _paAbsenMasukLaluJurnal(j);
   const ba = qs("pa-ajukan"); if (ba) ba.onclick = () => _paAjukanHadir(j);
   const b = qs("pa-isi");
@@ -165,6 +182,12 @@ function _paTawarJurnal(m, j, sesi) {
     });
   } catch (e) {}
 })();
+
+// Materi yang dikonfirmasi guru disimpan ke catatan presentasi terakhir → dipakai ⚡ isi jurnal
+function _paSimpanMateri() {
+  const v = (qs("pa-materi")?.value || "").trim(); if (!v) return;
+  try { const l = JSON.parse(localStorage.getItem("maPresentasi") || "[]"); if (l[0]) { l[0].materi = v; localStorage.setItem("maPresentasi", JSON.stringify(l)); } } catch (e) {}
+}
 
 // Dipakai form jurnal: status absen cepat untuk jadwal ini (atau null)
 function _paStatusAbsenCepat(jadwalId, tanggal) { const r = jadwalId ? _paBaca(jadwalId, tanggal) : null; return r ? r.status : null; }

@@ -89,3 +89,15 @@
 .uj-saring select{border:1px solid var(--border-soft,#e3e8ef);border-radius:10px;padding:7px 10px;background:var(--surface,#fff);color:var(--text-primary);font:inherit;font-size:12.5px}
 .uj-grup-judul{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--text-secondary);margin:12px 0 6px;display:flex;align-items:center;gap:6px}
 .uj-grup-judul span{background:rgba(var(--accent-rgb,37,99,235),.12);color:var(--text-primary);border-radius:99px;padding:1px 8px;font-size:10.5px}
+/* ── Ekspor jurnal (jurnal-ekspor.js) ── */
+.je-cepat{display:flex;gap:6px;flex-wrap:wrap;margin:-2px 0 10px}
+.je-cepat button{border:1px solid rgba(37,99,235,.25);background:rgba(37,99,235,.08);color:#1d4ed8;border-radius:999px;padding:5px 11px;font-size:11.5px;font-weight:700;cursor:pointer}
+.je-opsi{display:flex;align-items:center;gap:8px;font-size:13px;padding:10px 12px;border-radius:12px;background:rgba(5,150,105,.08);border:1px solid rgba(5,150,105,.2);cursor:pointer}
+.je-ringkas{font-size:12px;color:var(--text-secondary);margin:10px 0 6px}
+.je-sampul-mini{border:1px solid var(--border-soft,#e3e8ef);border-radius:12px;padding:14px 10px;text-align:center;font-family:'Times New Roman',serif;background:#fff;color:#111;display:flex;flex-direction:column;align-items:center;gap:2px;aspect-ratio:29.7/21;justify-content:center}
+.je-sampul-mini img{width:54px;height:54px;object-fit:contain;margin:6px 0}
+.je-sampul-mini .j1{font-size:15px}.je-sampul-mini .j2{font-size:12px;margin:4px 0}
+.je-sampul-mini b{font-size:11.5px}.je-sampul-mini span{font-size:11px}
+.je-sampul-mini .id{font-size:10.5px;line-height:1.5;margin:4px 0}
+.je-sampul-mini small{font-size:8.5px;line-height:1.4;margin-top:6px}
+.je-atur{margin-top:10px;font-size:12px}.je-atur summary{cursor:pointer;font-weight:700;color:var(--text-secondary)}

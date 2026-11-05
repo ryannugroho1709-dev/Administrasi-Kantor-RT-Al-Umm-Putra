@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="src/kas.css?v=3">
 <link rel="stylesheet" href="src/hp.css?v=2">
 <link rel="stylesheet" href="src/kuliah.css?v=6">
-<link rel="stylesheet" href="src/modul-baca.css?v=7">
-<link rel="stylesheet" href="src/ujian.css?v=4">
+<link rel="stylesheet" href="src/modul-baca.css?v=8">
+<link rel="stylesheet" href="src/ujian.css?v=5">
 
 <script>
 // Logo gagal dimuat → coba logo bawaan; kalau bawaan pun gagal, tampilkan ikon 🎓 (bukan huruf "G").
@@ -1528,7 +1528,7 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
             <div><label class="form-label" data-i18n="mapel">Mapel</label><select id="jg-mapel" class="input" onchange="renderJurnalGuru()"><option value="">— Semua Mapel —</option></select></div>
             <div><label class="form-label" data-i18n="pilihBulan">Pilih Bulan</label><input type="month" id="jg-bulan" class="input" onchange="renderJurnalGuru()"/></div>
           </div>
-          <button class="btn btn-accent" onclick="eksporJurnalWord()">📤 Ekspor Word</button>
+          <button class="btn btn-accent" onclick="bukaEksporJurnal()">📤 Ekspor Word</button>
         </div>
         <div id="jurnal-guru-table"></div>
       </section>
@@ -8425,20 +8425,22 @@ async function renderJurnalGuru() {
     </div>`).join("")}</div>`;
   } catch (e) { console.error(e); target.innerHTML = `<div class="card empty-state">Gagal memuat jurnal.</div>`; }
 }
-function eksporJurnalWord() {
-  if (!JURNAL_GURU_CACHE.length) { toast("Belum ada data jurnal untuk diekspor", "err"); return; }
+// Satu bagian jurnal untuk SATU bulan (judul + identitas + tabel + tanda tangan akhir bulan).
+// Dipakai ekspor 1 bulan maupun gabungan beberapa bulan (lihat src/jurnal-ekspor.js).
+function _htmlJurnalBulan(DATA, bulanVal) {
 
   const semuaGuru = !qs("jg-guru").value;
   const guruNama = semuaGuru
     ? t("semuaGuru")
     : (LOOKUP.guruAll.find((g) => g.id === qs("jg-guru").value)?.nama || "-");
-  const bulanVal = qs("jg-bulan").value; // "YYYY-MM"
   const bulanLabel = namaBulanIndo(bulanVal);
 
   // Hitung semester & tahun ajaran dari bulan yang dipilih
   const [yy, mm] = bulanVal.split("-").map(Number);
-  const semester = mm >= 7 ? "Ganjil" : "Genap";
-  const tahunAjaran = mm >= 7 ? `${yy}/${yy + 1}` : `${yy - 1}/${yy}`;
+  // ikut pengaturan "bulan awal tahun ajaran" (sama seperti Kesimpulan Bulanan); cadangan: Juli
+  const _ta = typeof _kbTahunAjaran === "function" ? _kbTahunAjaran(bulanVal) : null;
+  const semester = _ta ? _ta.semester : (mm >= 7 ? "Ganjil" : "Genap");
+  const tahunAjaran = _ta ? _ta.ta : (mm >= 7 ? `${yy}/${yy + 1}` : `${yy - 1}/${yy}`);
 
   // Metadata sekolah dari STATE.pengaturan
   const namaSekolah = STATE.pengaturan?.nama_pkbm || "PKBM Al Umm Barabai";
@@ -8447,7 +8449,7 @@ function eksporJurnalWord() {
   const lastDayDate = new Date(yy, mm, 0); // mm sudah 1-based, day=0 → akhir bulan sebelumnya → benar
   const tanggalTtd  = lastDayDate.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
   // Ambil program dari kelas di data jurnal (gunakan entri pertama yang punya program)
-  const programKelas = JURNAL_GURU_CACHE.find((j) => j.kelas?.program)?.kelas?.program || "-";
+  const programKelas = DATA.find((j) => j.kelas?.program)?.kelas?.program || "-";
 
   // === STYLE HELPERS ===
   const C = `border:1pt solid #555555;padding:6pt;font-size:10.5pt;`;
@@ -8469,7 +8471,7 @@ function eksporJurnalWord() {
   const theadHtml = `<thead><tr>${headers.map((h) => `<th style="${thS}">${h}</th>`).join("")}</tr></thead>`;
 
   // === BARIS DATA ===
-  const rowsHtml = JURNAL_GURU_CACHE.map((j, i) => {
+  const rowsHtml = DATA.map((j, i) => {
     const kegArr = [];
     if (j.deskripsi_otomatis) kegArr.push(`- ${escapeHtml(j.deskripsi_otomatis)}`);
     if (j.catatan) kegArr.push(`- ${escapeHtml(j.catatan)}`);
@@ -8545,13 +8547,10 @@ function eksporJurnalWord() {
     </table>
     ${footerHtml}`;
 
-  eksporHtmlSebagaiWord(
-    "Jurnal Kegiatan Pembelajaran",
-    html,
-    `Jurnal_${guruNama.replace(/\s+/g, "_")}_${bulanVal}`,
-    { landscape: true, margin: "2cm" }
-  );
+  return html;
 }
+function eksporJurnalWord() { bukaEksporJurnal(); }
+
 
 // ============================================================
 //  MODUL: SILABUS
@@ -16023,15 +16022,16 @@ async function handleImportSiswa(evt) {
 </script>
 <script src="src/kas.js?v=3"></script>
 <script src="src/kuliah.js?v=19"></script>
-<script src="src/modul-baca.js?v=7"></script>
+<script src="src/modul-baca.js?v=8"></script>
 <script src="src/sampul.js?v=1"></script>
-<script src="src/presentasi-absen.js?v=2"></script>
+<script src="src/presentasi-absen.js?v=3"></script>
+<script src="src/jurnal-ekspor.js?v=1"></script>
 <script src="src/kesimpulan.js?v=2"></script>
 <script src="src/profil.js?v=4"></script>
 <script src="src/kaldik-desain.js?v=5"></script>
 <script src="src/ujian.js?v=4"></script>
 <script src="src/ujian-editor.js?v=2"></script>
-<script src="src/jurnal-otomatis.js?v=4"></script>
+<script src="src/jurnal-otomatis.js?v=5"></script>
 <script src="src/hp.js?v=2"></script>
 </body>
 </html>

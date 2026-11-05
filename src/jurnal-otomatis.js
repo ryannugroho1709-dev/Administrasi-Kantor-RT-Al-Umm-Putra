@@ -43,6 +43,19 @@ function _joBuktiPresentasi(p) {
   ta.value = `Lupa absen masuk. Bukti mengajar: presentasi Modul Ajar "${p.judul}"${p.mulai ? ` pukul ${jam(p.mulai)}–${jam(p.t)} WITA` : ` selesai pukul ${jam(p.t)} WITA`}${p.halaman ? `, ${p.halaman} halaman ditampilkan` : ""}.`;
   qsa(".aju-alasan-chip button").forEach((b) => b.classList.toggle("aktif", /lupa absen masuk/i.test(b.textContent)));
 }
+// Teks materi dari presentasi hari ini (kelas & mapel sama). Urutan: materi yang sudah dikonfirmasi guru
+// → judul halaman yang lama dibuka → penanda/halaman. Beberapa presentasi di hari yang sama digabung (urut waktu).
+function _joLogPresentasi(kelasId, mapelId, tgl) {
+  try { return JSON.parse(localStorage.getItem("maPresentasi") || "[]").filter((x) => x.kelas_id === kelasId && x.mapel_id === mapelId && tanggalISO(new Date(x.t)) === tgl).sort((a, b) => a.t - b.t); }
+  catch (e) { return []; }
+}
+function _joTeksPresentasi(p) {
+  if (p.materi) return p.materi;
+  const hal = p.sampai > 1 ? ` (hal. ${p.dari}${p.sampai !== p.dari ? "–" + p.sampai : ""})` : "";
+  if (p.tanda) return `${p.buku || p.judul}: ${p.tanda}${hal}`;
+  if ((p.judulHal || []).length) return `${p.buku || p.judul}: ${p.judulHal.slice(0, 3).join(", ")}${hal}`;
+  return `${p.judul}${hal}`;
+}
 async function isiJurnalOtomatis(ctx, btn) {
   const { sesiId, kelasId, mapelId } = ctx;
   const tgl = ctx.tanggal || tanggalISO();
@@ -50,7 +63,7 @@ async function isiJurnalOtomatis(ctx, btn) {
   const [riwayat, hariIni, ujianHariIni, modul] = await Promise.all([
     _joAman(supa.from("jurnal_kelas").select("materi_pokok,metode_mengajar,tanggal,kelas_id,mapel_id,sesi_id").eq("guru_id", STATE.guruId).lte("tanggal", tgl).order("tanggal", { ascending: false }).limit(40)),
     _joAman(supa.from("jurnal_kelas").select("sesi_id,absensi_siswa(siswa_id,status)").eq("kelas_id", kelasId).eq("tanggal", tgl)),
-    _joAman(supa.from("ujian_sesi").select("mode,bank:ujian_bank(judul,bab,mapel_id)").eq("kelas_id", kelasId).gte("created_at", `${tgl}T00:00:00+08:00`).lte("created_at", `${tgl}T23:59:59+08:00`)),
+    _joAman(supa.from("ujian_sesi").select("id,mode,created_at,bank:ujian_bank(judul,bab,mapel_id)").eq("kelas_id", kelasId).gte("created_at", `${tgl}T00:00:00+08:00`).lte("created_at", `${tgl}T23:59:59+08:00`)),
     _joAman(supa.from("modul_ajar").select("judul,file_url").eq("kelas_id", kelasId).eq("mapel_id", mapelId)),
   ]);
   if (!qs("jurnal-materi")) return; // form sudah ditutup
@@ -59,17 +72,27 @@ async function isiJurnalOtomatis(ctx, btn) {
 
   // ── Materi ──
   const bagian = [];
-  const ujian = ujianHariIni.filter((u) => u.bank && u.bank.mapel_id === mapelId);
+  // Latihan/ujian hanya dihitung bila dibuka di sekitar jam pelajaran ini DAN ada santri yang mengerjakan
+  let jadwal = (STATE.jadwalHariIni || []).find((x) => x.id === ctx.jadwalId);
+  if (!jadwal && ctx.jadwalId) jadwal = (await _joAman(supa.from("jadwal_pelajaran").select("jam_mulai,jam_selesai").eq("id", ctx.jadwalId).limit(1)))[0];
+  const keMenit = (iso) => { const d = new Date(iso); const [h, m] = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Makassar", hour: "2-digit", minute: "2-digit", hour12: false }).format(d).split(":").map(Number); return h * 60 + m; };
+  const jamMenit = (j) => { const [h, m] = String(j || "0:0").split(":").map(Number); return h * 60 + (m || 0); };
+  const ujian = [];
+  for (const u of ujianHariIni.filter((x) => x.bank && x.bank.mapel_id === mapelId)) {
+    if (jadwal && jadwal.jam_mulai) { const t = keMenit(u.created_at); if (t < jamMenit(jadwal.jam_mulai) - 30 || t > jamMenit(jadwal.jam_selesai) + 15) continue; }
+    let peserta = 0;
+    try { const r = await supa.rpc("ujian_status_kelas", { p_sesi: u.id }); peserta = Object.keys(r.data || {}).length; } catch (e) {}
+    if (peserta > 0) ujian.push(u);
+  }
   // satu baris per bank soal; kalau hari ini ada ujian & latihan dari bank yang sama, cukup "Ujian"
-  [...new Set(ujian.map((u) => u.bank.judul))].forEach((judul) => bagian.push(`${ujian.some((u) => u.bank.judul === judul && u.mode === "ujian") ? "Ujian" : "Latihan soal"} ${judul}`));
-  if (ujian.length) sumber.push("ujian/latihan hari ini");
+  const bagianUjian = [...new Set(ujian.map((u) => u.bank.judul))].map((judul) => `${ujian.some((u) => u.bank.judul === judul && u.mode === "ujian") ? "Ujian" : "Latihan soal"} ${judul}`);
+  if (ujian.length) sumber.push("ujian/latihan yang dikerjakan santri di jam ini");
 
   let inti = "";
   try {
-    const log = JSON.parse(localStorage.getItem("maPresentasi") || "[]");
-    const p = log.find((x) => x.kelas_id === kelasId && x.mapel_id === mapelId && tanggalISO(new Date(x.t)) === tgl);
-    if (p) _joBuktiPresentasi(p);
-    if (p) { inti = `${p.judul}${p.sampai > 1 ? ` (hal. ${p.dari}${p.sampai !== p.dari ? "–" + p.sampai : ""})` : ""}`; sumber.push("presentasi Modul Ajar"); }
+    const logs = _joLogPresentasi(kelasId, mapelId, tgl);
+    if (logs.length) _joBuktiPresentasi(logs[logs.length - 1]);
+    if (logs.length) { inti = [...new Set(logs.map(_joTeksPresentasi))].join("; "); sumber.push(logs.some((x) => x.materi) ? "materi yang Anda konfirmasi setelah presentasi" : "halaman yang lama dibuka saat presentasi"); }
   } catch (e) {}
   if (!inti && modul.length && typeof _maMuatMeta === "function") {
     // penanda pertemuan pertama di buku yang belum pernah muncul di jurnal kelas & mapel ini
@@ -82,15 +105,24 @@ async function isiJurnalOtomatis(ctx, btn) {
   }
   // lanjutan dari jurnal terakhir yang berisi materi (jurnal ujian/ulangan dilewati)
   const materiLalu = lalu.find((j) => j.materi_pokok && !/^(ujian|ulangan|latihan soal|uh|uts|uas|pts|pas)\b/i.test(j.materi_pokok.replace(/^lanjutan:\s*/i, "")));
-  if (!inti && !ujian.length && materiLalu) {
+  if (!inti && !bagianUjian.length && materiLalu) {
     inti = (/^lanjutan/i.test(materiLalu.materi_pokok) ? "" : "Lanjutan: ") + materiLalu.materi_pokok;
     sumber.push(`lanjutan jurnal ${typeof _tglPendek === "function" ? _tglPendek(materiLalu.tanggal) : materiLalu.tanggal}`);
   }
   if (inti) bagian.push(inti);
+  bagian.push(...bagianUjian); // latihan/ujian ditulis SETELAH materi
   const ta = qs("jurnal-materi");
   let materiDiisi = false;
   // materi kosong atau terlalu singkat (mis. "a") diganti; materi yang sudah ditulis guru dibiarkan
   if (bagian.length && ta.value.replace(/[^a-z0-9]/gi, "").length < 4) { ta.value = bagian.join("; "); materiDiisi = true; }
+  else if (bagian.length && ta.value.trim() !== bagian.join("; ")) {
+    qs("jo-usul")?.remove();
+    const u = document.createElement("button"); u.type = "button"; u.id = "jo-usul"; u.className = "btn btn-ghost";
+    u.style.cssText = "margin-top:6px;padding:5px 10px;font-size:11px;text-align:left;white-space:normal;";
+    u.textContent = `↺ Ganti dengan usulan: "${bagian.join("; ").slice(0, 140)}"`;
+    u.onclick = () => { ta.value = bagian.join("; "); u.remove(); ta.focus(); };
+    ta.insertAdjacentElement("afterend", u);
+  }
 
   // ── Metode ──
   const contoh = (lalu.length >= 2 ? lalu : riwayat).slice(0, 10);
