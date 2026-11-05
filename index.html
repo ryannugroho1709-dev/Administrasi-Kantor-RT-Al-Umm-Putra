@@ -8425,130 +8425,7 @@ async function renderJurnalGuru() {
     </div>`).join("")}</div>`;
   } catch (e) { console.error(e); target.innerHTML = `<div class="card empty-state">Gagal memuat jurnal.</div>`; }
 }
-// Satu bagian jurnal untuk SATU bulan (judul + identitas + tabel + tanda tangan akhir bulan).
-// Dipakai ekspor 1 bulan maupun gabungan beberapa bulan (lihat src/jurnal-ekspor.js).
-function _htmlJurnalBulan(DATA, bulanVal) {
-
-  const semuaGuru = !qs("jg-guru").value;
-  const guruNama = semuaGuru
-    ? t("semuaGuru")
-    : (LOOKUP.guruAll.find((g) => g.id === qs("jg-guru").value)?.nama || "-");
-  const bulanLabel = namaBulanIndo(bulanVal);
-
-  // Hitung semester & tahun ajaran dari bulan yang dipilih
-  const [yy, mm] = bulanVal.split("-").map(Number);
-  // ikut pengaturan "bulan awal tahun ajaran" (sama seperti Kesimpulan Bulanan); cadangan: Juli
-  const _ta = typeof _kbTahunAjaran === "function" ? _kbTahunAjaran(bulanVal) : null;
-  const semester = _ta ? _ta.semester : (mm >= 7 ? "Ganjil" : "Genap");
-  const tahunAjaran = _ta ? _ta.ta : (mm >= 7 ? `${yy}/${yy + 1}` : `${yy - 1}/${yy}`);
-
-  // Metadata sekolah dari STATE.pengaturan
-  const namaSekolah = STATE.pengaturan?.nama_pkbm || "PKBM Al Umm Barabai";
-  const namaKepala  = STATE.pengaturan?.kepala_pkbm || "Ahmad Rizqi Zaidi, S.Pd";
-  // Tanggal akhir bulan (untuk baris kota pada tanda tangan)
-  const lastDayDate = new Date(yy, mm, 0); // mm sudah 1-based, day=0 → akhir bulan sebelumnya → benar
-  const tanggalTtd  = lastDayDate.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
-  // Ambil program dari kelas di data jurnal (gunakan entri pertama yang punya program)
-  const programKelas = DATA.find((j) => j.kelas?.program)?.kelas?.program || "-";
-
-  // === STYLE HELPERS ===
-  const C = `border:1pt solid #555555;padding:6pt;font-size:10.5pt;`;
-  const tdL  = `${C}vertical-align:top;`;                          // kiri, wrap
-  const tdC  = `${C}vertical-align:middle;text-align:center;`;    // tengah
-  const tdTC = `${C}vertical-align:top;text-align:center;`;       // tengah atas (tanggal)
-  const thS  = `${C}vertical-align:middle;text-align:center;font-weight:bold;background:#D9E1F2;mso-pattern:auto none;`;
-
-  // === LEBAR KOLOM (total 100%) ===
-  // Tanpa kolom Guru: No|HariTgl|Waktu|Mapel|Kelas|JmlSerdik|MateriPokok|Kegiatan|Kehadiran
-  const colsNoGuru = [5, 12, 10, 10, 13, 8, 18, 16, 8];
-  // Dengan kolom Guru: No|Guru|HariTgl|Waktu|Mapel|Kelas|JmlSerdik|MateriPokok|Kegiatan|Kehadiran
-  const colsDgnGuru = [4, 9, 10, 8, 8, 11, 7, 16, 19, 8];
-  const cols = semuaGuru ? colsDgnGuru : colsNoGuru;
-  const colGroupHtml = `<colgroup>${cols.map((w) => `<col style="width:${w}%;"/>`).join("")}</colgroup>`;
-
-  const headers = ["No", ...(semuaGuru ? ["Guru"] : []), "Hari/Tanggal", "Waktu",
-    "Mapel", "Kelas", "Jumlah Serdik", "Materi Pokok", "Kegiatan Pembelajaran", "Kehadiran"];
-  const theadHtml = `<thead><tr>${headers.map((h) => `<th style="${thS}">${h}</th>`).join("")}</tr></thead>`;
-
-  // === BARIS DATA ===
-  const rowsHtml = DATA.map((j, i) => {
-    const kegArr = [];
-    if (j.deskripsi_otomatis) kegArr.push(`- ${escapeHtml(j.deskripsi_otomatis)}`);
-    if (j.catatan) kegArr.push(`- ${escapeHtml(j.catatan)}`);
-    const kegiatan = kegArr.join("<br/>");
-    const tglStr = `${hariIniIndo(new Date(j.tanggal))},<br/>${new Date(j.tanggal)
-      .toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" })}`;
-    const waktu = `${j.jadwal_pelajaran?.jam_mulai?.slice(0, 5) || ""}&#x2013;${j.jadwal_pelajaran?.jam_selesai?.slice(0, 5) || ""}`;
-    return `<tr>
-      <td style="${tdC}">${i + 1}</td>
-      ${semuaGuru ? `<td style="${tdL}">${escapeHtml(j.guru?.nama || "-")}</td>` : ""}
-      <td style="${tdTC}">${tglStr}</td>
-      <td style="${tdC}">${waktu}</td>
-      <td style="${tdL}">${escapeHtml(j.mapel?.nama_mapel || "-")}</td>
-      <td style="${tdL}">${escapeHtml(j.kelas?.nama_kelas || "-")}</td>
-      <td style="${tdC}">${j.jumlah_siswa || 0} org</td>
-      <td style="${tdL}">${escapeHtml(j.materi_pokok || "")}</td>
-      <td style="${tdL}">${kegiatan}</td>
-      <td style="${tdC}">${_kehadiranRingkasJurnal(j)}</td>
-    </tr>`;
-  }).join("");
-
-  // === METADATA 2-KOLOM ===
-  const mL = `border:none;padding:2pt 8pt 2pt 0;white-space:nowrap;vertical-align:top;font-size:11pt;`;
-  const mSep = `border:none;padding:2pt 6pt 2pt 0;vertical-align:top;font-size:11pt;`;
-  const mV = `border:none;padding:2pt 0;vertical-align:top;font-size:11pt;`;
-  const metaHtml = `
-    <table style="border-collapse:collapse;width:100%;border:none;margin-bottom:14pt;" cellpadding="0" cellspacing="0">
-      <tr>
-        <td style="border:none;width:50%;vertical-align:top;padding-right:20pt;">
-          <table style="border:none;border-collapse:collapse;">
-            <tr><td style="${mL}">Satuan Pendidikan</td><td style="${mSep}">:</td><td style="${mV}"><b>${escapeHtml(namaSekolah)}</b></td></tr>
-            <tr><td style="${mL}">Program</td><td style="${mSep}">:</td><td style="${mV}"><b>${escapeHtml(programKelas)}</b></td></tr>
-          </table>
-        </td>
-        <td style="border:none;width:50%;vertical-align:top;">
-          <table style="border:none;border-collapse:collapse;">
-            <tr><td style="${mL}">Nama Pengajar</td><td style="${mSep}">:</td><td style="${mV}"><b>${escapeHtml(guruNama)}</b></td></tr>
-            <tr><td style="${mL}">Semester/ Tahun Ajaran</td><td style="${mSep}">:</td><td style="${mV}"><b>${semester} &#x2013; ${tahunAjaran}</b></td></tr>
-          </table>
-        </td>
-      </tr>
-    </table>`;
-
-  // === FOOTER TANDA TANGAN ===
-  const spasiTtd = `<br/><br/><br/><br/><br/>`;
-  const ftdStyle = `border:none;padding:0;vertical-align:top;font-size:11pt;font-family:Times New Roman,serif;`;
-  const footerHtml = `
-    <table style="width:100%;border-collapse:collapse;border:none;margin-top:24pt;page-break-inside:avoid;" cellpadding="0" cellspacing="0">
-      <tr>
-        <td style="${ftdStyle}width:50%;padding-right:20pt;">
-          Mengetahui,<br/>
-          Kepala PKBM,
-          ${spasiTtd}
-          <b>${escapeHtml(namaKepala)}</b>
-        </td>
-        <td style="${ftdStyle}width:50%;">
-          Barabai, ${tanggalTtd}<br/>
-          Tutor,
-          ${spasiTtd}
-          <b>${escapeHtml(guruNama)}</b>
-        </td>
-      </tr>
-    </table>`;
-
-  const html = `
-    <p style="text-align:center;font-weight:bold;font-size:14pt;margin:0 0 4pt 0;">JURNAL KEGIATAN PEMBELAJARAN</p>
-    <p style="text-align:center;font-weight:bold;font-size:12pt;margin:0 0 18pt 0;">Bulan ${bulanLabel}</p>
-    ${metaHtml}
-    <table style="border-collapse:collapse;width:100%;mso-table-lspace:0pt;mso-table-rspace:0pt;" cellpadding="0" cellspacing="0">
-      ${colGroupHtml}
-      ${theadHtml}
-      <tbody>${rowsHtml}</tbody>
-    </table>
-    ${footerHtml}`;
-
-  return html;
-}
+// Ekspor jurnal (Word .docx, satu/beberapa bulan, sampul opsional) ada di src/jurnal-ekspor.js
 function eksporJurnalWord() { bukaEksporJurnal(); }
 
 
@@ -16025,7 +15902,7 @@ async function handleImportSiswa(evt) {
 <script src="src/modul-baca.js?v=8"></script>
 <script src="src/sampul.js?v=1"></script>
 <script src="src/presentasi-absen.js?v=3"></script>
-<script src="src/jurnal-ekspor.js?v=1"></script>
+<script src="src/jurnal-ekspor.js?v=3"></script>
 <script src="src/kesimpulan.js?v=2"></script>
 <script src="src/profil.js?v=4"></script>
 <script src="src/kaldik-desain.js?v=5"></script>
