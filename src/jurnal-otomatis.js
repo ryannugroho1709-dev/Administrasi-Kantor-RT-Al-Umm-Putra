@@ -21,6 +21,13 @@ function _pasangTombolJurnalOtomatis(ctx) {
   ket.textContent = "Mengisi materi, metode, dan absensi dari presentasi, modul, ujian, dan kebiasaan Anda.";
   info.insertAdjacentElement("afterend", btn);
   btn.insertAdjacentElement("afterend", ket);
+  // absen santri yang sudah diisi saat presentasi → langsung dipasang ke tabel absensi
+  const cepat = typeof _paStatusAbsenCepat === "function" ? _paStatusAbsenCepat(ctx.jadwalId, ctx.tanggal || tanggalISO()) : null;
+  if (cepat) {
+    let tdk = 0;
+    Object.entries(cepat).forEach(([id, st]) => { const r = document.querySelector(`input[name="st-${id}"][value="${st}"]`); if (r) { r.checked = true; if (st !== "hadir") tdk++; } });
+    ket.innerHTML = `📋 <b>Absen dari presentasi sudah dipasang</b>${tdk ? ` (${tdk} tidak hadir)` : " (semua hadir)"}. Tekan ⚡ untuk melengkapi materi & metode.`;
+  }
 }
 
 const _joAman = (p) => Promise.resolve(p).then((r) => (r && !r.error ? r.data || [] : []), () => []);
@@ -91,16 +98,18 @@ async function isiJurnalOtomatis(ctx, btn) {
 
   // ── Absensi ──
   const status = {};
+  const cepat = typeof _paStatusAbsenCepat === "function" ? _paStatusAbsenCepat(ctx.jadwalId, tgl) : null;
   hariIni.filter((j) => j.sesi_id !== sesiId).forEach((j) => (j.absensi_siswa || []).forEach((a) => {
     if (a.status === "izin" || a.status === "sakit") status[a.siswa_id] = a.status;
   }));
   let ditandai = 0;
   (JURNAL_CTX?.siswa || []).forEach((s) => {
-    const st = status[s.id] || "hadir";
+    const st = (cepat && cepat[s.id]) || status[s.id] || "hadir";
     const r = document.querySelector(`input[name="st-${s.id}"][value="${st}"]`);
     if (r) { r.checked = true; if (st !== "hadir") ditandai++; }
   });
-  if (ditandai) sumber.push(`${ditandai} santri izin/sakit dari jam sebelumnya`);
+  if (cepat) sumber.push(`absen santri dari presentasi${ditandai ? ` (${ditandai} tidak hadir)` : ""}`);
+  else if (ditandai) sumber.push(`${ditandai} santri izin/sakit dari jam sebelumnya`);
 
   btn.disabled = false; btn.textContent = "✅ Terisi otomatis — periksa, lalu Simpan";
   const ket = qs("jurnal-otomatis-ket");

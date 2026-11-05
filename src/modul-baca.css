@@ -91,3 +91,28 @@ body.mv-buka { overflow: hidden; }
 .ma-rak-umum { margin-bottom: 18px; padding: 12px 14px; border-radius: 16px; border: 1px dashed var(--border-soft, #e3e8f2); background: var(--surface, #fff); }
 .ma-rak-umum .ma-kelas-judul { font-weight: 800; font-size: 13px; margin-bottom: 4px; }
 .ma-rak-umum p { font-size: 11px; color: var(--text-secondary); margin: 0 0 8px; }
+
+/* ── Absen santri sebelum presentasi (presentasi-absen.js) ── */
+.pa-ringkas { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.pa-ringkas span { font-size: 11.5px; padding: 4px 10px; border-radius: 999px; background: rgba(100,116,139,.1); }
+.pa-ringkas b { font-size: 13px; }
+.pa-ringkas .pa-hadir { background: rgba(5,150,105,.12); color: #047857; }
+.pa-ringkas .pa-izin { background: rgba(37,99,235,.1); color: #1d4ed8; }
+.pa-ringkas .pa-sakit { background: rgba(217,119,6,.12); color: #b45309; }
+.pa-ringkas .pa-alpha { background: rgba(220,38,38,.1); color: #b91c1c; }
+.pa-daftar { max-height: 52vh; overflow: auto; border: 1px solid var(--border-soft); border-radius: 12px; }
+.pa-baris { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-bottom: 1px solid var(--border-soft); }
+.pa-baris:last-child { border-bottom: 0; }
+.pa-baris.beda { background: rgba(234,122,26,.06); }
+.pa-nama { flex: 1; min-width: 0; font-size: 13px; }
+.pa-nama i { font-size: 10.5px; color: var(--text-secondary); }
+.pa-pilih { display: flex; gap: 4px; flex: none; }
+.pa-pilih button { width: 34px; height: 34px; border-radius: 10px; border: 1.5px solid var(--border-soft); background: var(--surface); font-weight: 800; font-size: 12.5px; cursor: pointer; color: var(--text-secondary); transition: transform .12s; }
+.pa-pilih button:active { transform: scale(.92); }
+.pa-pilih button.on.pa-hadir { background: #059669; border-color: #059669; color: #fff; }
+.pa-pilih button.on.pa-izin { background: #2563eb; border-color: #2563eb; color: #fff; }
+.pa-pilih button.on.pa-sakit { background: #d97706; border-color: #d97706; color: #fff; }
+.pa-pilih button.on.pa-alpha { background: #dc2626; border-color: #dc2626; color: #fff; }
+.pa-ringkas-jurnal { display: grid; gap: 8px; }
+.pa-ringkas-jurnal div { display: flex; flex-direction: column; gap: 2px; padding: 9px 11px; border-radius: 12px; background: rgba(var(--accent-rgb, 37,99,235), .07); font-size: 12px; }
+.pa-ringkas-jurnal span { font-size: 12.5px; color: var(--text-primary); }
