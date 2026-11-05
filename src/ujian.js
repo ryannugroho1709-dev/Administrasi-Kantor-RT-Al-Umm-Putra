@@ -125,25 +125,46 @@ async function ujMuat() {
   }
   _ujGambarSesi(); _ujGambarBank();
 }
+// Nama tampilan bank: mapel gabungan (mis. "Geografi/Sosiologi/Ek") dipecah memakai judul bank → "Ekonomi"
+function _ujNamaMapelTampil(b) {
+  const nama = _ujNamaMapel(b.mapel_id);
+  const subs = typeof _maSubMapel === "function" ? _maSubMapel(nama) : null;
+  const sub = subs && typeof _maSubDariJudul === "function" ? _maSubDariJudul(b.judul, subs) : null;
+  return sub || nama;
+}
+const _ujKelasAngka = (t) => parseInt(String(t || "").replace(/\D/g, ""), 10) || 99;
 function _ujGambarBank() {
   const el = qs("uj-bank"); if (!el) return;
   if (!UJ.bank.length) { el.innerHTML = `<div class="uj-kosong">Belum ada bank soal. Tekan <b>✨ Buat soal baru</b> atau <b>📋 Tempel dari Word</b>.</div>`; return; }
-  el.innerHTML = `<div class="uj-daftar">${UJ.bank.map((b) => {
+  // penyaring kelas & mapel (diingat di perangkat)
+  const pilihan = UJ.saring || (UJ.saring = (() => { try { return JSON.parse(localStorage.getItem("ujSaring") || "{}"); } catch (e) { return {}; } })());
+  const kelasAda = [...new Set(UJ.bank.map((b) => String(b.tingkat || "-")))].sort((a, b) => _ujKelasAngka(a) - _ujKelasAngka(b));
+  const mapelAda = [...new Set(UJ.bank.map(_ujNamaMapelTampil))].sort((a, b) => a.localeCompare(b, "id"));
+  const daftar = UJ.bank.filter((b) => (!pilihan.kelas || String(b.tingkat || "-") === pilihan.kelas) && (!pilihan.mapel || _ujNamaMapelTampil(b) === pilihan.mapel));
+  const grup = new Map();
+  daftar.slice().sort((a, b) => _ujKelasAngka(a.tingkat) - _ujKelasAngka(b.tingkat) || _ujNamaMapelTampil(a).localeCompare(_ujNamaMapelTampil(b), "id") || (a.bab || 0) - (b.bab || 0))
+    .forEach((b) => { const k = `Kelas ${b.tingkat || "-"} · ${_ujNamaMapelTampil(b)}`; if (!grup.has(k)) grup.set(k, []); grup.get(k).push(b); });
+  const saringHtml = UJ.bank.length > 1 ? `<div class="uj-saring">
+      <select onchange="UJ.saring.kelas=this.value;_ujSimpanSaring()"><option value="">🏫 Semua kelas</option>${kelasAda.map((k) => `<option value="${escapeHtml(k)}" ${pilihan.kelas === k ? "selected" : ""}>Kelas ${escapeHtml(k)}</option>`).join("")}</select>
+      <select onchange="UJ.saring.mapel=this.value;_ujSimpanSaring()"><option value="">📘 Semua mapel</option>${mapelAda.map((m) => `<option ${pilihan.mapel === m ? "selected" : ""}>${escapeHtml(m)}</option>`).join("")}</select>
+      <span class="uj-sub">${daftar.length} dari ${UJ.bank.length} bank soal</span></div>` : "";
+  el.innerHTML = saringHtml + ([...grup.entries()].map(([judulGrup, isi]) => `<div class="uj-grup-judul">${escapeHtml(judulGrup)} <span>${isi.length}</span></div><div class="uj-daftar">${isi.map((b) => {
     const pembuat = (LOOKUP.guruAll || []).find((g) => g.id === b.dibuat_oleh);
     const adaGambar = JSON.stringify(b.soal || []).includes('"g":"http');
     return `
     <div class="uj-item">
       <div class="uj-ikon">📘</div>
       <div style="flex:1;min-width:0"><b>${escapeHtml(b.judul)}</b>
-        <div class="uj-sub">${escapeHtml(_ujNamaMapel(b.mapel_id))} · Kelas ${escapeHtml(b.tingkat || "-")} · Bab ${b.bab} · ${_ujJumlahSoal(b.soal)} soal${adaGambar ? " · 🖼️ bergambar" : ""} · → Ulangan Harian ${b.bab}${pembuat ? ` · oleh ${escapeHtml(typeof _namaSingkatTopbar === "function" ? _namaSingkatTopbar(pembuat.nama) : pembuat.nama)}` : ""}</div></div>
+        <div class="uj-sub">${escapeHtml(_ujNamaMapelTampil(b))} · Kelas ${escapeHtml(b.tingkat || "-")} · Bab ${b.bab} · ${_ujJumlahSoal(b.soal)} soal${adaGambar ? " · 🖼️ bergambar" : ""} · → Ulangan Harian ${b.bab}${pembuat ? ` · oleh ${escapeHtml(typeof _namaSingkatTopbar === "function" ? _namaSingkatTopbar(pembuat.nama) : pembuat.nama)}` : ""}</div></div>
       <div class="uj-aksi">
         <button class="btn btn-accent btn-sm" onclick="ujBukaSesiModal('${b.id}')">▶ Buka sesi</button>
         <button class="btn btn-sm uj-b-ungu" onclick="ujEditorBuka('${b.id}')" title="Ubah soal, kunci, gambar">✏️ Ubah</button>
         <button class="btn btn-sm uj-b-emas" onclick="ujLihatKunci('${b.id}')" title="Lihat kunci jawaban (PIN)">🔑</button>
         ${isAdmin() ? `<button class="btn btn-sm uj-b-merah" onclick="ujHapusBank('${b.id}')" title="Hapus bank soal">🗑️</button>` : ""}
       </div>
-    </div>`; }).join("")}</div>`;
+    </div>`; }).join("")}</div>`).join("") || `<div class="uj-kosong">Tidak ada bank soal untuk saringan ini.</div>`);
 }
+function _ujSimpanSaring() { try { localStorage.setItem("ujSaring", JSON.stringify(UJ.saring || {})); } catch (e) {} _ujGambarBank(); }
 function _ujGambarSesi() {
   const el = qs("uj-sesi"); if (!el) return;
   if (!UJ.sesi.length) { el.innerHTML = `<div class="uj-kosong">Belum ada sesi. Pilih bank soal di bawah lalu tekan <b>▶ Buka sesi</b>.</div>`; return; }
