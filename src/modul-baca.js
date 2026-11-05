@@ -51,6 +51,7 @@ function bukaModulAjar(id, mode) {
       <div class="mv-grup mv-pdf">${tombol("hitam", "⬛", "Layar hitam (B)")}${tombol("putih", "⬜", "Layar putih (W)")}</div>
       <div class="mv-grup mv-pdf">${tombol("tanda", "🔖", "Penanda halaman per pertemuan")}${tombol("catatan", "📝", "Catatan guru per slide (tidak tampil di proyektor)")}${tombol("kuis", "❓", "Kuis cepat di layar")}</div>
       <span class="mv-timer" title="Lama presentasi">00:00</span>
+      ${tombol("kunci", "📌", "Kunci toolbar supaya tidak tersembunyi (T)", "mv-kunci-btn")}
       <div class="mv-grup">
         ${tombol("proyektor", "🪟 <span>Proyektor</span>", "Buka layar kedua untuk proyektor/TV — laptop menampilkan slide berikutnya", "mv-pdf mv-teks")}
         ${tombol("mode", MV.mode === "presentasi" ? "📖 <span>Baca</span>" : "🖥️ <span>Presentasi</span>", "Ganti mode", "mv-teks mv-mode")}
@@ -61,6 +62,7 @@ function bukaModulAjar(id, mode) {
       <div class="mv-muat">${loadingHTML("Membuka modul…")}</div></div>
     <div class="mv-next mv-pdf"><small>Berikutnya</small><canvas></canvas></div>
     <aside class="mv-panel" hidden></aside>
+    <button type="button" class="mv-pegangan" title="Tampilkan toolbar (T)">⌄ Alat</button>
     <div class="mv-tip">← → atau klik kiri/kanan: pindah slide · P pena · H stabilo · L laser · E hapus · B layar hitam · F layar penuh · Esc keluar</div>`;
   document.body.appendChild(el);
   document.body.classList.add("mv-buka");
@@ -71,6 +73,9 @@ function bukaModulAjar(id, mode) {
   document.addEventListener("keydown", _mvKey);
   window.addEventListener("resize", _mvResize);
   el.addEventListener("mousemove", _mvTampilBar);
+  el.querySelector(".mv-pegangan").addEventListener("click", (e) => { e.stopPropagation(); _mvTampilBar(); });
+  el.addEventListener("touchstart", (e) => { if (e.touches[0] && e.touches[0].clientY < 70) _mvTampilBar(); }, { passive: true });
+  _mvKunciBar(_mvLS("mvBarKunci") === "1");
   MV.tTimer = setInterval(_mvTimer, 1000);
   if (MV.mode === "presentasi") _mvLayarPenuh(true);
   _mvTampilBar();
@@ -298,6 +303,7 @@ function _mvKey(e) {
   else if (["ArrowLeft", "PageUp", "Backspace"].includes(k) || (!baca && k === "ArrowUp")) { e.preventDefault(); _mvKe(MV.hal - 1); }
   else if (k === "Home") _mvKe(1);
   else if (k === "End") _mvKe(MV.total);
+  else if (/^[tT]$/.test(k)) _mvKunciBar(!MV.barKunci);
   else if (/^[bB.]$/.test(k)) _mvLayar("hitam");
   else if (/^[wW,]$/.test(k)) _mvLayar("putih");
   else if (/^[pP]$/.test(k)) _mvAlat("pena");
@@ -318,6 +324,7 @@ function _mvKlikBar(e) {
   else if (a === "hapus") { delete MV.coret[_mvKunciCoret()]; _mvTarget().forEach((tg) => _mvGambarCoret(tg)); }
   else if (a === "hitam" || a === "putih") _mvLayar(a);
   else if (a === "proyektor") _mvBukaProyektor();
+  else if (a === "kunci") { _mvKunciBar(!MV.barKunci); toast(MV.barKunci ? "📌 Toolbar dikunci — selalu tampil" : "Toolbar kembali otomatis tersembunyi", "ok"); }
   else if (a === "tanda" || a === "catatan" || a === "kuis") _mvPanel(MV.panel === a ? null : a);
   else if (a === "unduh") unduhModulAjar(MV.m.file_url);
   else if (a === "mode") {
@@ -340,7 +347,15 @@ function _mvTampilBar() {
   const el = document.getElementById("mv"); if (!el) return;
   el.classList.add("mv-bar-on");
   clearTimeout(MV.tBar);
-  MV.tBar = setTimeout(() => { if (MV.mode === "presentasi") el.classList.remove("mv-bar-on"); }, 2600);
+  MV.tBar = setTimeout(() => { if (MV.mode === "presentasi" && !MV.barKunci) el.classList.remove("mv-bar-on"); }, 2600);
+}
+// 📌 Kunci toolbar: selalu tampil di mode presentasi (diingat di perangkat ini)
+function _mvKunciBar(kunci) {
+  MV.barKunci = !!kunci; _mvLS("mvBarKunci", kunci ? "1" : "0");
+  const el = document.getElementById("mv"); if (!el) return;
+  el.classList.toggle("mv-bar-kunci", MV.barKunci);
+  el.querySelector('[data-a="kunci"]')?.classList.toggle("on", MV.barKunci);
+  if (MV.barKunci) el.classList.add("mv-bar-on"); else _mvTampilBar();
 }
 function _mvTimer() {
   const t = document.querySelector("#mv .mv-timer"); if (!t) return;

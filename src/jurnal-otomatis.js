@@ -7,22 +7,25 @@
 //  Absensi : semua Hadir, kecuali santri yang sudah tercatat izin/sakit di jurnal jam sebelumnya
 //            pada kelas yang sama hari ini.
 // ============================================================
-function _pasangTombolJurnalOtomatis(ctx) {
+function _pasangTombolJurnalOtomatis(ctx, modeEdit) {
+  ctx = { ...ctx, modeEdit: !!modeEdit };
   const info = qs("modal-panel")?.querySelector("h3")?.nextElementSibling;
   if (!info || qs("btn-jurnal-otomatis")) return;
   const btn = document.createElement("button");
   btn.type = "button"; btn.id = "btn-jurnal-otomatis"; btn.className = "btn btn-accent";
   btn.style.cssText = "width:100%;margin:-4px 0 6px;";
-  btn.textContent = "⚡ Isi jurnal otomatis";
+  btn.textContent = modeEdit ? "⚡ Perbaiki otomatis (materi & metode)" : "⚡ Isi jurnal otomatis";
+  if (modeEdit) btn.className = "btn btn-outline";
   btn.onclick = () => isiJurnalOtomatis(ctx, btn);
   const ket = document.createElement("div");
   ket.id = "jurnal-otomatis-ket";
   ket.style.cssText = "font-size:11px;color:var(--text-secondary);line-height:1.6;margin-bottom:12px;";
-  ket.textContent = "Mengisi materi, metode, dan absensi dari presentasi, modul, ujian, dan kebiasaan Anda.";
+  ket.textContent = modeEdit ? "Mengganti materi yang terlalu singkat & melengkapi metode. Absensi santri tidak diubah."
+    : "Mengisi materi, metode, dan absensi dari presentasi, modul, ujian, dan kebiasaan Anda.";
   info.insertAdjacentElement("afterend", btn);
   btn.insertAdjacentElement("afterend", ket);
   // absen santri yang sudah diisi saat presentasi → langsung dipasang ke tabel absensi
-  const cepat = typeof _paStatusAbsenCepat === "function" ? _paStatusAbsenCepat(ctx.jadwalId, ctx.tanggal || tanggalISO()) : null;
+  const cepat = !modeEdit && typeof _paStatusAbsenCepat === "function" ? _paStatusAbsenCepat(ctx.jadwalId, ctx.tanggal || tanggalISO()) : null;
   if (cepat) {
     let tdk = 0;
     Object.entries(cepat).forEach(([id, st]) => { const r = document.querySelector(`input[name="st-${id}"][value="${st}"]`); if (r) { r.checked = true; if (st !== "hadir") tdk++; } });
@@ -86,7 +89,8 @@ async function isiJurnalOtomatis(ctx, btn) {
   if (inti) bagian.push(inti);
   const ta = qs("jurnal-materi");
   let materiDiisi = false;
-  if (bagian.length && !ta.value.trim()) { ta.value = bagian.join("; "); materiDiisi = true; }
+  // materi kosong atau terlalu singkat (mis. "a") diganti; materi yang sudah ditulis guru dibiarkan
+  if (bagian.length && ta.value.replace(/[^a-z0-9]/gi, "").length < 4) { ta.value = bagian.join("; "); materiDiisi = true; }
 
   // ── Metode ──
   const contoh = (lalu.length >= 2 ? lalu : riwayat).slice(0, 10);
@@ -104,14 +108,15 @@ async function isiJurnalOtomatis(ctx, btn) {
     if (cb && !cb.checked) { cb.checked = true; onToggleMetode(m, true); metodeBaru++; }
   });
 
-  // ── Absensi ──
+  // ── Absensi (saat mengedit jurnal lama, absensi tidak diubah) ──
   const status = {};
+  if (ctx.modeEdit) hariIni.length = 0;
   const cepat = typeof _paStatusAbsenCepat === "function" ? _paStatusAbsenCepat(ctx.jadwalId, tgl) : null;
   hariIni.filter((j) => j.sesi_id !== sesiId).forEach((j) => (j.absensi_siswa || []).forEach((a) => {
     if (a.status === "izin" || a.status === "sakit") status[a.siswa_id] = a.status;
   }));
   let ditandai = 0;
-  (JURNAL_CTX?.siswa || []).forEach((s) => {
+  if (!ctx.modeEdit) (JURNAL_CTX?.siswa || []).forEach((s) => {
     const st = (cepat && cepat[s.id]) || status[s.id] || "hadir";
     const r = document.querySelector(`input[name="st-${s.id}"][value="${st}"]`);
     if (r) { r.checked = true; if (st !== "hadir") ditandai++; }

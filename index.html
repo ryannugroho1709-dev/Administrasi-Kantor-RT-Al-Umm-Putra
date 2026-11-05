@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="src/kas.css?v=3">
 <link rel="stylesheet" href="src/hp.css?v=2">
 <link rel="stylesheet" href="src/kuliah.css?v=6">
-<link rel="stylesheet" href="src/modul-baca.css?v=6">
+<link rel="stylesheet" href="src/modul-baca.css?v=7">
 <link rel="stylesheet" href="src/ujian.css?v=4">
 
 <script>
@@ -46,7 +46,7 @@ function _logoAwal(){try{return localStorage.getItem("logoSekolahUrl")||"assets/
 <!-- pdf.js — hanya dipakai fitur "Ambil sampul dari halaman pertama PDF" di Modul Ajar (render page 1 ke canvas) -->
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script>if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";</script>
-<script src="src/api.js?v=13"></script>
+<script src="src/api.js?v=14"></script>
 <script>
 // ── Override apiPerbaikanAbsenAdmin: pakai RPC SECURITY DEFINER (bypass RLS) ──
 // Blok ini di index.html mengoverride versi dari api.js agar pasti termuat,
@@ -5347,6 +5347,7 @@ async function bukaFormJurnalUnified(opts) {
     afterSave,
     isLaporTerlambat: !!isLaporTerlambat,
     ajukanHadir: !!ajukanHadir,
+    catatanLama: existing?.catatan || "",
   };
 
   const rowsHtml = siswa.length
@@ -5403,7 +5404,7 @@ async function bukaFormJurnalUnified(opts) {
     <button class="btn btn-accent" style="width:100%" onclick="submitJurnal()">${ajukanHadir ? "📤 Kirim Pengajuan Hadir" : isLaporTerlambat ? "📤 Kirim ke Admin" : `<span data-i18n="simpanJurnal">Simpan Jurnal</span>`}</button>
   `);
   if (!existing && !ajukanHadir) { _tawarkanLanjutanMateri(kelasId, mapelId, tanggal); _tawarkanMateriPresentasi(kelasId, mapelId, tanggal); }
-  if (!existing && typeof _pasangTombolJurnalOtomatis === "function") _pasangTombolJurnalOtomatis(opts);
+  if (typeof _pasangTombolJurnalOtomatis === "function") _pasangTombolJurnalOtomatis(opts, !!existing);
 }
 // Isian cepat: tawarkan "Lanjutan" dari jurnal terakhir di kelas & mapel yang sama (materi + metode)
 async function _tawarkanLanjutanMateri(kelasId, mapelId, tanggal) {
@@ -5447,9 +5448,12 @@ async function submitJurnal() {
   if (JURNAL_CTX.ajukanHadir) {
     const alasan = (qs("aju-alasan")?.value || "").trim();
     if (!alasan) { toast("Alasan wajib diisi supaya admin bisa memutuskan", "err"); qs("aju-alasan")?.focus(); return; }
+    if (alasan.replace(/[^a-z0-9]/gi, "").length < 5) { toast("Alasan terlalu singkat — pilih salah satu tombol alasan atau tulis kalimat yang jelas", "err"); qs("aju-alasan")?.focus(); return; }
     catatan = `[Ajukan Hadir] ${alasan}`;
   }
   if (!materi) { toast(t("materiPokok") + " wajib diisi", "err"); return; }
+  if (materi.replace(/[^a-z0-9]/gi, "").length < 4) { toast("Materi pokok terlalu singkat — tekan ⚡ Isi jurnal otomatis atau tulis materi yang diajarkan", "err"); qs("jurnal-materi")?.focus(); return; }
+  if (!catatan && JURNAL_CTX.catatanLama) catatan = JURNAL_CTX.catatanLama; // edit jurnal: catatan lama (mis. alasan Ajukan Hadir) tetap ada
   if (!JURNAL_CTX.metodeTerpilih.length) { toast(t("metodeMengajar") + " wajib dipilih", "err"); return; }
 
   const absensiSiswa = JURNAL_CTX.siswa.map((s) => {
@@ -16019,7 +16023,7 @@ async function handleImportSiswa(evt) {
 </script>
 <script src="src/kas.js?v=3"></script>
 <script src="src/kuliah.js?v=19"></script>
-<script src="src/modul-baca.js?v=6"></script>
+<script src="src/modul-baca.js?v=7"></script>
 <script src="src/sampul.js?v=1"></script>
 <script src="src/presentasi-absen.js?v=2"></script>
 <script src="src/kesimpulan.js?v=2"></script>
@@ -16027,7 +16031,7 @@ async function handleImportSiswa(evt) {
 <script src="src/kaldik-desain.js?v=5"></script>
 <script src="src/ujian.js?v=4"></script>
 <script src="src/ujian-editor.js?v=2"></script>
-<script src="src/jurnal-otomatis.js?v=3"></script>
+<script src="src/jurnal-otomatis.js?v=4"></script>
 <script src="src/hp.js?v=2"></script>
 </body>
 </html>

@@ -121,3 +121,11 @@ body.mv-buka { overflow: hidden; }
 .pa-peringatan span { flex: 1; min-width: 200px; }
 .pa-peringatan.biru { background: rgba(37,99,235,.08); color: #1e40af; border-color: rgba(37,99,235,.2); }
 .pa-peringatan button { border: 0; border-radius: 10px; padding: 8px 12px; font-weight: 800; font-size: 12px; background: #16a34a; color: #fff; cursor: pointer; }
+
+/* 📌 toolbar terkunci & pegangan untuk memunculkan toolbar */
+.mv-presentasi.mv-bar-kunci .mv-bar { opacity: 1; transform: none; }
+.mv-presentasi.mv-bar-kunci { cursor: auto; }
+.mv-bar .mv-kunci-btn.on { background: #d4a72c; color: #1d1d1d; }
+.mv-pegangan { display: none; position: absolute; top: 0; left: 50%; transform: translateX(-50%); z-index: 4; border: 0; border-radius: 0 0 12px 12px; padding: 4px 14px 6px; background: rgba(17,19,25,.55); color: #e5e7eb; font: 700 11.5px system-ui, sans-serif; cursor: pointer; opacity: .55; }
+.mv-pegangan:hover { opacity: 1; }
+.mv-presentasi:not(.mv-bar-on) .mv-pegangan { display: block; }

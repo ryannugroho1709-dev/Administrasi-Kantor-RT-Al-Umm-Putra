@@ -1814,6 +1814,7 @@ async function apiProsesJurnalTerlambat(id, disetujui, catatanAdmin) {
         jurnalId = existingJurnal[0].id;
         unwrap(await supa.from("jurnal_kelas").update({
           materi_pokok: peng.materi_pokok, metode_mengajar: peng.metode_mengajar,
+          deskripsi_otomatis: buatDeskripsiOtomatis(peng.materi_pokok, peng.metode_mengajar),
           catatan: peng.catatan, jumlah_hadir: jumlahHadir, jumlah_izin: jumlahIzin,
           jumlah_sakit: jumlahSakit, jumlah_alpha: jumlahAlpha, jumlah_siswa: absensiSiswa.length,
           updated_at: now,
@@ -1823,6 +1824,7 @@ async function apiProsesJurnalTerlambat(id, disetujui, catatanAdmin) {
           sesi_id: sesi.id, guru_id: sesi.guru_id, kelas_id: sesi.kelas_id,
           mapel_id: sesi.mapel_id, jadwal_id: sesi.jadwal_id, tanggal: sesi.tanggal,
           materi_pokok: peng.materi_pokok, metode_mengajar: peng.metode_mengajar,
+          deskripsi_otomatis: buatDeskripsiOtomatis(peng.materi_pokok, peng.metode_mengajar),
           catatan: peng.catatan, jumlah_hadir: jumlahHadir, jumlah_izin: jumlahIzin,
           jumlah_sakit: jumlahSakit, jumlah_alpha: jumlahAlpha, jumlah_siswa: absensiSiswa.length,
         }).select());
