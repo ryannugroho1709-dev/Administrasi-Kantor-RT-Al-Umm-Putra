@@ -24,7 +24,7 @@
 <link rel="stylesheet" href="src/hp.css?v=2">
 <link rel="stylesheet" href="src/kuliah.css?v=6">
 <link rel="stylesheet" href="src/modul-baca.css?v=8">
-<link rel="stylesheet" href="src/ujian.css?v=6">
+<link rel="stylesheet" href="src/ujian.css?v=7">
 
 <script>
 // Logo gagal dimuat → coba logo bawaan; kalau bawaan pun gagal, tampilkan ikon 🎓 (bukan huruf "G").
@@ -1652,6 +1652,7 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--border-soft);">
             <button class="btn btn-ghost" style="font-size:11px;" onclick="bukaEkskulMassal('ru')">🏃 Isi Ekskul Santri</button>
+            <button class="btn btn-accent" style="font-size:11px;" onclick="bukaCetakRapor('ru')">🖨️ Cetak Rapor (format sekolah)</button>
           </div>
         </div>
         <div id="rapor-umum-content"></div>
@@ -1665,6 +1666,10 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
               <select id="rd-semester" class="input" onchange="renderRaporDiniyyah()"><option>Ganjil</option><option selected>Genap</option></select>
             </div>
             <div><label class="form-label" data-i18n="tahunAjaran">Tahun Ajaran</label><input id="rd-tahun" class="input" value="2025/2026" onchange="renderRaporDiniyyah()"/></div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--border-soft);">
+            <button class="btn btn-accent" style="font-size:11px;" onclick="bukaCetakRapor('rd')">🖨️ Cetak Rapor (format sekolah)</button>
+            <button class="btn btn-ghost" style="font-size:11px;" onclick="qs('rd-kelas').value?bukaNamaArab(qs('rd-kelas').value):toast('Pilih kelas dulu','err')">🔤 Nama Arab</button>
           </div>
         </div>
         <div id="rapor-diniyyah-content"></div>
@@ -1682,6 +1687,7 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
             <button class="btn btn-ghost" style="font-size:11px;" onclick="bukaEkskulMassal('rw')">🏃 Isi Ekskul Santri</button>
+            <button class="btn btn-accent" style="font-size:11px;" onclick="bukaCetakRapor('rw')">🖨️ Cetak Rapor</button>
             <button class="btn btn-outline" onclick="openPengaturanRapor()" data-i18n="tempatTerbit">Tempat/Tanggal Terbit</button>
           </div>
         </div>
@@ -15916,6 +15922,7 @@ async function handleImportSiswa(evt) {
 <script src="src/presentasi-absen.js?v=3"></script>
 <script src="src/jurnal-ekspor.js?v=3"></script>
 <script src="src/rapor-wk.js?v=1"></script>
+<script src="src/rapor-cetak.js?v=1"></script>
 <script src="src/kesimpulan.js?v=2"></script>
 <script src="src/profil.js?v=4"></script>
 <script src="src/kaldik-desain.js?v=5"></script>

@@ -141,3 +141,15 @@
 .pp-kkm-daftar label{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;border-bottom:1px dashed var(--border-soft,#e3e8ef);padding:3px 0}
 .pp-kkm-daftar small{color:var(--text-secondary);font-size:10.5px}
 .pp-kkm-daftar .input{width:64px;padding:3px 6px}
+
+/* ── Cetak Rapor format sekolah (src/rapor-cetak.js) ── */
+.rc-pilih { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.rc-pilih label { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 1.5px solid var(--border-soft); border-radius: 12px; cursor: pointer; font-size: 13px; }
+.rc-pilih label:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.rc-pilih input { display: none; }
+.rc-pilih span { font-size: 11px; color: var(--text-secondary); }
+.rc-catatan { margin-top: 10px; padding: 8px 10px; border-radius: 10px; font-size: 12px; background: color-mix(in srgb, #f59e0b 12%, transparent); line-height: 1.5; }
+.rc-arab-baris { display: grid; grid-template-columns: minmax(110px, 38%) 1fr auto; gap: 6px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--border-soft); font-size: 12px; }
+.rc-arab-baris input { font-family: 'Amiri', 'Traditional Arabic', serif; font-size: 15px; padding: 5px 8px; }
+.rc-arab-baris button { border: none; background: none; cursor: pointer; font-size: 16px; }
+@media (max-width: 520px) { .rc-pilih { grid-template-columns: 1fr; } .rc-arab-baris { grid-template-columns: 1fr auto; } .rc-arab-baris span { grid-column: 1 / -1; } }
