@@ -24,7 +24,7 @@
 <link rel="stylesheet" href="src/hp.css?v=2">
 <link rel="stylesheet" href="src/kuliah.css?v=6">
 <link rel="stylesheet" href="src/modul-baca.css?v=8">
-<link rel="stylesheet" href="src/ujian.css?v=5">
+<link rel="stylesheet" href="src/ujian.css?v=6">
 
 <script>
 // Logo gagal dimuat → coba logo bawaan; kalau bawaan pun gagal, tampilkan ikon 🎓 (bukan huruf "G").
@@ -1651,7 +1651,7 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
             <div><label class="form-label" data-i18n="tahunAjaran">Tahun Ajaran</label><input id="ru-tahun" class="input" value="2025/2026" onchange="renderRaporUmum()"/></div>
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--border-soft);">
-            <button class="btn btn-ghost" style="font-size:11px;" onclick="bukaKelolaEkskulKelas('ru')">🏃 <span data-i18n="kelolaEkskul">Kelola Ekskul</span></button>
+            <button class="btn btn-ghost" style="font-size:11px;" onclick="bukaEkskulMassal('ru')">🏃 Isi Ekskul Santri</button>
           </div>
         </div>
         <div id="rapor-umum-content"></div>
@@ -1681,7 +1681,7 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
             <div><label class="form-label" data-i18n="tahunAjaran">Tahun Ajaran</label><input id="rw-tahun" class="input" value="2025/2026" onchange="renderRaporWaliKelas()"/></div>
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            <button class="btn btn-ghost" style="font-size:11px;" onclick="bukaKelolaEkskulKelas('rw')">🏃 <span data-i18n="kelolaEkskul">Kelola Ekskul</span></button>
+            <button class="btn btn-ghost" style="font-size:11px;" onclick="bukaEkskulMassal('rw')">🏃 Isi Ekskul Santri</button>
             <button class="btn btn-outline" onclick="openPengaturanRapor()" data-i18n="tempatTerbit">Tempat/Tanggal Terbit</button>
           </div>
         </div>
@@ -7744,7 +7744,8 @@ function hitungTahunAjaranOtomatis() {
 }
 // Ganjil = Juli–Desember, Genap = Januari–Juni (standar kalender sekolah Indonesia)
 function hitungSemesterOtomatis() {
-  return (realNow().getMonth() + 1) >= 7 ? "Ganjil" : "Genap";
+  const bulanMulai = Number((STATE.pengaturan || {}).bulan_awal_tahun_ajaran) || 7;
+  return ((realNow().getMonth() + 1 - bulanMulai + 12) % 12) < 6 ? "Ganjil" : "Genap";
 }
 function rentangBulan(yyyyMm) {
   const [y, m] = yyyyMm.split("-").map(Number);
@@ -7867,7 +7868,7 @@ async function renderRiwayatAbsenInit() {
   // klik-klik dulu) atau riwayat dirinya sendiri saja — bukan daftar lengkap semua nama guru.
   const selGuru = qs("ra-guru");
   if (isAdmin()) {
-    selGuru.innerHTML = `<option value="">— ${t("semuaGuru")} —</option><option value="${STATE.guruId || ""}">${escapeHtml(STATE.guruNama || t("guru"))}</option>`;
+    selGuru.innerHTML = `<option value="">— ${t("semuaGuru")} —</option>${(LOOKUP.guruAll || []).slice().sort((a, b) => a.nama.localeCompare(b.nama, "id")).map((g) => `<option value="${g.id}">${escapeHtml(g.nama)}</option>`).join("")}`;
     selGuru.value = "";
     selGuru.disabled = false;
   } else {
@@ -8343,7 +8344,7 @@ async function renderJurnalGuruInit() {
   await ensureLookups();
   const selGuru = qs("jg-guru");
   if (isAdmin()) {
-    selGuru.innerHTML = `<option value="">— ${t("semuaGuru")} —</option><option value="${STATE.guruId || ""}">${escapeHtml(STATE.guruNama || t("guru"))}</option>`;
+    selGuru.innerHTML = `<option value="">— ${t("semuaGuru")} —</option>${(LOOKUP.guruAll || []).slice().sort((a, b) => a.nama.localeCompare(b.nama, "id")).map((g) => `<option value="${g.id}">${escapeHtml(g.nama)}</option>`).join("")}`;
     selGuru.value = "";
     selGuru.disabled = false;
   } else {
@@ -9977,6 +9978,15 @@ async function uploadKopSoal(kategori, inputEl) {
 // ============================================================
 let NILAI_STATE = { kolomUH: ["Ulangan Harian 1"], kolomTugas: ["Tugas 1"], rows: [], adaUTS: false, kehadiranMap: {} };
 
+// Isi <select>: pilihan dari jadwal di atas, sisanya di kelompok "lain" (guru tanpa jadwal tetap bisa memilih semua)
+function _isiSelectBerkelompok(id, utama, semua, kolom, labelUtama, labelLain) {
+  const el = qs(id); if (!el) return;
+  const lama = el.value, adaId = new Set(utama.map((x) => x.id));
+  const lain = semua.filter((x) => !adaId.has(x.id));
+  const opsi = (arr) => arr.map((x) => `<option value="${x.id}">${escapeHtml(x[kolom] || "-")}</option>`).join("");
+  el.innerHTML = utama.length ? `<optgroup label="${labelUtama}">${opsi(utama)}</optgroup>${lain.length ? `<optgroup label="${labelLain}">${opsi(lain)}</optgroup>` : ""}` : opsi(semua);
+  if (lama && [...el.options].some((o) => o.value === lama)) el.value = lama;
+}
 async function onGantiGuruNilai() {
   const guruId = qs("nl-guru").value;
   const mapelBerGuru = (LOOKUP.mapel || []).filter((m) => !m.tanpa_guru);
@@ -9988,7 +9998,7 @@ async function onGantiGuruNilai() {
   try {
     const jadwal = unwrap(await supa.from("jadwal_pelajaran").select("mapel_id,kelas_id,mapel(nama_mapel),kelas(nama_kelas)").eq("guru_id", guruId).eq("aktif", true));
     const mapelUnik = [...new Map(jadwal.map((j) => [j.mapel_id, { id: j.mapel_id, nama_mapel: j.mapel?.nama_mapel }])).values()];
-    populateSelect("nl-mapel", mapelUnik.length ? mapelUnik : mapelBerGuru, "id", "nama_mapel");
+    _isiSelectBerkelompok("nl-mapel", mapelUnik, mapelBerGuru, "nama_mapel", "📅 Di jadwal guru ini", "📚 Mapel lain (di luar jadwal)");
     // Jika hanya 1 mapel, auto-pilih
     if (mapelUnik.length === 1) qs("nl-mapel").value = mapelUnik[0].id;
   } catch (e) { console.error(e); }
@@ -10006,7 +10016,7 @@ async function onGantiMapelNilai() {
   try {
     const jadwal = unwrap(await supa.from("jadwal_pelajaran").select("kelas_id,kelas(nama_kelas)").eq("guru_id", guruId).eq("mapel_id", mapelId).eq("aktif", true));
     const kelasUnik = [...new Map(jadwal.map((j) => [j.kelas_id, { id: j.kelas_id, nama_kelas: j.kelas?.nama_kelas }])).values()];
-    populateSelect("nl-kelas", kelasUnik.length ? kelasUnik : LOOKUP.kelas, "id", "nama_kelas");
+    _isiSelectBerkelompok("nl-kelas", kelasUnik, LOOKUP.kelas, "nama_kelas", "📅 Di jadwal", "🏫 Kelas lain");
     if (kelasUnik.length === 1) qs("nl-kelas").value = kelasUnik[0].id;
   } catch (e) { console.error(e); }
   renderInputNilai();
@@ -10029,8 +10039,8 @@ async function renderInputNilaiInit() {
     selectGuru.value = STATE.guruId || "";
   }
   // Auto-isi semester dan tahun ajaran berdasarkan tanggal sekarang
-  qs("nl-semester").value = hitungSemesterOtomatis();
-  qs("nl-tahun").value = STATE.pengaturan?.tahun_ajaran || hitungTahunAjaranOtomatis();
+  if (typeof _rwkAturDefaultSemester === "function") _rwkAturDefaultSemester("nl");
+  else { qs("nl-semester").value = hitungSemesterOtomatis(); qs("nl-tahun").value = hitungTahunAjaranOtomatis(); }
   await onGantiGuruNilai();
 }
 
@@ -10089,7 +10099,7 @@ async function gambarTabelNilai() {
         <button class="btn btn-ghost nl-btn" onclick="tambahKolomNilai('uh')">＋ UH</button>
         <button class="btn btn-ghost nl-btn" onclick="tambahKolomNilai('tugas')">＋ Tugas</button>
         <label class="nl-switch"><input type="checkbox" id="nl-ada-uts" ${adaUTS ? "checked" : ""} onchange="toggleUTSNilai(this.checked)"/> <span>UTS</span></label>
-        ${isAdmin() ? `<button class="btn btn-ghost nl-btn" onclick="bukaModalBobotNilai()">⚖️ Bobot</button>` : ""}
+        ${isAdmin() || (typeof isKepsek === "function" && isKepsek()) ? `<button class="btn btn-ghost nl-btn" onclick="bukaPengaturanPenilaian()">⚖️ Bobot & KKM</button>` : ""}
       </div>
       <div class="nl-toolbar-kanan">
         <span id="nl-progres" class="nl-progres"></span>
@@ -10408,11 +10418,13 @@ async function onGantiKelasRapor(prefix) {
 async function renderRaporUmumInit() {
   await ensureLookups();
   populateSelect("ru-kelas", LOOKUP.kelas, "id", "nama_kelas");
+  if (typeof _rwkAturDefaultSemester === "function") _rwkAturDefaultSemester("ru");
   if (qs("ru-kelas").value) await onGantiKelasRapor("ru");
 }
 async function renderRaporDiniyyahInit() {
   await ensureLookups();
   populateSelect("rd-kelas", LOOKUP.kelas, "id", "nama_kelas");
+  if (typeof _rwkAturDefaultSemester === "function") _rwkAturDefaultSemester("rd");
   if (qs("rd-kelas").value) await onGantiKelasRapor("rd");
 }
 
@@ -13341,7 +13353,7 @@ async function _tawarkanKabariGuruWa(guruId, isiPesan) {
   const g = (LOOKUP.guruAll || []).find((x) => x.id === guruId);
   const { nomor, valid } = normalisasiNomorWa(g?.no_wa);
   if (!valid) { if (g) toast(`No. WA ${_namaSingkatTopbar(g.nama)} belum valid — sudah masuk Catatan Perbaikan Admin di Dasbor.`, "warn"); return; }
-  const pesan = `Assalamu'alaikum ${_namaSingkatTopbar(g.nama)},\n\n${isiPesan}\n\nJazakallahu khairan.`;
+  const pesan = `Wa'alaikumussalam warahmatullahi wabarakatuh, ${_namaSingkatTopbar(g.nama)}.\n\n${isiPesan}\n\nJazakallahu khairan.`;
   openModal(`
     <h3>💬 Kabari Guru?</h3>
     <div class="wa-pratinjau">${escapeHtml(pesan).replace(/\n/g, "<br/>").replace(/\*([^*]+)\*/g, "<b>$1</b>")}</div>
@@ -15903,6 +15915,7 @@ async function handleImportSiswa(evt) {
 <script src="src/sampul.js?v=1"></script>
 <script src="src/presentasi-absen.js?v=3"></script>
 <script src="src/jurnal-ekspor.js?v=3"></script>
+<script src="src/rapor-wk.js?v=1"></script>
 <script src="src/kesimpulan.js?v=2"></script>
 <script src="src/profil.js?v=4"></script>
 <script src="src/kaldik-desain.js?v=5"></script>
