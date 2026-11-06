@@ -153,3 +153,18 @@
 .rc-arab-baris input { font-family: 'Amiri', 'Traditional Arabic', serif; font-size: 15px; padding: 5px 8px; }
 .rc-arab-baris button { border: none; background: none; cursor: pointer; font-size: 16px; }
 @media (max-width: 520px) { .rc-pilih { grid-template-columns: 1fr; } .rc-arab-baris { grid-template-columns: 1fr auto; } .rc-arab-baris span { grid-column: 1 / -1; } }
+
+/* ── Rekap hadir: pratinjau sampul ── */
+.rh-sampul-mini { border: 3px double #1E7B3C !important; }
+.rh-sampul-mini .rh-pita { display: inline-block; background: #1E7B3C; color: #fff; padding: 4px 18px; margin: 6px auto; font-size: 13px; }
+
+/* ── Pantau kelengkapan nilai ── */
+.pk-ringkas { padding: 8px 12px; border-radius: 10px; background: var(--surface-2, rgba(0,0,0,.04)); font-size: 12.5px; margin-bottom: 10px; }
+.pk-guru { border: 1px solid var(--border-soft); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; }
+.pk-guru-kepala { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
+.pk-guru-kepala span { display: block; font-size: 11px; color: var(--text-secondary); }
+.pk-item { display: grid; grid-template-columns: minmax(120px, 1.3fr) 1fr auto; gap: 8px; align-items: center; font-size: 12px; padding: 3px 0; }
+.pk-bar { height: 7px; border-radius: 4px; background: var(--border-soft); overflow: hidden; }
+.pk-bar i { display: block; height: 100%; border-radius: 4px; }
+.pk-angka { font-size: 11px; color: var(--text-secondary); white-space: nowrap; }
+@media (max-width: 520px) { .pk-item { grid-template-columns: 1fr auto; } .pk-item .pk-bar { grid-column: 1 / -1; grid-row: 2; } }

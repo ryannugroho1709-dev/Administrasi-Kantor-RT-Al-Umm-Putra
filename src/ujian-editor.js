@@ -74,7 +74,7 @@ function _ujeGambar() {
         <div class="uj-sub" style="flex:1;min-width:200px">${tab === "pg" ? "Ketuk huruf untuk menandai <b>satu</b> jawaban benar." : tab === "pgk" ? "Centang <b>semua</b> jawaban benar. Nilai sebagian diberikan kalau santri benar sebagian." : "Isi kunci & poin penilaian; uraian dinilai guru (ada saran skor otomatis)."}</div>
       </div>
       <details class="uje-stim" ${bg.stimulus ? "open" : ""}><summary>📖 Teks bacaan untuk semua soal di bagian ini (opsional)</summary>
-        <textarea class="input" rows="4" placeholder="Tempel teks bacaan/cerita di sini" oninput="UJE.m.bagian['${tab}'].stimulus=this.value">${escapeHtml(bg.stimulus)}</textarea></details>
+        <textarea dir="auto" class="input" rows="4" placeholder="Tempel teks bacaan/cerita di sini" oninput="UJE.m.bagian['${tab}'].stimulus=this.value">${escapeHtml(bg.stimulus)}</textarea></details>
       <div id="uje-daftar">${bg.soal.map((s, i) => _ujeKartu(tab, s, i)).join("") || `<div class="uj-kosong">Belum ada soal ${UJE_LABEL[tab]}.</div>`}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
         <button class="btn btn-sm uje-b-tambah" onclick="ujeTambah('${tab}')">➕ Tambah soal ${UJE_LABEL[tab]}</button>
@@ -111,28 +111,28 @@ function _ujeKartu(j, s, i) {
       <button class="uje-ik" title="Turun" onclick="ujeGeser('${j}',${i},1)">↓</button>
       <button class="uje-ik" title="Gandakan" onclick="ujeGanda('${j}',${i})">⧉</button>
       <button class="uje-ik merah" title="Hapus soal" onclick="ujeHapus('${j}',${i})">🗑</button></div>
-    <details ${s.stimulus ? "open" : ""} class="uje-stim"><summary>📖 Teks bacaan khusus soal ini</summary><textarea class="input" rows="3" oninput="UJE.m.bagian['${j}'].soal[${i}].stimulus=this.value">${escapeHtml(s.stimulus || "")}</textarea></details>
-    <textarea class="input uje-teks" rows="2" placeholder="Tulis pertanyaan… (pakai **kata** untuk huruf tebal)" oninput="UJE.m.bagian['${j}'].soal[${i}].t=this.value">${escapeHtml(s.t || "")}</textarea>
+    <details ${s.stimulus ? "open" : ""} class="uje-stim"><summary>📖 Teks bacaan khusus soal ini</summary><textarea dir="auto" class="input" rows="3" oninput="UJE.m.bagian['${j}'].soal[${i}].stimulus=this.value">${escapeHtml(s.stimulus || "")}</textarea></details>
+    <textarea dir="auto" class="input uje-teks" rows="2" placeholder="Tulis pertanyaan… (pakai **kata** untuk huruf tebal)" oninput="UJE.m.bagian['${j}'].soal[${i}].t=this.value">${escapeHtml(s.t || "")}</textarea>
     <div class="uje-gambar">${s.g ? `<img src="${escapeHtml(s.g)}" alt=""><button class="uje-ik merah" onclick="UJE.m.bagian['${j}'].soal[${i}].g='';_ujeGambar()">✕ Hapus gambar</button>`
       : `<label class="btn btn-sm uje-b-gambar">🖼️ Tambah gambar<input type="file" accept="image/*" style="display:none" onchange="ujeUnggahGambar('${j}',${i},this)"></label>`}</div>
     ${j === "uraian" ? `
       <label class="form-label" style="margin-top:6px">🔑 Kunci / contoh jawaban</label>
-      <textarea class="input" rows="2" oninput="UJE.m.bagian['${j}'].soal[${i}].kunci=this.value;_ujeTandaKunci('${j}',${i})">${escapeHtml(s.kunci || "")}</textarea>
+      <textarea dir="auto" class="input" rows="2" oninput="UJE.m.bagian['${j}'].soal[${i}].kunci=this.value;_ujeTandaKunci('${j}',${i})">${escapeHtml(s.kunci || "")}</textarea>
       <label class="form-label" style="margin-top:6px">✅ Poin penilaian (pisahkan dengan titik koma) — dipakai untuk saran skor otomatis</label>
       <input class="input" value="${escapeHtml((s.poin_kunci || []).join("; "))}" placeholder="mis. menyebut 4 musim; menjelaskan ciri" oninput="UJE.m.bagian['${j}'].soal[${i}].poin_kunci=this.value.split(';').map(x=>x.trim()).filter(Boolean)">`
     : s.bs ? `<div class="uje-opsi">${(s.o || []).map((o, k) => `<div class="uje-opsi-baris">
-        <input class="input" value="${escapeHtml(o)}" placeholder="Pernyataan ${k + 1}" oninput="UJE.m.bagian['${j}'].soal[${i}].o[${k}]=this.value">
+        <input dir="auto" class="input" value="${escapeHtml(o)}" placeholder="Pernyataan ${k + 1}" oninput="UJE.m.bagian['${j}'].soal[${i}].o[${k}]=this.value">
         <button class="uje-bs ${s.k[k] ? "ya" : "tidak"}" title="Ketuk untuk mengganti kunci" onclick="ujeKunci('${j}',${i},${k})">${s.k[k] ? "✅ " + escapeHtml(s.bs[0]) : "❌ " + escapeHtml(s.bs[1])}</button>
         ${(s.o || []).length > 2 ? `<button class="uje-ik" title="Hapus pernyataan" onclick="ujeHapusOpsi('${j}',${i},${k})">✕</button>` : ""}</div>`).join("")}
         <button class="uje-ik" style="margin-top:4px" onclick="UJE.m.bagian['${j}'].soal[${i}].o.push('');UJE.m.bagian['${j}'].soal[${i}].k.push(true);_ujeGambar()">＋ pernyataan</button></div>`
     : `<div class="uje-opsi">${(s.o || []).map((o, k) => `<div class="uje-opsi-baris ${kunciPG.includes(k) ? "benar" : ""}">
         <button class="uje-huruf" title="${j === "pg" ? "Jadikan jawaban benar" : "Tandai benar/salah"}" onclick="ujeKunci('${j}',${i},${k})">${H[k]}</button>
-        <input class="input" value="${escapeHtml(o)}" placeholder="Pilihan ${H[k]}" oninput="UJE.m.bagian['${j}'].soal[${i}].o[${k}]=this.value">
+        <input dir="auto" class="input" value="${escapeHtml(o)}" placeholder="Pilihan ${H[k]}" oninput="UJE.m.bagian['${j}'].soal[${i}].o[${k}]=this.value">
         ${(s.o || []).length > 2 ? `<button class="uje-ik" title="Hapus pilihan" onclick="ujeHapusOpsi('${j}',${i},${k})">✕</button>` : ""}</div>`).join("")}
         ${(s.o || []).length < 8 ? `<button class="uje-ik" style="margin-top:4px" onclick="UJE.m.bagian['${j}'].soal[${i}].o.push('');_ujeGambar()">＋ pilihan</button>` : ""}</div>`}
     ${j === "pgk" ? `<label class="uje-bs-pilih"><input type="checkbox" ${s.bs ? "checked" : ""} onchange="ujeUbahBS(${i},this.checked)"> 📋 Bentuk tabel ${s.bs ? `<select onchange="UJE.m.bagian.pgk.soal[${i}].bs=UJE_BS[this.value];_ujeGambar()">${UJE_BS.map((p, x) => `<option value="${x}" ${s.bs[0] === p[0] ? "selected" : ""}>${p[0]} / ${p[1]}</option>`).join("")}</select>` : "Benar/Salah (tiap pernyataan dinilai sendiri)"}</label>` : ""}
     <details class="uje-stim" ${s.penjelasan ? "open" : ""}><summary>💡 Penjelasan singkat (tampil di hasil santri setelah ustadz membukanya)</summary>
-      <textarea class="input" rows="2" placeholder="mis. 🏭 Kata kuncinya nilai tambah… 📖 Modul hlm. 21" oninput="UJE.m.bagian['${j}'].soal[${i}].penjelasan=this.value">${escapeHtml(s.penjelasan || "")}</textarea></details>
+      <textarea dir="auto" class="input" rows="2" placeholder="mis. 🏭 Kata kuncinya nilai tambah… 📖 Modul hlm. 21" oninput="UJE.m.bagian['${j}'].soal[${i}].penjelasan=this.value">${escapeHtml(s.penjelasan || "")}</textarea></details>
   </div>`;
 }
 function _ujeTandaKunci(j, i) {
@@ -211,8 +211,19 @@ Kunci: a, c
 C. Uraian
 1. Apa arti pancaroba?
 Kunci: masa peralihan antarmusim</pre>
+    <details class="je-atur" style="margin:6px 0"><summary>🕌 Soal bahasa Arab juga bisa</summary>
+      <pre class="uje-contoh" dir="rtl" style="font-family:'Amiri',serif;font-size:15px">أ. اختر الإجابة الصحيحة
+١. ما معنى الصلاة لغة؟
+أ. الدعاء
+ب. الصيام
+الجواب: أ
+
+ب. أجب عن الأسئلة التالية
+١. اذكر شروط الصلاة!
+الجواب: الإسلام والعقل</pre>
+      <div class="uj-sub">Nomor ١ ٢ ٣, pilihan أ ب ج د هـ, dan "الجواب:" dikenali. Soal Arab tampil kanan-ke-kiri di layar santri; soal Indonesia/Inggris kiri-ke-kanan.</div></details>
     <div class="uj-sub" style="margin:6px 0">Kunci juga boleh ditandai dengan bintang di depan pilihan (<b>*b. fakta</b>). Soal tanpa pilihan otomatis jadi uraian. Kunci yang belum ada bisa ditandai setelahnya.</div>
-    <textarea id="uje-tempel" class="input" rows="12" placeholder="Tempel di sini…"></textarea>
+    <textarea id="uje-tempel" dir="auto" class="input" rows="12" placeholder="Tempel di sini…"></textarea>
     <div id="uje-tempel-info" class="uj-sub" style="margin-top:6px"></div>
     <div style="display:flex;gap:10px;margin-top:10px"><button class="btn btn-outline" style="flex:1" onclick="_ujeGambar()">‹ Kembali</button><button class="btn btn-accent" style="flex:1" onclick="ujeTempelProses()">✨ Masukkan soal</button></div>`, { lebar: true });
   const ta = qs("uje-tempel");
@@ -233,6 +244,31 @@ function ujeTempelProses() {
   toast(`${n} soal dimasukkan${h.tanpaKunci ? ` · ${h.tanpaKunci} belum ada kunci (ditandai ⚠️)` : ""}`, "ok");
   _ujeGambar();
 }
+// Soal berbahasa Arab dari Word: nomor ١. / ١- / (١), pilihan أ. ب. ج. د. هـ., judul bagian
+// (اختر الإجابة الصحيحة / أجب عن الأسئلة) dan kunci (الجواب: ب) diubah ke bentuk yang dikenali pengurai.
+// Teks soal & pilihannya sendiri tidak diubah; arah kanan-ke-kiri diatur saat ditampilkan.
+const UJE_HURUF_AR = { "أ": "a", "ا": "a", "إ": "a", "ب": "b", "ج": "c", "د": "d", "هـ": "e", "ه": "e", "و": "f", "ز": "g", "ح": "h" };
+const _ujeAngkaLatin = (s) => String(s).replace(/[٠-٩]/g, (d) => d.charCodeAt(0) - 0x660).replace(/[۰-۹]/g, (d) => d.charCodeAt(0) - 0x6f0);
+function _ujeNormalArab(l) {
+  if (!/[؀-ۿ]/.test(l) && !/^\s*\d{1,3}\s*[-–]\s/.test(l)) return l;
+  const kunci = l.match(/^\s*(?:مفتاح الإجابة|الإجابة الصحيحة|الإجابة|الجواب|kunci(?:\s+jawaban)?|jawaban(?:\s+benar)?|jwb)\s*[:：=]\s*(.*)$/i);
+  if (kunci) return "Kunci: " + _ujeKunciArab(kunci[1]);
+  // nomor soal: ١. ١) ١- (١) 1-
+  let x = l.replace(/^(\s*)\(?([0-9٠-٩۰-۹]{1,3})\s*[.)\-–/]\s*/, (m, sp, n) => `${sp}${_ujeAngkaLatin(n)}. `)
+    .replace(/^(\s*)\(([0-9٠-٩۰-۹]{1,3})\)\s*/, (m, sp, n) => `${sp}${_ujeAngkaLatin(n)}. `);
+  const bernomor = /^\s*\d{1,3}\.\s/.test(x);
+  // judul bagian (baris pendek tanpa nomor soal)
+  if (!bernomor && x.trim().length < 90) {
+    const t = x.replace(/^\s*\(?(?:[أابجده]|هـ|[IVX]{1,4})\s*[.)\-–]\s*/, "");
+    if (/أكثر من (إجابة|جواب)|الإجابات الصحيحة/.test(t)) return "Pilihan Ganda Kompleks";
+    if (/^(اختر|اختاري|اختيار من متعدد|الاختيار من متعدد|ضع دائرة)/.test(t.trim())) return "Pilihan Ganda";
+    if (/^(أجب|أجيبي|الأسئلة المقالية|المقال|أسئلة المقال|اكتب الإجابة)/.test(t.trim())) return "Uraian";
+  }
+  // pilihan: أ. … ب. … (di awal baris, atau beberapa pilihan dipisah ≥2 spasi/tab dalam satu baris)
+  x = x.replace(/(^|\s{2,}|\t)(\*?)\(?(هـ|[أاإبجدهوزح])\s*[.)\-–]\s*/g, (m, awal, bintang, h) => `${awal}${bintang}${UJE_HURUF_AR[h]}. `);
+  return x;
+}
+const _ujeKunciArab = (v) => (/^[\s,،وهـأاإبجدزح.*]+$/.test(v) ? v.split(/[\s,،]+/).map((h) => UJE_HURUF_AR[h.replace(/[.*]/g, "")] || "").filter(Boolean).join(", ") || v : v);
 // Pengurai teks bebas → { pg:[], pgk:[], uraian:[], tanpaKunci }
 function _ujeUraiTeks(teks) {
   const hasil = { pg: [], pgk: [], uraian: [], tanpaKunci: 0 };
@@ -258,7 +294,7 @@ function _ujeUraiTeks(teks) {
     hasil[jenis].push(s); cur = null;
   };
   for (const raw of baris) {
-    const l = raw.replace(/\s+$/, "");
+    const l = _ujeNormalArab(raw.replace(/\s+$/, ""));
     if (!l.trim() || /^\s*(pilihlah|jawablah|kerjakan|setiap soal|bernilai|=== halaman)/i.test(l)) continue;
     const jdl = l.trim().length < 60 && l.match(RE_JUDUL);
     if (jdl && !RE_NO.test(l)) {

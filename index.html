@@ -24,7 +24,7 @@
 <link rel="stylesheet" href="src/hp.css?v=2">
 <link rel="stylesheet" href="src/kuliah.css?v=6">
 <link rel="stylesheet" href="src/modul-baca.css?v=8">
-<link rel="stylesheet" href="src/ujian.css?v=7">
+<link rel="stylesheet" href="src/ujian.css?v=8">
 
 <script>
 // Logo gagal dimuat → coba logo bawaan; kalau bawaan pun gagal, tampilkan ikon 🎓 (bukan huruf "G").
@@ -1506,6 +1506,7 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
         <div class="card" style="margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
           <div><label class="form-label" data-i18n="kelas">Kelas</label><select id="rk-kelas" class="input" onchange="renderRekapSiswa()"></select></div>
           <div><label class="form-label" data-i18n="pilihBulan">Pilih Bulan</label><input type="month" id="rk-bulan" class="input" onchange="renderRekapSiswa()"/></div>
+          <button id="rk-cetak" class="btn btn-accent" style="display:none;margin-left:auto" onclick="bukaCetakRekapHadir()">🖨️ Cetak Rekap Hadir</button>
         </div>
         <div id="rekap-siswa-table"></div>
       </section>
@@ -1653,6 +1654,7 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--border-soft);">
             <button class="btn btn-ghost" style="font-size:11px;" onclick="bukaEkskulMassal('ru')">🏃 Isi Ekskul Santri</button>
             <button class="btn btn-accent" style="font-size:11px;" onclick="bukaCetakRapor('ru')">🖨️ Cetak Rapor (format sekolah)</button>
+            <button class="btn btn-ghost pk-tombol" style="font-size:11px;display:none" onclick="bukaKelengkapanNilai('ru')">📋 Pantau Kelengkapan Nilai</button>
           </div>
         </div>
         <div id="rapor-umum-content"></div>
@@ -1669,6 +1671,7 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--border-soft);">
             <button class="btn btn-accent" style="font-size:11px;" onclick="bukaCetakRapor('rd')">🖨️ Cetak Rapor (format sekolah)</button>
+            <button class="btn btn-ghost pk-tombol" style="font-size:11px;display:none" onclick="bukaKelengkapanNilai('rd')">📋 Pantau Kelengkapan Nilai</button>
             <button class="btn btn-ghost" style="font-size:11px;" onclick="qs('rd-kelas').value?bukaNamaArab(qs('rd-kelas').value):toast('Pilih kelas dulu','err')">🔤 Nama Arab</button>
           </div>
         </div>
@@ -1688,6 +1691,7 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
             <button class="btn btn-ghost" style="font-size:11px;" onclick="bukaEkskulMassal('rw')">🏃 Isi Ekskul Santri</button>
             <button class="btn btn-accent" style="font-size:11px;" onclick="bukaCetakRapor('rw')">🖨️ Cetak Rapor</button>
+            <button class="btn btn-ghost pk-tombol" style="font-size:11px;display:none" onclick="bukaKelengkapanNilai('rw')">📋 Pantau Kelengkapan</button>
             <button class="btn btn-outline" onclick="openPengaturanRapor()" data-i18n="tempatTerbit">Tempat/Tanggal Terbit</button>
           </div>
         </div>
@@ -7841,6 +7845,7 @@ async function renderRekapSiswaInit() {
   await ensureLookups();
   populateSelect("rk-kelas", LOOKUP.kelas, "id", "nama_kelas");
   if (!qs("rk-bulan").value) qs("rk-bulan").value = bulanIniISO();
+  if (qs("rk-cetak")) qs("rk-cetak").style.display = isAdmin() || isKepsek() ? "" : "none";
   renderRekapSiswa();
 }
 async function renderRekapSiswa() {
@@ -15923,11 +15928,13 @@ async function handleImportSiswa(evt) {
 <script src="src/jurnal-ekspor.js?v=3"></script>
 <script src="src/rapor-wk.js?v=1"></script>
 <script src="src/rapor-cetak.js?v=1"></script>
+<script src="src/rekap-hadir-cetak.js?v=1"></script>
+<script src="src/kelengkapan-nilai.js?v=1"></script>
 <script src="src/kesimpulan.js?v=2"></script>
 <script src="src/profil.js?v=4"></script>
 <script src="src/kaldik-desain.js?v=5"></script>
-<script src="src/ujian.js?v=4"></script>
-<script src="src/ujian-editor.js?v=2"></script>
+<script src="src/ujian.js?v=5"></script>
+<script src="src/ujian-editor.js?v=3"></script>
 <script src="src/jurnal-otomatis.js?v=5"></script>
 <script src="src/hp.js?v=2"></script>
 </body>

@@ -8,7 +8,7 @@
 <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2"></script>
 <script src="src/config.js?v=4"></script>
 <style>
@@ -76,6 +76,9 @@
   .stimulus{background:linear-gradient(180deg,#fbf7ea,#f7f2e1);border:1px solid #efe3bd;border-radius:14px;padding:14px 16px;font-size:14.5px;line-height:1.75;margin-bottom:14px;white-space:pre-wrap}
   .stimulus .lbl{font-size:11.5px;font-weight:800;color:#8a6500;margin-bottom:6px;display:block;white-space:normal}
   .teks-soal{font-size:16.5px;line-height:1.65;margin-bottom:14px;white-space:pre-wrap;font-weight:500}
+  .teks-soal:dir(rtl),.stimulus:dir(rtl),.opsi span:dir(rtl),.bs-teks:dir(rtl),textarea:dir(rtl){font-family:'Amiri','Traditional Arabic','Plus Jakarta Sans',serif;font-size:1.3em;line-height:1.95}
+  [dir=rtl] .opsi,.opsi[dir=rtl]{text-align:right}
+  .kartu-soal.arab .opsi .huruf{font-family:'Amiri',serif;font-size:16px}
   .gambar-soal{display:block;max-width:100%;max-height:340px;margin:0 auto 14px;border-radius:14px;border:1px solid var(--garis);cursor:zoom-in;background:#f6f8f7}
   .opsi{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;background:#fff;border:2px solid var(--garis);border-radius:14px;padding:12px 14px;margin-bottom:10px;font-size:15.5px;line-height:1.5;transition:border-color .15s,background .15s,transform .12s}
   .opsi:hover{border-color:color-mix(in srgb,var(--warna) 45%,#fff)}
@@ -173,6 +176,9 @@ const supa = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_A
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const HURUF = "ABCDEFGHIJ";
+const HURUF_AR = ["أ", "ب", "ج", "د", "هـ", "و", "ز", "ح", "ط", "ي"];
+// Soal berbahasa Arab (huruf Arab lebih banyak dari huruf Latin) → ditampilkan kanan-ke-kiri
+const soalArab = (s) => { const t = [s.t, ...(s.o || [])].join(" "); return (t.match(/[؀-ۿ]/g) || []).length > (t.match(/[A-Za-z]/g) || []).length; };
 const fmt = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, "<b><u>$1</u></b>"); // **kata** = dicetak tebal di soal asli
 const WARNA = { pg: "var(--c-pg)", pgk: "var(--c-pgk)", uraian: "var(--c-uraian)" };
 const HEX = { pg: "#2563eb", pgk: "#7c3aed", uraian: "#ea7a1a" };
@@ -401,20 +407,21 @@ function tampilSoal() {
   const total = S.soal.length, n = S.idx + 1, terjawab = hitungTerjawab(S.jawab);
   const noDiBagian = S.soal.filter((x, k) => x.jenis === s.jenis && k <= S.idx).length;
   const stimulus = s.stimulus || s.stimulusBagian;
+  const ar = soalArab(s);
   let isi = "";
   if (s.bs) {
     const jw = S.jawab.pgk[s.no] || [];
     isi = `<div class="petunjuk">🟢 Tentukan setiap pernyataan: <b>${esc(s.bs[0])}</b> atau <b>${esc(s.bs[1])}</b>.</div>
       <div class="bs-daftar">${s.urutanOpsi.map((asli, tampil) => `<div class="bs-baris">
-        <div class="bs-teks"><span class="bs-no">${tampil + 1}</span>${fmt(s.o[asli])}</div>
+        <div class="bs-teks" dir="auto"><span class="bs-no">${tampil + 1}</span>${fmt(s.o[asli])}</div>
         <div class="bs-pilih"><button class="${jw[asli] === true ? "ya" : ""}" onclick="pilihBS(${asli},true)">✔ ${esc(s.bs[0])}</button><button class="${jw[asli] === false ? "tidak" : ""}" onclick="pilihBS(${asli},false)">✖ ${esc(s.bs[1])}</button></div></div>`).join("")}</div>`;
   } else if (s.jenis === "pg" || s.jenis === "pgk") {
     const pilih = s.jenis === "pg" ? [S.jawab.pg[s.no]] : (S.jawab.pgk[s.no] || []);
     isi = `${s.jenis === "pgk" ? `<div class="petunjuk">☑️ Pilih <b>lebih dari satu</b> jawaban yang benar.</div>` : ""}
-      <div class="${s.jenis}">${s.urutanOpsi.map((asli, tampil) => `<button class="opsi ${pilih.includes(asli) ? "dipilih" : ""}" onclick="pilihOpsi(${asli})"><span class="huruf">${HURUF[tampil]}</span><span>${fmt(s.o[asli])}${s.og && s.og[asli] ? gambarHTML(s.og[asli]) : ""}</span></button>`).join("")}</div>`;
+      <div class="${s.jenis}" ${ar ? 'dir="rtl"' : ""}>${s.urutanOpsi.map((asli, tampil) => `<button class="opsi ${pilih.includes(asli) ? "dipilih" : ""}" onclick="pilihOpsi(${asli})"><span class="huruf">${(ar ? HURUF_AR : HURUF)[tampil]}</span><span dir="auto">${fmt(s.o[asli])}${s.og && s.og[asli] ? gambarHTML(s.og[asli]) : ""}</span></button>`).join("")}</div>`;
   } else {
     const v = S.jawab.uraian[s.no] || "";
-    isi = `<textarea id="uraian" placeholder="✍️ Tulis jawabanmu di sini…" oninput="ketikUraian(this.value)">${esc(v)}</textarea><div class="hitung-kata" id="hitung-kata">${v.trim() ? v.trim().split(/\s+/).length : 0} kata</div>`;
+    isi = `<textarea id="uraian" dir="auto" placeholder="✍️ Tulis jawabanmu di sini…" oninput="ketikUraian(this.value)">${esc(v)}</textarea><div class="hitung-kata" id="hitung-kata">${v.trim() ? v.trim().split(/\s+/).length : 0} kata</div>`;
   }
   const stimTeks = typeof stimulus === "object" && stimulus ? stimulus.teks : stimulus;
   const ragu = S.ragu.has(kunciRagu(s));
@@ -425,13 +432,13 @@ function tampilSoal() {
       <div class="progres"><i style="width:${Math.round((terjawab * 100) / total)}%"></i></div>
       <div class="progres-teks"><span>${terjawab} dari ${total} terjawab</span><span id="simpan-info">☁️ tersimpan</span></div>
     </div>
-    <div class="wadah" style="margin-top:14px"><div class="kartu kartu-soal" style="--warna:${WARNA[s.jenis]}">
+    <div class="wadah" style="margin-top:14px"><div class="kartu kartu-soal ${ar ? "arab" : ""}" style="--warna:${WARNA[s.jenis]}">
       <div class="kepala-soal"><span class="no-bulat">${n}</span>
         <div><div class="jenis-soal">${LABEL[s.jenis]}</div><div class="sub-soal">Soal ${noDiBagian} dari ${S.soal.filter((x) => x.jenis === s.jenis).length} · ${n}/${total}</div></div>
         <button class="ragu-btn ${ragu ? "aktif" : ""}" onclick="toggleRagu()">🚩 ${ragu ? "Ragu" : "Ragu-ragu"}</button></div>
-      ${stimTeks ? `<div class="stimulus"><span class="lbl">📖 Bacalah teks berikut</span>${fmt(stimTeks)}</div>` : ""}
+      ${stimTeks ? `<div class="stimulus" dir="auto"><span class="lbl">📖 Bacalah teks berikut</span>${fmt(stimTeks)}</div>` : ""}
       ${s.sg ? gambarHTML(s.sg) : ""}
-      <div class="teks-soal">${fmt(s.t)}</div>
+      <div class="teks-soal" dir="auto">${fmt(s.t)}</div>
       ${gambarHTML(s.g)}
       ${isi}
     </div></div>
@@ -642,8 +649,8 @@ function lihatRinciSoal(jenis, no) {
   else if (jenis === "pgk") jawabanku = (j[no] || []).length ? j[no].map((i) => "• " + fmt((s.o || [])[i] || "")).join("<br>") : "<i>tidak dijawab</i>";
   else jawabanku = String(j[no] || "").trim() ? esc(j[no]) : "<i>tidak dijawab</i>";
   $("detail-soal").innerHTML = `<div class="detail-soal"><b>${LABEL[jenis]} no. ${esc(no)}</b> · <span class="lencana s-${st.status}">${ST_LABEL[st.status][0]} ${ST_LABEL[st.status][1]}${st.dapat != null ? ` · ${st.dapat}/${st.maks} poin` : ""}</span>
-    <div style="margin-top:8px">${fmt(s.t || "")}</div>${gambarHTML(s.g)}
-    <div style="margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff;border:1px dashed var(--garis)"><span style="font-size:12px;color:var(--abu)">Jawabanmu:</span><br>${jawabanku}</div>
+    <div style="margin-top:8px" class="teks-soal" dir="auto">${fmt(s.t || "")}</div>${gambarHTML(s.g)}
+    <div style="margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff;border:1px dashed var(--garis)"><span style="font-size:12px;color:var(--abu)">Jawabanmu:</span><br><div dir="auto">${jawabanku}</div></div>
     ${st.penjelasan ? `<div class="penjelasan"><b>💡 Penjelasan singkat</b><div>${fmt(st.penjelasan)}</div></div>`
       : st.status !== "benar" ? `<div class="ket" style="margin-top:6px">💡 Baca lagi materi bab ini atau tanyakan ke ustadz.</div>` : ""}</div>`;
   $("detail-soal").scrollIntoView({ behavior: "smooth", block: "nearest" });
