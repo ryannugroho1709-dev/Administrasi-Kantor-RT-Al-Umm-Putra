@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="src/kas.css?v=3">
 <link rel="stylesheet" href="src/hp.css?v=2">
 <link rel="stylesheet" href="src/kuliah.css?v=6">
-<link rel="stylesheet" href="src/modul-baca.css?v=9">
+<link rel="stylesheet" href="src/modul-baca.css?v=10">
 <link rel="stylesheet" href="src/ujian.css?v=10">
 
 <script>
@@ -1586,6 +1586,7 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
             <div><label class="form-label" data-i18n="kelas">Kelas</label><select id="ma-filter-kelas" class="input" onchange="ubahFilterModulAjar()"></select></div>
             <div><label class="form-label" data-i18n="mapel">Mapel</label><select id="ma-filter-mapel" class="input" onchange="ubahFilterModulAjar()"></select></div>
           </div>
+          <button class="btn btn-accent" onclick="bukaPapanTulis()" title="Papan tulis kosong layar penuh — pena, penghapus sebagian, tulisan rapi, banyak halaman">🧑‍🏫 Papan Tulis</button>
           <button class="btn btn-accent admin-only" style="display:none;" onclick="bukaStatistikModulAjar()" title="Buku & guru yang paling sering memakai Modul Ajar">📊 Statistik</button>
           <button class="btn admin-only" style="display:none;background:rgba(5,150,105,.1);color:#047857;border:1px solid rgba(5,150,105,.25);" onclick="rapikanSampulKembar()" title="Satukan sampul yang gambarnya sama supaya hemat memori">🧹 Sampul kembar</button>
           <button class="btn btn-accent admin-only" style="display:none;" onclick="bukaModalUploadModul()">📤 <span data-i18n="unggahModul">Unggah Modul</span></button>
@@ -16050,7 +16051,7 @@ async function handleImportSiswa(evt) {
 </script>
 <script src="src/kas.js?v=3"></script>
 <script src="src/kuliah.js?v=19"></script>
-<script src="src/modul-baca.js?v=10"></script>
+<script src="src/modul-baca.js?v=11"></script>
 <script src="src/sampul.js?v=1"></script>
 <script src="src/presentasi-absen.js?v=4"></script>
 <script src="src/modul-peta.js?v=1"></script>
