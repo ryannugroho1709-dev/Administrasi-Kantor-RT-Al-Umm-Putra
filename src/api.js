@@ -603,11 +603,15 @@ async function apiGetMonitorHarian(tanggal, hari) {
         }
         continue;
       }
+      // Pada tanggal_asal jam X diajar guru tujuan; pada tanggal_tujuan jam Y diajar guru pengaju.
+      const badal = !t.jadwal_tujuan_id;
       if (t.tanggal_asal === tanggal && t.jadwal_asal_id) {
-        penggantiMap[t.jadwal_asal_id] = { guru: t.guru_tujuan, guruId: t.guru_tujuan_id, label: `🔄 Tukar Jam (gantinya: ${t.guru_tujuan?.nama || "-"})` };
+        penggantiMap[t.jadwal_asal_id] = { guru: t.guru_tujuan, guruId: t.guru_tujuan_id, ..._mapelTukar(t, "asal"),
+          label: `${badal ? "🙋 Menggantikan" : "🔄 Tukar jam dengan"} ${t.guru_pengaju?.nama || "-"}` };
       }
-      if (t.tanggal_tujuan === tanggal && t.jadwal_tujuan_id) {
-        penggantiMap[t.jadwal_tujuan_id] = { guru: t.guru_pengaju, guruId: t.guru_pengaju_id, label: `🔄 Tukar Jam (gantinya: ${t.guru_pengaju?.nama || "-"})` };
+      if (!badal && t.tanggal_tujuan === tanggal && t.jadwal_tujuan_id) {
+        penggantiMap[t.jadwal_tujuan_id] = { guru: t.guru_pengaju, guruId: t.guru_pengaju_id, ..._mapelTukar(t, "tujuan"),
+          label: `🔄 Tukar jam dengan ${t.guru_tujuan?.nama || "-"}` };
       }
     }
     jadwal = jadwal.filter((j) => !idJadwalUntukDisembunyikan.has(j.id));
@@ -641,7 +645,9 @@ async function apiGetMonitorHarian(tanggal, hari) {
         }
       }
       const pengganti = penggantiMap[j.id];
-      const jadwalTampil = pengganti ? { ...j, guru: pengganti.guru, _tukarLabel: pengganti.label } : j;
+      // guru_id ikut diganti → tombol WA konfirmasi/pengingat terkirim ke guru PENGGANTI, bukan guru semula
+      const jadwalTampil = pengganti ? { ...j, guru: pengganti.guru, guru_id: pengganti.guruId,
+        mapel_id: pengganti.mapel_id || j.mapel_id, mapel: pengganti.mapel || j.mapel, _tukarLabel: pengganti.label } : j;
       return { jadwal: jadwalTampil, sesi: s || null, warna, labelKhusus };
     });
   } catch (e) {
@@ -1669,7 +1675,19 @@ async function apiGetAgendaMendatang(dariTanggal, sampaiTanggal) {
 }
 
 // ── TUKAR JAM MENGAJAR (perlu persetujuan Kepala Sekolah) ──
-const _SELECT_TUKAR_JADWAL = "*,guru_pengaju:guru_pengaju_id(nama),guru_tujuan:guru_tujuan_id(nama)," +
+// ARTI TUKAR JAM (disamakan di Monitor, Absensi Guru & Riwayat Absen):
+//  • Guru A (pengaju) punya jam X pada tanggal_asal, guru B (tujuan) punya jam Y pada tanggal_tujuan.
+//  • Pada tanggal_asal, jam X diajar oleh B.  Pada tanggal_tujuan, jam Y diajar oleh A.
+//  • "Digantikan" (badal) = jenis tukar TANPA jadwal_tujuan: B hanya menggantikan A di jam X, tanpa balasan.
+//  • Mapel yang dicatat: bila X & Y di kelas yang sama → tiap guru tetap mengajar mapelnya sendiri
+//    (benar-benar bertukar jam). Bila beda kelas / badal → pengganti mengajar mapel jam itu.
+function _mapelTukar(t, slot) {
+  const x = t.jadwal_asal, y = t.jadwal_tujuan;
+  const sekelas = x && y && x.kelas_id && x.kelas_id === y.kelas_id;
+  if (slot === "asal") return sekelas ? { mapel_id: y.mapel_id, mapel: y.mapel } : { mapel_id: x?.mapel_id, mapel: x?.mapel };
+  return sekelas ? { mapel_id: x.mapel_id, mapel: x.mapel } : { mapel_id: y?.mapel_id, mapel: y?.mapel };
+}
+const _SELECT_TUKAR_JADWAL = "*,guru_pengaju:guru_pengaju_id(nama,foto_url),guru_tujuan:guru_tujuan_id(nama,foto_url)," +
   "jadwal_asal:jadwal_asal_id(hari,jam_mulai,jam_selesai,kelas_id,mapel_id,kelas(nama_kelas),mapel(nama_mapel))," +
   "jadwal_tujuan:jadwal_tujuan_id(hari,jam_mulai,jam_selesai,kelas_id,mapel_id,kelas(nama_kelas),mapel(nama_mapel))";
 async function apiGetJadwalMingguGuru(guruId) {
@@ -1878,7 +1896,8 @@ async function apiGetTukarJadwalAktifHariIni(guruId, tanggal) {
   return unwrap(
     await supa.from("tukar_jadwal").select(_SELECT_TUKAR_JADWAL)
       .eq("status", "disetujui")
-      .or(`and(guru_pengaju_id.eq.${guruId},tanggal_asal.eq.${tanggal}),and(guru_tujuan_id.eq.${guruId},tanggal_tujuan.eq.${tanggal})`)
+      .or(`guru_pengaju_id.eq.${guruId},guru_tujuan_id.eq.${guruId}`)
+      .or(`tanggal_asal.eq.${tanggal},tanggal_tujuan.eq.${tanggal}`)
   );
 }
 

@@ -46,7 +46,7 @@ function _logoAwal(){try{return localStorage.getItem("logoSekolahUrl")||"assets/
 <!-- pdf.js — hanya dipakai fitur "Ambil sampul dari halaman pertama PDF" di Modul Ajar (render page 1 ke canvas) -->
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script>if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";</script>
-<script src="src/api.js?v=14"></script>
+<script src="src/api.js?v=15"></script>
 <script>
 // ── Override apiPerbaikanAbsenAdmin: pakai RPC SECURITY DEFINER (bypass RLS) ──
 // Blok ini di index.html mengoverride versi dari api.js agar pasti termuat,
@@ -3818,13 +3818,20 @@ async function terapkanTukarJadwalHariIni(guruId, tanggal, jadwalHariIni) {
       }
       continue;
     }
-    if (t.guru_pengaju_id === guruId && t.tanggal_asal === tanggal && t.jadwal_tujuan) {
-      hasil = hasil.filter((j) => j.id !== t.jadwal_asal_id);
-      hasil.push({ id: t.jadwal_tujuan_id, ...t.jadwal_tujuan, _tukarInfo: `Tukar jam dengan ${t.guru_tujuan?.nama || "guru lain"}` });
+    // TUKAR / DIGANTIKAN (lihat _mapelTukar di api.js): pada tanggal_asal jam X milik pengaju diajar
+    // guru tujuan; pada tanggal_tujuan jam Y milik guru tujuan diajar pengaju (tidak ada untuk "digantikan").
+    // Dulu terbalik: guru pengganti mendapat jam X pada tanggal_tujuan, sehingga jadwal & "Ajukan Hadir"-nya
+    // tercatat di hari yang salah (mis. Senin, padahal menggantikan hari Sabtu).
+    const badal = !t.jadwal_tujuan_id;
+    if (t.guru_pengaju_id === guruId && t.tanggal_asal === tanggal) hasil = hasil.filter((j) => j.id !== t.jadwal_asal_id);
+    if (t.guru_tujuan_id === guruId && !badal && t.tanggal_tujuan === tanggal) hasil = hasil.filter((j) => j.id !== t.jadwal_tujuan_id);
+    if (t.guru_tujuan_id === guruId && t.tanggal_asal === tanggal && t.jadwal_asal) {
+      hasil.push({ id: t.jadwal_asal_id, ...t.jadwal_asal, ..._mapelTukar(t, "asal"), hari: _hariDariTanggalISO(t.tanggal_asal),
+        _tukarInfo: `${badal ? "Menggantikan" : "Tukar jam dengan"} ${t.guru_pengaju?.nama || "guru lain"}` });
     }
-    if (t.guru_tujuan_id === guruId && t.tanggal_tujuan === tanggal && t.jadwal_asal) {
-      hasil = hasil.filter((j) => j.id !== t.jadwal_tujuan_id);
-      hasil.push({ id: t.jadwal_asal_id, ...t.jadwal_asal, _tukarInfo: `Tukar jam dengan ${t.guru_pengaju?.nama || "guru lain"}` });
+    if (t.guru_pengaju_id === guruId && !badal && t.tanggal_tujuan === tanggal && t.jadwal_tujuan) {
+      hasil.push({ id: t.jadwal_tujuan_id, ...t.jadwal_tujuan, ..._mapelTukar(t, "tujuan"), hari: _hariDariTanggalISO(t.tanggal_tujuan),
+        _tukarInfo: `Tukar jam dengan ${t.guru_tujuan?.nama || "guru lain"}` });
     }
   }
   return hasil;
@@ -4701,6 +4708,9 @@ function tanggalUntukHariMingguIni(namaHari) {
   const dow = (now.getDay() + 6) % 7; // 0=Senin..6=Minggu (hari ini)
   const senin = new Date(now); senin.setDate(now.getDate() - dow);
   const target = new Date(senin); target.setDate(senin.getDate() + idx);
+  // Hari yang sudah lewat pekan ini → pakai pekan depan (dulu bisa terisi tanggal yang sudah lewat,
+  // mis. Senin 2 Nov padahal pengajuan dibuat Sabtu 7 Nov)
+  if (tanggalISO(target) < tanggalISO()) target.setDate(target.getDate() + 7);
   return tanggalISO(target);
 }
 function tukarJamCardHtml() {
@@ -4736,6 +4746,10 @@ async function renderRiwayatTukarSayaWidget() {
       }
       const sayaPengaju = r.guru_pengaju_id === STATE.guruId;
       const partner = sayaPengaju ? r.guru_tujuan?.nama : r.guru_pengaju?.nama;
+      if (!r.jadwal_tujuan_id) { // digantikan (tanpa tukar balik)
+        const jam = `${_tglPendek(r.tanggal_asal)} ${r.jadwal_asal?.jam_mulai?.slice(0, 5) || ""}`;
+        return baris(jam, sayaPengaju ? `🙋 ${escapeHtml(partner || "-")}` : "🙋 Saya", sayaPengaju ? `Digantikan ${escapeHtml(partner || "-")} · ${escapeHtml(r.jadwal_asal?.mapel?.nama_mapel || "-")}` : `Menggantikan ${escapeHtml(partner || "-")} · ${escapeHtml(r.jadwal_asal?.mapel?.nama_mapel || "-")} ${escapeHtml(r.jadwal_asal?.kelas?.nama_kelas || "")}`);
+      }
       const jamSaya = sayaPengaju ? r.jadwal_asal : r.jadwal_tujuan;
       const jamPartner = sayaPengaju ? r.jadwal_tujuan : r.jadwal_asal;
       return baris(`${_tglPendek(sayaPengaju ? r.tanggal_asal : r.tanggal_tujuan)} ${jamSaya?.jam_mulai?.slice(0, 5) || ""}`,
@@ -4772,13 +4786,17 @@ async function openAjukanTukarJadwal(mode = "tukar") {
       <div class="field" style="flex:1;"><label class="form-label">${t("jamMulaiBaru")}</label><input type="time" id="tk-jam-mulai-baru" class="input"/></div>
       <div class="field" style="flex:1;"><label class="form-label">${t("jamSelesaiBaru")}</label><input type="time" id="tk-jam-selesai-baru" class="input"/></div>
     </div>`;
+  const fieldsBadal = `
+    <div class="field"><label class="form-label">🙋 Guru pengganti</label><select id="tk-guru-tujuan" class="input"><option value="">— ${t("pilihGuru")} —</option>${opsiGuru}</select></div>
+    <div style="font-size:11px;color:var(--text-secondary);margin:-4px 0 10px;line-height:1.5">Guru pengganti yang absen, mengisi jurnal, dan tercatat hadir di jam ini. Tidak ada tukar balik.</div>`;
+  const subJudul = mode === "pindah" ? t("pindahJamSub") : mode === "badal" ? "Berhalangan mengajar? Minta guru lain menggantikan jam Antum pada tanggal tertentu." : t("tukarJamSub");
   openModal(`
     <h3>🔄 ${t("ajukanTukarJadwal")}</h3>
-    <div style="font-size:11px;color:var(--text-secondary);margin:-6px 0 12px;">${mode === "pindah" ? t("pindahJamSub") : t("tukarJamSub")}</div>
-    <div style="display:flex;gap:6px;margin-bottom:14px;">${toggleBtn("tukar", t("modeTukar"))}${toggleBtn("pindah", t("modePindah"))}</div>
-    <div class="field"><label class="form-label">${t("jamSayaDitukar")}</label><select id="tk-jadwal-asal" class="input" onchange="onGantiJadwalAsalTukar()">${opsiJadwalSaya}</select></div>
-    <div class="field"><label class="form-label">${t("tanggalMingguIni")}</label><input type="date" id="tk-tanggal-asal" class="input"/></div>
-    ${mode === "pindah" ? fieldsPindah : fieldsTukar}
+    <div style="font-size:11px;color:var(--text-secondary);margin:-6px 0 12px;">${subJudul}</div>
+    <div style="display:flex;gap:6px;margin-bottom:14px;">${toggleBtn("tukar", t("modeTukar"))}${toggleBtn("badal", "🙋 Digantikan")}${toggleBtn("pindah", t("modePindah"))}</div>
+    <div class="field"><label class="form-label">${mode === "badal" ? "Jam saya yang digantikan" : t("jamSayaDitukar")}</label><select id="tk-jadwal-asal" class="input" onchange="onGantiJadwalAsalTukar()">${opsiJadwalSaya}</select></div>
+    <div class="field"><label class="form-label">${mode === "badal" ? "Tanggal" : t("tanggalMingguIni")}</label><input type="date" id="tk-tanggal-asal" class="input"/></div>
+    ${mode === "pindah" ? fieldsPindah : mode === "badal" ? fieldsBadal : fieldsTukar}
     <div class="field"><label class="form-label">${t("alasanOpsional")}</label><textarea id="tk-alasan" class="input" rows="2"></textarea></div>
     <button class="btn btn-accent" style="width:100%" onclick="submitAjukanTukarJadwal()">${t("ajukanKeKepsek")}</button>
   `);
@@ -4826,11 +4844,21 @@ async function submitAjukanTukarJadwal() {
       jenis: "pindah", tanggal_tujuan: tanggalBaru, jam_mulai_baru: jamMulaiBaru, jam_selesai_baru: jamSelesaiBaru,
       alasan: alasan || null,
     };
+  } else if (mode === "badal") {
+    // "Digantikan" disimpan sebagai jenis tukar TANPA jam balasan (jadwal_tujuan_id kosong) — tidak perlu ubah database
+    const guruTujuanId = qs("tk-guru-tujuan").value;
+    if (!guruTujuanId) { toast("Pilih guru pengganti dulu", "err"); return; }
+    payload = {
+      guru_pengaju_id: STATE.guruId, jadwal_asal_id: jadwalAsalId, tanggal_asal: tanggalAsal,
+      jenis: "tukar", guru_tujuan_id: guruTujuanId, jadwal_tujuan_id: null, tanggal_tujuan: tanggalAsal,
+      alasan: alasan || null,
+    };
   } else {
     const guruTujuanId = qs("tk-guru-tujuan").value;
     const jadwalTujuanId = qs("tk-jadwal-tujuan").value;
     const tanggalTujuan = qs("tk-tanggal-tujuan").value;
     if (!guruTujuanId || !jadwalTujuanId || !tanggalTujuan) { toast(t("pilihGuruTujuanDulu"), "err"); return; }
+    if (tanggalTujuan < tanggalISO() && !(await konfirmasiTema(`Tanggal jam ${qs("tk-guru-tujuan").selectedOptions[0]?.textContent || "guru tujuan"} (${tanggalTujuan}) sudah lewat.\n\nKalau guru tersebut hanya MENGGANTIKAN tanpa tukar balik, pilih tab “🙋 Digantikan”. Tetap kirim sebagai tukar jam?`, { ikon: "⚠️", judul: "Tanggal sudah lewat", teksYa: "Tetap kirim" }))) return;
     payload = {
       guru_pengaju_id: STATE.guruId, jadwal_asal_id: jadwalAsalId, tanggal_asal: tanggalAsal,
       jenis: "tukar", guru_tujuan_id: guruTujuanId, jadwal_tujuan_id: jadwalTujuanId, tanggal_tujuan: tanggalTujuan,
@@ -4850,8 +4878,10 @@ async function submitAjukanTukarJadwal() {
     await bootDataGuru();
     refreshKepsekBadge();
     tawarkanKirimWaAdmin(
-      mode === "pindah" ? "Pengajuan Pindah Jam Terkirim" : "Pengajuan Tukar Jam Terkirim",
-      mode === "pindah"
+      mode === "pindah" ? "Pengajuan Pindah Jam Terkirim" : mode === "badal" ? "Pengajuan Digantikan Terkirim" : "Pengajuan Tukar Jam Terkirim",
+      mode === "badal"
+        ? `Saya *${_namaSingkatTopbar(STATE.guruNama)}* mengajukan *DIGANTIKAN* oleh ${namaTujuan}:\n• Jam saya: ${teksAsal}, tgl ${payload.tanggal_asal}` + (alasan ? `\n\nAlasan: ${alasan}` : "")
+        : mode === "pindah"
         ? `Saya *${_namaSingkatTopbar(STATE.guruNama)}* mengajukan *PINDAH JAM*:\n• Dari: ${teksAsal}, tgl ${payload.tanggal_asal}\n• Ke: tgl ${payload.tanggal_tujuan}, ${payload.jam_mulai_baru}–${payload.jam_selesai_baru}`
           + (alasan ? `\n\nAlasan: ${alasan}` : "")
         : `Saya *${_namaSingkatTopbar(STATE.guruNama)}* mengajukan *TUKAR JAM* dengan ${namaTujuan}:\n• Jam saya: ${teksAsal}, tgl ${payload.tanggal_asal}\n• Ditukar dengan: ${teksTujuan}, tgl ${payload.tanggal_tujuan}`
@@ -8103,11 +8133,48 @@ async function _gabungRiwayatDenganJadwal(rowsAsli, dari, sampai, guruIdFilter) 
   // baris virtual cuma dibuat untuk slot yang belum punya baris sama sekali, tidak peduli status
   // baris asli itu (hadir/izin/sakit/alpha) — jadi tidak mungkin dobel.
   const existingKeys = new Set(rowsAsli.map((r) => `${r.guru_id}|${r.tanggal}|${r.jadwal_id}`));
+  // Tukar jam / digantikan / pindah jam yang sudah disetujui: jam yang diserahkan TIDAK dihitung Alpha
+  // untuk guru aslinya, dan jam pengganti dicatat untuk guru yang benar-benar mengajar, di tanggal yang benar.
+  let tukarRentang = [];
+  try {
+    tukarRentang = unwrap(await supa.from("tukar_jadwal").select(_SELECT_TUKAR_JADWAL).eq("status", "disetujui")
+      .or(`and(tanggal_asal.gte.${dari},tanggal_asal.lte.${sampai}),and(tanggal_tujuan.gte.${dari},tanggal_tujuan.lte.${sampai})`));
+  } catch (e) { console.warn("Tukar jadwal tidak termuat:", e); }
+  const lewati = new Set(), tambahan = {};
+  const jadwalById = Object.fromEntries(jadwalSemua.map((j) => [j.id, j]));
+  const tambah = (iso, guruId, guru, j, ekstra) => { if (j && (!guruIdFilter || guruIdFilter === guruId)) (tambahan[iso] ||= []).push({ ...j, guru_id: guruId, guru, ...ekstra }); };
+  tukarRentang.forEach((t) => {
+    if (t.jenis === "pindah") {
+      lewati.add(`${t.guru_pengaju_id}|${t.tanggal_asal}|${t.jadwal_asal_id}`);
+      const j = jadwalById[t.jadwal_asal_id];
+      tambah(t.tanggal_tujuan, t.guru_pengaju_id, t.guru_pengaju, j, j ? { jam_mulai: t.jam_mulai_baru, jam_selesai: t.jam_selesai_baru } : {});
+      return;
+    }
+    lewati.add(`${t.guru_pengaju_id}|${t.tanggal_asal}|${t.jadwal_asal_id}`);
+    tambah(t.tanggal_asal, t.guru_tujuan_id, t.guru_tujuan, jadwalById[t.jadwal_asal_id], _mapelTukar(t, "asal"));
+    if (t.jadwal_tujuan_id) {
+      lewati.add(`${t.guru_tujuan_id}|${t.tanggal_tujuan}|${t.jadwal_tujuan_id}`);
+      tambah(t.tanggal_tujuan, t.guru_pengaju_id, t.guru_pengaju, jadwalById[t.jadwal_tujuan_id], _mapelTukar(t, "tujuan"));
+    }
+  });
   const virtual = [];
+  const buatVirtual = (j, iso) => {
+    if (lewati.has(`${j.guru_id}|${iso}|${j.id}`) || existingKeys.has(`${j.guru_id}|${iso}|${j.id}`)) return;
+    existingKeys.add(`${j.guru_id}|${iso}|${j.id}`);
+    virtual.push({
+      id: `virtual-${j.id}-${iso}`, tanggal: iso, guru_id: j.guru_id, guru: j.guru,
+      mapel_id: j.mapel_id, mapel: j.mapel, kelas_id: j.kelas_id, kelas: j.kelas,
+      jadwal_id: j.id, jadwal_pelajaran: { hari: j.hari, jam_mulai: j.jam_mulai, jam_selesai: j.jam_selesai },
+      jam_masuk: null, jam_pulang: null, jurnal_id: null,
+      status_kehadiran: iso === hariIni ? "belum_absen" : "alpha",
+      _virtual: true,
+    });
+  };
   let d = new Date(dari + "T00:00:00");
   const akhirRange = new Date(sampai + "T00:00:00");
   while (d <= akhirRange) {
     const iso = tanggalISO(d);
+    if (iso <= hariIni && !liburSet.has(iso)) (tambahan[iso] || []).forEach((j) => buatVirtual(j, iso)); // jam pengganti / pindahan
     if (iso <= hariIni) { // jangan buat baris untuk jadwal yang belum terjadi (tanggal di masa depan)
       // Nama hari HARUS dihitung pakai zona Jakarta (hariIniIndo), BUKAN d.getDay() lokal — kalau
       // timezone perangkat beda dari WIB (mis. WITA di Kalimantan), d.getDay() bisa kasih hari yang
@@ -8120,16 +8187,7 @@ async function _gabungRiwayatDenganJadwal(rowsAsli, dari, sampai, guruIdFilter) 
           // atau jadwal pekan-ke-berapa dalam bulan) — fokus hanya ke jadwal yang benar-benar berlaku
           // di tanggal tersebut, bukan semua jadwal yang kebetulan sama nama harinya.
           if (!_cocokTipeMinggu(j, iso) || !_cocokPekanBulan(j, iso)) return;
-          if (!existingKeys.has(`${j.guru_id}|${iso}|${j.id}`)) {
-            virtual.push({
-              id: `virtual-${j.id}-${iso}`, tanggal: iso, guru_id: j.guru_id, guru: j.guru,
-              mapel_id: j.mapel_id, mapel: j.mapel, kelas_id: j.kelas_id, kelas: j.kelas,
-              jadwal_id: j.id, jadwal_pelajaran: { hari: j.hari, jam_mulai: j.jam_mulai, jam_selesai: j.jam_selesai },
-              jam_masuk: null, jam_pulang: null, jurnal_id: null,
-              status_kehadiran: iso === hariIni ? "belum_absen" : "alpha",
-              _virtual: true,
-            });
-          }
+          buatVirtual(j, iso);
         });
       }
     }
@@ -8788,8 +8846,29 @@ function _maSubDariJudul(judul, subs) {
   const j = String(judul || "").toLowerCase();
   return subs.find((n) => j.includes(n.toLowerCase()) || j.includes(n.toLowerCase().slice(0, 4))) || null;
 }
+// Ikon & warna rak untuk SEMUA mapel (umum & diniyyah) — tampilan kartu berwarna seperti rak sub-mapel
+const MA_GAYA_MAPEL = {
+  matematika: ["📐", "37,99,235"], "bahasa indonesia": ["📝", "234,88,12"], "bahasa inggris": ["🇬🇧", "2,132,199"], ipa: ["🔬", "22,163,74"], ips: ["🌏", "14,116,144"],
+  pjok: ["⚽", "234,88,12"], informatika: ["💻", "71,85,105"], prakarya: ["🛠️", "161,98,7"], "bahasa arab": ["📜", "5,150,105"], aqidah: ["🕋", "13,148,136"],
+  akidah: ["🕋", "13,148,136"], fiqih: ["🕌", "8,145,178"], fikih: ["🕌", "8,145,178"], hadis: ["📜", "180,83,9"], hadits: ["📜", "180,83,9"], tafsir: ["📗", "22,101,52"],
+  tajwid: ["🎙️", "124,58,237"], tahsin: ["🎧", "147,51,234"], nahwu: ["✍️", "190,18,60"], shorof: ["🔣", "219,39,119"], sharaf: ["🔣", "219,39,119"], siroh: ["🐪", "161,98,7"],
+  sirah: ["🐪", "161,98,7"], "ushul fiqih": ["⚖️", "67,56,202"], muhadhoroh: ["🎤", "234,88,12"], tahfizh: ["📿", "21,128,61"], tahfidz: ["📿", "21,128,61"], akhlak: ["🌸", "219,39,119"],
+};
+const _MA_PALET = ["37,99,235", "22,163,74", "219,39,119", "234,88,12", "124,58,237", "14,116,144", "180,83,9", "13,148,136"];
+function _maGayaMapel(nama) {
+  const n = String(nama || "").toLowerCase().trim();
+  if (MA_GAYA_MAPEL[n]) return MA_GAYA_MAPEL[n];
+  const kunci = Object.keys(MA_GAYA_MAPEL).find((k) => n.startsWith(k));
+  if (kunci) return MA_GAYA_MAPEL[kunci];
+  let h = 0; for (const c of n) h = (h * 31 + c.charCodeAt(0)) | 0;
+  return ["📚", _MA_PALET[Math.abs(h) % _MA_PALET.length]];
+}
 function slotModulHtml(slot, bukuList) {
   const subs = _maSubMapel(slot.nama_mapel);
+  if (!subs && !slot._sub && slot.kelas_id !== "umum") {
+    const [ikon, rgb] = _maGayaMapel(slot.nama_mapel);
+    slot = { ...slot, _sub: { ikon, rgb, induk: null, awalJudul: "" } };
+  }
   if (subs && slot.kelas_id !== "umum") {
     const isi = subs.map((n) => [n, bukuList.filter((m) => _maSubDariJudul(m.judul, subs) === n)]);
     const lain = bukuList.filter((m) => !_maSubDariJudul(m.judul, subs));
@@ -8824,7 +8903,7 @@ function slotModulHtml(slot, bukuList) {
       <span class="ma-book-icon">➕</span><span>${t("tambah")}</span>
     </div>` : "";
   const kosong = (!bukuList.length && !isAdmin()) ? `<div class="ma-slot-kosong">${t("belumAdaModul")}</div>` : "";
-  return `<div class="ma-slot${slot._sub ? " ma-slot-sub" : ""}" ${slot._sub ? `style="--sub-rgb:${slot._sub.rgb}" title="Bagian dari mapel ${escapeHtml(slot._sub.induk)}"` : ""}>
+  return `<div class="ma-slot${slot._sub ? " ma-slot-sub" : ""}" ${slot._sub ? `style="--sub-rgb:${slot._sub.rgb}"${slot._sub.induk ? ` title="Bagian dari mapel ${escapeHtml(slot._sub.induk)}"` : ""}` : ""}>
     ${slot._sub ? `<div class="ma-sub-label"><span>${slot._sub.ikon}</span>${escapeHtml(slot.nama_mapel)}<small>${bukuList.length} buku</small></div>`
       : `<div style="font-size:11.5px;font-weight:700;color:var(--text-secondary);margin-bottom:6px;">${escapeHtml(slot.nama_mapel)}</div>`}
     ${kosong || `<div class="ma-rak">${kartuBuku}${tambahTile}</div>`}
@@ -13321,8 +13400,11 @@ function _tglPendek(iso) {
 }
 function _inisial(nama) { return String(nama || "?").split(",")[0].trim().split(/\s+/).slice(0, 2).map((s) => s[0] || "").join("").toUpperCase(); }
 function htmlKartuTukarJadwal(r, { aksi = "" } = {}) {
-  const pindah = r.jenis === "pindah";
+  const pindah = r.jenis === "pindah", badal = !pindah && !r.jadwal_tujuan_id;
   const ja = r.jadwal_asal || {}, jt = r.jadwal_tujuan || {};
+  // admin: tukar lama yang sebenarnya hanya "digantikan" (mis. tanggal balasannya terlanjur hari yang sudah lewat)
+  if (!aksi && isAdmin() && r.status === "disetujui" && !pindah && !badal)
+    aksi = `<div class="tj-aksi"><button class="btn btn-outline" style="font-size:11px" onclick="ubahTukarJadiDigantikan('${r.id}')" title="Pakai bila guru tujuan hanya menggantikan, tanpa tukar balik">🙋 Ubah jadi “digantikan saja”</button></div>`;
   const blok = (judul, tgl, jam, mapel, kelas, guru) => `<div class="tj-blok">
       <div class="tj-blok-judul">${judul}</div>
       <div class="tj-tgl">${_tglPendek(tgl)}</div>
@@ -13339,17 +13421,19 @@ function htmlKartuTukarJadwal(r, { aksi = "" } = {}) {
       <span class="tj-avatar">${_inisial(r.guru_pengaju?.nama)}</span>
       <div style="min-width:0;flex:1;">
         <b class="tj-nama">${escapeHtml(r.guru_pengaju?.nama || "-")}</b>
-        <div class="tj-jenis">${pindah ? "🔀 Pindah jam" : "⇄ Tukar jam dengan guru lain"}</div>
+        <div class="tj-jenis">${pindah ? "🔀 Pindah jam" : badal ? "🙋 Minta digantikan guru lain" : "⇄ Tukar jam dengan guru lain"}</div>
       </div>
-      ${aksi ? "" : status}
+      ${aksi && r.status === "menunggu" ? "" : status}
     </div>
     <div class="tj-alur">
       ${blok("Dari", r.tanggal_asal, jamAsal, ja.mapel?.nama_mapel, ja.kelas?.nama_kelas)}
-      <div class="tj-panah">${pindah ? "→" : "⇄"}</div>
+      <div class="tj-panah">${pindah || badal ? "→" : "⇄"}</div>
       ${pindah
         ? blok("Ke", r.tanggal_tujuan, `${r.jam_mulai_baru?.slice(0, 5) || ""}–${r.jam_selesai_baru?.slice(0, 5) || ""}`, ja.mapel?.nama_mapel, ja.kelas?.nama_kelas)
+        : badal ? blok("Digantikan oleh", r.tanggal_asal, jamAsal, ja.mapel?.nama_mapel, ja.kelas?.nama_kelas, r.guru_tujuan?.nama)
         : blok("Dengan", r.tanggal_tujuan, `${jt.jam_mulai?.slice(0, 5) || ""}–${jt.jam_selesai?.slice(0, 5) || ""}`, jt.mapel?.nama_mapel, jt.kelas?.nama_kelas, r.guru_tujuan?.nama)}
     </div>
+    ${!pindah && r.guru_tujuan?.nama ? `<div class="tj-alasan" style="font-style:normal">📌 ${_tglPendek(r.tanggal_asal)} ${jamAsal} diajar <b>${escapeHtml(r.guru_tujuan.nama)}</b>${badal ? "" : ` · ${_tglPendek(r.tanggal_tujuan)} diajar <b>${escapeHtml(r.guru_pengaju?.nama || "-")}</b>`}</div>` : ""}
     ${r.alasan ? `<div class="tj-alasan">“${escapeHtml(r.alasan)}”</div>` : ""}
     ${aksi}
   </div>`;
@@ -13392,13 +13476,45 @@ async function prosesTukarKepsek(id, status) {
     await renderKepsekTukarAntrian();
     await renderKepsekTukarRiwayat();
     refreshKepsekBadge();
-    if (r?.guru_pengaju_id) {
+    if (r?.guru_pengaju_id && r.jenis !== "pindah" && r.guru_tujuan_id) { _kabariTukarDuaGuru(r, status); }
+    else if (r?.guru_pengaju_id) {
       const ja = r.jadwal_asal || {};
       _tawarkanKabariGuruWa(r.guru_pengaju_id,
         `Pengajuan *${r.jenis === "pindah" ? "pindah jam" : "tukar jam"}* Antum untuk ${ja.mapel?.nama_mapel || "-"} ${ja.kelas?.nama_kelas || ""} (tgl ${r.tanggal_asal}) *${status === "disetujui" ? "DITERIMA ✅" : "DITOLAK ❌"}*.`
           + (status === "disetujui" && r.jenis === "pindah" ? `\nJadwal baru: tgl ${r.tanggal_tujuan}, ${r.jam_mulai_baru?.slice(0, 5)}–${r.jam_selesai_baru?.slice(0, 5)}. Silakan absen di jam baru tersebut.` : ""));
     }
   } catch (e) { toast("Gagal memproses: " + e.message, "err"); }
+}
+// Tukar jam / digantikan: kabari DUA guru — yang mengajukan dan guru PENGGANTI (yang harus datang mengajar)
+async function _kabariTukarDuaGuru(r, status) {
+  await ensureLookups();
+  const ja = r.jadwal_asal || {}, jt = r.jadwal_tujuan || {}, badal = !r.jadwal_tujuan_id, ok = status === "disetujui";
+  const jamA = `${ja.jam_mulai?.slice(0, 5) || ""}–${ja.jam_selesai?.slice(0, 5) || ""}`, jamT = `${jt.jam_mulai?.slice(0, 5) || ""}–${jt.jam_selesai?.slice(0, 5) || ""}`;
+  const mA = _mapelTukar(r, "asal").mapel?.nama_mapel || ja.mapel?.nama_mapel || "-", mT = _mapelTukar(r, "tujuan").mapel?.nama_mapel || jt.mapel?.nama_mapel || "-";
+  const g = (id) => (LOOKUP.guruAll || []).find((x) => x.id === id);
+  const pengaju = g(r.guru_pengaju_id), pengganti = g(r.guru_tujuan_id);
+  const pesanPengaju = `Wa'alaikumussalam warahmatullahi wabarakatuh, ${_namaSingkatTopbar(pengaju?.nama || "")}.\n\nPengajuan *${badal ? "digantikan" : "tukar jam"}* Antum *${ok ? "DITERIMA ✅" : "DITOLAK ❌"}*.` +
+    (ok ? `\n• ${_tglPendek(r.tanggal_asal)} ${jamA}, ${ja.kelas?.nama_kelas || ""}: diajar *${pengganti?.nama || "-"}*.` + (badal ? "" : `\n• ${_tglPendek(r.tanggal_tujuan)} ${jamT}, ${jt.kelas?.nama_kelas || ""}: Antum mengajar *${mT}* — silakan absen & isi jurnal di jam tersebut.`) : "") + `\n\nJazakallahu khairan.`;
+  const pesanPengganti = ok ? `Assalamu'alaikum warahmatullahi wabarakatuh, ${_namaSingkatTopbar(pengganti?.nama || "")}.\n\nMohon konfirmasi, Antum *${badal ? "menggantikan" : "bertukar jam dengan"} ${pengaju?.nama || "-"}*:\n• *${_tglPendek(r.tanggal_asal)}, ${jamA}* — ${ja.kelas?.nama_kelas || ""}, mapel *${mA}*.` +
+    (badal ? "" : `\n• Sebagai gantinya, jam Antum ${_tglPendek(r.tanggal_tujuan)} ${jamT} diajar ${pengaju?.nama || "-"}.`) +
+    `\n\nJadwal ini sudah muncul di menu *Absen* Antum pada tanggal tersebut — silakan absen masuk, isi jurnal, lalu absen pulang seperti biasa.\n\nJazakallahu khairan.` : "";
+  const tombol = (guru, pesan, label) => { const { nomor, valid } = normalisasiNomorWa(guru?.no_wa); return valid ? `<a class="btn btn-wa" style="width:100%;margin-top:8px;text-decoration:none;" target="_blank" rel="noopener" href="https://wa.me/${nomor}?text=${encodeURIComponent(pesan)}">💬 ${label}</a>` : `<div style="font-size:11.5px;color:var(--bad);margin-top:8px">No. WA ${escapeHtml(guru?.nama || "-")} belum valid.</div>`; };
+  openModal(`<h3>💬 Kabari Guru</h3>
+    ${ok ? `<div class="wa-pratinjau">${escapeHtml(pesanPengganti).replace(/\n/g, "<br/>").replace(/\*([^*]+)\*/g, "<b>$1</b>")}</div>${tombol(pengganti, pesanPengganti, "Kirim ke guru PENGGANTI · " + escapeHtml(_namaSingkatTopbar(pengganti?.nama || "")))}` : ""}
+    ${r.guru_pengaju_id !== STATE.guruId ? tombol(pengaju, pesanPengaju, "Kirim ke guru yang mengajukan · " + escapeHtml(_namaSingkatTopbar(pengaju?.nama || ""))) : ""}
+    <button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="closeModal()">Selesai</button>`);
+}
+async function ubahTukarJadiDigantikan(id) {
+  if (!isAdmin()) return;
+  if (!(await konfirmasiTema("Ubah jadi “digantikan saja”?\n\nGuru tujuan tetap mengajar di jam & tanggal asal, tetapi TIDAK ada tukar balik — jam milik guru tujuan kembali menjadi jamnya sendiri seperti biasa.", { ikon: "🙋", judul: "Digantikan saja", teksYa: "Ubah" }))) return;
+  try {
+    const { data: row, error: e1 } = await supa.from("tukar_jadwal").select("tanggal_asal").eq("id", id).maybeSingle();
+    if (e1 || !row) throw e1 || new Error("Data tidak ditemukan");
+    const { error } = await supa.from("tukar_jadwal").update({ jadwal_tujuan_id: null, tanggal_tujuan: row.tanggal_asal }).eq("id", id);
+    if (error) throw error;
+    toast("🙋 Diubah jadi “digantikan saja”", "ok");
+    renderKepsekTukarRiwayat();
+  } catch (e) { toast("Gagal mengubah: " + (e.message || e), "err"); }
 }
 async function renderKepsekTukarRiwayat() {
   const target = qs("kepsek-tukar-riwayat");
