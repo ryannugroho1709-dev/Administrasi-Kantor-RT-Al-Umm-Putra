@@ -345,11 +345,36 @@ async function apiGetSiswaByKelas(kelasId) {
   }
 }
 
+// Kalimat "Kegiatan Pembelajaran" yang alami: materi dipecah jadi topik + poin bahasan,
+// metode diubah jadi kegiatan nyata (mis. Ceramah → "guru menjelaskan"), dan latihan/ujian dikenali.
+const _KEGIATAN_METODE = {
+  "ceramah": "penjelasan guru", "diskusi": "diskusi", "tanya jawab": "tanya jawab", "demonstrasi": "demonstrasi/peragaan",
+  "bermain peran": "bermain peran", "pembelajaran berbasis masalah": "pemecahan masalah", "pembelajaran berbasis proyek": "pengerjaan proyek",
+  "penemuan": "kegiatan menemukan konsep", "penyelidikan": "penyelidikan", "curah gagasan": "curah gagasan", "pembelajaran kooperatif": "kerja kelompok",
+  "studi kasus": "pembahasan studi kasus", "tutor sebaya": "tutor sebaya", "pemetaan pikiran": "pembuatan peta pikiran", "penugasan": "pengerjaan tugas",
+  "studi lapangan": "studi lapangan", "ulangan": "ulangan", "tugas": "pengerjaan tugas", "hafalan": "setoran hafalan", "setoran": "setoran hafalan",
+  "muraja'ah": "muraja'ah", "murajaah": "muraja'ah", "talaqqi": "talaqqi", "presentasi": "presentasi", "latihan": "latihan soal",
+};
 function buatDeskripsiOtomatis(materi, metodeArr) {
   if (!metodeArr || !metodeArr.length) return "";
-  const metodeStr = metodeArr.join(", ");
-  return `Pembelajaran dengan materi "${materi}" disampaikan menggunakan metode ${metodeStr}, ` +
-    `melibatkan siswa secara aktif sesuai pendekatan yang dipilih guru untuk mencapai pemahaman materi tersebut.`;
+  const kegiatan = [...new Set(metodeArr.map((m) => _KEGIATAN_METODE[String(m).toLowerCase().trim()] || String(m).toLowerCase().trim()))];
+  const daftar = (a) => (a.length <= 1 ? a.join("") : `${a.slice(0, -1).join(", ")} dan ${a[a.length - 1]}`);
+  const bagian = String(materi || "").split(/\s*;\s*/).map((x) => x.replace(/^lanjutan:\s*/i, "").trim()).filter(Boolean);
+  const kalimat = [];
+  const isi = bagian.filter((b) => !/^(latihan soal|ujian|ulangan|uh|uts|uas|pts|pas)\b/i.test(b));
+  const latihan = bagian.filter((b) => /^(latihan soal|ujian|ulangan|uh|uts|uas|pts|pas)\b/i.test(b));
+  if (isi.length) {
+    const lanjut = /^lanjutan/i.test(String(materi || "").trim()) ? "melanjutkan " : "";
+    const urai = isi.map((b) => {
+      const [topik, ...sisa] = b.split(/:\s+/);
+      const poin = sisa.join(": ").trim();
+      return poin ? `${topik.trim()}, meliputi ${poin.replace(/\s*\(([^)]*)\)\s*$/, " ($1)")}` : topik.trim();
+    });
+    kalimat.push(`Pembelajaran ${lanjut ? "melanjutkan pembahasan" : "membahas"} ${urai.join("; serta ")}.`);
+  }
+  if (latihan.length) kalimat.push(`Santri mengerjakan ${daftar(latihan.map((x) => x.charAt(0).toLowerCase() + x.slice(1)))} untuk mengukur pemahaman.`);
+  kalimat.push(`Kegiatan berlangsung melalui ${daftar(kegiatan)} bersama santri.`);
+  return kalimat.join(" ");
 }
 
 async function apiSimpanJurnal({ sesi, guruId, kelasId, mapelId, jadwalId, tanggal, materiPokok, metodeArr, catatan, absensiSiswa }) {

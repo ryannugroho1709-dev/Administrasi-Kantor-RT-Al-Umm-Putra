@@ -207,7 +207,33 @@
       return true;
     } catch (e) { return false; }
   }
+  // WhatsApp di komputer (Windows) merusak emoji "baru" (kode di atas U+FFFF, mis. 📅 📚 🕒 📝) yang
+  // dikirim lewat tautan → tampil "�". Sebelum dibuka, emoji tsb diganti emoji lama yang pasti tampil
+  // (✅ ⏰ ✍️ ✏️ ⚠️ ☀️ ⭐ dst.); yang tidak punya padanan dibuang.
+  const WA_GANTI = [
+    [/[\u{1F4C5}\u{1F4C6}\u{1F5D3}]️?/gu, "▪️"], [/[\u{1F550}-\u{1F567}]️?/gu, "⏰"], [/[\u{1F4DA}\u{1F4D6}\u{1F4D7}\u{1F4D8}\u{1F4D9}\u{1F4D5}\u{1F4D3}\u{1F4D4}]/gu, "✏️"],
+    [/\u{1F4DD}/gu, "✍️"], [/[\u{1F4E2}\u{1F4E3}]/gu, "✳️"], [/[\u{1F4AC}\u{1F4E4}\u{1F4E5}\u{1F4E9}\u{1F4E8}\u{1F4E7}]/gu, "✉️"], [/[\u{1F3C5}\u{1F3C6}\u{1F947}\u{1F393}]/gu, "⭐"],
+    [/\u{1F514}/gu, "⏰"], [/\u{1F64B}[‍♀♂️]*/gu, "✋"], [/\u{1F534}/gu, "❗"], [/\u{1F7E2}/gu, "✅"], [/\u{1F7E1}/gu, "⚠️"],
+    [/[\u{1F4CC}\u{1F4CD}]/gu, "➡️"], [/\u{1F6E1}️?/gu, "✅"], [/[\u{1F3D6}\u{1F334}]️?/gu, "☀️"], [/[\u{1F389}\u{1F38A}\u{1F4A1}]/gu, "✨"],
+    [/[\u{1F91D}\u{1F465}\u{1F46A}]/gu, "✳️"], [/[\u{1F504}\u{1F501}]/gu, "♻️"], [/[\u{1F54C}\u{1F4FF}\u{1F54B}]/gu, "☪️"], [/[\u{1F4CB}\u{1F4CA}\u{1F4C8}\u{1F5C2}\u{1F4C1}]️?/gu, "▪️"],
+  ];
+  function waAman(teks) {
+    let t = String(teks || "");
+    WA_GANTI.forEach(([re, ganti]) => { t = t.replace(re, ganti); });
+    // sisa emoji baru (termasuk gabungan ZWJ & warna kulit) dibuang
+    t = t.replace(/(?:[\u{10000}-\u{10FFFF}][\u{1F3FB}-\u{1F3FF}️]*‍?)+/gu, "");
+    return t.replace(/^[ \t]+/gm, (m) => (m.length > 3 ? m : "")).replace(/[ \t]{2,}/g, " ").replace(/ +\n/g, "\n");
+  }
+  function urlWaAman(url) {
+    try {
+      const u = new URL(url);
+      const q = []; u.searchParams.forEach((v, k) => q.push(`${k}=${encodeURIComponent(k === "text" ? waAman(v) : v)}`));
+      return `${u.origin}${u.pathname}${q.length ? "?" + q.join("&") : ""}`;
+    } catch (e) { return url; }
+  }
+  window.waAman = waAman;
   function bukaWa(url) {
+    url = urlWaAman(url);
     let nomor = "", teks = "";
     try { const u = new URL(url); nomor = u.pathname.replace(/\D/g, ""); teks = u.searchParams.get("text") || ""; } catch (e) {}
     if (diPerangkatHp() && nomor) {
@@ -238,7 +264,10 @@
     }, true);
     // window.open("https://wa.me/...") yang dipanggil langsung dari kode (slip gaji, dll) ikut diarahkan
     window.open = function (url, ...rest) {
-      if (typeof url === "string" && /^https:\/\/(wa\.me|api\.whatsapp\.com)\//.test(url) && diPerangkatHp()) { simpanPosisi(); buangPosisiSaatKembali(); bukaWa(url); return null; }
+      if (typeof url === "string" && /^https:\/\/(wa\.me|api\.whatsapp\.com)\//.test(url)) {
+        if (diPerangkatHp()) { simpanPosisi(); buangPosisiSaatKembali(); bukaWa(url); return null; }
+        url = urlWaAman(url); // komputer: tetap tab baru, tetapi emoji diamankan
+      }
 
       return _asliOpen(url, ...rest);
     };

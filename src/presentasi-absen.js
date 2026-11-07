@@ -123,13 +123,16 @@ _mvTutup = function () {
   setTimeout(() => _paTawarJurnal(m, j, sesi), 300);
 };
 async function _paTawarJurnal(m, j, sesi) {
-  try { await Promise.race([window._mvJanjiJudul, new Promise((r) => setTimeout(r, 4000))]); } catch (e) {}
+  // judul bab & poin dibaca dari halaman buku (bisa lewat OCR) — tunggu sebentar sambil memberi tahu guru
+  openModal(`<div style="text-align:center;padding:18px 6px"><div style="font-size:30px">📖</div><b>Membaca bab & poin yang tadi diajarkan…</b><div style="font-size:12px;color:var(--text-secondary);margin-top:6px">Sebentar saja — untuk mengisi jurnal otomatis.</div>${loadingHTML("")}</div>`);
+  try { await Promise.race([window._mvJanjiJudul, new Promise((r) => setTimeout(r, 15000))]); } catch (e) {}
   let thumbs = [];
   try { thumbs = (await Promise.race([window._mvJanjiThumb, new Promise((r) => setTimeout(() => r([]), 4000))])) || []; } catch (e) {}
   const absen = _paBaca(j.id), log = (() => { try { return JSON.parse(localStorage.getItem("maPresentasi") || "[]")[0]; } catch (e) { return null; } })();
   const usul = log && typeof _joTeksPresentasi === "function" ? _joTeksPresentasi(log) : (m.judul || "");
   const pilihan = log ? [...new Set([
-    ...(log.judulHal || []).map((x) => `${log.buku || m.judul}: ${x}`),
+    log.materiOtomatis || null,
+    ...(log.judulHal || []).filter((x) => x !== log.materiOtomatis).map((x) => `${log.buku || m.judul}: ${x}`),
     log.tanda ? `${log.buku || m.judul}: ${log.tanda}` : null,
     ...(window._mvTandaBuku || []).map((x) => `${log.buku || m.judul}: ${x}`),
     `${log.buku || m.judul} (hal. ${log.dari}${log.sampai !== log.dari ? "–" + log.sampai : ""})`,

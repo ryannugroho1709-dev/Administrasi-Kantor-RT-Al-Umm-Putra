@@ -46,7 +46,7 @@ function _logoAwal(){try{return localStorage.getItem("logoSekolahUrl")||"assets/
 <!-- pdf.js — hanya dipakai fitur "Ambil sampul dari halaman pertama PDF" di Modul Ajar (render page 1 ke canvas) -->
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script>if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";</script>
-<script src="src/api.js?v=15"></script>
+<script src="src/api.js?v=16"></script>
 <script>
 // ── Override apiPerbaikanAbsenAdmin: pakai RPC SECURITY DEFINER (bypass RLS) ──
 // Blok ini di index.html mengoverride versi dari api.js agar pasti termuat,
@@ -16052,7 +16052,8 @@ async function handleImportSiswa(evt) {
 <script src="src/kuliah.js?v=19"></script>
 <script src="src/modul-baca.js?v=10"></script>
 <script src="src/sampul.js?v=1"></script>
-<script src="src/presentasi-absen.js?v=3"></script>
+<script src="src/presentasi-absen.js?v=4"></script>
+<script src="src/modul-peta.js?v=1"></script>
 <script src="src/jurnal-ekspor.js?v=3"></script>
 <script src="src/rapor-wk.js?v=1"></script>
 <script src="src/rapor-cetak.js?v=1"></script>
@@ -16064,7 +16065,7 @@ async function handleImportSiswa(evt) {
 <script src="src/kaldik-desain.js?v=5"></script>
 <script src="src/ujian.js?v=5"></script>
 <script src="src/ujian-editor.js?v=3"></script>
-<script src="src/jurnal-otomatis.js?v=5"></script>
-<script src="src/hp.js?v=2"></script>
+<script src="src/jurnal-otomatis.js?v=6"></script>
+<script src="src/hp.js?v=3"></script>
 </body>
 </html>
