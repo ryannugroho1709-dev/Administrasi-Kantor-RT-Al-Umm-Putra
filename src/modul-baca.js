@@ -101,6 +101,8 @@ async function _mvMuatPdf(el) {
     if (!window.pdfjsLib) throw new Error("Pembaca PDF belum termuat — periksa internet lalu coba lagi.");
     const [data, meta] = await Promise.all([_mvAmbilPdf(MV.m.file_url), _maMuatMeta(MV.m.file_url)]);
     MV.meta = meta;
+    // harakat yang pernah ditempel di buku ini (tersimpan bersama, tampil lagi untuk semua guru)
+    Object.entries(meta.harakat || {}).forEach(([hal, arr]) => { MV.coret[hal] = arr.map((x) => ({ alat: "harakat", teks: x.t, ukuran: x.u, warna: x.w, pts: [x.p] })); });
     MV.doc = await pdfjsLib.getDocument({ data }).promise;
     if (MV.mode === "presentasi" && (meta.tanda || []).length) setTimeout(() => _mvPanel("tanda"), 300);
     MV.total = MV.doc.numPages;
@@ -237,6 +239,20 @@ function _mvUrung(maju) {
   MV.coret[k] = dari.pop();
   _mvTarget().forEach((tg) => _mvGambarCoret(tg));
   _mvTombolRiwayat();
+  _mvSinkronHarakat();
+}
+// Harakat di halaman buku disimpan permanen per buku (coretan pena/stabilo tetap sementara seperti papan tulis)
+function _mvSinkronHarakat() {
+  if (!MV.meta || !MV.m) return;
+  const h = {};
+  Object.keys(MV.coret).forEach((k) => {
+    if (!/^\d+$/.test(k)) return;
+    const a = (MV.coret[k] || []).filter((g) => g.alat === "harakat").map((g) => ({ t: g.teks, u: g.ukuran, w: g.warna, p: [+g.pts[0][0].toFixed(4), +g.pts[0][1].toFixed(4)] }));
+    if (a.length) h[k] = a;
+  });
+  if (JSON.stringify(h) === JSON.stringify(MV.meta.harakat || {})) return;
+  MV.meta.harakat = h;
+  _maSimpanMetaNanti();
 }
 function _mvTombolRiwayat() {
   const el = document.getElementById("mv"); if (!el) return;
@@ -248,6 +264,7 @@ function _mvHapusCoret() {
   if (!(MV.coret[_mvKunciCoret()] || []).length) return;
   _mvSimpanRiwayat(); delete MV.coret[_mvKunciCoret()];
   _mvTarget().forEach((tg) => _mvGambarCoret(tg));
+  _mvSinkronHarakat();
   toast("🧹 Coretan dihapus — tekan ↶ untuk mengembalikan", "ok");
 }
 function _mvTempelHarakat(p) {
@@ -255,6 +272,7 @@ function _mvTempelHarakat(p) {
   const k = _mvKunciCoret();
   (MV.coret[k] = MV.coret[k] || []).push({ alat: "harakat", teks: MV.harakat, ukuran: MV.ukuranHarakat, warna: MV.warna, pts: [p] });
   _mvTarget().forEach((tg) => _mvGambarCoret(tg));
+  _mvSinkronHarakat();
 }
 function _mvPasangPointer(el) {
   const ink = el.querySelector(".mv-ink"), stage = el.querySelector(".mv-stage");
@@ -318,7 +336,7 @@ function _mvAlat(a) {
   el.classList.toggle("mv-alat-harakat", MV.alat === "harakat");
   if (MV.alat === "harakat") {
     if (document.fonts) document.fonts.load("40px Amiri", "بَ").then(() => _mvTarget().forEach((tg) => _mvGambarCoret(tg))).catch(() => {});
-    if (!_mvLS("mvHarakatTip")) { toast("بَ Pilih harakat, lalu ketuk tepat di atas/bawah huruf. Salah tempat? tekan ↶", "ok"); _mvLS("mvHarakatTip", "1"); }
+    if (!_mvLS("mvHarakatTip")) { toast("بَ Pilih harakat, lalu ketuk tepat di atas/bawah huruf. Salah tempat? tekan ↶. Harakat tersimpan di buku ini & muncul lagi saat dibuka.", "ok"); _mvLS("mvHarakatTip", "1"); }
   }
 }
 function _mvLayar(jenis) {

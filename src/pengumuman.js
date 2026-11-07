@@ -8,7 +8,13 @@
 //   • Persiapan pembagian rapor untuk wali kelas (H-3)   • Agenda pekan ini
 //  Teks bisa diedit, lalu dikirim lewat WhatsApp (pilih grup) atau disalin. Riwayat kirim disimpan bersama.
 // ============================================================
-const PG = { kaldik: [], atur: null, riwayat: {}, hari: new Set(), saran: [] };
+const PG = { kaldik: [], atur: null, aturWali: null, riwayat: {}, hari: new Set(), saran: [], untuk: "guru" };
+const PG_BAWAAN_WALI = {
+  salam: "Assalamu'alaikum warahmatullahi wabarakatuh.",
+  sapaan: "Kepada Bapak/Ibu wali santri Rumah Tahfizh Putra & PKBM Al Umm Barabai yang dirahmati Allah,",
+  penutup: "Jazakumullahu khairan atas perhatian dan kerja samanya.\nWassalamu'alaikum warahmatullahi wabarakatuh.",
+  pengirim: "Admin PKBM Al Umm Barabai",
+};
 const PG_BAWAAN = {
   salam: "Assalamu'alaikum warahmatullahi wabarakatuh.",
   sapaan: "Kepada Bapak/Ustadz dewan guru PKBM Al Umm Barabai yang dirahmati Allah,",
@@ -47,15 +53,25 @@ function _pgKategori(k) {
   if (k.jenis === "libur") return "libur";
   return "agenda";
 }
-const PG_IKON = { akhir_kbm: "🏁", soal: "📝", jadwal_ujian: "🗓️", nilai: "📊", rapat: "🤝", rapat_ingat: "⏰", libur: "🏖️", rapor: "📘", pekan: "📅", bebas: "✍️" };
-const PG_NAMA = { akhir_kbm: "Akhir KBM", soal: "Pengumpulan soal ujian", jadwal_ujian: "Pelaksanaan ujian", nilai: "Pengumpulan nilai rapor", rapat: "Undangan rapat", rapat_ingat: "Pengingat rapat", libur: "Info libur & masuk kembali", rapor: "Persiapan pembagian rapor", pekan: "Agenda pekan ini", bebas: "Pengumuman bebas" };
+const PG_IKON = { akhir_kbm: "🏁", soal: "📝", jadwal_ujian: "🗓️", nilai: "📊", rapat: "🤝", rapat_ingat: "⏰", libur: "🏖️", rapor: "📘", pekan: "📅", bebas: "✍️",
+  w_libur: "🏖️", w_ujian: "📖", w_rapor: "📘", w_agenda: "📌" };
+const PG_NAMA = { akhir_kbm: "Akhir KBM", soal: "Pengumpulan soal ujian", jadwal_ujian: "Pelaksanaan ujian", nilai: "Pengumpulan nilai rapor", rapat: "Undangan rapat", rapat_ingat: "Pengingat rapat", libur: "Info libur & masuk kembali", rapor: "Persiapan pembagian rapor", pekan: "Agenda pekan ini", bebas: "Pengumuman bebas",
+  w_libur: "Libur santri & tanggal kembali", w_ujian: "Ujian — mohon dukungan wali", w_rapor: "Undangan pengambilan rapor", w_agenda: "Undangan kegiatan wali santri" };
 
-function _pgSusunSaran() {
+function _pgSusunSaran(untuk = PG.untuk) {
   const hariIni = _pgHariIni(), batasAwal = _pgGeser(hariIni, -7), batasAkhir = _pgGeser(hariIni, 160);
   const out = [];
   const tambah = (k, tipe, kirim, ekstra = {}) => out.push({ id: `${k.id}:${tipe}`, k, tipe, kirim, ...ekstra });
   PG.kaldik.filter((k) => k.tanggal_mulai >= batasAwal && k.tanggal_mulai <= batasAkhir).forEach((k) => {
     const kat = _pgKategori(k), mulai = k.tanggal_mulai;
+    if (untuk === "wali") {
+      // pengumuman untuk grup wali santri
+      if (["uas", "uts", "tahfizh", "ujian"].includes(kat)) tambah(k, "w_ujian", _pgGeser(mulai, -7), { kat });
+      else if (kat === "rapor") tambah(k, "w_rapor", _pgGeser(mulai, -5));
+      else if (kat === "libur" && (k.tanggal_selesai || mulai) > mulai) tambah(k, "w_libur", _pgGeser(mulai, -3));
+      else if (/wali santri|orang ?tua|wali murid|parenting/i.test(`${k.judul} ${k.keterangan || ""}`)) tambah(k, "w_agenda", _pgGeser(mulai, -5));
+      return;
+    }
     if (["uas", "uts", "tahfizh", "ujian"].includes(kat)) {
       // ujian yang menyambung ujian lain (mis. Tahfizh lalu UAS) → "akhir KBM" cukup sekali, di ujian pertama
       const sambung = PG.kaldik.some((x) => x !== k && ["uas", "uts", "tahfizh", "ujian"].includes(_pgKategori(x)) && x.tanggal_mulai < mulai && (x.tanggal_selesai || x.tanggal_mulai) >= _pgGeser(mulai, -10));
@@ -75,23 +91,31 @@ function _pgSusunSaran() {
   return out.filter((s) => (s.k.tanggal_selesai || s.k.tanggal_mulai) >= hariIni).sort((a, b) => a.kirim.localeCompare(b.kirim));
 }
 
-async function bukaPengumumanWa() {
+async function _pgMuatData() {
+  await ensureLookups();
+  const [kaldik, atur, riwayat, jadwal] = await Promise.all([
+    apiGetKaldikSemua(), _kvAmbil("pengumuman:atur", {}), _kvAmbil("pengumuman:riwayat", {}),
+    supa.from("jadwal_pelajaran").select("hari").eq("aktif", true).then(unwrap).catch(() => []),
+  ]);
+  PG.kaldik = kaldik || []; PG.atur = { ...PG_BAWAAN, ...(atur || {}) }; PG.aturWali = { ...PG_BAWAAN_WALI, ...((atur || {}).wali || {}) };
+  delete PG.atur.wali; PG.riwayat = riwayat || {};
+  PG.hari = new Set(jadwal.map((j) => j.hari).filter(Boolean));
+}
+async function bukaPengumumanWa(untuk) {
   if (!(isAdmin() || isKepsek())) { toast("Fitur ini untuk admin & kepala sekolah", "err"); return; }
-  openModal(`<h3>📢 Pengumuman WA Grup Guru</h3><div id="pg-isi">${loadingHTML()}</div>`, { lebar: true });
+  if (untuk) PG.untuk = untuk;
+  openModal(`<h3>📢 Pengumuman WhatsApp</h3><div id="pg-isi">${loadingHTML()}</div>`, { lebar: true });
   try {
-    await ensureLookups();
-    const [kaldik, atur, riwayat, jadwal] = await Promise.all([
-      apiGetKaldikSemua(), _kvAmbil("pengumuman:atur", {}), _kvAmbil("pengumuman:riwayat", {}),
-      supa.from("jadwal_pelajaran").select("hari").eq("aktif", true).then(unwrap).catch(() => []),
-    ]);
-    PG.kaldik = kaldik || []; PG.atur = { ...PG_BAWAAN, ...(atur || {}) }; PG.riwayat = riwayat || {};
-    PG.hari = new Set(jadwal.map((j) => j.hari).filter(Boolean));
+    await _pgMuatData();
     PG.saran = _pgSusunSaran();
     _pgDaftar();
   } catch (e) { console.error(e); qs("pg-isi").innerHTML = `<div class="card empty-state">Gagal memuat kalender: ${escapeHtml(e.message)}</div>`; }
 }
+function _pgGantiUntuk(u) { PG.untuk = u; PG.saran = _pgSusunSaran(); _pgDaftar(); }
+const _pgKartuUmum = (id, ikon, judul, sub) => `<button type="button" class="pg-kartu" onclick="${id === "pengawas" ? "_pgPengawas()" : `_pgBuka('${id}')`}"><span class="pg-ikon">${ikon}</span><span class="pg-teks"><b>${judul}</b><small>${sub}</small></span></button>`;
 function _pgDaftar() {
-  const el = qs("pg-isi"); if (!el) { openModal(`<h3>📢 Pengumuman WA Grup Guru</h3><div id="pg-isi"></div>`, { lebar: true }); return _pgDaftar(); }
+  const el = qs("pg-isi"); if (!el) { openModal(`<h3>📢 Pengumuman WhatsApp</h3><div id="pg-isi"></div>`, { lebar: true }); return _pgDaftar(); }
+  const wali = PG.untuk === "wali", atur = wali ? PG.aturWali : PG.atur;
   const hariIni = _pgHariIni();
   const kartu = (s) => {
     const terkirim = PG.riwayat[s.id], jatuh = s.kirim <= hariIni;
@@ -102,31 +126,38 @@ function _pgDaftar() {
       <span class="pg-teks"><b>${PG_NAMA[s.tipe]}</b><small>${escapeHtml(s.k.judul || "")} · ${escapeHtml(_pgFmt(s.k.tanggal_mulai, { tanpaHijri: true, tanpaHari: true }))}${s.batas ? ` · batas ${escapeHtml(_pgFmt(s.batas, { tanpaHijri: true, tanpaHari: true }))}` : ""}</small></span>${status}</button>`;
   };
   const perlu = PG.saran.filter((s) => !PG.riwayat[s.id] && s.kirim <= hariIni), nanti = PG.saran.filter((s) => !perlu.includes(s));
+  const umum = wali
+    ? _pgKartuUmum("pekan-wali", "📅", "Agenda santri pekan ini", "kegiatan kaldik 7 hari ke depan") + _pgKartuUmum("bebas", "✍️", "Pengumuman bebas", "salam & penutup untuk wali santri")
+    : _pgKartuUmum("pekan", "📅", "Agenda pekan ini", "semua kegiatan kaldik 7 hari ke depan")
+      + _pgKartuUmum("jurnal-pekan", "📝", "Jurnal belum diisi", "pekan ini — sebut guru, mapel & tanggal")
+      + _pgKartuUmum("nilai-sekarang", "📊", "Kelengkapan nilai saat ini", "sebut guru & mapel yang belum lengkap")
+      + _pgKartuUmum("modul-belum", "📚", "Modul ajar belum diunggah", "per guru, sesuai jadwal mengajar")
+      + _pgKartuUmum("rekap-guru", "🧑‍🏫", "Rekap kehadiran guru", "bulan ini — untuk kepala sekolah")
+      + _pgKartuUmum("pengawas", "🛡️", "Jadwal pengawas ujian", "dibagi rata otomatis per hari & kelas")
+      + _pgKartuUmum("bebas", "✍️", "Pengumuman bebas", "salam & penutup sudah tersusun");
   el.innerHTML = `
-    <div class="uj-sub" style="margin:-4px 0 10px;line-height:1.6">Disusun otomatis dari <b>Kalender Akademik</b>. Pilih pengumuman → periksa/edit teks → kirim ke grup WhatsApp.</div>
-    <div class="pg-umum">
-      <button type="button" class="pg-kartu" onclick="_pgBuka('pekan')"><span class="pg-ikon">📅</span><span class="pg-teks"><b>Agenda pekan ini</b><small>semua kegiatan kaldik 7 hari ke depan</small></span></button>
-      <button type="button" class="pg-kartu" onclick="_pgBuka('nilai-sekarang')"><span class="pg-ikon">📊</span><span class="pg-teks"><b>Kelengkapan nilai saat ini</b><small>sebut guru & mapel yang belum lengkap</small></span></button>
-      <button type="button" class="pg-kartu" onclick="_pgBuka('bebas')"><span class="pg-ikon">✍️</span><span class="pg-teks"><b>Pengumuman bebas</b><small>salam & penutup sudah tersusun</small></span></button>
-    </div>
+    <div class="pg-tab"><button class="${wali ? "" : "on"}" onclick="_pgGantiUntuk('guru')">👥 Grup guru</button><button class="${wali ? "on" : ""}" onclick="_pgGantiUntuk('wali')">👪 Grup wali santri</button></div>
+    <div class="uj-sub" style="margin:0 0 10px;line-height:1.6">Disusun otomatis dari <b>Kalender Akademik</b> dan data aplikasi. Pilih pengumuman → periksa/edit teks → kirim ke grup WhatsApp.</div>
+    <div class="pg-umum">${umum}</div>
     ${perlu.length ? `<div class="rwk-judul">🔔 Perlu dikirim (${perlu.length})</div>${perlu.map(kartu).join("")}` : ""}
     <div class="rwk-judul">🗓️ Dari kalender akademik</div>
-    ${nanti.length ? nanti.map(kartu).join("") : `<div class="card empty-state" style="font-size:12.5px">Belum ada kegiatan ujian/rapat/rapor/libur di kaldik 5 bulan ke depan.<br>Tambahkan di menu <b>Kalender Akademik</b> — judul seperti “UAS Semester Ganjil”, “Ujian Tahfizh”, “Rapat Guru”, “Pembagian Rapor”.</div>`}
-    <details class="je-atur" style="margin-top:12px"><summary>⚙️ Salam, sapaan, penutup & nama pengirim</summary>
-      ${["salam", "sapaan", "penutup", "pengirim"].map((k) => `<div class="field" style="margin:6px 0 0"><label class="form-label" style="text-transform:capitalize">${k}</label><textarea class="input pg-atur" data-k="${k}" rows="${k === "penutup" ? 2 : 1}">${escapeHtml(PG.atur[k])}</textarea></div>`).join("")}
+    ${nanti.length ? nanti.map(kartu).join("") : `<div class="card empty-state" style="font-size:12.5px">Belum ada kegiatan ${wali ? "ujian/rapor/libur/kegiatan wali santri" : "ujian/rapat/rapor/libur"} di kaldik 5 bulan ke depan.<br>Tambahkan di menu <b>Kalender Akademik</b> — judul seperti “UAS Semester Ganjil”, “Ujian Tahfizh”, “Rapat Guru”, “Pembagian Rapor”${wali ? ", “Pertemuan Wali Santri”" : ""}.</div>`}
+    <details class="je-atur" style="margin-top:12px"><summary>⚙️ Salam, sapaan, penutup & nama pengirim (${wali ? "wali santri" : "guru"})</summary>
+      ${["salam", "sapaan", "penutup", "pengirim"].map((k) => `<div class="field" style="margin:6px 0 0"><label class="form-label" style="text-transform:capitalize">${k}</label><textarea class="input pg-atur" data-k="${k}" rows="${k === "penutup" ? 2 : 1}">${escapeHtml(atur[k])}</textarea></div>`).join("")}
       <label class="je-opsi"><input type="checkbox" id="pg-hijri" ${PG.atur.hijri ? "checked" : ""}> <span>Sertakan tanggal Hijriah</span></label>
       <button class="btn btn-outline btn-sm" style="margin-top:6px" onclick="_pgSimpanAtur()">💾 Simpan pengaturan</button>
-      <div class="uj-sub" style="margin-top:6px">Kegiatan dikenali dari judul di kaldik: UAS/PAS/PAT, UTS/PTS, Ujian Tahfizh, Rapat, Pembagian Rapor, dan libur lebih dari sehari. Tanggal kirim: soal H-21 (batas H-14), akhir KBM H-7, nilai H-14 (batas H-7 rapor), rapat H-3 & H-1, libur H-2.</div>
+      <div class="uj-sub" style="margin-top:6px">${wali ? "Untuk wali santri: ujian (H-7), pengambilan rapor (H-5), libur lebih dari sehari (H-3), dan kegiatan yang judulnya memuat “wali santri / orang tua” (H-5)." : "Kegiatan dikenali dari judul di kaldik: UAS/PAS/PAT, UTS/PTS, Ujian Tahfizh, Rapat, Pembagian Rapor, dan libur lebih dari sehari. Tanggal kirim: soal H-21 (batas H-14), akhir KBM H-7, nilai H-14 (batas H-7 rapor), rapat H-3 & H-1, libur H-2."}</div>
     </details>`;
 }
 async function _pgSimpanAtur() {
-  qsa(".pg-atur").forEach((i) => (PG.atur[i.dataset.k] = i.value.trim()));
+  const atur = PG.untuk === "wali" ? PG.aturWali : PG.atur;
+  qsa(".pg-atur").forEach((i) => (atur[i.dataset.k] = i.value.trim()));
   PG.atur.hijri = qs("pg-hijri").checked;
-  try { await _kvSimpan("pengumuman:atur", PG.atur); toast("Pengaturan pengumuman tersimpan", "ok"); } catch (e) { toast("Gagal menyimpan: " + e.message, "err"); }
+  try { await _kvSimpan("pengumuman:atur", { ...PG.atur, wali: PG.aturWali }); toast("Pengaturan pengumuman tersimpan", "ok"); } catch (e) { toast("Gagal menyimpan: " + e.message, "err"); }
 }
 
 // ── Isi pengumuman ──
-const _pgBungkus = (judul, isi) => `📢 *${judul}*\n\n${PG.atur.salam}\n${PG.atur.sapaan}\n\n${isi}\n\n${PG.atur.penutup}\n\n_${PG.atur.pengirim}_`;
+const _pgBungkus = (judul, isi) => { const a = PG.untuk === "wali" ? PG.aturWali : PG.atur; return `📢 *${judul}*\n\n${a.salam}\n${a.sapaan}\n\n${isi}\n\n${a.penutup}\n\n_${a.pengirim}_`; };
 function _pgDaftarTugasGuru() {
   // guru → [mapel kelas] dari jadwal aktif (untuk pengumpulan soal)
   return supa.from("jadwal_pelajaran").select("guru_id,kelas_id,mapel_id").eq("aktif", true).then(unwrap).then((rows) => {
@@ -160,9 +191,12 @@ async function _pgDaftarBelumLengkap(semester, ta) {
 async function _pgSusunTeks(id) {
   const hariIni = _pgHariIni();
   if (id === "bebas") return _pgBungkus("PENGUMUMAN", "[Tulis isi pengumuman di sini]");
-  if (id === "pekan") {
+  if (id === "jurnal-pekan") return _pgTeksJurnalPekan();
+  if (id === "modul-belum") return _pgTeksModulBelum();
+  if (id === "rekap-guru") return _pgTeksRekapGuru();
+  if (id === "pekan" || id === "pekan-wali") {
     const akhir = _pgGeser(hariIni, 7);
-    const ada = PG.kaldik.filter((k) => (k.tanggal_selesai || k.tanggal_mulai) >= hariIni && k.tanggal_mulai <= akhir);
+    const ada = PG.kaldik.filter((k) => (k.tanggal_selesai || k.tanggal_mulai) >= hariIni && k.tanggal_mulai <= akhir && (id === "pekan" || _pgKategori(k) !== "rapat"));
     const isi = ada.length ? ada.map((k) => `• *${k.judul}* — ${_pgRentang(k.tanggal_mulai, k.tanggal_selesai)}${k.keterangan ? `\n   ${k.keterangan}` : ""}`).join("\n") : "Tidak ada agenda khusus di kalender akademik pekan ini. KBM berjalan seperti biasa.";
     return _pgBungkus(`AGENDA PEKAN INI (${_pgFmt(hariIni, { tanpaHijri: true, tanpaHari: true })} – ${_pgFmt(akhir, { tanpaHijri: true, tanpaHari: true })})`, `Berikut agenda sesuai kalender akademik:\n\n${isi}`);
   }
@@ -203,6 +237,20 @@ async function _pgSusunTeks(id) {
     case "rapat_ingat":
       return _pgBungkus(`PENGINGAT: ${judul.toUpperCase()} BESOK`,
         `Mengingatkan kembali, *${judul}* insyaAllah dilaksanakan *besok, ${_pgFmt(k.tanggal_mulai)}*.${k.keterangan ? `\n\n${k.keterangan}` : ""}\n\nMohon hadir tepat waktu.`);
+    case "w_ujian":
+      return _pgBungkus(`${judul.toUpperCase()}`,
+        `Diberitahukan bahwa ananda santri akan mengikuti *${judul}* pada *${_pgRentang(k.tanggal_mulai, k.tanggal_selesai)}*.\n\nMohon dukungan Bapak/Ibu:\n1. Mendoakan dan menyemangati ananda.\n2. Mengingatkan ananda untuk ${s.kat === "tahfizh" ? "memperbanyak murajaah hafalan" : "belajar dan murajaah materi"}, menjaga kesehatan, serta istirahat yang cukup.\n3. Memastikan ananda hadir tepat waktu selama ujian berlangsung.${ket}`);
+    case "w_rapor":
+      return _pgBungkus(`UNDANGAN PENGAMBILAN RAPOR`,
+        `Dengan hormat, kami mengundang Bapak/Ibu wali santri untuk hadir pada *${judul}* ${sm.label}:\n\n📅 *${_pgRentang(k.tanggal_mulai, k.tanggal_selesai)}*\n🕗 Pukul [jam] WITA\n📍 [tempat]\n\nRapor diserahkan langsung kepada wali santri, sekaligus kesempatan berdiskusi dengan wali kelas tentang perkembangan ananda.${ket}`);
+    case "w_libur": {
+      const masuk = _pgHariAktifSesudah(k.tanggal_selesai || k.tanggal_mulai);
+      return _pgBungkus(/^libur/i.test(judul) ? judul.toUpperCase() : `LIBUR ${judul.toUpperCase()}`,
+        `Diberitahukan bahwa sesuai kalender akademik, santri *libur* dalam rangka *${judul}* pada *${_pgRentang(k.tanggal_mulai, k.tanggal_selesai)}*.\n\nSantri *kembali belajar* pada *${_pgFmt(masuk)}*.\n\nSelama libur, mohon Bapak/Ibu membimbing ananda untuk tetap menjaga shalat, murajaah hafalan, dan adab di rumah.${ket}`);
+    }
+    case "w_agenda":
+      return _pgBungkus(`UNDANGAN ${judul.toUpperCase()}`,
+        `Dengan hormat, kami mengundang Bapak/Ibu wali santri untuk menghadiri *${judul}* yang insyaAllah dilaksanakan pada:\n\n📅 *${_pgRentang(k.tanggal_mulai, k.tanggal_selesai)}*\n🕗 Pukul [jam] WITA\n📍 [tempat]${k.keterangan ? `\n📝 ${k.keterangan}` : ""}\n\nKehadiran Bapak/Ibu sangat kami harapkan.`);
     case "libur": {
       const masuk = _pgHariAktifSesudah(k.tanggal_selesai || k.tanggal_mulai);
       return _pgBungkus(/^libur/i.test(judul) ? judul.toUpperCase() : `LIBUR ${judul.toUpperCase()}`,
@@ -211,6 +259,120 @@ async function _pgSusunTeks(id) {
   }
   return "";
 }
+// Senin pekan ini
+const _pgSenin = (iso) => { const d = _pgTgl(iso), g = (d.getDay() + 6) % 7; d.setDate(d.getDate() - g); return _pgIso(d); };
+const _pgKelas = (k) => (k && k.nama_kelas ? (typeof formatKelasLabel === "function" ? "Kelas " + formatKelasLabel(k.nama_kelas) : k.nama_kelas) : "-");
+async function _pgTeksJurnalPekan() {
+  const hariIni = _pgHariIni(), dari = _pgSenin(hariIni);
+  const rows = unwrap(await supa.from("absensi_sesi").select("tanggal,guru_id,jurnal_id,jam_masuk,jam_pulang,status_kehadiran,kelas(nama_kelas),mapel(nama_mapel)").gte("tanggal", dari).lte("tanggal", hariIni));
+  const belum = {}, alpha = {};
+  rows.forEach((r) => {
+    if (["izin", "sakit"].includes(r.status_kehadiran) || r.jurnal_id) return;
+    if (r.tanggal === hariIni && !r.jam_pulang) return; // sesi hari ini yang mungkin masih berjalan
+    const baris = `${r.mapel?.nama_mapel || "-"} ${_pgKelas(r.kelas)} (${_pgFmt(r.tanggal, { tanpaHijri: true, tanpaHari: true }).replace(/ \d{4}$/, "")})`;
+    const target = r.jam_masuk ? belum : alpha;
+    (target[r.guru_id] = target[r.guru_id] || []).push(baris);
+  });
+  const nama = (id) => _pgNama(((LOOKUP.guruAll || []).find((g) => g.id === id) || {}).nama || "-");
+  const daftar = (o) => Object.keys(o).sort((a, b) => nama(a).localeCompare(nama(b), "id")).map((id, i) => `${i + 1}. *${nama(id)}*: ${o[id].join("; ")}`).join("\n");
+  const rentang = `${_pgFmt(dari, { tanpaHijri: true, tanpaHari: true })} – ${_pgFmt(hariIni, { tanpaHijri: true, tanpaHari: true })}`;
+  let isi = `Rekap jurnal pembelajaran pekan ini (${rentang}).`;
+  if (!Object.keys(belum).length && !Object.keys(alpha).length) isi += "\n\nAlhamdulillah, *semua sesi yang sudah berjalan sudah berjurnal*. Jazakumullahu khairan 🙏";
+  else {
+    if (Object.keys(belum).length) isi += `\n\n📝 *Sudah absen masuk, jurnal belum diisi:*\n${daftar(belum)}`;
+    if (Object.keys(alpha).length) isi += `\n\n🙋 *Belum ada absen & jurnal* (bila sebenarnya mengajar, silakan ajukan hadir di aplikasi):\n${daftar(alpha)}`;
+    isi += "\n\nMohon segera dilengkapi di menu *Jurnal* aplikasi.";
+  }
+  return _pgBungkus("PENGINGAT JURNAL PEMBELAJARAN", isi);
+}
+async function _pgTeksModulBelum() {
+  const [jadwal, modul] = await Promise.all([
+    supa.from("jadwal_pelajaran").select("guru_id,kelas_id,mapel_id").eq("aktif", true).then(unwrap),
+    supa.from("modul_ajar").select("kelas_id,mapel_id").then(unwrap),
+  ]);
+  const ada = new Set(modul.map((m) => `${m.kelas_id || "umum"}|${m.mapel_id}`));
+  const per = {}, unik = new Set();
+  jadwal.forEach((j) => {
+    const kunci = `${j.guru_id}|${j.kelas_id}|${j.mapel_id}`; if (!j.guru_id || !j.mapel_id || unik.has(kunci)) return; unik.add(kunci);
+    if (ada.has(`${j.kelas_id}|${j.mapel_id}`) || ada.has(`umum|${j.mapel_id}`)) return;
+    const m = LOOKUP.mapel.find((x) => x.id === j.mapel_id), k = LOOKUP.kelas.find((x) => x.id === j.kelas_id);
+    (per[j.guru_id] = per[j.guru_id] || []).push(`${m?.nama_mapel || "-"} ${_pgKelas(k)}`);
+  });
+  const nama = (id) => _pgNama(((LOOKUP.guruAll || []).find((g) => g.id === id) || {}).nama || "-");
+  const ids = Object.keys(per).sort((a, b) => nama(a).localeCompare(nama(b), "id"));
+  const isi = ids.length
+    ? `Agar pembelajaran & presentasi di kelas lebih mudah (buku bisa dibuka di layar, materi otomatis tercatat di jurnal), mohon Bapak/Ustadz mengunggah *modul ajar / buku pegangan* di menu *Modul Ajar* untuk mapel berikut:\n\n${ids.map((id, i) => `${i + 1}. *${nama(id)}*: ${per[id].sort().join(", ")}`).join("\n")}\n\nFile PDF paling dianjurkan. Bila kesulitan, silakan kirim filenya ke admin.`
+    : "Alhamdulillah, *semua mapel di jadwal sudah memiliki modul ajar* di aplikasi. Jazakumullahu khairan 🙏";
+  return _pgBungkus("MODUL AJAR", isi);
+}
+async function _pgTeksRekapGuru() {
+  const hariIni = _pgHariIni(), awal = new Date().getDate() <= 5; // awal bulan → rekap bulan lalu
+  const d0 = _pgTgl(hariIni); if (awal) d0.setMonth(d0.getMonth() - 1);
+  const dari = `${d0.getFullYear()}-${String(d0.getMonth() + 1).padStart(2, "0")}-01`;
+  const sampai = awal ? _pgGeser(hariIni.slice(0, 8) + "01", -1) : hariIni;
+  const rows = await apiGetRekapKedisiplinan(dari, sampai);
+  const per = {};
+  rows.forEach((x) => {
+    if (x.tanggal === hariIni && !x.jam_pulang && x.status_kehadiran !== "alpha") return;
+    const g = (per[x.guru_id] = per[x.guru_id] || { nama: x.guru?.nama || "-", sesi: 0, hadir: 0, jurnal: 0, izin: 0, sakit: 0, alpha: 0 });
+    if (x.status_kehadiran === "izin") { g.izin++; return; }
+    if (x.status_kehadiran === "sakit") { g.sakit++; return; }
+    g.sesi++; if (x.jam_masuk) g.hadir++; else g.alpha++; if (x.jurnal_id) g.jurnal++;
+  });
+  const daftar = Object.values(per).map((g) => ({ ...g, p: g.sesi ? Math.round((g.hadir * 100) / g.sesi) : 100, pj: g.sesi ? Math.round((g.jurnal * 100) / g.sesi) : 100 }))
+    .sort((a, b) => b.p - a.p || b.pj - a.pj || a.nama.localeCompare(b.nama, "id"));
+  const bulan = d0.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
+  const tot = daftar.reduce((a, g) => ({ sesi: a.sesi + g.sesi, hadir: a.hadir + g.hadir, jurnal: a.jurnal + g.jurnal }), { sesi: 0, hadir: 0, jurnal: 0 });
+  const isi = `Rekap kehadiran mengajar & jurnal *bulan ${bulan}*${awal ? "" : ` (s.d. ${_pgFmt(sampai, { tanpaHijri: true, tanpaHari: true })})`}:\n\n✅ Kehadiran mengajar: *${tot.sesi ? Math.round((tot.hadir * 100) / tot.sesi) : 0}%* (${tot.hadir}/${tot.sesi} sesi)\n📝 Jurnal terisi: *${tot.sesi ? Math.round((tot.jurnal * 100) / tot.sesi) : 0}%*\n\n${daftar.map((g, i) => `${i + 1}. ${_pgNama(g.nama)} — hadir ${g.p}% (${g.hadir}/${g.sesi}), jurnal ${g.pj}%${g.izin ? `, izin ${g.izin}` : ""}${g.sakit ? `, sakit ${g.sakit}` : ""}${g.alpha ? `, *alpha ${g.alpha}*` : ""}`).join("\n")}\n\n🏅 Paling disiplin: ${daftar.filter((g) => g.p >= 95 && g.pj >= 95 && g.sesi).slice(0, 3).map((g) => _pgNama(g.nama)).join(", ") || "-"}`;
+  return _pgBungkus(`REKAP KEHADIRAN GURU — ${bulan.toUpperCase()}`, isi);
+}
+
+// ── Jadwal pengawas ujian: guru dibagi rata per hari & kelas (bisa diedit sebelum dikirim) ──
+async function _pgPengawas() {
+  await ensureLookups();
+  const hariIni = _pgHariIni();
+  const ujian = PG.kaldik.filter((k) => ["uas", "uts", "tahfizh", "ujian"].includes(_pgKategori(k)) && (k.tanggal_selesai || k.tanggal_mulai) >= hariIni);
+  const jadwal = await supa.from("jadwal_pelajaran").select("guru_id,kelas_id").eq("aktif", true).then(unwrap).catch(() => []);
+  const guruAktif = [...new Set(jadwal.map((j) => j.guru_id))].map((id) => (LOOKUP.guruAll || []).find((g) => g.id === id)).filter(Boolean).sort((a, b) => a.nama.localeCompare(b.nama, "id"));
+  const kelas = [...new Set(jadwal.map((j) => j.kelas_id))].map((id) => LOOKUP.kelas.find((k) => k.id === id)).filter(Boolean)
+    .sort((a, b) => (parseInt(a.nama_kelas.match(/\d+/)) || 99) - (parseInt(b.nama_kelas.match(/\d+/)) || 99));
+  openModal(`<h3>🛡️ Jadwal Pengawas Ujian</h3>
+    <div class="field"><label class="form-label">Ujian</label><select id="pw-ujian" class="input">${ujian.map((k) => `<option value="${k.id}">${escapeHtml(k.judul)} · ${escapeHtml(_pgRentang(k.tanggal_mulai, k.tanggal_selesai).replace(/ \([^)]*\)/g, ""))}</option>`).join("") || `<option value="">Belum ada ujian di kaldik</option>`}</select></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <div class="field" style="flex:1;min-width:120px"><label class="form-label">Sesi per hari</label><input id="pw-sesi" type="number" min="1" max="4" value="1" class="input"></div>
+      <div class="field" style="flex:2;min-width:180px"><label class="form-label">Jam sesi (pisahkan koma)</label><input id="pw-jam" class="input" value="07.30–09.30"></div></div>
+    <details class="je-atur" open><summary>🏫 Ruang/kelas (${kelas.length})</summary><div class="pw-cek">${kelas.map((k) => `<label><input type="checkbox" class="pw-kelas" value="${k.id}" checked> ${escapeHtml(_pgKelas(k))}</label>`).join("")}</div></details>
+    <details class="je-atur"><summary>👥 Guru pengawas (${guruAktif.length}) — hapus centang yang berhalangan</summary><div class="pw-cek">${guruAktif.map((g) => `<label><input type="checkbox" class="pw-guru" value="${g.id}" checked> ${escapeHtml(_pgNama(g.nama))}</label>`).join("")}</div></details>
+    <button class="btn btn-accent" style="width:100%;margin-top:10px" onclick="_pgSusunPengawas()">🔀 Susun jadwal</button>
+    <button class="btn btn-outline" style="width:100%;margin-top:6px" onclick="_pgDaftar()">‹ Kembali</button>`, { lebar: true });
+}
+function _pgSusunPengawas() {
+  if (qs("pw-ujian")) PG.pw = { uj: qs("pw-ujian").value, sesi: +qs("pw-sesi").value || 1, jam: qs("pw-jam").value,
+    kelas: Array.from(qsa(".pw-kelas")).filter((c) => c.checked).map((c) => c.value), guru: Array.from(qsa(".pw-guru")).filter((c) => c.checked).map((c) => c.value) };
+  const pw = PG.pw || {};
+  const k = PG.kaldik.find((x) => x.id === pw.uj); if (!k) { toast("Pilih ujian dulu", "err"); return; }
+  const sesi = Math.max(1, Math.min(4, pw.sesi || 1)), jam = String(pw.jam || "").split(",").map((x) => x.trim());
+  const kelas = (pw.kelas || []).map((id) => LOOKUP.kelas.find((x) => x.id === id)).filter(Boolean);
+  const guru = (pw.guru || []).map((id) => (LOOKUP.guruAll || []).find((x) => x.id === id)).filter(Boolean);
+  if (!kelas.length || !guru.length) { toast("Pilih minimal satu kelas dan satu guru", "err"); return; }
+  const hari = []; for (let d = k.tanggal_mulai; d <= (k.tanggal_selesai || k.tanggal_mulai) && hari.length < 30; d = _pgGeser(d, 1)) if (_pgHariAktif(d) || d === k.tanggal_mulai) hari.push(d);
+  // urutan diacak sekali lalu digilir → beban merata; dalam satu sesi tidak ada guru ganda (bila guru ≥ kelas)
+  const urut = guru.slice().sort(() => Math.random() - 0.5), beban = {};
+  let c = 0;
+  const baris = hari.map((d) => `*${_pgFmt(d, { tanpaHijri: true })}*\n` + Array.from({ length: sesi }, (_, s) =>
+    `${sesi > 1 || jam[s] ? `  Sesi ${s + 1}${jam[s] ? ` (${jam[s]})` : ""}:\n` : ""}` + kelas.map((kl) => { const g = urut[c++ % urut.length]; beban[g.nama] = (beban[g.nama] || 0) + 1; return `   • ${_pgKelas(kl)}: ${_pgNama(g.nama)}`; }).join("\n")).join("\n")).join("\n\n");
+  const catatan = guru.length < kelas.length ? "\n\n⚠️ Jumlah guru lebih sedikit dari ruang — ada guru yang mengawas dua ruang dalam satu sesi." : "";
+  const teks = _pgBungkus(`JADWAL PENGAWAS ${String(k.judul).toUpperCase()}`,
+    `Berikut jadwal pengawas *${k.judul}* (${_pgRentang(k.tanggal_mulai, k.tanggal_selesai).replace(/ \([^)]*H\)/g, "")}):\n\n${baris}${catatan}\n\nMohon pengawas hadir 15 menit sebelum ujian dimulai, mengambil soal & daftar hadir di kantor, serta mengisi berita acara. Bila berhalangan, mohon bertukar dengan guru lain dan mengabari admin.`);
+  openModal(`<h3>🛡️ Jadwal Pengawas — ${escapeHtml(k.judul)}</h3>
+    <div class="uj-sub" style="margin:-4px 0 8px">Beban: ${Object.entries(beban).sort((a, b) => b[1] - a[1]).map(([n, v]) => `${escapeHtml(_pgNama(n))} ${v}×`).join(" · ")}</div>
+    <textarea id="pg-teks" class="input" rows="16" style="font-size:13px;line-height:1.55">${escapeHtml(teks)}</textarea>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+      <button class="btn btn-outline" style="flex:1" onclick="_pgPengawas()">‹ Ubah</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="_pgSusunPengawas()">🔀 Acak ulang</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="_pgSalin('pengawas')">📋 Salin</button>
+      <button class="btn btn-wa" style="flex:2" onclick="_pgKirim('pengawas')">💬 Kirim ke grup WA</button></div>`, { lebar: true });
+}
 function _pgTeksBelum(daftar) {
   if (!daftar.length) return "Alhamdulillah, per hari ini *semua nilai & catatan rapor sudah lengkap*. Jazakumullahu khairan 🙏";
   return `Per ${_pgFmt(_pgHariIni(), { tanpaHijri: true })}, yang *belum lengkap*:\n${daftar.map((d, i) => `${i + 1}. *${_pgNama(d.nama)}*: ${d.teks.join("; ")}`).join("\n")}\n\nBagi yang sudah lengkap, jazakumullahu khairan.`;
@@ -218,7 +380,8 @@ function _pgTeksBelum(daftar) {
 
 async function _pgBuka(id) {
   const s = PG.saran.find((x) => x.id === id);
-  const judul = s ? `${PG_IKON[s.tipe]} ${PG_NAMA[s.tipe]}` : id === "pekan" ? "📅 Agenda pekan ini" : id === "nilai-sekarang" ? "📊 Kelengkapan nilai" : "✍️ Pengumuman bebas";
+  const JUDUL_UMUM = { pekan: "📅 Agenda pekan ini", "pekan-wali": "📅 Agenda santri pekan ini", "nilai-sekarang": "📊 Kelengkapan nilai", "jurnal-pekan": "📝 Jurnal belum diisi", "modul-belum": "📚 Modul ajar belum diunggah", "rekap-guru": "🧑‍🏫 Rekap kehadiran guru", bebas: "✍️ Pengumuman bebas" };
+  const judul = s ? `${PG_IKON[s.tipe]} ${PG_NAMA[s.tipe]}` : JUDUL_UMUM[id] || "📢 Pengumuman";
   openModal(`<h3>${judul}</h3>${s ? `<div class="uj-sub" style="margin:-4px 0 8px">${escapeHtml(s.k.judul || "")} · ${escapeHtml(_pgRentang(s.k.tanggal_mulai, s.k.tanggal_selesai))} · disarankan dikirim ${escapeHtml(_pgFmt(s.kirim, { tanpaHijri: true }))}</div>` : ""}
     <textarea id="pg-teks" class="input" rows="16" style="font-size:13px;line-height:1.55">Menyusun…</textarea>
     <div class="uj-sub" style="margin-top:4px">*tebal* dan _miring_ tampil sebagai huruf tebal/miring di WhatsApp. Bagian dalam [kurung siku] silakan dilengkapi.</div>
@@ -244,6 +407,32 @@ function _pgKirim(id) {
   window.open("https://wa.me/?text=" + encodeURIComponent(qs("pg-teks").value), "_blank", "noopener");
   _pgTandai(id);
 }
+
+// ── Pengingat di Dasbor admin/kepsek: "N pengumuman perlu dikirim hari ini" ──
+// Dihitung sekali per hari per perangkat (hemat kuota); setelah mengirim, angka diperbarui saat dasbor dibuka lagi.
+async function _pgHitungJatuhTempo() {
+  const kunci = "pgIngat:" + _pgHariIni();
+  try { const c = JSON.parse(sessionStorage.getItem(kunci) || "null"); if (c && Date.now() - c.t < 30 * 60 * 1000) return c.n; } catch (e) {}
+  await _pgMuatData();
+  const hariIni = _pgHariIni(), semua = [..._pgSusunSaran("guru"), ..._pgSusunSaran("wali")];
+  const n = semua.filter((s) => !PG.riwayat[s.id] && s.kirim <= hariIni).length;
+  try { sessionStorage.setItem(kunci, JSON.stringify({ n, t: Date.now() })); } catch (e) {}
+  return n;
+}
+async function _pgPasangPengingat() {
+  if (!(isAdmin() || isKepsek())) return;
+  const halaman = document.getElementById("page-dashboard"); if (!halaman) return;
+  let n = 0; try { n = await _pgHitungJatuhTempo(); } catch (e) { return; }
+  let el = document.getElementById("pg-ingat");
+  if (!n) { el?.remove(); return; }
+  if (!el) { el = document.createElement("div"); el.id = "pg-ingat"; halaman.prepend(el); }
+  el.className = "pg-ingat";
+  el.innerHTML = `<span>🔔</span><div><b>${n} pengumuman perlu dikirim</b><small>sesuai kalender akademik — ke grup guru / wali santri</small></div><button class="btn btn-wa btn-sm" onclick="sessionStorage.removeItem('pgIngat:${_pgHariIni()}');bukaPengumumanWa()">📢 Buka</button>`;
+}
+(() => {
+  const asli = window.renderDashboard; if (typeof asli !== "function") return;
+  window.renderDashboard = async function (...a) { const r = await asli.apply(this, a); _pgPasangPengingat(); return r; };
+})();
 
 // Tombol di halaman Kalender Akademik (admin & kepsek)
 (() => {
