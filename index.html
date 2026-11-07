@@ -24,7 +24,7 @@
 <link rel="stylesheet" href="src/hp.css?v=2">
 <link rel="stylesheet" href="src/kuliah.css?v=6">
 <link rel="stylesheet" href="src/modul-baca.css?v=9">
-<link rel="stylesheet" href="src/ujian.css?v=8">
+<link rel="stylesheet" href="src/ujian.css?v=9">
 
 <script>
 // Logo gagal dimuat → coba logo bawaan; kalau bawaan pun gagal, tampilkan ikon 🎓 (bukan huruf "G").
@@ -1598,6 +1598,7 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
           <div id="kaldik-semester-tabs" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-wa pg-tombol" style="display:none" onclick="bukaPengumumanWa()">📢 Pengumuman WA</button>
             <label class="btn btn-ghost admin-only" style="cursor:pointer;display:none;">
               <span data-i18n="importExcel">Impor Excel</span>
               <input type="file" id="kaldik-file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleImportKaldik(event)"/>
@@ -15940,7 +15941,8 @@ async function handleImportSiswa(evt) {
 <script src="src/rapor-wk.js?v=1"></script>
 <script src="src/rapor-cetak.js?v=1"></script>
 <script src="src/rekap-hadir-cetak.js?v=1"></script>
-<script src="src/kelengkapan-nilai.js?v=1"></script>
+<script src="src/kelengkapan-nilai.js?v=2"></script>
+<script src="src/pengumuman.js?v=1"></script>
 <script src="src/kesimpulan.js?v=2"></script>
 <script src="src/profil.js?v=4"></script>
 <script src="src/kaldik-desain.js?v=5"></script>

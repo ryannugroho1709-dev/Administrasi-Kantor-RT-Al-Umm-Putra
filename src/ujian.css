@@ -168,3 +168,19 @@
 .pk-bar i { display: block; height: 100%; border-radius: 4px; }
 .pk-angka { font-size: 11px; color: var(--text-secondary); white-space: nowrap; }
 @media (max-width: 520px) { .pk-item { grid-template-columns: 1fr auto; } .pk-item .pk-bar { grid-column: 1 / -1; grid-row: 2; } }
+
+/* ── Pengumuman WA ── */
+.pg-umum { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; margin-bottom: 6px; }
+.pg-kartu { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 10px 12px; margin-bottom: 6px; border-radius: 12px; border: 1px solid var(--border-soft); background: var(--nl, transparent); color: inherit; cursor: pointer; font: inherit; }
+.pg-kartu:hover { border-color: var(--accent); }
+.pg-kartu.jatuh { border-color: #f59e0b; background: color-mix(in srgb, #f59e0b 9%, transparent); }
+.pg-kartu.selesai { opacity: .7; }
+.pg-ikon { font-size: 22px; flex: none; }
+.pg-teks { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pg-teks b { font-size: 13px; }
+.pg-teks small { font-size: 11px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pg-st { flex: none; font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+.pg-st.ok { background: color-mix(in srgb, #1F8A5F 15%, transparent); color: #1F8A5F; }
+.pg-st.kirim { background: #f59e0b; color: #fff; }
+.pg-st.nanti { background: var(--border-soft); color: var(--text-secondary); }
+@media (max-width: 520px) { .pg-kartu { flex-wrap: wrap; } .pg-st { margin-left: 32px; } }

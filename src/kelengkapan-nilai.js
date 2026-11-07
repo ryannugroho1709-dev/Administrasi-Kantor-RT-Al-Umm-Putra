@@ -14,6 +14,7 @@ async function bukaKelengkapanNilai(prefix) {
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px">
       <div class="field" style="margin:0"><label class="form-label">Semester</label><select id="pk-semester" class="input" onchange="_pkMuat()"><option ${semester === "Ganjil" ? "selected" : ""}>Ganjil</option><option ${semester === "Genap" ? "selected" : ""}>Genap</option></select></div>
       <div class="field" style="margin:0"><label class="form-label">Tahun Ajaran</label><input id="pk-tahun" class="input" style="width:110px" value="${escapeHtml(tahun)}" onchange="_pkMuat()"></div>
+      <button class="btn btn-wa btn-sm" style="margin-bottom:4px" onclick="bukaPengumumanWa().then(()=>_pgBuka('nilai-sekarang'))" title="Umumkan daftar yang belum lengkap ke grup WA guru">📢 Umumkan ke grup</button>
       <label class="je-opsi" style="margin:0 0 6px"><input type="checkbox" id="pk-belum" ${PK.hanyaBelum ? "checked" : ""} onchange="PK.hanyaBelum=this.checked;_pkGambar()"> <span>Hanya yang belum lengkap</span></label>
     </div>
     <div id="pk-isi">${loadingHTML()}</div>`, { lebar: true });
@@ -25,6 +26,14 @@ async function _pkMuat() {
   el.innerHTML = loadingHTML();
   const semester = qs("pk-semester").value, tahun = qs("pk-tahun").value.trim();
   try {
+    PK.data = { semester, tahun, perGuru: await _pkHitung(semester, tahun) };
+    _pkGambar();
+  } catch (e) { console.error(e); el.innerHTML = `<div class="card empty-state">Gagal memuat: ${escapeHtml(e.message)}</div>`; }
+}
+// Hitung kelengkapan per guru (dipakai juga oleh Pengumuman WA → daftar guru yang belum lengkap)
+async function _pkHitung(semester, tahun) {
+  await ensureLookups();
+  {
     const [jadwal, nilai] = await Promise.all([
       supa.from("jadwal_pelajaran").select("guru_id,kelas_id,mapel_id").eq("aktif", true).then(unwrap),
       _pkAmbilSemua(() => supa.from("nilai_rapor").select("*").eq("semester", semester).eq("tahun_ajaran", tahun)),
@@ -57,9 +66,8 @@ async function _pkMuat() {
       (perGuru[g.id] = perGuru[g.id] || []).push({ jenis: "wali", kelas: k, total: siswa.length,
         isi: siswa.filter((s) => (c(s).catatan_wali_kelas || "").trim()).length, ar: siswa.filter((s) => (c(s).catatan_wali_kelas_ar || "").trim()).length });
     });
-    PK.data = { semester, tahun, perGuru };
-    _pkGambar();
-  } catch (e) { console.error(e); el.innerHTML = `<div class="card empty-state">Gagal memuat: ${escapeHtml(e.message)}</div>`; }
+    return perGuru;
+  }
 }
 async function _pkAmbilSemua(buatKueri) {
   const out = [];
