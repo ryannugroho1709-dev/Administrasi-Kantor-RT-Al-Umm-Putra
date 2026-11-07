@@ -51,6 +51,7 @@ function _joLogPresentasi(kelasId, mapelId, tgl) {
 }
 function _joTeksPresentasi(p) {
   if (p.materi) return p.materi;
+  if (p.materiOtomatis) return p.materiOtomatis; // bab & poin dari peta isi buku (modul-peta.js)
   const hal = p.sampai > 1 ? ` (hal. ${p.dari}${p.sampai !== p.dari ? "–" + p.sampai : ""})` : "";
   if (p.tanda) return `${p.buku || p.judul}: ${p.tanda}${hal}`;
   if ((p.judulHal || []).length) return `${p.buku || p.judul}: ${p.judulHal.slice(0, 3).join(", ")}${hal}`;
