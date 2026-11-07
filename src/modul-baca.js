@@ -10,6 +10,11 @@ const MV = { doc: null, m: null, hal: 1, total: 0, mode: "baca", alat: null, war
   layar: "", zoom: 1, mulai: 0, dikunjungi: new Set(), proj: null, renderId: 0, tTimer: null, tBar: null, sentuh: null };
 const _MV_CACHE = "modul-ajar-v1";
 const _MV_WARNA = ["#ef4444", "#2563eb", "#16a34a", "#f59e0b", "#111827", "#ffffff"];
+// Tanda harakat yang bisa "ditempel" di atas/bawah huruf kitab PDF (ditulis dengan huruf Amiri)
+const MV_HARAKAT = [["َ", "Fathah"], ["ِ", "Kasrah"], ["ُ", "Dhammah"], ["ْ", "Sukun"], ["ّ", "Syaddah"],
+  ["َّ", "Syaddah+fathah"], ["ِّ", "Syaddah+kasrah"], ["ُّ", "Syaddah+dhammah"],
+  ["ً", "Fathatain"], ["ٍ", "Kasratain"], ["ٌ", "Dhammatain"], ["ٰ", "Alif kecil"], ["ٓ", "Maddah"]];
+const MV_UKURAN_HARAKAT = { k: 0.03, s: 0.045, b: 0.07 };
 
 async function _mvAmbilPdf(url) {
   try {
@@ -34,7 +39,8 @@ function bukaModulAjar(id, mode) {
   _mvTutup();
   const pdf = _jenisFileModul({ name: (m.file_nama || m.file_url || "").split("?")[0] }) !== "pptx";
   Object.assign(MV, { m, mode: mode || "baca", alat: null, coret: {}, garis: null, layar: "", zoom: 1, mulai: Date.now(), dikunjungi: new Set(), doc: null, total: 0, pdf,
-    meta: {}, panel: null, tandaAktif: null, kuis: null, pernahPresentasi: mode === "presentasi", lamaHal: {}, halAktif: null, halSejak: 0 });
+    meta: {}, panel: null, tandaAktif: null, kuis: null, pernahPresentasi: mode === "presentasi", lamaHal: {}, halAktif: null, halSejak: 0,
+    riwayat: {}, harakat: MV_HARAKAT[0][0], ukuranHarakat: "s" });
   MV.hal = pdf ? Math.max(1, +(_mvLS("maHal:" + m.id) || 1)) : 1;
   if (MV.mode === "presentasi") MV.hal = 1;
   const el = document.createElement("div");
@@ -46,7 +52,7 @@ function bukaModulAjar(id, mode) {
       <div class="mv-judul"><b>${escapeHtml(m.judul || "")}</b><small>${escapeHtml(m.mapel?.nama_mapel || "")} · ${escapeHtml(m.kelas?.nama_kelas || "")}</small></div>
       <div class="mv-grup mv-pdf"><button type="button" data-a="prev" title="Sebelumnya (←)">‹</button><span class="mv-no"><input type="number" min="1" value="${MV.hal}" aria-label="Halaman"/> / <span class="mv-tot">…</span></span><button type="button" data-a="next" title="Berikutnya (→)">›</button></div>
       <div class="mv-grup mv-pdf mv-zoom">${tombol("zout", "−", "Perkecil")}${tombol("zin", "+", "Perbesar")}</div>
-      <div class="mv-grup mv-pdf">${tombol("pena", "🖊️", "Pena (P)")}${tombol("stabilo", "🖍️", "Stabilo (H)")}${tombol("laser", "🔴", "Laser pointer (L)")}${tombol("hapus", "🧹", "Hapus coretan halaman ini (E)")}
+      <div class="mv-grup mv-pdf">${tombol("pena", "🖊️", "Pena (P)")}${tombol("stabilo", "🖍️", "Stabilo (H)")}${tombol("harakat", '<b class="mv-ikon-harakat">بَ</b>', "Harakat — pilih tanda lalu ketuk di atas/bawah huruf (K)")}${tombol("laser", "🔴", "Laser pointer (L)")}${tombol("undo", "↶", "Urungkan (Ctrl+Z)")}${tombol("redo", "↷", "Ulangi (Ctrl+Y)")}${tombol("hapus", "🧹", "Hapus coretan halaman ini (E)")}
         <span class="mv-warna">${_MV_WARNA.map((w) => `<i data-w="${w}" style="background:${w}"${w === MV.warna ? ' class="on"' : ""}></i>`).join("")}</span></div>
       <div class="mv-grup mv-pdf">${tombol("hitam", "⬛", "Layar hitam (B)")}${tombol("putih", "⬜", "Layar putih (W)")}</div>
       <div class="mv-grup mv-pdf">${tombol("tanda", "🔖", "Penanda halaman per pertemuan")}${tombol("catatan", "📝", "Catatan guru per slide (tidak tampil di proyektor)")}${tombol("kuis", "❓", "Kuis cepat di layar")}</div>
@@ -62,6 +68,8 @@ function bukaModulAjar(id, mode) {
       <div class="mv-muat">${loadingHTML("Membuka modul…")}</div></div>
     <div class="mv-next mv-pdf"><small>Berikutnya</small><canvas></canvas></div>
     <aside class="mv-panel" hidden></aside>
+    <div class="mv-harakat" hidden>${MV_HARAKAT.map(([h, n], i) => `<button type="button" data-h="${h}" title="${n}" class="${i === 0 ? "on" : ""}"><span>ب${h}</span><small>${n}</small></button>`).join("")}
+      <span class="mv-harakat-ukuran">${[["k", "Kecil"], ["s", "Sedang"], ["b", "Besar"]].map(([u, n]) => `<button type="button" data-u="${u}" class="${u === "s" ? "on" : ""}">${n}</button>`).join("")}</span></div>
     <button type="button" class="mv-pegangan" title="Tampilkan toolbar (T)">⌄ Alat</button>
     <div class="mv-tip">← → atau klik kiri/kanan: pindah slide · P pena · H stabilo · L laser · E hapus · B layar hitam · F layar penuh · Esc keluar</div>`;
   document.body.appendChild(el);
@@ -70,6 +78,12 @@ function bukaModulAjar(id, mode) {
   el.querySelector(".mv-no input").addEventListener("change", (e) => _mvKe(+e.target.value));
   el.querySelectorAll(".mv-warna i").forEach((w) => w.onclick = () => { MV.warna = w.dataset.w; el.querySelectorAll(".mv-warna i").forEach((x) => x.classList.toggle("on", x === w)); if (!MV.alat || MV.alat === "laser") _mvAlat("pena"); });
   _mvPasangPointer(el);
+  el.querySelector(".mv-harakat").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return; e.stopPropagation();
+    if (b.dataset.h) { MV.harakat = b.dataset.h; el.querySelectorAll(".mv-harakat [data-h]").forEach((x) => x.classList.toggle("on", x === b)); }
+    if (b.dataset.u) { MV.ukuranHarakat = b.dataset.u; el.querySelectorAll(".mv-harakat [data-u]").forEach((x) => x.classList.toggle("on", x === b)); }
+    if (MV.alat !== "harakat") _mvAlat("harakat");
+  });
   document.addEventListener("keydown", _mvKey);
   window.addEventListener("resize", _mvResize);
   el.addEventListener("mousemove", _mvTampilBar);
@@ -146,6 +160,7 @@ async function _mvRender() {
     el.querySelector('[data-a="prev"]').disabled = MV.hal <= 1;
     el.querySelector('[data-a="next"]').disabled = MV.hal >= MV.total;
     if (MV.mode === "baca") el.querySelector(".mv-stage").scrollTop = 0;
+    _mvTombolRiwayat();
   }
   _mvRenderBerikutnya();
   if (MV.panel === "catatan") _mvPanel("catatan", true);
@@ -184,6 +199,7 @@ function _mvGambarCoret(tg, hanyaTerakhir) {
   if (!hanyaTerakhir) ctx.clearRect(0, 0, W, H);
   (hanyaTerakhir ? daftar.slice(-1) : daftar).forEach((g) => {
     if (g.pts.length < 1) return;
+    if (g.alat === "harakat") return _mvGambarHarakat(ctx, g, W, H);
     ctx.save();
     ctx.globalAlpha = g.alat === "stabilo" ? 0.32 : 1;
     ctx.strokeStyle = g.warna; ctx.lineWidth = (g.alat === "stabilo" ? 0.022 : 0.0045) * (MV.layar ? Math.min(W, H) * 1.5 : W);
@@ -195,10 +211,56 @@ function _mvGambarCoret(tg, hanyaTerakhir) {
     ctx.stroke(); ctx.restore();
   });
 }
+// Harakat: tanda dipusatkan tepat di titik yang diketuk (memakai kotak tinta glyph, bukan huruf dasar)
+function _mvGambarHarakat(ctx, g, W, H) {
+  const px = (MV_UKURAN_HARAKAT[g.ukuran] || 0.045) * (MV.layar ? Math.min(W, H) * 1.5 : W);
+  ctx.save();
+  ctx.font = `700 ${Math.round(px)}px Amiri, 'Traditional Arabic', 'Times New Roman', serif`;
+  ctx.fillStyle = g.warna; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+  const teks = " " + g.teks, m = ctx.measureText(teks);
+  const L = m.actualBoundingBoxLeft || 0, R = m.actualBoundingBoxRight || m.width, A = m.actualBoundingBoxAscent || px * 0.6, D = m.actualBoundingBoxDescent || 0;
+  const [x, y] = g.pts[0];
+  ctx.fillText(teks, x * W - (R - L) / 2, y * H - (D - A) / 2);
+  ctx.restore();
+}
+// ── Urungkan / ulangi (per halaman & per papan) ──
+function _mvSimpanRiwayat() {
+  const k = _mvKunciCoret(), h = MV.riwayat[k] || (MV.riwayat[k] = { u: [], r: [] });
+  h.u.push((MV.coret[k] || []).slice()); if (h.u.length > 80) h.u.shift(); h.r = [];
+  _mvTombolRiwayat();
+}
+function _mvUrung(maju) {
+  const k = _mvKunciCoret(), h = MV.riwayat[k]; if (!h) return;
+  const dari = maju ? h.r : h.u, ke = maju ? h.u : h.r;
+  if (!dari.length) return;
+  ke.push((MV.coret[k] || []).slice());
+  MV.coret[k] = dari.pop();
+  _mvTarget().forEach((tg) => _mvGambarCoret(tg));
+  _mvTombolRiwayat();
+}
+function _mvTombolRiwayat() {
+  const el = document.getElementById("mv"); if (!el) return;
+  const h = MV.riwayat[_mvKunciCoret()] || { u: [], r: [] };
+  const u = el.querySelector('[data-a="undo"]'), r = el.querySelector('[data-a="redo"]');
+  if (u) u.disabled = !h.u.length; if (r) r.disabled = !h.r.length;
+}
+function _mvHapusCoret() {
+  if (!(MV.coret[_mvKunciCoret()] || []).length) return;
+  _mvSimpanRiwayat(); delete MV.coret[_mvKunciCoret()];
+  _mvTarget().forEach((tg) => _mvGambarCoret(tg));
+  toast("🧹 Coretan dihapus — tekan ↶ untuk mengembalikan", "ok");
+}
+function _mvTempelHarakat(p) {
+  _mvSimpanRiwayat();
+  const k = _mvKunciCoret();
+  (MV.coret[k] = MV.coret[k] || []).push({ alat: "harakat", teks: MV.harakat, ukuran: MV.ukuranHarakat, warna: MV.warna, pts: [p] });
+  _mvTarget().forEach((tg) => _mvGambarCoret(tg));
+}
 function _mvPasangPointer(el) {
   const ink = el.querySelector(".mv-ink"), stage = el.querySelector(".mv-stage");
   const pos = (e) => { const r = ink.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; };
   ink.addEventListener("pointerdown", (e) => {
+    if (MV.alat === "harakat") { e.preventDefault(); return _mvTempelHarakat(pos(e)); }
     if (MV.alat !== "pena" && MV.alat !== "stabilo") return;
     e.preventDefault(); ink.setPointerCapture(e.pointerId);
     MV.garis = { alat: MV.alat, warna: MV.alat === "stabilo" && MV.warna === "#ef4444" ? "#facc15" : MV.warna, pts: [pos(e)] };
@@ -210,13 +272,14 @@ function _mvPasangPointer(el) {
     MV.garis.pts.push(pos(e));
     _mvTarget().forEach((tg) => _mvGambarCoret(tg, true));
   });
-  const selesai = () => { if (!MV.garis) return; const k = _mvKunciCoret(); (MV.coret[k] = MV.coret[k] || []).push(MV.garis); MV.garis = null; };
+  const selesai = () => { if (!MV.garis) return; const g = MV.garis; MV.garis = null; _mvSimpanRiwayat(); const k = _mvKunciCoret(); (MV.coret[k] = MV.coret[k] || []).push(g); };
   ink.addEventListener("pointerup", selesai); ink.addEventListener("pointercancel", selesai);
   const papan = el.querySelector(".mv-papan");
   const posP = (e) => { const r = papan.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; };
   papan.addEventListener("pointerdown", (e) => {
     if (MV.alat === "laser") return;
     if (!MV.alat) _mvAlat("pena");
+    if (MV.alat === "harakat") { e.preventDefault(); e.stopPropagation(); return _mvTempelHarakat(posP(e)); }
     e.preventDefault(); e.stopPropagation(); papan.setPointerCapture(e.pointerId);
     MV.garis = { alat: MV.alat, warna: MV.alat === "stabilo" && MV.warna === "#ef4444" ? "#facc15" : MV.warna, pts: [posP(e)] };
     _mvTarget().forEach((tg) => _mvGambarCoret(tg));
@@ -249,8 +312,14 @@ function _mvAlat(a) {
   MV.alat = MV.alat === a ? null : a;
   const el = document.getElementById("mv"); if (!el) return;
   el.classList.toggle("mv-menggambar", !!MV.alat);
-  el.querySelectorAll('[data-a="pena"],[data-a="stabilo"],[data-a="laser"]').forEach((b) => b.classList.toggle("on", b.dataset.a === MV.alat));
+  el.querySelectorAll('[data-a="pena"],[data-a="stabilo"],[data-a="laser"],[data-a="harakat"]').forEach((b) => b.classList.toggle("on", b.dataset.a === MV.alat));
   if (MV.alat !== "laser") _mvLaser(null);
+  el.querySelector(".mv-harakat").hidden = MV.alat !== "harakat";
+  el.classList.toggle("mv-alat-harakat", MV.alat === "harakat");
+  if (MV.alat === "harakat") {
+    if (document.fonts) document.fonts.load("40px Amiri", "بَ").then(() => _mvTarget().forEach((tg) => _mvGambarCoret(tg))).catch(() => {});
+    if (!_mvLS("mvHarakatTip")) { toast("بَ Pilih harakat, lalu ketuk tepat di atas/bawah huruf. Salah tempat? tekan ↶", "ok"); _mvLS("mvHarakatTip", "1"); }
+  }
 }
 function _mvLayar(jenis) {
   MV.layar = MV.layar === jenis ? "" : jenis;
@@ -262,6 +331,7 @@ function _mvLayar(jenis) {
     if (!MV.alat || MV.alat === "laser") _mvAlat("pena");
   }
   el?.classList.toggle("mv-papan-aktif", !!MV.layar);
+  _mvTombolRiwayat();
   _mvTarget().forEach((tg) => { tg.tirai.className = (tg.utama ? "mv-tirai " : "tir ") + MV.layar; _mvGambarCoret(tg); });
 }
 
@@ -271,7 +341,8 @@ function _mvBukaProyektor() {
   const w = window.open("", "mv-proyektor", "width=1100,height=680");
   if (!w) { toast("Izinkan pop-up untuk membuka layar proyektor", "warn"); return; }
   w.document.open();
-  w.document.write(`<!doctype html><html lang="id"><head><meta charset="utf-8"><title>Proyektor — ${escapeHtml(MV.m.judul || "")}</title><style>
+  w.document.write(`<!doctype html><html lang="id"><head><meta charset="utf-8"><title>Proyektor — ${escapeHtml(MV.m.judul || "")}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@700&display=swap" rel="stylesheet"><style>
     html,body{margin:0;height:100%;background:#000;overflow:hidden;cursor:none}
     .st{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}.pg{position:relative}.pg canvas{display:block}
     .ink{position:absolute;left:0;top:0}.las{position:absolute;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:#ff2d2d;box-shadow:0 0 16px 7px rgba(255,40,40,.55);display:none}
@@ -295,6 +366,8 @@ function _mvKey(e) {
   const el = document.getElementById("mv"); if (!el) return;
   if (e.target?.matches?.("input,textarea,select")) return;
   const k = e.key, baca = MV.mode === "baca";
+  if ((e.ctrlKey || e.metaKey) && /^[zZyY]$/.test(k)) { e.preventDefault(); _mvUrung(/^[yY]$/.test(k) || (e.shiftKey && /^[zZ]$/.test(k))); return; }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
   if (MV.kuis) {
     if (["ArrowRight", "PageDown", " ", "Enter"].includes(k)) { e.preventDefault(); _mvKuisLanjut(); }
     else if (k === "Escape") _mvKuisTutup();
@@ -310,7 +383,8 @@ function _mvKey(e) {
   else if (/^[pP]$/.test(k)) _mvAlat("pena");
   else if (/^[hH]$/.test(k)) _mvAlat("stabilo");
   else if (/^[lL]$/.test(k)) _mvAlat("laser");
-  else if (/^[eE]$/.test(k)) { delete MV.coret[_mvKunciCoret()]; _mvTarget().forEach((tg) => _mvGambarCoret(tg)); }
+  else if (/^[kK]$/.test(k)) _mvAlat("harakat");
+  else if (/^[eE]$/.test(k)) _mvHapusCoret();
   else if (/^[fF]$/.test(k)) _mvLayarPenuh(!document.fullscreenElement);
   else if (k === "Escape") { if (MV.alat) _mvAlat(MV.alat); else if (MV.layar) _mvLayar(MV.layar); else if (!document.fullscreenElement) _mvTutup(); }
 }
@@ -321,8 +395,9 @@ function _mvKlikBar(e) {
   else if (a === "prev") _mvKe(MV.hal - 1);
   else if (a === "next") _mvKe(MV.hal + 1);
   else if (a === "zin" || a === "zout") { MV.zoom = Math.max(0.5, Math.min(3, MV.zoom * (a === "zin" ? 1.2 : 1 / 1.2))); _mvRender(); }
-  else if (["pena", "stabilo", "laser"].includes(a)) _mvAlat(a);
-  else if (a === "hapus") { delete MV.coret[_mvKunciCoret()]; _mvTarget().forEach((tg) => _mvGambarCoret(tg)); }
+  else if (["pena", "stabilo", "laser", "harakat"].includes(a)) _mvAlat(a);
+  else if (a === "undo" || a === "redo") _mvUrung(a === "redo");
+  else if (a === "hapus") _mvHapusCoret();
   else if (a === "hitam" || a === "putih") _mvLayar(a);
   else if (a === "proyektor") _mvBukaProyektor();
   else if (a === "kunci") { _mvKunciBar(!MV.barKunci); toast(MV.barKunci ? "📌 Toolbar dikunci — selalu tampil" : "Toolbar kembali otomatis tersembunyi", "ok"); }
@@ -372,7 +447,11 @@ function _mvCatatLama(halBaru) {
 }
 // Judul/subjudul halaman dari teks PDF (huruf terbesar, atau baris bernomor seperti "1. Pengertian …").
 // PDF hasil gambar/scan tidak punya teks → hasil kosong (lalu dipakai penanda / nomor halaman).
-const _MV_BUKAN_JUDUL = /^(ringkasan materi|apersepsi|daftar isi|kata pengantar|tujuan pembelajaran|dilarang|undang-undang|sumber:|keterangan|info tambahan|pindai|evaluasi|refleksi)/i;
+const _MV_BUKAN_JUDUL = /^(ringkasan materi|apersepsi|daftar isi|kata pengantar|tujuan pembelajaran|dilarang|undang-undang|sumber:|keterangan|info tambahan|pindai|evaluasi|refleksi|الفهرس|فهرس|المقدمة|مقدمة|المحتويات|التمرين|التمرينات|تمرين|الأسئلة|أسئلة|المناقشة)/i;
+// Kitab berbahasa Arab: kata disusun kanan-ke-kiri, huruf bentuk-sajian (presentation forms) dinormalkan,
+// dan judul dikenali dari kata seperti الدرس / الباب / الفصل / سورة / تفسير atau nomor ١. / أ.
+const _MV_AR = /[؀-ۿﭐ-﷿ﹰ-﻿]/g;
+const _MV_JUDUL_AR = /^(الدرس|الباب|الفصل|المبحث|المطلب|الموضوع|سورة|تفسير|الآية|الآيات|الحديث|القاعدة|الوحدة|الجزء|باب|فصل|درس)(\s|:|$)/;
 async function _mvJudulHalaman(doc, halaman) {
   const hasil = [];
   for (const h of halaman.slice(0, 15)) {
@@ -380,22 +459,34 @@ async function _mvJudulHalaman(doc, halaman) {
       const tc = await (await doc.getPage(h)).getTextContent();
       const baris = [];
       tc.items.forEach((it) => {
-        const t = String(it.str || "").trim(); if (!t) return;
+        // ligatur lam-alif sering terbaca terbalik dari PDF ("األول" → "الأول")
+        const t = String(it.str || "").normalize("NFKC").replace(/ا([أإآا])ل/g, "ال$1").trim(); if (!t) return;
         const y = Math.round(it.transform[5]), size = Math.hypot(it.transform[2], it.transform[3]);
-        const b = baris.find((x) => Math.abs(x.y - y) <= 2);
-        if (b) { b.t += " " + t; b.size = Math.max(b.size, size); } else baris.push({ y, t, size });
+        const b = baris.find((x) => Math.abs(x.y - y) <= Math.max(2, size * 0.25));
+        const pot = { t, x: it.transform[4], w: it.width || 0 };
+        if (b) { b.pot.push(pot); b.size = Math.max(b.size, size); } else baris.push({ y, size, pot: [pot] });
+      });
+      baris.forEach((b) => {
+        const semua = b.pot.map((p) => p.t).join(""), ar = (semua.match(_MV_AR) || []).length > (semua.match(/[a-z]/gi) || []).length;
+        b.ar = ar;
+        const urut = b.pot.slice().sort((p, q) => (ar ? q.x - p.x : p.x - q.x));
+        b.t = urut.reduce((s, p, i) => {
+          if (!i) return p.t;
+          const sbl = urut[i - 1], celah = ar ? sbl.x - (p.x + p.w) : p.x - (sbl.x + sbl.w);
+          return s + (celah > b.size * 0.15 ? " " : "") + p.t;
+        }, "");
       });
       const ok = baris.map((b) => ({ ...b, t: b.t.replace(/\s+/g, " ").trim() }))
-        .filter((b) => b.t.length >= 4 && b.t.length <= 80 && /[a-z]/i.test(b.t) && !_MV_BUKAN_JUDUL.test(b.t));
+        .filter((b) => b.t.length >= 4 && b.t.length <= 90 && /[a-z؀-ۿ]/i.test(b.t) && !_MV_BUKAN_JUDUL.test(b.t.replace(/^[^\p{L}]+/u, "")));
       if (!ok.length) continue;
       // judul = pendek (≤ 8 kata), tidak diakhiri titik/koma, dan hurufnya lebih besar dari teks isi
-      // (ukuran median halaman) — atau bernomor seperti "1. Pengertian …" / "B. Pertumbuhan …"
-      const miripJudul = (b) => b.t.length <= 60 && b.t.split(" ").length <= 8 && !/[.,;:]$/.test(b.t);
+      // (ukuran median halaman) — atau bernomor seperti "1. Pengertian …" / "B. Pertumbuhan …" / "١. …"
+      const miripJudul = (b) => b.t.length <= 70 && b.t.split(" ").length <= (b.ar ? 10 : 8) && !/[.,;:،؛]$/.test(b.t);
       const urut = ok.map((b) => b.size).sort((a, b) => a - b), median = urut[Math.floor(urut.length / 2)] || 0;
       const besar = ok.filter((b) => miripJudul(b) && b.size > median * 1.12);
-      const bernomor = ok.filter((b) => miripJudul(b) && /^([0-9]{1,2}|[A-H])[.)]\s+[A-Z]/.test(b.t));
+      const bernomor = ok.filter((b) => miripJudul(b) && (/^([0-9]{1,2}|[A-H])[.)]\s+[A-Z]/.test(b.t) || /^([0-9٠-٩]{1,2}|[أبجده])\s*[.)\-–]\s*\S/.test(b.t) || _MV_JUDUL_AR.test(b.t)));
       [...besar.slice(0, 1), ...bernomor.slice(0, 2)].forEach((b) => {
-        const j = b.t.replace(/^([0-9]{1,2}|[A-H])[.)]\s+/, "");
+        const j = b.t.replace(/^([0-9]{1,2}|[A-H])[.)]\s+/, "").replace(/^([0-9٠-٩]{1,2}|[أبجده])\s*[.)\-–]\s*/, "");
         if (!hasil.some((x) => x.toLowerCase() === j.toLowerCase())) hasil.push(j);
       });
     } catch (e) {}

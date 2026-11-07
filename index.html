@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="src/kas.css?v=3">
 <link rel="stylesheet" href="src/hp.css?v=2">
 <link rel="stylesheet" href="src/kuliah.css?v=6">
-<link rel="stylesheet" href="src/modul-baca.css?v=8">
+<link rel="stylesheet" href="src/modul-baca.css?v=9">
 <link rel="stylesheet" href="src/ujian.css?v=8">
 
 <script>
@@ -8692,18 +8692,29 @@ async function renderModulAjarInit() {
 
   const kelasUnik = Array.from(new Map(MODUL_AJAR_PETA_CACHE.map((p) => [p.kelas_id, p])).values())
     .sort((a, b) => _kelasAngkaUrut(a.nama_kelas) - _kelasAngkaUrut(b.nama_kelas));
-  const mapelUnik = Array.from(new Map(MODUL_AJAR_PETA_CACHE.map((p) => [p.mapel_id, p])).values())
-    .sort((a, b) => String(a.nama_mapel).localeCompare(String(b.nama_mapel), "id"));
-
   qs("ma-filter-kelas").innerHTML = `<option value="">— ${t("semuaKelas")} —</option>` + kelasUnik.map((k) => `<option value="${k.kelas_id}">${escapeHtml(k.nama_kelas)}</option>`).join("");
-  qs("ma-filter-mapel").innerHTML = `<option value="">— ${t("semuaMapel")} —</option>` + mapelUnik.map((m) => `<option value="${m.mapel_id}">${escapeHtml(m.nama_mapel)}</option>`).join("");
   qs("ma-filter-kelas").value = MODUL_AJAR_FILTER.kelas;
-  qs("ma-filter-mapel").value = MODUL_AJAR_FILTER.mapel;
+  _maIsiFilterMapel();
   renderModulAjar();
 }
+// Pilihan mapel mengikuti kelas yang dipilih — hanya mapel yang ada di jadwal kelas itu
+// (Kelas 11 tidak menampilkan IPA/IPS, Kelas 10 tidak menampilkan Tafsir, dst.)
+function _maIsiFilterMapel() {
+  const kelas = MODUL_AJAR_FILTER.kelas;
+  const sumber = kelas ? MODUL_AJAR_PETA_CACHE.filter((p) => p.kelas_id === kelas) : MODUL_AJAR_PETA_CACHE;
+  const mapelUnik = Array.from(new Map(sumber.map((p) => [p.mapel_id, p])).values())
+    .sort((a, b) => String(a.nama_mapel).localeCompare(String(b.nama_mapel), "id"));
+  const grup = (judul, arr) => arr.length ? `<optgroup label="${judul}">${arr.map((m) => `<option value="${m.mapel_id}">${escapeHtml(m.nama_mapel)}</option>`).join("")}</optgroup>` : "";
+  const din = mapelUnik.filter((m) => m.masuk_diniyyah && !m.masuk_umum), umum = mapelUnik.filter((m) => !(m.masuk_diniyyah && !m.masuk_umum));
+  qs("ma-filter-mapel").innerHTML = `<option value="">— ${t("semuaMapel")}${kelas ? ` (${mapelUnik.length})` : ""} —</option>` + grup("📗 Diniyyah", din) + grup("📘 Umum", umum);
+  if (MODUL_AJAR_FILTER.mapel && !mapelUnik.some((m) => m.mapel_id === MODUL_AJAR_FILTER.mapel)) MODUL_AJAR_FILTER.mapel = "";
+  qs("ma-filter-mapel").value = MODUL_AJAR_FILTER.mapel;
+}
 function ubahFilterModulAjar() {
+  const kelasBerubah = MODUL_AJAR_FILTER.kelas !== qs("ma-filter-kelas").value;
   MODUL_AJAR_FILTER.kelas = qs("ma-filter-kelas").value;
   MODUL_AJAR_FILTER.mapel = qs("ma-filter-mapel").value;
+  if (kelasBerubah) _maIsiFilterMapel();
   renderModulAjar();
 }
 async function renderModulAjar() {
@@ -15922,7 +15933,7 @@ async function handleImportSiswa(evt) {
 </script>
 <script src="src/kas.js?v=3"></script>
 <script src="src/kuliah.js?v=19"></script>
-<script src="src/modul-baca.js?v=8"></script>
+<script src="src/modul-baca.js?v=9"></script>
 <script src="src/sampul.js?v=1"></script>
 <script src="src/presentasi-absen.js?v=3"></script>
 <script src="src/jurnal-ekspor.js?v=3"></script>
