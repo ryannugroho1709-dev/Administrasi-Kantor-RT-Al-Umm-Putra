@@ -43,14 +43,19 @@ function _pgHariAktifSesudah(iso) { let d = _pgGeser(iso, 1); for (let i = 0; i 
 
 // Jenis kegiatan kaldik dari judul/keterangan
 function _pgKategori(k) {
-  const t = `${k.judul || ""} ${k.keterangan || ""}`.toLowerCase();
-  if (/rapat|musyawarah|koordinasi guru/.test(t)) return "rapat";
-  if (/rapor|raport|rapot/.test(t)) return "rapor";
-  if (/tahfi[zd]h?|tasmi'?|munaqasy|setoran hafalan/.test(t)) return "tahfizh";
-  if (/\b(uts|pts|sts)\b|tengah semester/.test(t)) return "uts";
-  if (/\b(uas|pas|pat|sas)\b|akhir semester|akhir tahun|ujian akhir|asesmen akhir|penilaian akhir|sumatif akhir|ujian semester/.test(t)) return "uas";
-  if (k.jenis === "ujian" || /ujian|asesmen|penilaian/.test(t)) return "ujian";
+  // KBM hanya dihentikan oleh UJIAN (atau libur). Rapat, rihlah, lomba, kemah, wisata, dsb. tetap ada KBM —
+  // walaupun judulnya memuat kata seperti "Tahfizh" (mis. "Rihlah Santri Berprestasi (Tahfizh)").
+  const t = `${k.judul || ""} ${k.keterangan || ""}`.toLowerCase(), judul = String(k.judul || "").toLowerCase();
+  if (/rapat|musyawarah|koordinasi guru/.test(judul)) return "rapat";
+  if (/rapor|raport|rapot/.test(judul)) return "rapor";
+  if (/rihlah|wisata|piknik|outbound|out bound|study tour|studi tour|kunjungan|lomba|perlombaan|kemah|perkemahan|jalan sehat|tasyakuran|syukuran|santunan|bakti sosial|baksos|upacara|peringatan|maulid|isra|halal ?bi ?halal|silaturahmi|pentas|gebyar|festival|apresiasi|berprestasi|wisuda/.test(judul)
+    && !/\b(ujian|imtihan|munaqasy|tasmi'?|uas|uts|pas|pts|pat|asesmen)\b/.test(judul)) return "agenda";
   if (k.jenis === "libur") return "libur";
+  const ujian = /\b(ujian|imtihan|munaqasy\w*|tasmi'?\w*|asesmen|evaluasi akhir|penilaian (akhir|tengah)|sumatif)\b/.test(t);
+  if (/tahfi[zd]h?|hafalan|qur'?an/.test(judul) && ujian) return "tahfizh";
+  if (/\b(uts|pts|sts)\b|tengah semester/.test(t) && !/libur/.test(judul)) return "uts";
+  if (/\b(uas|pas|pat|sas)\b|ujian akhir|asesmen akhir|penilaian akhir|sumatif akhir|ujian semester/.test(t) && !/libur/.test(judul)) return "uas";
+  if (ujian || (k.jenis === "ujian" && !/libur/.test(judul))) return "ujian";
   return "agenda";
 }
 const PG_IKON = { akhir_kbm: "🏁", soal: "📝", jadwal_ujian: "🗓️", nilai: "📊", rapat: "🤝", rapat_ingat: "⏰", libur: "🏖️", rapor: "📘", pekan: "📅", bebas: "✍️",
