@@ -9,7 +9,7 @@
   const sem = [1, 2, 3, 4, 5, 6, 7, 8].map(kosong);
 
   sem[0].mk.push({
-    id: "bahasa-inggris", tglUjian: { uts: "2026-11-08", uas: "2027-02-01" }, kode: "ENES101", ikon: "language", tema: 10, motif: "abc", motifOpt: { lbl: "English 101" }, jumlah: 30,
+    id: "bahasa-inggris", tglUjian: { uts: "2026-11-08", utsAkhir: "2026-11-14", uas: "2027-02-01" }, kode: "ENES101", ikon: "language", tema: 10, motif: "abc", motifOpt: { lbl: "English 101" }, jumlah: 30,
     ujian: { uts: [1, 15], uas: [16, 30] }, teksBahasa: "id", bahasa: "en", labelKitab: "Buku", sampul: "Academic Literacy", sampulPenulis: "Underhill & Dube",
     nama: { id: "Bahasa Inggris (Literasi Akademik)", en: "English 101 — Academic Literacy" },
     kitab: { id: "Academic Literacy · English Grammar for the Utterly Confused · Introduction to Academic Writing", en: "Academic Literacy · English Grammar for the Utterly Confused · Introduction to Academic Writing" },
@@ -55,7 +55,7 @@
   });
 
   sem[4].mk.push({
-    id: "psikologi-adiktif", tglUjian: { uts: "2026-11-08", uas: "2027-02-01" }, kode: "PPAB301", sks: 3, ikon: "brain", tema: 1, motif: "otak", motifOpt: { lbl: "علم نفس السلوك الإدماني" }, jumlah: 30,
+    id: "psikologi-adiktif", tglUjian: { uts: "2026-11-08", utsAkhir: "2026-11-14", uas: "2027-02-01" }, kode: "PPAB301", sks: 3, ikon: "brain", tema: 1, motif: "otak", motifOpt: { lbl: "علم نفس السلوك الإدماني" }, jumlah: 30,
     ujian: { uts: [1, 15], uas: [16, 30] }, teksBahasa: "id",
     nama: { id: "Psikologi Perilaku Adiktif", ar: "علم نفس السلوك الإدماني" },
     kitab: { id: "PPAB301 · PSY 204 — Psychology of Addictive Behaviours", ar: "علم نفس السلوك الإدماني" },
@@ -95,7 +95,7 @@
   });
 
   sem[4].mk.push({
-    id: "disabilitas", tglUjian: { uts: "2026-11-08", uas: "2027-02-01" }, kode: "PMAD301", ikon: "users", tema: 7, motif: "payung", motifOpt: { lbl: "نماذج ومقاربات الإعاقة" }, jumlah: 30,
+    id: "disabilitas", tglUjian: { uts: "2026-11-08", utsAkhir: "2026-11-14", uas: "2027-02-01" }, kode: "PMAD301", ikon: "users", tema: 7, motif: "payung", motifOpt: { lbl: "نماذج ومقاربات الإعاقة" }, jumlah: 30,
     ujian: { uts: [1, 15], uas: [16, 30] }, teksBahasa: "id",
     nama: { id: "Model dan Pendekatan terhadap Disabilitas", en: "Models and Approaches to Disability", ar: "نماذج ومقاربات الإعاقة" },
     kitab: { id: "PMAD301 · PSY 404 — Psychological Models and Approaches to Disability", ar: "نماذج ومقاربات الإعاقة" },
@@ -127,7 +127,7 @@
   });
 
   sem[4].mk.push({
-    id: "tes-psikologi", tglUjian: { uts: "2026-11-08", uas: "2027-02-01" }, kode: "PPTA301", sks: 2, ikon: "chart", tema: 2, motif: "kurva-normal", motifOpt: { lbl: "الاختبارات والتقييم النفسي" }, jumlah: 30,
+    id: "tes-psikologi", tglUjian: { uts: "2026-11-08", utsAkhir: "2026-11-14", uas: "2027-02-01" }, kode: "PPTA301", sks: 2, ikon: "chart", tema: 2, motif: "kurva-normal", motifOpt: { lbl: "الاختبارات والتقييم النفسي" }, jumlah: 30,
     ujian: { uts: [1, 15], uas: [16, 30] }, teksBahasa: "id",
     nama: { id: "Tes dan Asesmen Psikologis", en: "Psychological Testing and Assessment", ar: "الاختبارات والتقييم النفسي" },
     kitab: { id: "PPTA301 — Handbook of Psychological Assessment (Gary Groth-Marnat, ed. 4)", ar: "الاختبارات والتقييم النفسي" },
@@ -151,6 +151,15 @@
       { id: "Klien Muslim & studi kasus", ar: "العميل المسلم ودراسات الحالة", dari: 25, sampai: 27 },
       { id: "Masa depan pengujian & pendekatan pengobatan", ar: "المستقبل وأساليب العلاج", dari: 28, sampai: 30 }
     ]
+  });
+
+  sem[4].mk.push({
+    id: "peta-tes", induk: "tes-psikologi", kode: "Peta", ikon: "map", tema: 7, motif: "kompas", motifOpt: { lbl: "Peta Gangguan & Tes" }, jumlah: 2, tanpaUjian: true, teksBahasa: "id", labelKitab: "Sumber", sampul: "Peta Gangguan & Alat Tes", sampulPenulis: "PPTA301 · Modul 1–30",
+    nama: { id: "Peta Gangguan & Alat Tes PPTA301", en: "PPTA301 Disorder & Test Map" },
+    kitab: { id: "Ringkasan lintas modul PPTA301 (Groth-Marnat, DSM-5)", en: "PPTA301 cross-module summary" },
+    dosen: { id: "Kashmala Qasim", en: "Kashmala Qasim" },
+    tentang: { id: "Pelengkap Tes & Asesmen Psikologis: **peta semua gangguan Modul 1–30** dengan ciri kunci, **alat ukur**, obat/penanganan medis, penanganan psikologis, dan pendekatan psikolog Muslim; serta **peta alat tes** — tes apa dipakai untuk apa, sasaran usia, dan skor kuncinya." },
+    bab: [{ id: "Peta gangguan & penanganan", en: "Disorder map", dari: 1, sampai: 1 }, { id: "Peta alat tes", en: "Test map", dari: 2, sampai: 2 }]
   });
 
   window.PROGRAM = {

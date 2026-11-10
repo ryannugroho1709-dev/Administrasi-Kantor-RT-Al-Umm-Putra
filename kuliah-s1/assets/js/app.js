@@ -321,7 +321,12 @@
   /* Kartu target ujian (kuliah mandiri IOU): tanggal UTS/UAS per mata kuliah + hitung mundur + target modul per hari + pengingat WA */
   const hariKe = t => t ? Math.ceil((new Date(t + "T00:00:00") - new Date(U.todayKey() + "T00:00:00")) / 864e5) : null;
   function tglMk(id) { const st = S().set, m = (st.tglMk || {})[id] || {}, d = (mkById(id) || {}).tglUjian || {}; return { uts: m.uts || d.uts || st.tglUts || "", uas: m.uas || d.uas || st.tglUas || "" }; }
-  const RENC_TGL = m => tglMk(m.id).uts, RENC_RANGE = m => UJI(m).uts;
+  /* Masa ujian (S1 IOU): ujian boleh dipilih harinya di dalam rentang, mis. UTS 8–14 Nov. Hasil: [awal, akhir] atau null */
+  function masaUji(id, j) { const d = (mkById(id) || {}).tglUjian || {}; return d[j] && d[j + "Akhir"] ? [d[j], d[j + "Akhir"]] : null; }
+  const hariDipilih = (id, j) => !!((S().set.tglMk || {})[id] || {})[j];
+  const tglPendek = t => new Date(t + "T00:00:00").toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+  /* rencana belajar: bila hari ujian belum dipilih dalam masa ujian, tenggatnya hari terakhir masa ujian */
+  const RENC_TGL = m => { const ms = masaUji(m.id, "uts"); return ms && !hariDipilih(m.id, "uts") ? ms[1] : tglMk(m.id).uts; }, RENC_RANGE = m => UJI(m).uts;
   function sisaBaca(m, j) { const rr = UJI(m)[j]; return Kuliah.list(m.id).filter(p => p.no >= rr[0] && p.no <= rr[1] && !p.belumDisusun && !(S().baca[pKey(m.id, p.no)] || {}).selesai).length; }
   function kirimPengingatWa(id, j) {
     const m = mkById(id); if (!m) return;
@@ -338,8 +343,18 @@
     const pr = ujiMk.reduce((s, m) => { const q = mkProgress(m.id); s.done += q.done; s.total += q.total; return s; }, { done: 0, total: 0 });
     const multi = ujiMk.length > 1;
     const baris = ujiMk.flatMap(m => [["UTS", "uts", "medal"], ["UAS", "uas", "seal"]].map(([J, j, ic]) => {
-      const h = hariKe(tglMk(m.id)[j]), r = UJI(m)[j], sisa = sisaBaca(m, j);
-      const ket = h == null ? lab("Atur tanggal ujian", "حدِّد الموعد") : h < 0 ? lab("Sudah lewat", "انتهى") : h === 0 ? lab("Hari ini! Bismillah", "اليوم") : lab(h + " hari lagi" + (sisa ? " · target " + Math.max(1, Math.ceil(sisa / Math.max(h, 1))) + " modul/hari" : " · semua modul selesai ✓"), "بقي " + arNum(h) + " يومًا");
+      let h = hariKe(tglMk(m.id)[j]); const r = UJI(m)[j], sisa = sisaBaca(m, j), masa = masaUji(m.id, j), pilih = hariDipilih(m.id, j);
+      const target = hh => sisa ? " · target " + Math.max(1, Math.ceil(sisa / Math.max(hh, 1))) + " modul/hari" : " · semua modul selesai ✓";
+      let ket;
+      if (masa && !pilih) {
+        /* belum memilih hari: tampilkan masa ujian, hitung mundur ke hari terakhir masa ujian */
+        const hA = hariKe(masa[0]), hZ = hariKe(masa[1]), teksMasa = "Masa " + J + " " + tglPendek(masa[0]) + "–" + tglPendek(masa[1]);
+        h = hA > 0 ? hA : hZ;
+        ket = hZ < 0 ? lab("Masa ujian sudah lewat", "انتهى") : hA > 0 ? lab(teksMasa + " · " + hA + " hari lagi · pilih harimu" + target(hA), "بقي " + arNum(hA)) : lab(teksMasa + " sedang berlangsung · sisa " + (hZ + 1) + " hari · ketuk Atur untuk memilih hari" + target(hZ + 1), "جارٍ");
+      } else {
+        const lewatMasa = masa && hariKe(masa[1]) < 0;
+        ket = h == null ? lab("Atur tanggal ujian", "حدِّد الموعد") : h < 0 ? lab(masa && !lewatMasa ? "Sudah ujian ✓ (masa " + J + " sampai " + tglPendek(masa[1]) + ")" : "Sudah lewat", "انتهى") : h === 0 ? lab("Hari ini! Bismillah", "اليوم") : lab(h + " hari lagi" + (masa ? " (" + tglPendek(tglMk(m.id)[j]) + ")" : "") + target(h), "بقي " + arNum(h) + " يومًا");
+      }
       const wa = h != null && h >= 0 && h <= 14 ? '<button class="btn ghost sm tg-wa" type="button" data-mk="' + esc(m.id) + '" data-j="' + j + '" title="Kirim pengingat ke WhatsApp">' + Icon("chat") + "</button>" : "";
       return { h: h == null ? 1e4 : h < 0 ? 2e4 + h : h, html: '<div class="tg-row"><span class="tg-ic">' + Icon(ic) + "</span><div><b>" + J + (multi ? " " + esc(m.kode) : "") + " · " + lab("Modul " + rng(r), "الوحدات " + rng(r)) + "</b><small>" + ket + "</small></div>" + wa + (h != null && h >= 0 ? '<span class="tg-day">' + n(h) + "</span>" : "") + "</div>" };
     })).sort((x, y) => x.h - y.h).slice(0, multi ? 4 : 2).map(x => x.html).join("");
@@ -350,7 +365,10 @@
   function aturTanggalUjian() {
     const sh = $("#sheet"), st = S().set, ujiMk = adaData().filter(m => !m.tanpaUjian);
     sh.innerHTML = '<div class="sheet-bg"></div><div class="sheet-card" role="dialog" aria-modal="true"><div class="sheet-grip"></div><h3>' + Icon("calendar") + " " + lab("Tanggal ujian per mata kuliah", "مواعيد الاختبار") + '</h3><p class="muted sm">' + lab("Isi sesuai jadwal resmi IOU. Dipakai untuk hitung mundur, target modul per hari, dan pengingat WhatsApp (muncul 14 hari sebelum ujian).", "حسب الجدول الرسمي") + "</p>" +
-      '<form class="onb-f">' + ujiMk.map(m => { const t = tglMk(m.id); return '<fieldset class="tg-fs"><legend><b>' + esc(m.kode) + "</b> · " + esc(m.nama.id) + '</legend><label>UTS<input type="date" name="uts-' + esc(m.id) + '" value="' + esc(t.uts) + '"></label><label>UAS<input type="date" name="uas-' + esc(m.id) + '" value="' + esc(t.uas) + '"></label></fieldset>'; }).join("") +
+      '<form class="onb-f">' + ujiMk.map(m => {
+        const t = tglMk(m.id), inp = j => { const ms = masaUji(m.id, j), J = j.toUpperCase(), v = hariDipilih(m.id, j) || !ms ? t[j] : "";
+          return "<label>" + J + (ms ? ' <small class="muted">pilih hari ' + tglPendek(ms[0]) + "–" + tglPendek(ms[1]) + "</small>" : "") + '<input type="date" name="' + j + "-" + esc(m.id) + '" value="' + esc(v) + '"' + (ms ? ' min="' + ms[0] + '" max="' + ms[1] + '"' : "") + "></label>"; };
+        return '<fieldset class="tg-fs"><legend><b>' + esc(m.kode) + "</b> · " + esc(m.nama.id) + "</legend>" + inp("uts") + inp("uas") + "</fieldset>"; }).join("") +
       '<button class="btn gold lg" type="submit">' + Icon("check") + lab("Simpan", "حفظ") + "</button></form></div>";
     sh.classList.add("open");
     const close = () => { sh.classList.remove("open"); setTimeout(() => sh.innerHTML = "", 300); };
