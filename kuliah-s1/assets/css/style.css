@@ -1371,3 +1371,19 @@ body.focus .reader { grid-template-columns: 1fr !important; max-width: 860px; ma
 .judul-blk.tts-now { outline: 2px solid var(--c2); outline-offset: 6px; border-radius: 10px; }
 .tts-now { outline: 2px solid var(--c2); outline-offset: 6px; border-radius: 12px; background-color: color-mix(in srgb, var(--c2) 7%, transparent); transition: background-color .3s; }
 .tts-bar .tts-info { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+
+/* ===== Kamus istilah: abjad, filter jenis, teori & tokoh ===== */
+.is-jenis { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 6px; }
+.is-jenis .pill { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.is-jenis .pill .ic { width: 16px; height: 16px; }
+.is-az { position: sticky; top: 0; z-index: 3; display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 0; margin-bottom: 6px; background: var(--bg); }
+.is-az a { min-width: 30px; text-align: center; padding: 4px 6px; border-radius: 8px; border: 1px solid var(--line); background: var(--sf); font-weight: 700; color: var(--acc); text-decoration: none; }
+.is-az a:hover { background: var(--acc); color: #fff; }
+.is-huruf { display: flex; align-items: baseline; gap: 8px; margin: 18px 0 4px; font-size: 22px; color: var(--acc); border-bottom: 2px solid var(--line); padding-bottom: 4px; scroll-margin-top: 60px; }
+.is-huruf small { font-size: 12px; color: var(--mut); font-weight: 600; }
+.is-term { font-weight: 800; }
+.is-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 2px 8px; border-radius: 99px; background: color-mix(in srgb, var(--acc) 14%, transparent); color: var(--acc); }
+.is-tag .ic { width: 13px; height: 13px; }
+.is-j-tokoh .is-tag { background: color-mix(in srgb, #c98a12 18%, transparent); color: #a26b00; }
+.is-tokoh { display: flex; align-items: center; gap: 4px; margin-top: 3px; font-weight: 500; color: var(--mut); font-size: 13px; }
+small.is-tokoh .ic { width: 14px; height: 14px; }

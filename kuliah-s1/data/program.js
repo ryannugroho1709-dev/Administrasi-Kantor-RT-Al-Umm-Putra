@@ -81,6 +81,20 @@
   });
 
   sem[4].mk.push({
+    id: "kasus-adiktif", induk: "psikologi-adiktif", kode: "Kasus & LS", ikon: "target", tema: 5, motif: "target", motifOpt: { lbl: "Studi Kasus" }, jumlah: 8, tanpaUjian: true, teksBahasa: "id", labelKitab: "Sumber", sampul: "Studi Kasus & Materi Dosen", sampulPenulis: "PPAB301 · LS01–LS03",
+    nama: { id: "Studi Kasus & Materi Dosen PPAB301", en: "PPAB301 Case Studies & Live Sessions" },
+    kitab: { id: "PPAB301 — LS01–LS03 (Ahmad Yunus) + bank studi kasus", en: "PPAB301 Live Sessions & Case Bank" },
+    dosen: { id: "Ahmad Yunus, S.Pd., M.Couns.", en: "Ahmad Yunus" },
+    tentang: { id: "Pelengkap mata kuliah Psikologi Perilaku Adiktif: **kasus resmi dosen untuk UAS (Budi & Hadi)** beserta jawaban model, **bank studi kasus berjenjang** (Dasar → Menengah → Lanjut, setara soal kasus S1 internasional) untuk semua gangguan di Modul 1–15, **ringkasan materi pertemuan langsung LS01–LS03**, dan **peta seluruh penyakit Modul 1–30** beserta obat dan penanganannya untuk psikolog Muslim." },
+    bab: [
+      { id: "Kasus resmi dosen", en: "Official cases", dari: 1, sampai: 1 },
+      { id: "Bank studi kasus", en: "Case bank", dari: 2, sampai: 4 },
+      { id: "Materi dosen LS01–LS03", en: "Live sessions", dari: 5, sampai: 7 },
+      { id: "Peta penyakit & penanganan", en: "Disorder map", dari: 8, sampai: 8 }
+    ]
+  });
+
+  sem[4].mk.push({
     id: "disabilitas", tglUjian: { uts: "2026-11-08", uas: "2027-02-01" }, kode: "PMAD301", ikon: "users", tema: 7, motif: "payung", motifOpt: { lbl: "نماذج ومقاربات الإعاقة" }, jumlah: 30,
     ujian: { uts: [1, 15], uas: [16, 30] }, teksBahasa: "id",
     nama: { id: "Model dan Pendekatan terhadap Disabilitas", en: "Models and Approaches to Disability", ar: "نماذج ومقاربات الإعاقة" },
@@ -113,7 +127,7 @@
   });
 
   sem[4].mk.push({
-    id: "tes-psikologi", tglUjian: { uts: "2026-11-08", uas: "2027-02-01" }, kode: "PPTA301", ikon: "chart", tema: 2, motif: "kurva-normal", motifOpt: { lbl: "الاختبارات والتقييم النفسي" }, jumlah: 30,
+    id: "tes-psikologi", tglUjian: { uts: "2026-11-08", uas: "2027-02-01" }, kode: "PPTA301", sks: 2, ikon: "chart", tema: 2, motif: "kurva-normal", motifOpt: { lbl: "الاختبارات والتقييم النفسي" }, jumlah: 30,
     ujian: { uts: [1, 15], uas: [16, 30] }, teksBahasa: "id",
     nama: { id: "Tes dan Asesmen Psikologis", en: "Psychological Testing and Assessment", ar: "الاختبارات والتقييم النفسي" },
     kitab: { id: "PPTA301 — Handbook of Psychological Assessment (Gary Groth-Marnat, ed. 4)", ar: "الاختبارات والتقييم النفسي" },

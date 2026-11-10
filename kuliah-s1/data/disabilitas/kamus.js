@@ -1,0 +1,52 @@
+/* Kamus tambahan PMAD301 — teori, tokoh/penemu, dan istilah pelengkap */
+Kuliah.kamus("disabilitas", [
+  /* ===== TEORI & MODEL ===== */
+  { jenis: "teori", t: "Model Medis Disabilitas", tokoh: "Tradisi biomedis; ICIDH (WHO, 1980)", no: 9, id: "Disabilitas adalah masalah individu akibat penyakit/kerusakan yang harus disembuhkan atau dinormalkan oleh profesional." },
+  { jenis: "teori", t: "Model Sosial Disabilitas", tokoh: "UPIAS (1976); Mike Oliver (1983)", no: 11, id: "Impairment adalah kondisi tubuh; disabilitas diciptakan hambatan masyarakat." },
+  { jenis: "teori", t: "Peran Sakit (Sick Role)", tokoh: "Talcott Parsons (1951)", no: 9, id: "Orang sakit dibebaskan dari kewajiban asalkan berusaha sembuh dan patuh kepada dokter." },
+  { jenis: "teori", t: "Model Amal/Tragedi Personal", tokoh: "Dikritik oleh Mike Oliver (1990)", no: 9, id: "Penyandang disabilitas sebagai objek belas kasihan dan sumbangan." },
+  { jenis: "teori", t: "Model Berbasis Hak", tokoh: "CRPD — Konvensi PBB (2006)", no: 8, id: "Disabilitas sebagai isu hak asasi; negara wajib menjamin kesetaraan & aksesibilitas." },
+  { jenis: "teori", t: "Model Kelompok Minoritas", tokoh: "Harlan Hahn (1985)", no: 11, id: "Penyandang disabilitas sebagai kelompok minoritas yang mengalami diskriminasi seperti minoritas lain." },
+  { jenis: "teori", t: "Konstruksionisme Sosial", tokoh: "Peter Berger & Thomas Luckmann (1966)", no: 13, id: "Makna disabilitas dibentuk interaksi, bahasa, dan budaya." },
+  { jenis: "teori", t: "Defektologi & Disabilitas Sekunder", tokoh: "Lev Vygotsky (1920-an)", no: 13, id: "Defek primer (biologis) berbeda dari disabilitas sekunder (sosial); Zona Perkembangan Proksimal." },
+  { jenis: "teori", t: "Teori Disabilitas Kritis", tokoh: "Mazhab Frankfurt; Critical Legal Studies", no: 14, id: "Menganalisis kekuasaan, ideologi, dan hukum yang menindas penyandang disabilitas." },
+  { jenis: "teori", t: "Interseksionalitas", tokoh: "Kimberlé Crenshaw (1989)", no: 14, id: "Identitas berlapis (gender, ras, disabilitas, kelas) menimbulkan pengalaman diskriminasi yang khas." },
+  { jenis: "teori", t: "Prinsip Normalisasi", tokoh: "Bengt Nirje (1969); N. E. Bank-Mikkelsen", no: 15, id: "Pola hidup penyandang disabilitas dibuat sedekat mungkin dengan pola hidup masyarakat umum." },
+  { jenis: "teori", t: "Valorisasi Peran Sosial (SRV)", tokoh: "Wolf Wolfensberger (1983)", no: 15, id: "Mendukung peran sosial yang dihargai untuk melawan devaluasi." },
+  { jenis: "teori", t: "Pendekatan Kapabilitas", tokoh: "Amartya Sen (1980-an); Martha Nussbaum", no: 16, id: "Kesejahteraan diukur dari kebebasan nyata untuk menjadi dan melakukan (capabilities), bukan sumber daya semata." },
+  { jenis: "teori", t: "Pendekatan Berbasis Kekuatan", tokoh: "Dennis Saleebey (1992)", no: 17, id: "Fokus pada kekuatan, sumber daya, dan resiliensi, bukan defisit." },
+  { jenis: "teori", t: "Model Disablement", tokoh: "Saad Nagi (1965)", no: 19, id: "Patologi aktif → impairment → keterbatasan fungsional → disabilitas." },
+  { jenis: "teori", t: "Proses Enabling–Disabling", tokoh: "Institute of Medicine (1997); Verbrugge & Jette (1994)", no: 19, id: "Faktor individu & lingkungan dapat mempercepat atau menghambat proses disabilitas." },
+  { jenis: "teori", t: "Model Biopsikososial", tokoh: "George Engel (1977)", no: 20, id: "Kesehatan & disabilitas sebagai interaksi faktor biologis, psikologis, sosial." },
+  { jenis: "teori", t: "ICF", tokoh: "WHO (2001)", no: 20, id: "Klasifikasi fungsi tubuh, aktivitas, partisipasi, dan faktor kontekstual (lingkungan & personal)." },
+  { jenis: "teori", t: "Model Afirmasi", tokoh: "John Swain & Sally French (2000)", no: 29, id: "Identitas disabilitas yang positif dan afirmatif, bukan tragedi." },
+  { jenis: "teori", t: "Model Ekologi", tokoh: "Urie Bronfenbrenner (1979)", no: 28, id: "Mikro-, meso-, ekso-, makrosistem yang memengaruhi rehabilitasi." },
+  { jenis: "teori", t: "Neurodiversitas", tokoh: "Judy Singer (1998)", no: 12, id: "Variasi neurologis (mis. autisme) sebagai keragaman manusia." },
+  { jenis: "teori", t: "Rehabilitasi Berbasis Masyarakat (CBR)", tokoh: "WHO (1978, Alma-Ata)", no: 6, id: "Rehabilitasi dilakukan di dalam komunitas dengan sumber daya lokal." },
+  { jenis: "teori", t: "Pertumbuhan Pasca-Trauma", tokoh: "Richard Tedeschi & Lawrence Calhoun (1996)", no: 26, id: "Perubahan positif yang tumbuh setelah perjuangan menghadapi krisis." },
+  { jenis: "teori", t: "Teori Stigma", tokoh: "Erving Goffman (1963)", no: 26, id: "Identitas yang tercemar akibat atribut yang didiskreditkan." },
+  { jenis: "teori", t: "Efek Hawthorne", tokoh: "Elton Mayo (1924–1932)", no: 15, id: "Perilaku berubah karena merasa sedang diamati." },
+  { jenis: "teori", t: "Overshadowing Diagnostik", tokoh: "Steven Reiss dkk. (1982)", no: 23, id: "Gejala gangguan jiwa keliru dianggap bagian dari disabilitas intelektual." },
+
+  /* ===== TOKOH ===== */
+  { jenis: "tokoh", t: "Hannah Morris", tokoh: "Dosen PMAD301 (IOU)", id: "Pengampu Psychological Models and Approaches to Disability." },
+  { jenis: "tokoh", t: "Mike Oliver", tokoh: "1945–2019", no: 11, id: "Sosiolog Inggris yang merumuskan istilah *social model of disability* (1983)." },
+  { jenis: "tokoh", t: "Paul Hunt & Vic Finkelstein", tokoh: "UPIAS 1976", no: 11, id: "Pendiri Union of the Physically Impaired Against Segregation." },
+  { jenis: "tokoh", t: "Tom Shakespeare", tokoh: "*Disability Rights and Wrongs* (2006)", no: 12, id: "Kritikus model sosial yang menekankan realitas impairment." },
+  { jenis: "tokoh", t: "Ed Roberts", tokoh: "1939–1995", no: 11, id: "Pelopor gerakan hidup mandiri (independent living) di AS." },
+  { jenis: "tokoh", t: "Abdullah ibn Umm Maktum", tokoh: "Sahabat Nabi ﷺ", no: 7, id: "Sahabat tunanetra; muadzin dan beberapa kali ditunjuk menggantikan Nabi di Madinah; sebab turunnya QS 'Abasa." },
+  { jenis: "tokoh", t: "Amr ibn al-Jamuh", tokoh: "Sahabat Nabi ﷺ", no: 7, id: "Sahabat berkaki pincang yang bersikeras ikut berjihad di Uhud." },
+  { jenis: "tokoh", t: "Atha' ibn Abi Rabah", tokoh: "w. 114 H", no: 7, id: "Tabi'in, mufti Makkah, dengan beberapa disabilitas fisik." },
+  { jenis: "tokoh", t: "Al-Walid ibn Abdul Malik", tokoh: "Khalifah Umayyah", no: 7, id: "Disebut mendirikan layanan/rumah sakit dan memberi pendamping bagi penyandang disabilitas." },
+  { jenis: "tokoh", t: "Helen Keller", tokoh: "1880–1968", no: 1, id: "Penulis & aktivis tunanetra-tunarungu." },
+  { jenis: "tokoh", t: "Louis Braille", tokoh: "1809–1852", no: 2, id: "Pencipta huruf timbul braille." },
+  { jenis: "tokoh", t: "Leo Kanner & Hans Asperger", tokoh: "1943 & 1944", no: 4, id: "Mendeskripsikan autisme dan sindrom Asperger." },
+  { jenis: "tokoh", t: "John Langdon Down", tokoh: "1866", no: 4, id: "Mendeskripsikan sindrom Down." },
+
+  /* ===== ISTILAH PELENGKAP ===== */
+  { t: "Aksesibilitas", id: "Kemudahan fasilitas & layanan untuk digunakan semua orang." },
+  { t: "CRPD", id: "Convention on the Rights of Persons with Disabilities (PBB 2006); diratifikasi Indonesia lewat UU 19/2011." },
+  { t: "Desain universal", tokoh: "Ronald Mace (1997)", id: "Merancang lingkungan yang dapat dipakai semua orang tanpa adaptasi khusus." },
+  { t: "Pendidikan inklusif", id: "Peserta didik disabilitas belajar bersama di sekolah umum dengan dukungan." },
+  { t: "UU No. 8 Tahun 2016", id: "Undang-Undang Penyandang Disabilitas di Indonesia." }
+]);

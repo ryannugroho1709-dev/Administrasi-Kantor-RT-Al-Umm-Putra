@@ -4,9 +4,12 @@
    - U: kumpulan fungsi bantu (teks dwibahasa, format, tanggal, dll.)
    ===================================================================== */
 window.Kuliah = (function () {
-  const db = {}, teks = {};
+  const db = {}, teks = {}, kamus = {};
   return {
-    db, teksDb: teks,
+    db, teksDb: teks, kamusDb: kamus,
+    /* Dipanggil dari data/<mata-kuliah>/kamus.js — istilah, teori & tokoh tambahan (di luar istilah per modul) */
+    kamus(mk, items) { (kamus[mk] = kamus[mk] || []).push(...items); },
+    kamusList(mk) { return kamus[mk] || []; },
     /* Dipanggil dari data/<mata-kuliah>/pNN.js */
     pertemuan(mk, p) { (db[mk] = db[mk] || {})[p.no] = p; p.mk = mk; },
     /* Dipanggil dari data/<mata-kuliah>/teks/pNN.js (teks asli tafrigh) */

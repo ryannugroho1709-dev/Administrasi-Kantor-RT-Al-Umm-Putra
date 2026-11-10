@@ -898,8 +898,22 @@
   /* ===================== MURAJA'AH (SRS) ===================== */
   function allCards(mkIds) {
     const out = [], ids = asList(mkIds), multi = ids.length > 1;
-    ids.forEach(id => { const m = mkById(id); if (!m) return; Kuliah.list(id).forEach(p => (p.istilah || []).forEach((c, i) => out.push(Object.assign({ key: pKey(id, p.no) + "/i" + i, src: (multi ? m.nama.id + " · " : "") + "M" + p.no, mk: id, no: p.no }, c)))); });
+    ids.forEach(id => {
+      const m = mkById(id); if (!m) return;
+      const ada = new Set();
+      Kuliah.list(id).forEach(p => (p.istilah || []).forEach((c, i) => { ada.add(kunciIstilah(c)); out.push(Object.assign({ key: pKey(id, p.no) + "/i" + i, src: (multi ? m.nama.id + " · " : "") + "M" + p.no, mk: id, no: p.no }, c)); }));
+      /* kamus tambahan per mata kuliah (teori, tokoh, istilah pelengkap); yang sudah ada di modul tidak digandakan */
+      (Kuliah.kamusList ? Kuliah.kamusList(id) : []).forEach(c => {
+        const k = kunciIstilah(c); if (!k || ada.has(k)) return; ada.add(k);
+        out.push(Object.assign({ key: id + "/kamus/" + k, src: (multi ? m.nama.id + " · " : "") + (c.no ? "M" + c.no : "Kamus"), mk: id, no: c.no || 0 }, c));
+      });
+    });
     return out;
+  }
+  function kunciIstilah(c) { return String(c.t || c.latin || U.plain(c.id) || "").toLowerCase().replace(/[^a-z0-9؀-ۿ]+/g, " ").trim(); }
+  function hurufAwal(c) {
+    const s = String(c.t || c.latin || U.plain(c.id) || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/^[^A-Za-z0-9؀-ۿ]+/, "");
+    const h = s.charAt(0).toUpperCase(); return /[A-Z]/.test(h) ? h : "#";
   }
   function salahCards(mkIds) {
     const ids = asList(mkIds), multi = ids.length > 1;
@@ -931,18 +945,38 @@
   /* ===================== KAMUS ISTILAH ===================== */
   function istilah(mkId) {
     if (mkId && mkById(mkId)) { S().set.pilihMk = [mkId]; Store.save(); history.replaceState(null, "", "#/istilah"); }
-    const cards = allCards(pilihan());
-    view.innerHTML = '<div class="wrap"><div class="page-h">' + Icon("language", "ph-ic") + "<div><h1>" + lab("Kamus Istilah", "معجم المصطلحات") + '</h1><p class="muted">' + lab(cards.length + " istilah kunci dwibahasa · " + labelPilihan(), arNum(cards.length) + " مصطلحًا") + "</p></div></div>" +
+    /* urut abjad (A–Z), dikelompokkan per huruf; bisa disaring: semua / istilah / teori / tokoh */
+    const cards = allCards(pilihan()).sort((a, b) => kunciIstilah(a).localeCompare(kunciIstilah(b), "id"));
+    const jenisOf = c => c.jenis === "teori" || c.jenis === "tokoh" ? c.jenis : "istilah";
+    const hit = { istilah: 0, teori: 0, tokoh: 0 }; cards.forEach(c => hit[jenisOf(c)]++);
+    const JENIS = [["semua", "Semua", cards.length, "layers"], ["istilah", "Istilah", hit.istilah, "language"], ["teori", "Teori & Model", hit.teori, "bulb"], ["tokoh", "Tokoh & Penemu", hit.tokoh, "user"]];
+    let jenis = "semua", q = "";
+    view.innerHTML = '<div class="wrap"><div class="page-h">' + Icon("language", "ph-ic") + "<div><h1>" + lab("Kamus Istilah", "معجم المصطلحات") + '</h1><p class="muted">' + lab(cards.length + " entri, urut abjad A–Z · " + labelPilihan(), arNum(cards.length) + " مصطلحًا") + "</p></div></div>" +
       mkPicker(id => allCards(id).length, lab("Tampilkan istilah dari", "اعرض مصطلحات")) +
-      '<label class="search-box">' + Icon("search") + '<input type="search" class="is-q" placeholder="Cari istilah… / ابحث"></label>' +
-      '<div class="is-list"></div></div>';
-    const listEl = $(".is-list");
-    const draw = q => {
-      q = (q || "").trim().toLowerCase();
-      const f = cards.filter(c => !q || ((c.ar || "") + " " + (c.t || "") + " " + (c.latin || "") + " " + U.plain(c.id) + " " + U.plain(c.def)).toLowerCase().includes(q));
-      listEl.innerHTML = f.map(c => '<details class="is-item"><summary>' + (c.t ? '<span class="is-term">' + esc(c.t) + "</span>" : "") + (c.ar ? '<span class="is-ar" lang="ar">' + esc(c.ar) + "</span>" : "") + '<span class="is-id">' + (c.latin ? "<i>" + esc(c.latin) + "</i> · " : "") + one(c.id, "id") + '</span><span class="q-src">' + esc(c.src) + "</span>" + Icon("down", "ak-ic") + '</summary><div class="is-b">' + (c.def ? bi(c.def) : "") + '<a class="btn sm ghost" href="#/mk/' + c.mk + "/" + c.no + '">' + Icon("book") + lab("Buka modul " + c.no, "افتح الوحدة") + "</a></div></details>").join("") || empty("search", "Istilah tidak ditemukan.", "لا نتائج");
+      '<label class="search-box">' + Icon("search") + '<input type="search" class="is-q" placeholder="Cari istilah, teori, atau tokoh… / ابحث"></label>' +
+      '<div class="is-jenis">' + JENIS.map(j => '<button type="button" class="pill' + (j[0] === "semua" ? " on" : "") + '" data-j="' + j[0] + '">' + Icon(j[3]) + esc(j[1]) + " <b>" + n(j[2]) + "</b></button>").join("") + "</div>" +
+      '<nav class="is-az" aria-label="Lompat ke huruf"></nav><div class="is-list"></div></div>';
+    const listEl = $(".is-list"), azEl = $(".is-az");
+    const label1 = { teori: ["bulb", "Teori"], tokoh: ["user", "Tokoh"] };
+    const item = c => {
+      const j = jenisOf(c), tg = label1[j];
+      return '<details class="is-item is-j-' + j + '"><summary>' + (tg ? '<span class="is-tag">' + Icon(tg[0]) + tg[1] + "</span>" : "") + (c.t ? '<span class="is-term">' + esc(c.t) + "</span>" : "") + (c.ar ? '<span class="is-ar" lang="ar">' + esc(c.ar) + "</span>" : "") +
+        '<span class="is-id">' + (c.latin ? "<i>" + esc(c.latin) + "</i> · " : "") + one(c.id, "id") + (c.tokoh ? '<small class="is-tokoh">' + Icon("user") + esc(c.tokoh) + "</small>" : "") + "</span>" +
+        '<span class="q-src">' + esc(c.src) + "</span>" + Icon("down", "ak-ic") + '</summary><div class="is-b">' + (c.def ? bi(c.def) : "") +
+        (c.no ? '<a class="btn sm ghost" href="#/mk/' + c.mk + "/" + c.no + '">' + Icon("book") + lab("Buka modul " + c.no, "افتح الوحدة") + "</a>" : "") + "</div></details>";
     };
-    draw(); $(".is-q").oninput = U.debounce(e => draw(e.target.value), 200);
+    const draw = () => {
+      const s = q.trim().toLowerCase();
+      const f = cards.filter(c => (jenis === "semua" || jenisOf(c) === jenis) && (!s || ((c.ar || "") + " " + (c.t || "") + " " + (c.latin || "") + " " + (c.tokoh || "") + " " + U.plain(c.id) + " " + U.plain(c.def)).toLowerCase().includes(s)));
+      const grup = {}; f.forEach(c => (grup[hurufAwal(c)] = grup[hurufAwal(c)] || []).push(c));
+      const urut = Object.keys(grup).sort((a, b) => (a === "#") - (b === "#") || a.localeCompare(b));
+      azEl.innerHTML = urut.map(h => '<a href="#" data-h="' + h + '">' + h + "</a>").join("");
+      listEl.innerHTML = urut.map(h => '<h3 class="is-huruf" id="huruf-' + (h === "#" ? "lain" : h) + '">' + h + "<small>" + n(grup[h].length) + "</small></h3>" + grup[h].map(item).join("")).join("") || empty("search", "Istilah tidak ditemukan.", "لا نتائج");
+    };
+    draw();
+    $(".is-q").oninput = U.debounce(e => { q = e.target.value; draw(); }, 200);
+    view.querySelectorAll(".is-jenis .pill").forEach(b => b.onclick = () => { jenis = b.dataset.j; view.querySelectorAll(".is-jenis .pill").forEach(x => x.classList.toggle("on", x === b)); draw(); });
+    azEl.onclick = e => { const a = e.target.closest("a[data-h]"); if (!a) return; e.preventDefault(); const el = document.getElementById("huruf-" + (a.dataset.h === "#" ? "lain" : a.dataset.h)); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); };
     bindPicker(view, () => route(true));
   }
 
