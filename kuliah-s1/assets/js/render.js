@@ -105,6 +105,8 @@ window.Render = (function () {
       b.kata.map(k => '<tr><td class="ir-c ' + (k.h || "bina") + '"><span lang="ar">' + esc(k.w) + "</span></td><td>" + bi(k) + "</td></tr>").join("") + "</tbody></table></div></details>" +
       '<div class="ir-legend">' + Object.keys(HK).filter(h => b.kata.some(k => (k.h || "bina") === h)).map(h => '<span class="' + h + '"><i></i>' + hk(h) + "</span>").join("") + "</div></div>",
 
+    /* Animasi interaktif (assets/js/anim.js) */
+    anim: b => (window.Anim ? Anim.html(b) : ""),
     gambar: b => '<figure class="blk rv gambar"><img src="' + esc(b.src) + '" alt="' + esc(U.pickId(b.keterangan) || "") + '" loading="lazy">' + (b.keterangan ? "<figcaption>" + one(b.keterangan) + "</figcaption>" : "") + "</figure>",
     video: b => '<div class="blk rv video"><iframe src="https://www.youtube-nocookie.com/embed/' + esc(b.youtube) + '" title="Video" loading="lazy" allowfullscreen></iframe></div>'
   };
@@ -166,6 +168,7 @@ window.Render = (function () {
       Audio2.sfx(on ? "tap" : "pop");
     })));
     root.querySelectorAll("details.ak").forEach(d => d.addEventListener("toggle", () => d.open && Audio2.sfx("open")));
+    if (window.Anim) Anim.init(root);
     reveal(root);
   }
 

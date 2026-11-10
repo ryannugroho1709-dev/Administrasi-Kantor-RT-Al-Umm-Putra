@@ -395,6 +395,29 @@
     Array.from({ length: 7 }, (_, i) => { const a = Math.PI + i * Math.PI / 6, x1 = 200 + Math.cos(a) * 100, y1 = 170 + Math.sin(a) * 100, x2 = 200 + Math.cos(a) * 130, y2 = 170 + Math.sin(a) * 130; return D("M" + x1.toFixed(1) + " " + y1.toFixed(1) + " L" + x2.toFixed(1) + " " + y2.toFixed(1), "dr root", 0.6 + i * 0.1); }).join("") +
     C(200, 170, 40, "glow pulse", 1.2) + lat(200, 160, "♡", "big gold fade", 1.5));
 
+  /* ───────── TES & ASESMEN PSIKOLOGIS (PPTA 301) ───────── */
+  // kurva normal dengan garis SD & penanda skor
+  A("kurva-normal", (op, { D, C }) => {
+    let d = ""; for (let z = -3.2; z <= 3.21; z += 0.2) d += (d ? " L" : "M") + (200 + z * 46).toFixed(1) + " " + (190 - Math.exp(-z * z / 2) * 140).toFixed(1);
+    return D("M40 190 H360", "dr thick", 0) + D(d, "dr thick", 0.3) +
+      [-2, -1, 0, 1, 2].map((z, i) => D("M" + (200 + z * 46) + " 190 V" + (190 - Math.exp(-z * z / 2) * 140).toFixed(1), "dr root", 1 + i * 0.12)).join("") +
+      C(246, 190 - Math.exp(-0.5) * 140, 7, "fruit pop", 1.8) + C(246, 190 - Math.exp(-0.5) * 140, 16, "glow pulse", 2);
+  });
+  // bercak tinta simetris (tes proyektif)
+  A("bercak", (op, { D, C }) => {
+    const sisi = "M200 50 C180 52 168 70 176 86 C150 78 128 92 138 110 C114 112 108 136 128 146 C116 162 132 182 152 172 C160 190 186 192 196 176 L200 170";
+    return '<path class="dr thick" style="--d:0s" pathLength="1" d="' + sisi + '"/>' + '<path class="dr thick" style="--d:.2s" pathLength="1" transform="translate(400 0) scale(-1 1)" d="' + sisi + '"/>' +
+      C(170, 120, 10, "fruit pop", 1) + C(230, 120, 10, "fruit pop", 1.1) + C(200, 140, 30, "glow pulse", 1.3) + D("M200 40 V200", "dr root", 1.5);
+  });
+  // lembar jawaban & pensil
+  A("lembar-tes", (op, { D, C }) => R(110, 40, 160, 160, 10, "paper pop", 0) +
+    [0, 1, 2, 3].map(r => [0, 1, 2, 3].map(c => C(150 + c * 26, 76 + r * 30, 8, (r + c) % 3 === 0 ? "fruit pop" : "node pop", 0.3 + r * 0.15 + c * 0.05)).join("")).join("") +
+    D("M282 60 L330 180", "dr thick", 1.2) + D("M326 170 L334 196 L314 182", "dr", 1.4));
+  // balok desain (subtes Block Design)
+  A("blok-desain", (op, { D, C }) => [[120, 60], [190, 60], [120, 130], [190, 130]].map((p, i) => R(p[0], p[1], 64, 64, 6, "tile-l pop", i * 0.2) +
+    D("M" + p[0] + " " + (p[1] + 64) + " L" + (p[0] + 64) + " " + p[1], "dr", 0.9 + i * 0.15)).join("") +
+    R(276, 96, 50, 50, 6, "hl pop", 1.6) + C(301, 121, 34, "glow pulse", 1.8));
+
   // M30 penutup: buku khatam + toga
   A("toga-khatam", (op, { D, C, star8 }) => R(110, 130, 180, 40, 6, "book pop", 0) + R(122, 170, 156, 30, 6, "paper pop", 0.2) +
     '<path class="crown pop" style="--d:.5s" d="M200 40 L300 76 L200 112 L100 76Z"/>' + D("M140 92 V118 C170 132 230 132 260 118 V92", "dr thick", 0.8) +

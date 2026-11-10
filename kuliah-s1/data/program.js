@@ -112,6 +112,33 @@
     bab: [{ id: "UTS (resmi)", en: "Midterm", dari: 1, sampai: 1 }, { id: "UAS (latihan mandiri)", en: "Final practice", dari: 2, sampai: 2 }]
   });
 
+  sem[4].mk.push({
+    id: "tes-psikologi", tglUjian: { uts: "2026-11-08", uas: "2027-02-01" }, kode: "PPTA301", ikon: "chart", tema: 2, motif: "kurva-normal", motifOpt: { lbl: "الاختبارات والتقييم النفسي" }, jumlah: 30,
+    ujian: { uts: [1, 15], uas: [16, 30] }, teksBahasa: "id",
+    nama: { id: "Tes dan Asesmen Psikologis", en: "Psychological Testing and Assessment", ar: "الاختبارات والتقييم النفسي" },
+    kitab: { id: "PPTA301 — Handbook of Psychological Assessment (Gary Groth-Marnat, ed. 4)", ar: "الاختبارات والتقييم النفسي" },
+    penulis: { id: "Gary Groth-Marnat", ar: "غاري غروث-مارنات" },
+    dosen: { id: "Kashmala Qasim", ar: "كشمالة قاسم" },
+    tentang: {
+      id: "Mata kuliah ini memperkenalkan **teori & praktik psikometri** — statistik dasar, **norma, reliabilitas, validitas**, standardisasi — lalu **proses asesmen klinis** (pertanyaan rujukan, wawancara, asesmen perilaku, pemilihan & administrasi tes, faktor pasien), **diagnosis DSM** & isu **bias**, tes **kepribadian** (proyektif & objektif), **kecerdasan**, dan **neuropsikologis**; dilanjutkan asesmen gangguan khusus (**depresi & kecemasan, skizofrenia, Alzheimer, ADHD, autisme**), etika asesmen anak, **konseling & asesmen dengan klien Muslim**, studi kasus, tren masa depan, dan sejarah pendekatan pengobatan. Setiap modul dilengkapi **animasi interaktif** (kurva normal, reliabilitas–validitas, SEM, cut-off skrining, profil MMPI/WAIS, peta otak) dan **soal latihan tingkat sulit** berbasis kasus & hitungan."
+    },
+    tentangPenulis: {
+      id: "Dosen: **Kashmala Qasim** (IOU), berpengalaman sebagai psikometris klinis (antara lain di Baycrest Centre for Geriatric Care, Toronto). Buku rujukan: *Handbook of Psychological Assessment* edisi ke-4 karya Gary Groth-Marnat. Kuis tiap modul 5 soal pilihan ganda; UTS (Modul 1–15) & UAS (Modul 16–30) berformat pilihan ganda dan **tidak kumulatif**."
+    },
+    bab: [
+      { id: "Dasar: pengantar, jenis tes, sejarah, etika", ar: "الأساسيات", dari: 1, sampai: 4 },
+      { id: "Psikometri: statistik, norma, reliabilitas, validitas", ar: "القياس النفسي", dari: 5, sampai: 6 },
+      { id: "Proses asesmen klinis", ar: "مراحل التقييم الإكلينيكي", dari: 7, sampai: 11 },
+      { id: "Diagnosis (DSM) & bias", ar: "التشخيص والتحيز", dari: 12, sampai: 13 },
+      { id: "Tes kepribadian: proyektif & objektif", ar: "اختبارات الشخصية", dari: 14, sampai: 15 },
+      { id: "Kecerdasan & neuropsikologi", ar: "الذكاء والتقييم العصبي النفسي", dari: 16, sampai: 18 },
+      { id: "Asesmen gangguan pada dewasa", ar: "تشخيص اضطرابات الراشدين", dari: 19, sampai: 21 },
+      { id: "Asesmen anak: etika, ADHD, autisme", ar: "تقييم الأطفال", dari: 22, sampai: 24 },
+      { id: "Klien Muslim & studi kasus", ar: "العميل المسلم ودراسات الحالة", dari: 25, sampai: 27 },
+      { id: "Masa depan pengujian & pendekatan pengobatan", ar: "المستقبل وأساليب العلاج", dari: 28, sampai: 30 }
+    ]
+  });
+
   window.PROGRAM = {
     nama: { id: "S1 Psikologi Islam", ar: "بكالوريوس علم النفس الإسلامي" },
     singkat: "S1",
