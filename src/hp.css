@@ -71,7 +71,9 @@
 .hp-aksi-grid button:active{transform:scale(.97);}
 
 /* ── Tarik untuk muat ulang ── */
-.hp-tarik{position:fixed;left:50%;top:64px;z-index:450;width:40px;height:40px;margin-left:-20px;border-radius:50%;background:var(--surface);box-shadow:0 6px 18px rgba(0,0,0,.16);display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:18px;opacity:0;transform:translateY(-50px);pointer-events:none;}
+.hp-tarik{position:fixed;left:50%;top:64px;z-index:450;width:40px;height:40px;margin-left:-20px;border-radius:50%;background:var(--surface);box-shadow:0 6px 18px rgba(0,0,0,.16);display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:18px;opacity:0;transform:translateY(-50px);pointer-events:none;transition:visibility 0s .2s;}
+.hp-tarik[style*="opacity: 0"]{visibility:hidden;}
+body:has(#sidebar.open) .hp-tarik,body:has(#modal-overlay.open) .hp-tarik{visibility:hidden !important;}
 .hp-tarik.siap{color:#fff;background:var(--accent);}
 .hp-tarik.muat span{animation:hpPutar .8s linear infinite;}
 @keyframes hpPutar{to{transform:rotate(360deg);}}

@@ -194,3 +194,21 @@
 .pg-ingat > div { flex: 1; display: flex; flex-direction: column; }
 .pg-ingat small { font-size: 11.5px; color: var(--text-secondary); }
 @keyframes pgGoyang { 0%, 80%, 100% { transform: rotate(0); } 85% { transform: rotate(-14deg); } 90% { transform: rotate(12deg); } 95% { transform: rotate(-6deg); } }
+/* KKM per kelas */
+.pp-kkm-daftar{grid-template-columns:1fr;max-height:46vh}
+.pp-kkm-item{border-bottom:1px dashed var(--border-soft,#e3e8ef);padding:4px 0}
+.pp-kkm-baris{display:flex;align-items:center;gap:8px;font-size:12.5px}
+.pp-kkm-nama{flex:1;min-width:0;line-height:1.3}
+.pp-kkm-tgl{font-size:11px;padding:3px 8px;white-space:nowrap}
+.pp-kkm-tgl.on{color:var(--accent);font-weight:800}
+.pp-kkm-kelas{display:none;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px;padding:6px 0 4px}
+.pp-kkm-item.buka .pp-kkm-kelas{display:grid}
+.pp-kkm-kelas label{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10.5px;color:var(--text-secondary);border:0;padding:0}
+.pp-kkm-kelas .input{width:100%;text-align:center;padding:4px}
+/* pilihan jenis nilai saat membuat soal */
+.uje-jn{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.uje-jn button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 8px;border:1.5px solid var(--border-soft,#e3e8ef);border-radius:14px;background:var(--surface,#fff);font:inherit;cursor:pointer;color:inherit}
+.uje-jn button:hover{border-color:var(--accent);background:var(--accent-soft,rgba(37,99,235,.06))}
+.uje-jn span{font-size:24px}.uje-jn b{font-size:13px}.uje-jn small{font-size:10.5px;color:var(--text-secondary)}
+.uje-jn-ke{display:flex;align-items:center;gap:8px;font-size:12px;margin-top:10px;color:var(--text-secondary)}
+.uje-jn-ke .input{width:70px;padding:4px 8px}

@@ -32,6 +32,22 @@ function _ujSemesterSekarang(tglISO) {
 }
 const _ujNamaKelas = (id) => (LOOKUP.kelas.find((k) => k.id === id) || {}).nama_kelas || "-";
 const _ujNamaMapel = (id) => (LOOKUP.mapel.find((m) => m.id === id) || {}).nama_mapel || "-";
+// Jenis penilaian tiap bank soal (dipilih saat membuat soal): uh | tugas | uts | uas, + ke- (untuk UH/Tugas).
+// Disimpan di kuliah_pengaturan "ujian:jenis" (tanpa kolom baru di tabel ujian_bank).
+const UJ_JENIS_NILAI = { uh: "Ulangan Harian", tugas: "Tugas", uts: "UTS", uas: "UAS" };
+function _ujJenisNilai(b) {
+  const x = (UJ.jenisNilai || {})[b && b.id];
+  if (x && x.jenis) return { jenis: x.jenis, ke: Number(x.ke) || 1 };
+  const j = String((b && b.judul) || "").toLowerCase();
+  const tebak = /\buas\b|akhir semester|ujian akhir|\bpas\b|\bpat\b|sumatif akhir/.test(j) ? "uas" : /\buts\b|tengah semester|\bpts\b/.test(j) ? "uts" : "uh";
+  return { jenis: tebak, ke: Math.max(1, Number(b && b.bab) || 1) };
+}
+const _ujLabelJenis = (b) => { const x = _ujJenisNilai(b); return x.jenis === "uh" || x.jenis === "tugas" ? `${UJ_JENIS_NILAI[x.jenis]} ${x.ke}` : UJ_JENIS_NILAI[x.jenis]; };
+async function _ujSimpanJenis(bankId, jenis, ke, info) {
+  if (!bankId || !jenis) return;
+  try { const d = await _kvAmbil("ujian:jenis", {}); d[bankId] = { jenis, ke: Number(ke) || 1, ...(info || {}), t: new Date().toISOString() }; await _kvSimpan("ujian:jenis", d); UJ.jenisNilai = d; }
+  catch (e) { console.warn("Jenis nilai tidak tersimpan:", e); }
+}
 const _ujJumlahSoal = (bagian) => (bagian || []).reduce((a, b) => a + (b.soal || []).length, 0);
 
 // ── PIN Kunci Ujian (disimpan di perangkat guru setelah benar sekali) ──
@@ -109,6 +125,7 @@ function ujSalinTautan() {
 }
 async function ujMuat() {
   try {
+    UJ.jenisNilai = await _kvAmbil("ujian:jenis", {}).catch(() => ({}));
     const [bank, sesi] = await Promise.all([
       supa.from("ujian_bank").select("id,kode,mapel_id,tingkat,bab,judul,soal,skor_maksimal,updated_at,dibuat_oleh").order("tingkat").order("bab"),
       supa.from("ujian_sesi").select("*").order("created_at", { ascending: false }).limit(60),
@@ -155,11 +172,12 @@ function _ujGambarBank() {
     <div class="uj-item">
       <div class="uj-ikon">📘</div>
       <div style="flex:1;min-width:0"><b>${escapeHtml(b.judul)}</b>
-        <div class="uj-sub">${escapeHtml(_ujNamaMapelTampil(b))} · Kelas ${escapeHtml(b.tingkat || "-")} · Bab ${b.bab} · ${_ujJumlahSoal(b.soal)} soal${adaGambar ? " · 🖼️ bergambar" : ""} · → Ulangan Harian ${b.bab}${pembuat ? ` · oleh ${escapeHtml(typeof _namaSingkatTopbar === "function" ? _namaSingkatTopbar(pembuat.nama) : pembuat.nama)}` : ""}</div></div>
+        <div class="uj-sub">${escapeHtml(_ujNamaMapelTampil(b))} · Kelas ${escapeHtml(b.tingkat || "-")} · Bab ${b.bab} · ${_ujJumlahSoal(b.soal)} soal${adaGambar ? " · 🖼️ bergambar" : ""} · → ${escapeHtml(_ujLabelJenis(b))}${pembuat ? ` · oleh ${escapeHtml(typeof _namaSingkatTopbar === "function" ? _namaSingkatTopbar(pembuat.nama) : pembuat.nama)}` : ""}</div></div>
       <div class="uj-aksi">
         <button class="btn btn-accent btn-sm" onclick="ujBukaSesiModal('${b.id}')">▶ Buka sesi</button>
         <button class="btn btn-sm uj-b-ungu" onclick="ujEditorBuka('${b.id}')" title="Ubah soal, kunci, gambar">✏️ Ubah</button>
         <button class="btn btn-sm uj-b-emas" onclick="ujLihatKunci('${b.id}')" title="Lihat kunci jawaban (PIN)">🔑</button>
+        <button class="btn btn-sm uj-b-abu" onclick="ujCetakSoal('${b.id}')" title="Cetak / simpan PDF naskah soal untuk arsip">🖨️</button>
         ${isAdmin() ? `<button class="btn btn-sm uj-b-merah" onclick="ujHapusBank('${b.id}')" title="Hapus bank soal">🗑️</button>` : ""}
       </div>
     </div>`; }).join("")}</div>`).join("") || `<div class="uj-kosong">Tidak ada bank soal untuk saringan ini.</div>`);
@@ -271,7 +289,7 @@ function ujBukaSesiModal(bankId) {
     <div class="field"><label class="form-label">Jenis</label>
       <div class="uj-mode">
         <label><input type="radio" name="uj-s-mode" value="latihan" checked onchange="_ujModeBerubah()"> 🎯 <b>Latihan</b><span>Boleh diulang, nilai langsung keluar (PG saja). Tidak masuk rapor. Santri langsung melihat soal mana yang benar/belum tepat — jadi <b>jangan pakai bank soal yang sama untuk ujian</b>.</span></label>
-        <label><input type="radio" name="uj-s-mode" value="ujian" onchange="_ujModeBerubah()"> 📝 <b>Ujian</b><span>Sekali kirim, uraian dinilai guru, bisa dikirim ke rapor sebagai <b>Ulangan Harian ${b.bab}</b>.</span></label>
+        <label><input type="radio" name="uj-s-mode" value="ujian" onchange="_ujModeBerubah()"> 📝 <b>Ujian</b><span>Sekali kirim, uraian dinilai guru, bisa dikirim ke rapor sebagai <b>${escapeHtml(_ujLabelJenis(b))}</b>.</span></label>
       </div></div>
     <div style="display:flex;gap:10px">
       <div class="field" style="flex:1"><label class="form-label">Durasi (menit, kosong = bebas)</label><input id="uj-s-durasi" type="number" min="5" class="input" placeholder="mis. 60"></div>
@@ -350,7 +368,7 @@ function _ujGambarRekap() {
   const st = { mengerjakan: "⏳ mengerjakan", dikirim: "📨 tunggu nilai uraian", dinilai: "✅ selesai" };
   const selesai = rows.filter((r) => r.status === "dinilai" && r.nilai_akhir != null);
   const rata = selesai.length ? Math.round(selesai.reduce((a, r) => a + Number(r.nilai_akhir), 0) / selesai.length) : null;
-  const kkm = (LOOKUP.mapel.find((m) => m.id === b.mapel_id) || {}).kkm || 75;
+  const kkm = typeof kkmMapel === "function" ? kkmMapel(b.mapel_id, s.kelas_id) : ((LOOKUP.mapel.find((m) => m.id === b.mapel_id) || {}).kkm || 75);
   const ujian = s.mode === "ujian";
   // analisis butir: % santri yang mendapat poin penuh per soal objektif
   const kirim = rows.filter((r) => r.rincian);
@@ -488,30 +506,31 @@ async function ujSimpanUraian(id) {
 function ujPilihKirimRapor() {
   const { b } = UJ.rekap, bab = Math.max(1, Number(b.bab) || 1);
   const judul = String(b.judul || "").toLowerCase();
-  const tebak = /\buas\b|akhir semester|ujian akhir|\bpas\b|\bpat\b/.test(judul) ? "uas" : /\buts\b|tengah semester|\bpts\b/.test(judul) ? "uts" : "uh";
+  const jn = _ujJenisNilai(b), tebak = jn.jenis, keAwal = jn.ke || bab;
   openModal(`<h3>📤 Kirim nilai ke rapor</h3>
     <div class="uj-sub" style="margin:-4px 0 10px">${escapeHtml(b.judul || "")} · ${escapeHtml(_ujNamaMapel(b.mapel_id))}. Nilai ini masuk sebagai:</div>
-    <div class="rc-pilih" style="grid-template-columns:repeat(3,1fr)">
-      <label><input type="radio" name="uj-tujuan" value="uh" ${tebak === "uh" ? "checked" : ""}> 📝 <b>Ulangan Harian</b><span>ke-<select id="uj-uh-ke" class="input" style="display:inline-block;width:auto;padding:2px 6px;font-size:12px" onclick="event.stopPropagation()">${Array.from({ length: Math.max(10, bab) }, (_, i) => `<option ${i + 1 === bab ? "selected" : ""}>${i + 1}</option>`).join("")}</select></span></label>
+    <div class="rc-pilih" style="grid-template-columns:repeat(2,1fr)">
+      <label><input type="radio" name="uj-tujuan" value="uh" ${tebak === "uh" ? "checked" : ""}> 📝 <b>Ulangan Harian</b><span>ke-<select id="uj-uh-ke" class="input" style="display:inline-block;width:auto;padding:2px 6px;font-size:12px" onclick="event.stopPropagation()">${Array.from({ length: Math.max(10, keAwal) }, (_, i) => `<option ${i + 1 === keAwal ? "selected" : ""}>${i + 1}</option>`).join("")}</select></span></label>
+      <label><input type="radio" name="uj-tujuan" value="tugas" ${tebak === "tugas" ? "checked" : ""}> ✍️ <b>Tugas</b><span>ke-<select id="uj-tg-ke" class="input" style="display:inline-block;width:auto;padding:2px 6px;font-size:12px" onclick="event.stopPropagation()">${Array.from({ length: Math.max(10, keAwal) }, (_, i) => `<option ${i + 1 === keAwal ? "selected" : ""}>${i + 1}</option>`).join("")}</select></span></label>
       <label><input type="radio" name="uj-tujuan" value="uts" ${tebak === "uts" ? "checked" : ""}> 📘 <b>UTS</b><span>tengah semester</span></label>
       <label><input type="radio" name="uj-tujuan" value="uas" ${tebak === "uas" ? "checked" : ""}> 🎓 <b>UAS</b><span>akhir semester</span></label>
     </div>
     <div class="uj-sub" style="margin-top:8px">Nilai yang sudah diisi manual di kolom itu akan diganti (Anda diberi tahu sebelum dikirim). Kolom lain tidak berubah.</div>
     <div style="display:flex;gap:10px;margin-top:12px"><button class="btn btn-outline" style="flex:1" onclick="ujBukaRekap(UJ.rekapSesi)">‹ Kembali</button>
-      <button class="btn btn-accent" style="flex:2" onclick="ujKirimRapor(document.querySelector('input[name=uj-tujuan]:checked').value, Number(qs('uj-uh-ke').value))">Lanjut</button></div>`);
+      <button class="btn btn-accent" style="flex:2" onclick="(function(j){ujKirimRapor(j, Number(qs(j==='tugas'?'uj-tg-ke':'uj-uh-ke').value))})(document.querySelector('input[name=uj-tujuan]:checked').value)">Lanjut</button></div>`);
 }
 async function ujKirimRapor(jenis = "uh", ke = null) {
   const { s, b, rows, siswa } = UJ.rekap;
   const sesiId = UJ.rekapSesi;
-  const kolom = jenis === "uas" ? "uas" : jenis === "uts" ? "uts" : "ulangan_harian";
+  const kolom = jenis === "uas" ? "uas" : jenis === "uts" ? "uts" : jenis === "tugas" ? "tugas" : "ulangan_harian";
   if (!b.mapel_id) { toast("Bank soal belum punya mapel", "err"); return; }
   const siap = rows.filter((r) => r.status === "dinilai" && r.nilai_akhir != null);
   const belum = rows.filter((r) => r.status === "dikirim").length;
   if (!siap.length) { toast("Belum ada nilai akhir yang siap dikirim", "err"); return; }
   const sem = s.semester ? { semester: s.semester, ta: s.tahun_ajaran } : (() => { const x = _ujSemesterSekarang(s.created_at.slice(0, 10)); return { semester: x.semester, ta: x.ta }; })();
-  const idx = kolom === "ulangan_harian" ? Math.max(0, (Number(ke) || Number(b.bab) || 1) - 1) : 0;
-  const label = kolom === "uas" ? "UAS" : kolom === "uts" ? "UTS" : `Ulangan Harian ${idx + 1}`;
-  const namaIsi = (i) => (kolom === "ulangan_harian" ? `Ulangan Harian ${i + 1}` : kolom === "uas" ? "UAS" : "UTS");
+  const idx = kolom === "ulangan_harian" || kolom === "tugas" ? Math.max(0, (Number(ke) || Number(b.bab) || 1) - 1) : 0;
+  const label = kolom === "uas" ? "UAS" : kolom === "uts" ? "UTS" : kolom === "tugas" ? `Tugas ${idx + 1}` : `Ulangan Harian ${idx + 1}`;
+  const namaIsi = (i) => (kolom === "ulangan_harian" ? `Ulangan Harian ${i + 1}` : kolom === "tugas" ? `Tugas ${i + 1}` : kolom === "uas" ? "UAS" : "UTS");
   let data;
   try { data = await apiGetNilaiRaporByKelasMapel(s.kelas_id, b.mapel_id, sem.semester, sem.ta); }
   catch (e) { toast(e.message, "err"); return; }

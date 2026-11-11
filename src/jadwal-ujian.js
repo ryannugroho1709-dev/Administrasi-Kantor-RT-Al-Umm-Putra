@@ -102,6 +102,7 @@ function _juHtmlKartuJadwal(j) {
     <div class="ju-aksi">
       ${atur ? `<button class="btn btn-accent btn-sm" onclick="juBukaEditor('${j.id}')">✏️ Susun</button>` : `<button class="btn btn-outline btn-sm" onclick="juBukaEditor('${j.id}')">👁️ Lihat</button>`}
       <button class="btn btn-outline btn-sm" onclick="juCetakPdf('${j.id}')">🖨️ PDF</button>
+      ${j.jenis !== "tahfizh" ? `<button class="btn btn-outline btn-sm" onclick="juPengumpulanSoal('${j.id}')">📥 Soal</button>` : ""}
       ${atur ? `<button class="btn btn-wa btn-sm" onclick="juBagikanWa('${j.id}')">💬 WA</button><button class="btn btn-outline btn-sm" onclick="juRekapHadir('${j.id}')">✅ Kehadiran</button><button class="btn btn-ghost btn-sm" onclick="juHapus('${j.id}')">🗑️</button>` : ""}
     </div>
   </div>`;
@@ -189,13 +190,16 @@ function _juGambarEditor() {
   const beban = _juBeban(j);
   const semuaHari = _juHariDalamRentang(j.mulai, j.selesai);
   const tgl = JU.hari;
+  const hp = _juLayarSempit();
   wadah.innerHTML = `
-    <div class="ju-editor-h">
-      <button class="btn btn-ghost" onclick="_juTutupEditor()">← Daftar</button>
-      <div style="flex:1;min-width:0;">${atur ? `<input id="ju-judul" class="input ju-judul-in" value="${_juEsc(j.judul)}" oninput="JU.edit.judul=this.value;_juTandai()"/>` : `<b class="ju-judul">${_juEsc(j.judul)}</b>`}<small class="ju-ket">${_juHariPanjang(j.mulai)}${j.selesai !== j.mulai ? " – " + _juHariPanjang(j.selesai) : ""}</small></div>
-      <span id="ju-status" class="nl-status"></span>
-      <button class="btn btn-outline" onclick="juCetakPdf('${j.id}', true)">🖨️ PDF</button>
-      ${atur ? `<button class="btn btn-accent" onclick="juSimpanEditor()">💾 Simpan</button>` : ""}
+    <div class="ju-eh">
+      <div class="ju-eh-atas"><button class="btn btn-ghost btn-sm" onclick="_juTutupEditor()">← Daftar</button><span id="ju-status" class="nl-status"></span></div>
+      <div class="ju-eh-judul">${atur ? `<input id="ju-judul" class="input ju-judul-in" value="${_juEsc(j.judul)}" oninput="JU.edit.judul=this.value;_juTandai()"/>` : `<b class="ju-judul">${_juEsc(j.judul)}</b>`}<small class="ju-ket">${_juHariPendek(j.mulai)}${j.selesai !== j.mulai ? " – " + _juHariPendek(j.selesai) : ""} · ${j.hari.length} hari ujian</small></div>
+      <div class="ju-eh-aksi">
+        ${atur ? `<button class="btn btn-accent btn-sm" onclick="juSimpanEditor()">💾 Simpan</button><button class="btn btn-outline btn-sm" onclick="juSusunDariJadwal()" title="Susun otomatis dari jadwal pelajaran">🪄 Susun dari jadwal</button>` : ""}
+        <button class="btn btn-outline btn-sm" onclick="juCetakPdf('${j.id}', true)">🖨️ PDF</button>
+        ${atur ? `<button class="btn btn-ghost btn-sm" onclick="juTandaTangan()">✍️ Tanda tangan</button>` : ""}
+      </div>
     </div>
     ${atur ? `<details class="card ju-atur"><summary>⚙️ Pengaturan: jenis, hari, sesi & kelas</summary>
       <div class="ju-atur-isi">
@@ -206,25 +210,35 @@ function _juGambarEditor() {
       </div></details>` : ""}
     <div class="ju-tab">${j.hari.map((t) => `<button class="${t === tgl ? "on" : ""}" onclick="JU.hari='${t}';_juGambarEditor()">${_juHariPendek(t)}<small>${Object.keys(j.slot || {}).filter((k) => k.startsWith(t + "|") && _juLabelSlot(j.slot[k])).length} mapel</small></button>`).join("")}</div>
     ${tgl ? `<div class="card ju-papan">
-      <div class="ju-papan-h"><b>${_juHariPanjang(tgl)}</b>${atur ? `<span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;"><button class="btn btn-ghost btn-sm" onclick="_juSalinHari()">📋 Salin ke hari lain</button><button class="btn btn-outline btn-sm" onclick="juIsiPengawasOtomatis()">⚡ Isi pengawas otomatis</button></span>` : ""}</div>
-      <div class="ju-tabel-wadah"><table class="ju-tabel">
-        <thead><tr><th class="ju-th-sesi">Sesi</th>${j.kelas.map((k) => `<th style="--kw:${_juWarnaKelas(k)}"><span class="ju-kls">${_juEsc(_juAngkaKelas(k))}</span>Kelas ${_juEsc(_juAngkaKelas(k))}</th>`).join("")}</tr></thead>
+      <div class="ju-papan-h"><b>${_juHariPanjang(tgl)}</b>${atur ? `<span class="ju-papan-aksi"><button class="btn btn-ghost btn-sm" onclick="_juSalinHari()">📋 Salin hari</button><button class="btn btn-outline btn-sm" onclick="juIsiPengawasOtomatis()">⚡ Pengawas otomatis</button></span>` : ""}</div>
+      ${hp
+        // HP: satu kartu per sesi, kelas berbaris ke bawah (tidak perlu geser ke samping)
+        ? j.sesi.map((s, i) => `<div class="ju-hp-sesi"><div class="ju-hp-sesi-h"><b>Sesi ${i + 1}</b><span>${s.mulai}–${s.selesai}</span></div>
+            ${j.kelas.map((k) => `<div class="ju-hp-sel ${_juLabelSlot(j.slot?.[_juKunci(tgl, s.id, k)]) ? "" : "kosong"}" style="--kw:${_juWarnaKelas(k)}"><div class="ju-hp-kls">Kelas ${_juEsc(_juAngkaKelas(k))}</div><div class="ju-hp-isi">${_juIsiSel(j, tgl, s, k, atur)}</div></div>`).join("")}</div>`).join("")
+        : `<div class="ju-tabel-wadah"><table class="ju-tabel">
+        <thead><tr><th class="ju-th-sesi">Sesi</th>${j.kelas.map((k) => `<th class="ju-th-kls" style="--kw:${_juWarnaKelas(k)}">Kelas ${_juEsc(_juAngkaKelas(k))}</th>`).join("")}</tr></thead>
         <tbody>${j.sesi.map((s, i) => `<tr><th class="ju-th-sesi"><b>Sesi ${i + 1}</b><small>${s.mulai}–${s.selesai}</small></th>${j.kelas.map((k) => _juHtmlSel(j, tgl, s, k, atur)).join("")}</tr>`).join("")}</tbody>
-      </table></div>
+      </table></div>`}
     </div>` : `<div class="card empty-state">Belum ada hari ujian. Centang hari di ⚙️ Pengaturan.</div>`}
     <div class="card"><div class="ju-sub">👥 Beban mengawas (seluruh hari)</div><div class="ju-beban">${Object.entries(beban).sort((a, b) => b[1] - a[1]).map(([g, n]) => `<span>${_juEsc(_juNamaGuru(g))} <b>${n}</b></span>`).join("") || `<span class="ju-ket">Belum ada pengawas.</span>`}</div></div>`;
   _juTandai(true);
 }
+const _juLayarSempit = () => window.matchMedia && window.matchMedia("(max-width: 760px)").matches;
 function _juHtmlSel(j, tgl, s, kelasId, atur) {
+  const label = _juLabelSlot(j.slot?.[_juKunci(tgl, s.id, kelasId)]);
+  return `<td class="ju-sel ${label ? "" : "kosong"}" style="--kw:${_juWarnaKelas(kelasId)}">${_juIsiSel(j, tgl, s, kelasId, atur)}</td>`;
+}
+// Isi satu sel (dipakai tabel di layar lebar dan kartu di HP)
+function _juIsiSel(j, tgl, s, kelasId, atur) {
   const kunci = _juKunci(tgl, s.id, kelasId), x = j.slot?.[kunci] || {};
   const mapelKelas = _juMapelDiKelas(kelasId);
   const pengampu = x.m ? [...(mapelKelas[x.m] || [])] : [];
   const label = _juLabelSlot(x);
   const chips = (x.p || []).map((g) => { const bentrok = _juBentrok(j, tgl, s.id, kelasId, g); return `<span class="ju-chip ${bentrok.length ? "bentrok" : ""}" title="${bentrok.length ? "Bentrok: juga mengawas Kelas " + bentrok.map(_juAngkaKelas).join(", ") + " di sesi ini" : ""}">${_juEsc(_juNamaGuru(g))}${atur ? `<button onclick="_juLepasPengawas('${kunci}','${g}')" aria-label="lepas">×</button>` : ""}</span>`; }).join("");
-  if (!atur) return `<td class="ju-sel ${label ? "" : "kosong"}" style="--kw:${_juWarnaKelas(kelasId)}">${label ? `<b>${_juEsc(label)}</b>${x.ruang ? `<small>Ruang ${_juEsc(x.ruang)}</small>` : ""}<div class="ju-chips">${chips || '<span class="ju-ket">pengawas belum ada</span>'}</div>` : "–"}</td>`;
+  if (!atur) return label ? `<b>${_juEsc(label)}</b>${x.ruang ? `<small>Ruang ${_juEsc(x.ruang)}</small>` : ""}<div class="ju-chips">${chips || '<span class="ju-ket">pengawas belum ada</span>'}</div>` : "–";
   const opsiUtama = Object.keys(mapelKelas).map((m) => [m, _juNamaMapel(m)]).filter(([, n]) => n).sort((a, b) => a[1].localeCompare(b[1], "id"));
   const opsiLain = (LOOKUP.mapel || []).filter((m) => !mapelKelas[m.id]).map((m) => [m.id, m.nama_mapel]).sort((a, b) => a[1].localeCompare(b[1], "id"));
-  return `<td class="ju-sel ${label ? "" : "kosong"}" style="--kw:${_juWarnaKelas(kelasId)}">
+  return `
     <select class="input ju-mapel" onchange="_juSetMapel('${kunci}',this.value)">
       <option value="">— kosong —</option>
       ${opsiUtama.length ? `<optgroup label="Mapel kelas ini">${opsiUtama.map(([id, n]) => `<option value="${id}" ${id === x.m ? "selected" : ""}>${_juEsc(n)}</option>`).join("")}</optgroup>` : ""}
@@ -232,8 +246,7 @@ function _juHtmlSel(j, tgl, s, kelasId, atur) {
       <option value="__teks" ${!x.m && x.teks ? "selected" : ""}>✏️ Tulis sendiri…</option>
     </select>
     ${!x.m && x.teks ? `<div class="ju-teks">${_juEsc(x.teks)}</div>` : ""}
-    ${label ? `<div class="ju-chips">${chips}<button class="ju-tambah" onclick="juPilihPengawas('${kunci}')">＋ Pengawas</button></div>${pengampu.length ? `<small class="ju-ket">Pengampu: ${pengampu.map(_juNamaGuru).map(_juEsc).join(", ")}</small>` : ""}` : ""}
-  </td>`;
+    ${label ? `<div class="ju-chips">${chips}<button class="ju-tambah" onclick="juPilihPengawas('${kunci}')">＋ Pengawas</button></div>${pengampu.length ? `<small class="ju-ket">Pengampu: ${pengampu.map(_juNamaGuru).map(_juEsc).join(", ")}</small>` : ""}` : ""}`;
 }
 function _juTandai(diam) {
   if (!diam) JU.dirty = true;
@@ -439,8 +452,11 @@ function juBagikanWa(id) {
 }
 
 // ── CETAK / PDF (pedoman: Minimalist Islamic Academic, A4 lanskap) ──
-function juCetakPdf(id, dariEditor) {
-  const j = dariEditor && JU.edit?.id === id ? JU.edit : JU.daftar.find((x) => x.id === id); if (!j) return;
+async function juCetakPdf(id, dariEditor) {
+  const wJendela = window.open("", "_blank"); // dibuka segera (sebelum menunggu data) supaya tidak diblokir browser
+  if (wJendela) wJendela.document.write("<p style='font-family:sans-serif;padding:20px'>Menyiapkan jadwal…</p>");
+  const j = dariEditor && JU.edit?.id === id ? JU.edit : JU.daftar.find((x) => x.id === id); if (!j) { wJendela?.close(); return; }
+  const ttd = await _kvAmbil(_JU_TTD, null).catch(() => null);
   const p = STATE.pengaturan || {};
   const logo = p.logo_kiri_url || p.logo_kanan_url || (typeof urlLogoSekolah === "function" ? urlLogoSekolah() : "");
   const lembaga = (p.nama_lembaga_kop || "Rumah Tahfizh Al Umm Putra Barabai").toUpperCase();
@@ -450,8 +466,8 @@ function juCetakPdf(id, dariEditor) {
   const hariTerisi = j.hari.filter((t) => j.sesi.some((s) => j.kelas.some((k) => _juLabelSlot(j.slot[_juKunci(t, s.id, k)]))));
   const blokHari = (hariTerisi.length ? hariTerisi : j.hari).map((t) => `<section class="hari">
       <h3><span class="garis"></span>${e(_juHariPanjang(t))}${hijri(t) ? `<small> · ${e(hijri(t))}</small>` : ""}</h3>
-      <table><thead><tr><th class="sesi">Sesi / Waktu</th>${j.kelas.map((k) => `<th><span class="kls" style="border-color:${_juWarnaKelas(k)}">${e(_juAngkaKelas(k))}</span> Kelas ${e(_juAngkaKelas(k))}</th>`).join("")}</tr></thead>
-      <tbody>${j.sesi.map((s, i) => `<tr><td class="sesi"><b>Sesi ${i + 1}</b><br/>${s.mulai}–${s.selesai}</td>${j.kelas.map((k) => { const x = j.slot[_juKunci(t, s.id, k)]; const l = _juLabelSlot(x); return `<td>${l ? `<div class="mp">${e(l)}</div>${x.ruang ? `<div class="kc">Ruang ${e(x.ruang)}</div>` : ""}<div class="pw">${(x.p || []).map((g) => e(_juNamaGuru(g))).join(", ") || "—"}</div>` : ""}</td>`; }).join("")}</tr>`).join("")}</tbody></table>
+      <table><thead><tr><th class="sesi">Sesi / Waktu</th>${j.kelas.map((k) => `<th class="thk" style="background:${_juWarnaKelas(k)}">Kelas ${e(_juAngkaKelas(k))}</th>`).join("")}</tr></thead>
+      <tbody>${j.sesi.map((s, i) => (j.kelas.some((k) => _juLabelSlot(j.slot[_juKunci(t, s.id, k)])) || !hariTerisi.length) ? `<tr><td class="sesi"><b>Sesi ${i + 1}</b><br/>${s.mulai}–${s.selesai}</td>${j.kelas.map((k) => { const x = j.slot[_juKunci(t, s.id, k)]; const l = _juLabelSlot(x); return `<td style="background:${_juWarnaKelas(k)}12">${l ? `<div class="mp">${e(l)}</div>${x.ruang ? `<div class="kc">Ruang ${e(x.ruang)}</div>` : ""}<div class="pw">${(x.p || []).map((g) => e(_juNamaGuru(g))).join(", ") || "—"}</div>` : "–"}</td>`; }).join("")}</tr>` : "").join("")}</tbody></table>
     </section>`).join("");
   const per = {};
   Object.entries(j.slot).forEach(([k, s]) => { const [t, sesiId, kelasId] = k.split("|"); if (!j.hari.includes(t) || !_juLabelSlot(s)) return; (s.p || []).forEach((g) => (per[g] = per[g] || []).push(`${_juHariPendek(t)} S${j.sesi.findIndex((x) => x.id === sesiId) + 1} K${_juAngkaKelas(kelasId)}`)); });
@@ -470,13 +486,14 @@ function juCetakPdf(id, dariEditor) {
     table{width:100%;border-collapse:collapse;table-layout:fixed}
     th,td{border:.6pt solid #8C9792;padding:5px 6px;vertical-align:top;font-variant-numeric:tabular-nums}
     thead th{background:#E3EAE6;color:#1B2A41;font-size:9.5pt;text-align:center}
-    tbody tr:nth-child(even) td{background:#EEF1EF}
+    thead th.thk{color:#fff;font-weight:800;letter-spacing:.3px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    td{text-align:center;vertical-align:middle}td{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+
     td.sesi,th.sesi{width:26mm;text-align:center;color:#1B2A41}
-    .kls{display:inline-block;min-width:18px;border:2px solid;border-radius:5px;font-weight:800;padding:0 3px}
     .mp{font-weight:700;color:#1B2A41}.kc{font-size:8.5pt;color:#5B6470}.pw{font-size:9pt;margin-top:3px}
     .rekap{break-inside:avoid;margin-top:12px}.rekap table td{font-size:9.5pt}
     .catatan{font-size:9pt;color:#5B6470;margin-top:8px}
-    .ttd{display:flex;justify-content:flex-end;margin-top:14px;font-size:10pt}.ttd div{text-align:center;width:65mm}
+    .ttd{display:flex;justify-content:flex-end;margin-top:14px;font-size:10pt}.ttd div{text-align:center;width:65mm}.ttd small{display:block;color:#5B6470;font-size:7.5pt;margin-top:2px}
     footer{position:fixed;bottom:0;left:0;right:0;font-size:7.5pt;color:#5B6470;border-top:.4pt solid #8C9792;padding-top:3px;display:flex;justify-content:space-between}
   </style></head><body>
     <div class="kop">${logo ? `<img src="${e(logo)}" alt=""/>` : ""}<div><div class="lem">${e(lembaga)}</div><div class="jdl">JADWAL ${e(String(j.judul).toUpperCase())}</div><div class="ket">${e(_juHariPanjang(j.mulai))}${j.selesai !== j.mulai ? " – " + e(_juHariPanjang(j.selesai)) : ""} · Tahun Ajaran ${e(typeof hitungTahunAjaranOtomatis === "function" ? hitungTahunAjaranOtomatis() : "")}</div></div></div>
@@ -485,12 +502,143 @@ function juCetakPdf(id, dariEditor) {
       ${rekap.map(([g, xs], i) => `<tr><td style="text-align:center">${i + 1}</td><td>${e(_juGuru(g)?.nama || "-")}</td><td style="text-align:center">${xs.length}</td><td>${e(xs.join(" · "))}</td></tr>`).join("") || `<tr><td colspan="4">Belum ada pengawas.</td></tr>`}
     </tbody></table>
     <div class="catatan">Catatan: selama hari ujian, KBM kelas diliburkan. Pengawas hadir 15 menit sebelum sesi dan mengisi Absen Mengawas di aplikasi.${j.catatan ? " " + e(j.catatan) : ""}</div>
-    <div class="ttd"><div>Barabai, ${e(new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }))}<br/>Kepala Sekolah<br/><br/><br/><br/><b>${e(p.kepala_pkbm || (typeof _namaPejabat === "function" ? _namaPejabat(p) : "") || "")}</b></div></div></section>
+    <div class="ttd"><div>Barabai, ${e(new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }))}<br/>Kepala Sekolah<br/>${ttd?.img ? `<img src="${ttd.img}" alt="tanda tangan" style="height:22mm;max-width:60mm;object-fit:contain;display:block;margin:2px auto"/>` : "<br/><br/><br/>"}<b>${e(ttd?.nama || p.kepala_pkbm || (typeof _namaPejabat === "function" ? _namaPejabat(p) : "") || "")}</b>${ttd?.img ? `<small>Ditandatangani elektronik · ${e(new Date(ttd.t).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }))}</small>` : ""}</div></div></section>
     <footer><span>${e(j.judul)} · ${e(lembaga)}</span><span>Dicetak ${e(new Date().toLocaleString("id-ID"))}</span></footer>
     <script>window.onload=function(){setTimeout(function(){window.print()},400)}<\/script>
   </body></html>`;
-  const w = window.open("", "_blank");
+  const w = wJendela;
   if (!w) { toast("Izinkan pop-up untuk mencetak / simpan PDF", "err"); return; }
   w.document.open(); w.document.write(html); w.document.close();
   toast("Pilih \"Simpan sebagai PDF\" di jendela cetak untuk membuat file PDF", "ok");
+}
+
+// ── SUSUN OTOMATIS DARI JADWAL PELAJARAN ────────────────────
+// Aturan: tiap mapel diujikan di HARI PERTAMA mapel itu muncul di jadwal pelajaran kelasnya
+// (mapel dobel / lebih dari sekali sepekan cukup sekali). Maksimal N mapel sehari; kelas yang punya
+// pelajaran SORE boleh 1 mapel lagi (sesi sore). Kelebihan dialihkan ke hari yang sama pekan berikutnya,
+// kalau masih penuh ke hari ujian lain yang masih longgar (pekan kedua didahulukan).
+const _JU_NAMA_HARI = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+const _JU_LEWATI_MAPEL = /muhadh|muhad[oa]r|tahfi|ekskul|ekstra|pramuka|upacara|apel|halaqah|kultum/i;
+const _juJamSore = (jam) => String(jam || "") >= "13:00";
+async function juSusunDariJadwal() {
+  const j = JU.edit; if (!j) return;
+  let rows;
+  try {
+    setGlobalLoading(true, "Membaca jadwal pelajaran…");
+    rows = await supa.from("jadwal_pelajaran").select("kelas_id,mapel_id,guru_id,hari,jam_mulai").eq("aktif", true).then(unwrap);
+  } catch (e) { toast("Gagal membaca jadwal pelajaran: " + (e.message || e), "err"); return; }
+  finally { setGlobalLoading(false); }
+  JU.susunRows = (rows || []).filter((r) => j.kelas.includes(r.kelas_id) && r.mapel_id);
+  if (!JU.susunRows.length) { toast("Jadwal pelajaran kelas peserta masih kosong", "info"); return; }
+  const mapelIds = [...new Set(JU.susunRows.map((r) => r.mapel_id))].sort((a, b) => _juNamaMapel(a).localeCompare(_juNamaMapel(b), "id"));
+  const adaIsi = Object.values(j.slot || {}).some(_juLabelSlot);
+  openModal(`<h3>🪄 Susun dari jadwal pelajaran</h3>
+    <div class="ju-susun-ket">Mapel diujikan pada <b>hari pertama</b> mapel itu ada di jadwal pelajaran kelasnya. Mapel dobel cukup sekali.</div>
+    <div class="ju-susun-baris"><label class="form-label">Maksimal mapel sehari</label><select id="jus-maks" class="input"><option>1</option><option selected>2</option><option>3</option></select></div>
+    <label class="je-opsi"><input type="checkbox" id="jus-sore" checked/> <span>Kelas yang punya pelajaran sore boleh <b>+1 mapel</b> (sesi sore)</span></label>
+    <label class="je-opsi"><input type="checkbox" id="jus-pengampu" checked/> <span>Pengampu mapel langsung jadi pengawas</span></label>
+    ${adaIsi ? `<label class="je-opsi"><input type="checkbox" id="jus-kosongkan" checked/> <span>Kosongkan dulu jadwal yang sudah terisi</span></label>` : ""}
+    <details class="ju-susun-mapel"><summary>Mapel yang diujikan (${mapelIds.length})</summary>
+      <div class="ju-cek">${mapelIds.map((m) => `<label><input type="checkbox" class="jus-m" value="${m}" ${_JU_LEWATI_MAPEL.test(_juNamaMapel(m)) ? "" : "checked"}/> ${_juEsc(_juNamaMapel(m) || "?")}</label>`).join("")}</div>
+    </details>
+    <div class="ju-susun-ket">Kalau sehari melebihi batas, mapel dipindah ke <b>hari yang sama di pekan kedua</b>, supaya urutannya tetap mirip jadwal pelajaran.</div>
+    <button class="btn btn-accent" style="width:100%;margin-top:10px;" onclick="_juSusunJalankan()">Susun sekarang</button>`);
+}
+function _juSusunJalankan() {
+  const j = JU.edit, rows = JU.susunRows || [];
+  const maks = Number(qs("jus-maks").value) || 2, pakaiSore = qs("jus-sore").checked, pakaiPengampu = qs("jus-pengampu").checked;
+  const kosongkan = qs("jus-kosongkan") ? qs("jus-kosongkan").checked : false;
+  const dipilih = new Set(qsa(".jus-m").filter((c) => c.checked).map((c) => c.value));
+  closeModal();
+  if (kosongkan) j.slot = {};
+  const kelasSore = new Set(rows.filter((r) => _juJamSore(r.jam_mulai)).map((r) => r.kelas_id));
+  const batasMaks = maks + (pakaiSore && kelasSore.size ? 1 : 0);
+  // pastikan jumlah sesi cukup; sesi tambahan setelah batas = sesi sore
+  while (j.sesi.length < batasMaks) {
+    const sore = pakaiSore && j.sesi.length === maks;
+    const akhir = j.sesi[j.sesi.length - 1]?.selesai || "09:00";
+    j.sesi.push(sore ? { id: "s" + _juId(), mulai: "16:00", selesai: "17:00" } : { id: "s" + _juId(), mulai: akhir, selesai: akhir });
+  }
+  const urutHari = (h) => (_JU_NAMA_HARI.indexOf(h) + 6) % 7; // Senin = 0
+  const hariUjian = j.hari.slice().sort();
+  const senin0 = (() => { const d = _juTgl(hariUjian[0]); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d; })();
+  const pekanKe = (iso) => Math.floor((_juTgl(iso) - senin0) / 86400000 / 7);
+  const sisa = [];
+  let terisi = 0;
+  j.kelas.forEach((k) => {
+    const cap = Math.min(j.sesi.length, maks + (pakaiSore && kelasSore.has(k) ? 1 : 0));
+    const pertama = {};
+    rows.filter((r) => r.kelas_id === k && dipilih.has(r.mapel_id)).forEach((r) => {
+      const key = urutHari(r.hari) * 10000 + _juMenit(r.jam_mulai);
+      if (!pertama[r.mapel_id] || key < pertama[r.mapel_id].key) pertama[r.mapel_id] = { key, hari: r.hari, guru: [] };
+    });
+    rows.filter((r) => r.kelas_id === k && pertama[r.mapel_id]).forEach((r) => { const g = pertama[r.mapel_id].guru; if (r.guru_id && !g.includes(r.guru_id)) g.push(r.guru_id); });
+    const isiHari = (t) => j.sesi.slice(0, cap).filter((s) => _juLabelSlot(j.slot[_juKunci(t, s.id, k)])).length;
+    const sudahAda = new Set(Object.entries(j.slot).filter(([kk, x]) => kk.endsWith("|" + k) && x && x.m).map(([, x]) => x.m));
+    const taruh = (t, m, info) => {
+      const s = j.sesi.slice(0, cap).find((x) => !_juLabelSlot(j.slot[_juKunci(t, x.id, k)])); if (!s) return false;
+      j.slot[_juKunci(t, s.id, k)] = { m, teks: "", p: pakaiPengampu ? info.guru.slice(0, 1) : [] };
+      terisi++; return true;
+    };
+    Object.entries(pertama).sort((a, b) => a[1].key - b[1].key).forEach(([m, info]) => {
+      if (sudahAda.has(m)) return;
+      const samaHari = hariUjian.filter((t) => _JU_NAMA_HARI[_juTgl(t).getDay()] === info.hari);
+      const lain = hariUjian.filter((t) => !samaHari.includes(t)).sort((a, b) => pekanKe(b) - pekanKe(a) || a.localeCompare(b));
+      const t = [...samaHari, ...lain].find((x) => isiHari(x) < cap);
+      if (!t || !taruh(t, m, info)) sisa.push(`Kelas ${_juAngkaKelas(k)}: ${_juNamaMapel(m)}`);
+    });
+  });
+  _juTandai(); _juGambarEditor();
+  const soreIkut = [...kelasSore].filter((k) => j.kelas.includes(k));
+  openModal(`<h3>✅ Jadwal tersusun</h3>
+    <p>${terisi} mapel ditempatkan di ${hariUjian.length} hari ujian (maks ${maks} sehari${pakaiSore && soreIkut.length ? `, +1 sesi sore untuk Kelas ${soreIkut.map(_juAngkaKelas).join(", ")}` : ""}).</p>
+    ${sisa.length ? `<div class="ju-susun-sisa"><b>⚠️ ${sisa.length} mapel belum dapat tempat</b> (hari ujian penuh). Tambah hari/sesi di ⚙️ Pengaturan atau naikkan batas mapel sehari:<ul>${sisa.map((x) => `<li>${_juEsc(x)}</li>`).join("")}</ul></div>` : `<p class="ju-ket">Semua mapel sudah dapat tempat.</p>`}
+    <p class="ju-ket">Periksa lagi, ubah bila perlu, lalu tekan <b>💾 Simpan</b>.</p>
+    <button class="btn btn-accent" style="width:100%" onclick="closeModal()">Oke, periksa</button>`);
+}
+
+// ── TANDA TANGAN ONLINE KEPALA SEKOLAH ──────────────────────
+// Digambar sekali (jari / mouse), disimpan sebagai gambar di kuliah_pengaturan "ttd:kepala_sekolah",
+// lalu otomatis muncul di PDF jadwal ujian.
+const _JU_TTD = "ttd:kepala_sekolah";
+async function juTandaTangan() {
+  const lama = await _kvAmbil(_JU_TTD, null).catch(() => null);
+  const p = STATE.pengaturan || {};
+  const namaBawaan = lama?.nama || p.kepala_pkbm || (typeof _namaPejabat === "function" ? _namaPejabat(p) : "") || "";
+  openModal(`<h3>✍️ Tanda tangan Kepala Sekolah</h3>
+    ${lama?.img ? `<div class="ju-ttd-lama"><img src="${lama.img}" alt="tanda tangan tersimpan"/><small>Tersimpan ${_juEsc(new Date(lama.t).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }))}</small></div>` : ""}
+    <div class="field"><label class="form-label">Nama di bawah tanda tangan</label><input id="ttd-nama" class="input" value="${_juEsc(namaBawaan)}"/></div>
+    <div class="ju-ttd-ket">Tanda tangan di kotak ini dengan jari atau mouse:</div>
+    <canvas id="ttd-kanvas" class="ju-ttd-kanvas" width="600" height="240"></canvas>
+    <div class="ju-ttd-aksi"><button class="btn btn-ghost btn-sm" onclick="_juTtdBersih()">🧽 Ulangi</button>${lama?.img ? `<button class="btn btn-ghost btn-sm" onclick="_juTtdHapus()">🗑️ Hapus tanda tangan</button>` : ""}</div>
+    <button class="btn btn-accent" style="width:100%;margin-top:10px;" onclick="_juTtdSimpan()">💾 Simpan tanda tangan</button>`);
+  const c = qs("ttd-kanvas"), x = c.getContext("2d");
+  x.lineWidth = 3.2; x.lineCap = "round"; x.lineJoin = "round"; x.strokeStyle = "#1B2A41";
+  let gambar = false, akhir = null; JU.ttdTergores = false;
+  const titik = (ev) => { const r = c.getBoundingClientRect(); return [((ev.clientX - r.left) * c.width) / r.width, ((ev.clientY - r.top) * c.height) / r.height]; };
+  c.addEventListener("pointerdown", (ev) => { ev.preventDefault(); gambar = true; akhir = titik(ev); c.setPointerCapture?.(ev.pointerId); });
+  c.addEventListener("pointermove", (ev) => { if (!gambar) return; ev.preventDefault(); const p2 = titik(ev); x.beginPath(); x.moveTo(akhir[0], akhir[1]); x.lineTo(p2[0], p2[1]); x.stroke(); akhir = p2; JU.ttdTergores = true; });
+  ["pointerup", "pointercancel", "pointerleave"].forEach((n) => c.addEventListener(n, () => { gambar = false; }));
+}
+function _juTtdBersih() { const c = qs("ttd-kanvas"); c.getContext("2d").clearRect(0, 0, c.width, c.height); JU.ttdTergores = false; }
+async function _juTtdSimpan() {
+  const nama = qs("ttd-nama").value.trim();
+  if (!JU.ttdTergores) { toast("Tanda tangan dulu di kotak", "info"); return; }
+  // potong ruang kosong supaya gambarnya ringkas
+  const c = qs("ttd-kanvas"), d = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
+  let x0 = c.width, y0 = c.height, x1 = 0, y1 = 0;
+  for (let y = 0; y < c.height; y++) for (let xx = 0; xx < c.width; xx++) if (d[(y * c.width + xx) * 4 + 3] > 10) { if (xx < x0) x0 = xx; if (xx > x1) x1 = xx; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  const pad = 8, sx = Math.max(0, x0 - pad), sy = Math.max(0, y0 - pad), w = Math.min(c.width - sx, x1 - x0 + pad * 2), h = Math.min(c.height - sy, y1 - y0 + pad * 2);
+  const o = document.createElement("canvas"); o.width = w; o.height = h;
+  o.getContext("2d").drawImage(c, sx, sy, w, h, 0, 0, w, h);
+  try {
+    setGlobalLoading(true, "Menyimpan tanda tangan…");
+    await _kvSimpan(_JU_TTD, { img: o.toDataURL("image/png"), nama, t: new Date().toISOString(), oleh: STATE.guruId || null });
+    closeModal(); toast("Tanda tangan tersimpan ✓ — otomatis muncul di PDF", "ok");
+  } catch (e) { toast("Gagal menyimpan: " + (e.message || e), "err"); }
+  finally { setGlobalLoading(false); }
+}
+async function _juTtdHapus() {
+  if (!(await konfirmasiTema("Hapus tanda tangan tersimpan? PDF berikutnya kembali memakai ruang tanda tangan kosong.", { ikon: "🗑️", judul: "Hapus tanda tangan" }))) return;
+  try { await _kvSimpan(_JU_TTD, null); closeModal(); toast("Tanda tangan dihapus", "ok"); } catch (e) { toast("Gagal: " + (e.message || e), "err"); }
 }

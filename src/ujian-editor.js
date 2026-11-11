@@ -43,13 +43,33 @@ async function ujEditorBuka(bankId) {
     try { UJE.m = _ujeDariBank(b, await _ujRpc("ujian_kunci_ambil", { p_pin: pin, p_bank: bankId })); }
     catch (e) { toast(_ujPesan(e), "err"); return; }
   } else {
+    // Soal baru: tanya dulu dihitung sebagai apa (UH / Tugas / UTS / UAS) → dipakai saat kirim nilai ke rapor
+    const pilih = await _ujeTanyaJenis(); if (!pilih) return;
     UJE.m = _ujeModelKosong();
+    Object.assign(UJE.m, pilih);
     UJE.m.bagian.pg.soal.push(_ujeSoalBaru("pg"));
   }
+  if (bankId) { const jn = typeof _ujJenisNilai === "function" ? _ujJenisNilai(UJ.bank.find((x) => x.id === bankId)) : null; if (jn) { UJE.m.jenisNilai = jn.jenis; UJE.m.jenisKe = jn.ke; } }
   UJE.tab = UJE_JENIS.find((j) => UJE.m.bagian[j].soal.length) || "pg";
   _ujeGambar();
 }
 
+// Pertanyaan pertama saat membuat soal baru
+function _ujeTanyaJenis() {
+  return new Promise((res) => {
+    window._ujeJenisJawab = (j) => { const ke = Number(qs("uje-jn-ke")?.value) || 1; window._ujeJenisJawab = null; res(j ? { jenisNilai: j, jenisKe: ke, bab: ke } : null); };
+    openModal(`<h3>📊 Soal ini dihitung sebagai…</h3>
+      <div class="uj-sub" style="margin:-4px 0 12px">Dipakai saat nilai santri dikirim ke <b>Input Nilai Rapor</b>, dan soal UTS/UAS otomatis tercentang di <b>Pengumpulan Soal</b> (menu Jadwal Ujian).</div>
+      <div class="uje-jn">
+        <button onclick="_ujeJenisJawab('uh')"><span>📝</span><b>Ulangan Harian</b><small>nilai harian per bab</small></button>
+        <button onclick="_ujeJenisJawab('tugas')"><span>✍️</span><b>Tugas</b><small>tugas / PR</small></button>
+        <button onclick="_ujeJenisJawab('uts')"><span>📘</span><b>UTS</b><small>tengah semester</small></button>
+        <button onclick="_ujeJenisJawab('uas')"><span>🎓</span><b>UAS</b><small>akhir semester</small></button>
+      </div>
+      <label class="uje-jn-ke">Untuk Ulangan Harian / Tugas: ke- <input id="uje-jn-ke" type="number" min="1" value="1" class="input"></label>
+      <button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="closeModal();_ujeJenisJawab&&_ujeJenisJawab(null)">Batal</button>`);
+  });
+}
 function _ujeGambar() {
   const m = UJE.m, tab = UJE.tab, bg = m.bagian[tab];
   // pertahankan posisi gulir saat menggambar ulang (mis. setelah menandai kunci di soal ke-20)
@@ -65,7 +85,8 @@ function _ujeGambar() {
       <div class="field" style="grid-column:1/-1"><label class="form-label">📝 Judul</label><input class="input" value="${escapeHtml(m.judul)}" placeholder="mis. Penilaian Bab 2 — Teks Eksposisi" oninput="UJE.m.judul=this.value"></div>
       <div class="field"><label class="form-label">📘 Mapel</label><select class="input" onchange="UJE.m.mapel_id=this.value"><option value="">— pilih —</option>${LOOKUP.mapel.map((x) => `<option value="${x.id}" ${x.id === m.mapel_id ? "selected" : ""}>${escapeHtml(x.nama_mapel)}</option>`).join("")}</select></div>
       <div class="field"><label class="form-label">🏫 Kelas (tingkat)</label><input class="input" value="${escapeHtml(m.tingkat)}" placeholder="mis. 10" oninput="UJE.m.tingkat=this.value"></div>
-      <div class="field"><label class="form-label">🔖 Bab → UH ke-</label><input class="input" type="number" min="1" value="${m.bab}" oninput="UJE.m.bab=Number(this.value)||1"></div>
+      <div class="field"><label class="form-label">📊 Dihitung sebagai</label><select class="input" onchange="UJE.m.jenisNilai=this.value">${[["uh", "Ulangan Harian"], ["tugas", "Tugas"], ["uts", "UTS"], ["uas", "UAS"]].map(([k, l]) => `<option value="${k}" ${(m.jenisNilai || "uh") === k ? "selected" : ""}>${l}</option>`).join("")}</select></div>
+      <div class="field"><label class="form-label">🔖 Bab / ke-</label><input class="input" type="number" min="1" value="${m.bab}" oninput="UJE.m.bab=Number(this.value)||1;UJE.m.jenisKe=UJE.m.bab"></div>
     </div>
     <div class="uje-tab">${UJE_JENIS.map((j) => `<button class="${j === tab ? "aktif" : ""}" style="--rgb:${UJE_WARNA[j]}" onclick="UJE.tab='${j}';_ujeGambar()">${UJE_LABEL[j]} <span>${m.bagian[j].soal.length}</span></button>`).join("")}</div>
     <div class="uje-bagian" style="--rgb:${UJE_WARNA[tab]}">
@@ -385,6 +406,7 @@ async function ujeSimpan() {
     const pin = await _ujPin("PIN untuk menyimpan soal"); if (!pin) return;
     const { publik, kunci } = _ujPisahKunci(bank);
     m.bankId = await _ujRpc("ujian_bank_simpan", { p_pin: pin, p_kode: m.kode, p_mapel_id: m.mapel_id, p_tingkat: m.tingkat, p_bab: m.bab, p_judul: bank.judul, p_soal: publik, p_kunci: kunci, p_skor_maksimal: bank.skor_maksimal, p_guru: STATE.guruId || null });
+    if (typeof _ujSimpanJenis === "function") await _ujSimpanJenis(m.bankId, m.jenisNilai || "uh", m.jenisKe || m.bab, { mapel_id: m.mapel_id, tingkat: m.tingkat, guru_id: STATE.guruId || null });
     toast("💾 Bank soal tersimpan", "ok"); closeModal(); ujMuat();
   } catch (e) { toast(_ujPesan(e), "err"); }
 }

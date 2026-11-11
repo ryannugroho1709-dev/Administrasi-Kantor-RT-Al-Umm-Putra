@@ -262,7 +262,7 @@ function _rcIsiPkbm(semester) {
 function _rcDataDiniyyah(k, s, peringkat) {
   const mapel = (LOOKUP.mapel || []).filter((m) => m.masuk_diniyyah).sort((a, b) => (k.urut[a.id] ?? 999) - (k.urut[b.id] ?? 999) || a.nama_mapel.localeCompare(b.nama_mapel, "id"));
   const nilaiS = k.nilai.filter((n) => n.siswa_id === s.id);
-  const baris = mapel.map((m, i) => { const v = _rcNA(nilaiS.find((n) => n.mapel_id === m.id)); return { no: i + 1, mapel: _rcMapelAr(m), kkm: m.kkm ?? 70, nilai: v ?? "-", huruf: v != null ? angkaKeHurufArab(v) : "-", v }; });
+  const baris = mapel.map((m, i) => { const v = _rcNA(nilaiS.find((n) => n.mapel_id === m.id)); return { no: i + 1, mapel: _rcMapelAr(m), kkm: typeof kkmMapel === "function" ? kkmMapel(m, k.kelas?.id || k.kelasId) : (m.kkm ?? 70), nilai: v ?? "-", huruf: v != null ? angkaKeHurufArab(v) : "-", v }; });
   const terisi = baris.filter((b) => b.v != null), jumlah = terisi.reduce((a, b) => a + b.v, 0);
   const cat = k.catatan.find((c) => c.siswa_id === s.id) || {};
   const h = k.hadir.find((r) => r.siswa?.id === s.id) || {};

@@ -100,7 +100,7 @@ function _rwkGambar() {
 
       <div class="rwk-judul">📚 Nilai mapel <small>(diisi guru mapel di menu Input Nilai)</small></div>
       <table class="simple-table"><thead><tr><th>Mapel</th><th style="width:60px">KKM</th><th style="width:70px">Nilai</th><th>Capaian</th></tr></thead>
-        <tbody>${nilaiBerGuru.map((n) => { const na = hitungNilaiAkhir(n); const kkm = n.mapel?.kkm ?? 70, v = na ? na.nilaiAkhir : null;
+        <tbody>${nilaiBerGuru.map((n) => { const na = hitungNilaiAkhir(n); const kkm = typeof kkmMapel === "function" ? kkmMapel({ ...(n.mapel || {}), id: n.mapel_id }, n.kelas_id) : (n.mapel?.kkm ?? 70), v = na ? na.nilaiAkhir : null;
           return `<tr><td>${escapeHtml(n.mapel?.nama_mapel)}</td><td style="text-align:center">${kkm}</td><td style="text-align:center"><b class="${v == null ? "" : v >= kkm ? "rwk-tuntas" : "rwk-belum"}">${v ?? "-"}</b></td><td>${escapeHtml(n.capaian_pembelajaran || "-")}</td></tr>`; }).join("")
           || `<tr><td colspan="4" style="text-align:center;color:var(--text-secondary)">Belum ada nilai untuk semester ini.</td></tr>`}</tbody></table>
 
@@ -211,6 +211,8 @@ async function bukaPengaturanPenilaian() {
   const b = STATE.pengaturan?.bobot_nilai || def, tu = b.tanpa_uts || def.tanpa_uts, du = b.dengan_uts || def.dengan_uts;
   const isian = (id, v) => `<input id="${id}" type="number" min="0" max="100" class="input pp-bobot" value="${v ?? 0}" oninput="_ppTotal()">`;
   const grup = (judul, pre, o, kunci) => `<div class="pp-grup"><b>${judul}</b><div class="pp-baris">${kunci.map(([k, l]) => `<label>${l}${isian(`pp-${pre}-${k}`, o[k])}</label>`).join("")}</div><div class="pp-total" id="pp-${pre}-total"></div></div>`;
+  const kkmKelas = STATE.pengaturan?.bobot_nilai?.kkm_kelas || {};
+  const kelasUrut = (LOOKUP.kelas || []).slice().sort((a, c) => (parseInt(String(a.nama_kelas).match(/d+/)?.[0] || "99", 10)) - (parseInt(String(c.nama_kelas).match(/d+/)?.[0] || "99", 10)));
   const mapel = (LOOKUP.mapel || []).slice().sort((a, b2) => (a.masuk_diniyyah - b2.masuk_diniyyah) || a.nama_mapel.localeCompare(b2.nama_mapel, "id"));
   openModal(`<h3>⚖️ Pengaturan Penilaian</h3>
     <div style="font-size:12px;color:var(--text-secondary);margin:-4px 0 12px">Berlaku untuk semua guru, Input Nilai, dan rapor. Bisa diubah Admin & Kepala Sekolah.</div>
@@ -219,7 +221,9 @@ async function bukaPengaturanPenilaian() {
     ${grup("Dengan UTS", "du", du, [["uh", "Ulangan Harian"], ["tugas", "Tugas"], ["uts", "UTS"], ["uas", "UAS"], ["kehadiran", "Kehadiran"]])}
     <div class="rwk-judul" style="display:flex;justify-content:space-between;align-items:center">2️⃣ KKM tiap mapel
       <span style="font-size:11.5px;font-weight:600">Semua jadi <input id="pp-kkm-semua" type="number" class="input" style="width:64px;padding:3px 6px;display:inline-block" value="70"> <button class="btn btn-ghost btn-sm" onclick="qsa('.pp-kkm').forEach(i=>i.value=qs('pp-kkm-semua').value)">Terapkan</button></span></div>
-    <div class="pp-kkm-daftar">${mapel.map((m) => `<label><span>${escapeHtml(m.nama_mapel)} <small>${m.masuk_diniyyah ? "diniyyah" : "umum"}</small></span><input type="number" min="0" max="100" class="input pp-kkm" data-id="${m.id}" data-awal="${m.kkm ?? 70}" value="${m.kkm ?? 70}"></label>`).join("")}</div>
+    <div style="font-size:11px;color:var(--text-secondary);margin:-4px 0 8px">Angka di kanan = KKM semua kelas. Ketuk <b>Per kelas</b> bila KKM kelas tertentu berbeda (kosong = ikut KKM umum).</div>
+    <div class="pp-kkm-daftar">${mapel.map((m) => { const kk = kkmKelas[m.id] || {}, adaKhusus = Object.keys(kk).length; return `<div class="pp-kkm-item"><div class="pp-kkm-baris"><span class="pp-kkm-nama">${escapeHtml(m.nama_mapel)} <small>${m.masuk_diniyyah ? "diniyyah" : "umum"}</small></span><button type="button" class="btn btn-ghost btn-sm pp-kkm-tgl ${adaKhusus ? "on" : ""}" onclick="this.closest('.pp-kkm-item').classList.toggle('buka')">Per kelas${adaKhusus ? " (" + adaKhusus + ")" : ""} ▾</button><input type="number" min="0" max="100" class="input pp-kkm" data-id="${m.id}" data-awal="${m.kkm ?? 70}" value="${m.kkm ?? 70}"></div>
+      <div class="pp-kkm-kelas">${kelasUrut.map((k) => `<label><span>Kls ${escapeHtml(String(k.nama_kelas).replace(/^s*kelass+/i, ""))}</span><input type="number" min="0" max="100" class="input pp-kkm-k" data-mapel="${m.id}" data-kelas="${k.id}" value="${kk[k.id] ?? ""}" placeholder="${m.kkm ?? 70}"></label>`).join("")}</div></div>`; }).join("")}</div>
     <button class="btn btn-accent" style="width:100%;margin-top:12px" id="pp-ok">💾 Simpan pengaturan penilaian</button>`, { lebar: true });
   _ppTotal();
   qs("pp-ok").onclick = async () => {
@@ -230,8 +234,13 @@ async function bukaPengaturanPenilaian() {
     if (jml(tuB) !== 100 || jml(duB) !== 100) { toast("Tiap kelompok bobot harus berjumlah tepat 100%", "err"); return; }
     const tb = qs("pp-ok"); tb.disabled = true; tb.textContent = "Menyimpan…";
     try {
-      const upd = await apiSimpanPengaturanSekolah({ bobot_nilai: { tanpa_uts: tuB, dengan_uts: duB } });
-      STATE.pengaturan = { ...STATE.pengaturan, bobot_nilai: upd?.bobot_nilai || { tanpa_uts: tuB, dengan_uts: duB } };
+      // KKM khusus per kelas (hanya yang diisi & berbeda dari KKM umum mapelnya)
+      const kkmBaru = {};
+      qsa(".pp-kkm-k").forEach((i) => { const v = i.value === "" ? null : Number(i.value); const umum = Number(qs(`.pp-kkm[data-id="${i.dataset.mapel}"]`)?.value);
+        if (v != null && v >= 0 && v <= 100 && v !== umum) (kkmBaru[i.dataset.mapel] = kkmBaru[i.dataset.mapel] || {})[i.dataset.kelas] = v; });
+      const bobotBaru = { tanpa_uts: tuB, dengan_uts: duB, kkm_kelas: kkmBaru };
+      const upd = await apiSimpanPengaturanSekolah({ bobot_nilai: bobotBaru });
+      STATE.pengaturan = { ...STATE.pengaturan, bobot_nilai: upd?.bobot_nilai || bobotBaru };
       let n = 0;
       for (const i of qsa(".pp-kkm")) {
         const v = Number(i.value); if (!(v >= 0 && v <= 100) || String(v) === i.dataset.awal) continue;

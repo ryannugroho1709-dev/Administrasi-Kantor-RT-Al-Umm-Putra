@@ -75,6 +75,12 @@
       setTimeout(() => { ind.classList.remove("muat", "siap"); ind.style.opacity = 0; ind.style.transform = "translateY(-50px)"; }, 500);
       perbaruiBadge(true);
     });
+    // Sentuhan dibatalkan (mis. menu samping ikut terbuka saat menggeser) → sembunyikan lagi, jangan tertinggal
+    const reset = () => { if (ind.classList.contains("muat")) return; y0 = null; aktif = false; ind.classList.remove("siap"); ind.style.transition = "opacity .15s"; ind.style.opacity = 0; ind.style.transform = "translateY(-50px)"; };
+    sc.addEventListener("touchcancel", reset, { passive: true });
+    sc.addEventListener("scroll", () => { if (sc.scrollTop > 0) reset(); }, { passive: true });
+    document.addEventListener("click", (e) => { if (e.target.closest && e.target.closest("#sidebar,.sidebar,.hamburger,#btn-menu,[onclick*='toggleSidebar']")) reset(); }, true);
+    document.addEventListener("visibilitychange", reset);
   }
 
   // ── 3. Seret panel bawah untuk menutup ───────────────────

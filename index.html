@@ -21,10 +21,10 @@
      sedini mungkin supaya tidak sempat "berkedip" tampilan lain dulu. Disimpan per perangkat. -->
 <link rel="stylesheet" href="src/tema-elegan.css?v=5">
 <link rel="stylesheet" href="src/kas.css?v=3">
-<link rel="stylesheet" href="src/hp.css?v=2">
+<link rel="stylesheet" href="src/hp.css?v=3">
 <link rel="stylesheet" href="src/kuliah.css?v=6">
 <link rel="stylesheet" href="src/modul-baca.css?v=10">
-<link rel="stylesheet" href="src/ujian.css?v=10">
+<link rel="stylesheet" href="src/ujian.css?v=11">
 
 <script>
 // Logo gagal dimuat → coba logo bawaan; kalau bawaan pun gagal, tampilkan ikon 🎓 (bukan huruf "G").
@@ -681,6 +681,49 @@ tr.nl-lengkap .nl-col-nama::after{content:" ✓";color:var(--ok);font-size:11px;
 .ju-tugas-baris{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;border:1px solid var(--border-soft);border-left:4px solid var(--kw,#475569);}
 .ju-tugas-baris>div{flex:1;min-width:0;display:flex;flex-direction:column;}.ju-tugas-baris small{font-size:11px;color:var(--text-secondary);}
 .ju-dasbor{margin-bottom:12px;border-left:4px solid var(--accent);}.ju-link{display:inline-block;margin-top:8px;font-size:12px;font-weight:700;}
+/* Jadwal Ujian — kepala editor (rapi di HP), kolom kelas berwarna, isi rata tengah */
+.ju-eh{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
+.ju-eh-atas{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.ju-eh-judul{display:flex;flex-direction:column;gap:3px;min-width:0;}.ju-eh-judul .ju-judul-in{width:100%;}
+.ju-eh-aksi{display:flex;flex-wrap:wrap;gap:6px;}
+.ju-papan-aksi{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto;}
+.ju-tabel thead th.ju-th-kls{background:var(--kw,#475569);color:#fff;text-align:center;font-weight:800;letter-spacing:.3px;}
+.ju-sel{text-align:center;vertical-align:middle;background:color-mix(in srgb,var(--kw,#475569) 6%,var(--card,#fff));}
+.ju-sel.kosong{background:color-mix(in srgb,var(--kw,#475569) 3%,transparent);color:var(--text-secondary);}
+.ju-sel .ju-chips,.ju-hp-isi .ju-chips{justify-content:center;}.ju-sel .ju-mapel,.ju-hp-isi .ju-mapel{text-align:center;text-align-last:center;}
+.ju-sel small,.ju-hp-isi small{display:block;}
+.ju-hp-sesi{border:1px solid var(--border-soft);border-radius:14px;padding:8px;margin-bottom:10px;}
+.ju-hp-sesi-h{display:flex;justify-content:space-between;align-items:center;padding:2px 4px 8px;font-size:13px;}.ju-hp-sesi-h span{font-size:12px;color:var(--text-secondary);font-variant-numeric:tabular-nums;}
+.ju-hp-sel{display:flex;flex-direction:column;border-radius:12px;overflow:hidden;border:1px solid color-mix(in srgb,var(--kw) 45%,transparent);margin-bottom:6px;}
+.ju-hp-kls{background:var(--kw);color:#fff;font-weight:800;font-size:12px;text-align:center;padding:4px 8px;letter-spacing:.3px;}
+.ju-hp-isi{padding:8px;text-align:center;font-size:12.5px;background:color-mix(in srgb,var(--kw) 6%,var(--card,#fff));}.ju-hp-isi>b{display:block;font-size:13px;}
+.ju-hp-sel.kosong .ju-hp-isi{color:var(--text-secondary);}
+.ju-susun-ket{font-size:12px;color:var(--text-secondary);line-height:1.5;margin:6px 0;}
+.ju-susun-baris{display:flex;align-items:center;gap:10px;margin:8px 0;}.ju-susun-baris .input{width:auto;}.ju-susun-baris .form-label{margin:0;}
+.ju-susun-mapel{margin:8px 0;font-size:12.5px;}.ju-susun-mapel summary{cursor:pointer;font-weight:700;}.ju-susun-mapel .ju-cek{margin-top:8px;max-height:30vh;overflow:auto;}
+.ju-susun-sisa{background:rgba(217,119,6,.08);border:1px solid rgba(217,119,6,.35);border-radius:12px;padding:8px 10px;font-size:12.5px;margin:8px 0;}.ju-susun-sisa ul{margin:6px 0 0 18px;padding:0;}
+.ju-ttd-kanvas{width:100%;height:auto;aspect-ratio:5/2;border:2px dashed var(--border-soft);border-radius:12px;background:#fff;touch-action:none;cursor:crosshair;display:block;}
+.ju-ttd-ket{font-size:12px;color:var(--text-secondary);margin:8px 0 4px;}.ju-ttd-aksi{display:flex;gap:6px;justify-content:flex-end;margin-top:6px;}
+.ju-ttd-lama{display:flex;flex-direction:column;align-items:center;gap:2px;margin-bottom:8px;padding:6px;border:1px solid var(--border-soft);border-radius:12px;background:#fff;}.ju-ttd-lama img{max-height:70px;max-width:100%;}.ju-ttd-lama small{font-size:10.5px;color:#5B6470;}
+/* Pengumpulan soal */
+.ua-ringkas{display:flex;align-items:center;gap:12px;margin-bottom:10px;}.ua-angka{display:flex;align-items:baseline;gap:3px;white-space:nowrap;}.ua-angka b{font-size:22px;color:var(--accent);}.ua-angka small{font-size:11px;color:var(--text-secondary);margin-left:4px;}
+.ua-ket{font-size:12px;line-height:1.55;color:var(--text-secondary);margin-bottom:10px;}
+.ua-guru{margin-bottom:10px;}.ua-guru-h{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;}.ua-ke{font-size:11.5px;font-weight:800;color:var(--text-secondary);}
+.ua-baris{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:10px;border-left:4px solid var(--kw,#475569);background:color-mix(in srgb,var(--kw,#475569) 5%,transparent);margin-bottom:5px;flex-wrap:wrap;}
+.ua-mapel{flex:1;min-width:120px;display:flex;flex-direction:column;}.ua-mapel small{font-size:11px;color:var(--text-secondary);}
+.ua-st{display:flex;flex-wrap:wrap;gap:4px;}.ua-aksi{display:flex;gap:4px;}
+.ua-chip{display:inline-flex;align-items:center;gap:3px;border:0;border-radius:99px;padding:3px 9px;font:inherit;font-size:11px;font-weight:700;text-decoration:none;cursor:pointer;}
+.ua-chip.on{background:rgba(22,163,74,.12);color:#15803d;}.ua-chip.belum{background:rgba(217,119,6,.12);color:#b45309;cursor:default;}
+@media (max-width:760px){
+  .ju-eh-aksi .btn{flex:1 1 calc(50% - 6px);justify-content:center;}
+  .ju-papan-h{flex-direction:column;align-items:stretch;}.ju-papan-aksi{margin-left:0;}.ju-papan-aksi .btn{flex:1;}
+  .ju-hero{flex-direction:column;align-items:stretch;}.ju-hero>div{min-width:0;}
+  .ju-grid{grid-template-columns:1fr;}.ju-aksi .btn{flex:1 1 auto;}
+  .ju-atur-isi{grid-template-columns:1fr;}.ju-sesi-in{flex-wrap:wrap;}
+  .ju-usul-baris{flex-direction:column;align-items:stretch;}
+  .ju-tugas-baris{flex-wrap:wrap;}
+  .ua-ringkas{flex-wrap:wrap;}.ua-baris{align-items:flex-start;}
+}
 @media (max-width:640px){.ju-sel{min-width:150px;}.ju-tugas-baris{flex-wrap:wrap;}}
 .peran-ikon{grid-row:1/3;width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:17px;background:color-mix(in srgb,var(--tile) 16%,transparent);}
 .peran-nilai{font-size:20px;font-weight:800;color:var(--tile);line-height:1.1;font-variant-numeric:tabular-nums;}
@@ -7825,6 +7868,15 @@ function _jabatanBendahara(p) { return (p.jabatan_bendahara || "").trim() || "Be
 function _namaPejabat(p) { return (p?.nama_pejabat || "").trim() || _guruDenganJabatan("kepala_sekolah")?.nama || ""; }
 function _jabatanPejabat(p) { return (p?.jabatan_pejabat || "").trim() || (_guruDenganJabatan("kepala_sekolah") ? "Kepala Sekolah" : ""); }
 
+// KKM: bisa dibedakan per KELAS (Pengaturan Penilaian). Disimpan di pengaturan_sekolah.bobot_nilai.kkm_kelas
+// = { mapelId: { kelasId: angka } }; bila tidak ada pakai KKM mapel, lalu 70.
+function kkmMapel(mapel, kelasId) {
+  const id = typeof mapel === "string" ? mapel : mapel?.id;
+  const m = typeof mapel === "string" ? (LOOKUP.mapel || []).find((x) => x.id === mapel) : mapel;
+  const khusus = id && kelasId ? STATE.pengaturan?.bobot_nilai?.kkm_kelas?.[id]?.[kelasId] : null;
+  const v = khusus ?? m?.kkm ?? (id ? (LOOKUP.mapel || []).find((x) => x.id === id)?.kkm : null);
+  return v != null && v !== "" ? Number(v) : 70;
+}
 function formatKelasLabel(nama) {
   if (!nama) return nama;
   return String(nama).replace(/\S+/g, (w) => {
@@ -10142,12 +10194,14 @@ let KOP_SOAL_CACHE = [];
 async function renderKopSoalInit() { await renderKopSoal(); }
 function kopSoalKartu(labelMapel, kategori) {
   const row = KOP_SOAL_CACHE.find((r) => r.kategori === kategori);
-  return `<div style="border:1px solid var(--border-soft);border-radius:12px;padding:10px;">
+  // Berkas yang masih menunjuk ke server Supabase LAMA (sudah dihapus) tidak bisa dibuka lagi → minta unggah ulang
+  const hilang = !!row?.file_url && !String(row.file_url).startsWith(window.SUPABASE_URL || "https://izvsypocfpaerahfpgrk.supabase.co") && /supabase\.co/.test(row.file_url);
+  return `<div style="border:1px solid ${hilang ? "var(--bad)" : "var(--border-soft)"};border-radius:12px;padding:10px;">
     <div style="font-weight:700;font-size:11.5px;">${labelMapel}</div>
-    <div style="font-size:10px;color:var(--text-secondary);margin:5px 0 8px;">${row?.file_url ? row.nama_file || "file" : `<span data-i18n="belumAdaFile">${t("belumAdaFile")}</span>`}</div>
-    <div style="display:flex;gap:6px;">
-      ${isAdmin() ? `<label class="btn btn-ghost" style="padding:4px 8px;font-size:11px;cursor:pointer;" title="${t("unggah")}">⬆️ ${t("unggah")}<input type="file" style="display:none" onchange="uploadKopSoal('${kategori}', this)"/></label>` : ""}
-      ${row?.file_url ? `<a class="btn btn-outline" style="padding:4px 8px;font-size:11px;" href="${row.file_url}" target="_blank" rel="noopener" title="${t("unduh")}">⬇️ ${t("unduh")}</a>` : ""}
+    <div style="font-size:10px;color:${hilang ? "var(--bad)" : "var(--text-secondary)"};margin:5px 0 8px;">${hilang ? `⚠️ Berkas "${escapeHtml(row.nama_file || "kop")}" tersimpan di server lama yang sudah tidak aktif.${isAdmin() ? " Unggah ulang berkasnya." : " Admin perlu mengunggah ulang."}` : row?.file_url ? escapeHtml(row.nama_file || "file") : `<span data-i18n="belumAdaFile">${t("belumAdaFile")}</span>`}</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      ${isAdmin() ? `<label class="btn ${hilang ? "btn-accent" : "btn-ghost"}" style="padding:4px 8px;font-size:11px;cursor:pointer;" title="${t("unggah")}">⬆️ ${hilang ? "Unggah ulang" : t("unggah")}<input type="file" style="display:none" onchange="uploadKopSoal('${kategori}', this)"/></label>` : ""}
+      ${row?.file_url && !hilang ? `<a class="btn btn-outline" style="padding:4px 8px;font-size:11px;" href="${row.file_url}" target="_blank" rel="noopener" download title="${t("unduh")}">⬇️ ${t("unduh")}</a>` : ""}
     </div>
   </div>`;
 }
@@ -10315,7 +10369,7 @@ async function gambarTabelNilai() {
   // di HP tiap siswa jadi kartu ringkas. Kelas & atribut input SAMA seperti sebelumnya, jadi
   // simpanSemuaNilai() tidak berubah sama sekali.
   const mapelAktif = (LOOKUP.mapel || []).find((m) => m.id === qs("nl-mapel").value);
-  NILAI_STATE.kkm = Number(mapelAktif?.kkm) || null;
+  NILAI_STATE.kkm = mapelAktif ? kkmMapel(mapelAktif, qs("nl-kelas").value) : null;
   NILAI_STATE.dirty = false;
   const bSet = (() => { const b = STATE.pengaturan?.bobot_nilai; return b ? (adaUTS ? b.dengan_uts : b.tanpa_uts) : null; })();
   const bobotChip = bSet ? (adaUTS
@@ -10950,7 +11004,7 @@ async function renderRaporDiniyyah() {
       return `<tr>
         <td>${i + 1}</td><td>${escapeHtml(d.mapel.nama_mapel)}</td>
         <td>${nilaiAkhir !== null ? angkaKeHurufArab(nilaiAkhir) : "-"}</td><td>${nilaiAkhir !== null ? nilaiAkhir : "-"}</td>
-        <td>${d.mapel.kkm ?? 70}</td>
+        <td>${kkmMapel(d.mapel, d.nilaiRow?.kelas_id)}</td>
       </tr>`;
     }).join("");
 
@@ -11048,7 +11102,7 @@ async function renderRaporWaliKelas() {
             <thead><tr><th>Mapel</th><th data-i18n="kkmLabel">KKM</th><th data-i18n="nilaiLabel">Nilai</th><th data-i18n="cpLabel">CP</th></tr></thead>
             <tbody>${nilaiBerGuru.map((n) => {
               const na = hitungNilaiAkhir(n);
-              return `<tr><td>${escapeHtml(n.mapel?.nama_mapel)}</td><td>${n.mapel?.kkm ?? 70}</td><td>${na ? na.nilaiAkhir : "-"}</td><td>${n.capaian_pembelajaran || "-"}</td></tr>`;
+              return `<tr><td>${escapeHtml(n.mapel?.nama_mapel)}</td><td>${kkmMapel(n.mapel_id ? { ...(n.mapel || {}), id: n.mapel_id } : n.mapel, n.kelas_id)}</td><td>${na ? na.nilaiAkhir : "-"}</td><td>${n.capaian_pembelajaran || "-"}</td></tr>`;
             }).join("") || `<tr><td colspan="4" style="text-align:center;color:var(--text-secondary);">Belum ada nilai.</td></tr>`}</tbody>
           </table>
 
@@ -11244,7 +11298,7 @@ async function eksporRaporKelas() {
     const catatanSiswa = c.catatanSemua.find((cc) => cc.siswa_id === s.id) || {};
     const tableRows = nilaiSiswa.map((n) => {
       const na = hitungNilaiAkhir(n);
-      return `<tr><td>${escapeHtml(n.mapel?.nama_mapel)}</td><td>${n.mapel?.kkm ?? 70}</td><td>${na ? na.nilaiAkhir : "-"}</td><td>${n.capaian_pembelajaran || "-"}</td></tr>`;
+      return `<tr><td>${escapeHtml(n.mapel?.nama_mapel)}</td><td>${kkmMapel(n.mapel_id ? { ...(n.mapel || {}), id: n.mapel_id } : n.mapel, n.kelas_id)}</td><td>${na ? na.nilaiAkhir : "-"}</td><td>${n.capaian_pembelajaran || "-"}</td></tr>`;
     }).join("") || `<tr><td colspan="4">Belum ada nilai.</td></tr>`;
     const ekskulRows = ekskulSiswa.map((e) => `<tr><td>${e.nama_ekstrakurikuler}</td><td>${escapeHtml(e.keterangan || "-")}</td></tr>`).join("") || `<tr><td colspan="2">-</td></tr>`;
     return `<h3>${escapeHtml(s.nama)}</h3>
@@ -16184,19 +16238,20 @@ async function handleImportSiswa(evt) {
 <script src="src/presentasi-absen.js?v=4"></script>
 <script src="src/modul-peta.js?v=1"></script>
 <script src="src/jurnal-ekspor.js?v=3"></script>
-<script src="src/rapor-wk.js?v=1"></script>
-<script src="src/rapor-cetak.js?v=1"></script>
+<script src="src/rapor-wk.js?v=2"></script>
+<script src="src/rapor-cetak.js?v=2"></script>
 <script src="src/rekap-hadir-cetak.js?v=1"></script>
 <script src="src/kelengkapan-nilai.js?v=2"></script>
 <script src="src/pengumuman.js?v=4"></script>
 <script src="src/kesimpulan.js?v=2"></script>
 <script src="src/profil.js?v=5"></script>
 <script src="src/kaldik-desain.js?v=5"></script>
-<script src="src/ujian.js?v=5"></script>
-<script src="src/ujian-editor.js?v=3"></script>
+<script src="src/ujian.js?v=6"></script>
+<script src="src/ujian-editor.js?v=4"></script>
 <script src="src/jurnal-otomatis.js?v=6"></script>
-<script src="src/hp.js?v=4"></script>
+<script src="src/hp.js?v=5"></script>
 <script src="src/leger-nilai.js?v=1"></script>
-<script src="src/jadwal-ujian.js?v=1"></script>
+<script src="src/jadwal-ujian.js?v=2"></script>
+<script src="src/ujian-arsip.js?v=1"></script>
 </body>
 </html>
