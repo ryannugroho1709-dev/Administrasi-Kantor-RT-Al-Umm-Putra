@@ -312,5 +312,27 @@
       }, 2000);
     } catch (e) { console.warn("Fitur tampilan HP gagal dipasang:", e); }
   }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mulai); else mulai();
+  // ── Tautan langsung dari WA: ?buka=perizinan → setelah admin/kepsek masuk, langsung ke halaman
+  //    Perizinan (antrian izin/sakit, tukar jam, ajukan hadir) yang punya tombol ACC / Tolak. ──
+  function pasangTautanLangsung() {
+    let tujuan = "";
+    try { tujuan = new URLSearchParams(location.search).get("buka") || sessionStorage.getItem("bukaTujuan") || ""; } catch (e) {}
+    if (!tujuan) return;
+    try { sessionStorage.setItem("bukaTujuan", tujuan); history.replaceState(null, "", location.pathname + location.hash); } catch (e) {}
+    const PETA = { perizinan: ["kepsek", "page-kepsek", "menuKepsek"], jadwalujian: ["jadwal-ujian", "page-jadwal-ujian", "menuJadwalUjian"] };
+    const t = PETA[tujuan]; if (!t) return;
+    let n = 0;
+    const iv = setInterval(() => {
+      n++;
+      if (n > 90) { clearInterval(iv); return; } // ± 3 menit menunggu login
+      if (typeof STATE === "undefined" || !STATE.guruId || typeof showPage !== "function") return;
+      const boleh = tujuan === "perizinan" ? ((typeof isAdmin === "function" && isAdmin()) || (typeof isKepsekOrTU === "function" && isKepsekOrTU())) : true;
+      if (!boleh) { if (n > 20) { clearInterval(iv); try { sessionStorage.removeItem("bukaTujuan"); } catch (e) {} } return; }
+      clearInterval(iv);
+      try { sessionStorage.removeItem("bukaTujuan"); } catch (e) {}
+      showPage(t[0], t[1], t[2]);
+      if (STATE.currentPage === t[0]) toast(tujuan === "perizinan" ? "📥 Pengajuan menunggu ACC ada di halaman ini" : "📅 Jadwal ujian", "ok");
+    }, 2000);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => { mulai(); pasangTautanLangsung(); }); else { mulai(); pasangTautanLangsung(); }
 })();

@@ -33,7 +33,7 @@ function _logoAwal(){try{return localStorage.getItem("logoSekolahUrl")||"assets/
 </script>
 <script>try{var _pw=localStorage.getItem("paletWarna")||"biru";if(_pw!=="klasik"){document.documentElement.classList.add("tema-elegan");document.documentElement.setAttribute("data-palet",_pw);}var _tc=document.querySelector('meta[name="theme-color"]');if(_tc)_tc.setAttribute("content",{klasik:"#1F8A5F",hijau:"#0b4a3c",biru:"#0b2a6b",maroon:"#5c1222",ungu:"#3b2566"}[_pw]||"#0b2a6b");}catch(e){}</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2"></script>
-<script src="src/config.js?v=4"></script>
+<script src="src/config.js?v=5"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <!-- ExcelJS — khusus Ekspor Excel Data BOP yang perlu tampilan (warna header, border, logo): xlsx.js (di atas)
      adalah versi komunitas SheetJS yang TIDAK bisa menulis styling ke .xlsx, jadi dipakai cuma untuk baca
@@ -46,7 +46,7 @@ function _logoAwal(){try{return localStorage.getItem("logoSekolahUrl")||"assets/
 <!-- pdf.js — hanya dipakai fitur "Ambil sampul dari halaman pertama PDF" di Modul Ajar (render page 1 ke canvas) -->
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script>if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";</script>
-<script src="src/api.js?v=16"></script>
+<script src="src/api.js?v=17"></script>
 <script>
 // ── Override apiPerbaikanAbsenAdmin: pakai RPC SECURITY DEFINER (bypass RLS) ──
 // Blok ini di index.html mengoverride versi dari api.js agar pasti termuat,
@@ -622,6 +622,66 @@ tr.nl-lengkap .nl-col-nama::after{content:" ✓";color:var(--ok);font-size:11px;
 .peran-tile.nol{opacity:.62;}
 .peran-total{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--bad,#dc2626);color:#fff;font-size:11px;font-weight:800;margin-left:4px;}
 .badge-bersyarat{white-space:nowrap;}
+.badge-alpha-klik{cursor:pointer;border:1px dashed currentColor;font:inherit;font-size:11px;font-weight:700;white-space:nowrap;}
+.badge-alpha-klik:hover{filter:brightness(.95);box-shadow:0 0 0 3px rgba(220,38,38,.15);}
+/* Leger nilai Excel */
+.lg-kartu{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px;border-left:4px solid var(--accent);}
+.lg-ikon{font-size:26px;line-height:1;}
+.lg-teks{flex:1;min-width:220px;display:flex;flex-direction:column;gap:2px;}
+.lg-teks small{font-size:11.5px;color:var(--text-secondary);}
+.lg-aksi{display:flex;gap:8px;flex-wrap:wrap;}
+.lg-ringkas{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.lg-ringkas div{border:1px solid var(--border-soft);border-radius:12px;padding:8px;text-align:center;}
+.lg-ringkas b{display:block;font-size:20px;}
+.lg-ringkas small{font-size:10.5px;color:var(--text-secondary);}
+.lg-baris{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px dashed var(--border-soft);font-size:12px;}
+/* Jadwal ujian & pengawas */
+.ju-hero{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px;border-left:4px solid var(--accent);}
+.ju-hero>div{flex:1;min-width:240px;display:flex;flex-direction:column;gap:3px;}.ju-hero small{font-size:11.5px;color:var(--text-secondary);line-height:1.5;}
+.ju-sub{font-size:11.5px;font-weight:800;letter-spacing:.3px;color:var(--text-secondary);text-transform:uppercase;margin:4px 0 8px;}
+.ju-usul{margin-bottom:12px;}.ju-usul-baris{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;border-bottom:1px dashed var(--border-soft);}
+.ju-usul-baris span{display:flex;flex-direction:column;}.ju-usul-baris small{font-size:11px;color:var(--text-secondary);}
+.ju-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;}
+.ju-kartu{display:flex;flex-direction:column;gap:6px;}.ju-kartu-h{display:flex;justify-content:space-between;gap:8px;align-items:center;}
+.ju-jenis{font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:99px;background:rgba(37,99,235,.12);color:#1d4ed8;}
+.ju-j-uas{background:rgba(220,38,38,.1);color:#b91c1c;}.ju-j-uts{background:rgba(217,119,6,.12);color:#b45309;}.ju-j-tahfizh{background:rgba(22,163,74,.12);color:#15803d;}
+.ju-tgl{font-size:11px;color:var(--text-secondary);font-variant-numeric:tabular-nums;}.ju-judul{font-size:15px;font-weight:800;line-height:1.3;}
+.ju-meta{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:11.5px;color:var(--text-secondary);}
+.ju-bar{height:6px;border-radius:99px;background:var(--border-soft);overflow:hidden;}.ju-bar i{display:block;height:100%;background:var(--accent);}
+.ju-ket{font-size:10.5px;color:var(--text-secondary);}.ju-aksi{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;}
+.ju-editor-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;}.ju-editor-h>div{display:flex;flex-direction:column;}
+.ju-judul-in{font-size:15px;font-weight:800;}
+.ju-atur summary{cursor:pointer;font-weight:700;font-size:13px;}.ju-atur-isi{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-top:10px;}
+.ju-cek{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;}.ju-cek label{display:flex;align-items:center;gap:5px;cursor:pointer;}
+.ju-dot{width:10px;height:10px;border-radius:3px;display:inline-block;}
+.ju-sesi-in{display:flex;align-items:center;gap:5px;margin-bottom:5px;font-size:12px;}.ju-sesi-in .input{width:96px;padding:4px 6px;}
+.ju-tab{display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px;margin:10px 0 0;}
+.ju-tab button{flex:none;border:1px solid var(--border-soft);background:var(--card,#fff);border-radius:12px;padding:7px 12px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;color:inherit;}
+.ju-tab button small{font-size:10px;color:var(--text-secondary);font-weight:600;}.ju-tab button.on{background:var(--accent);color:#fff;border-color:var(--accent);}.ju-tab button.on small{color:rgba(255,255,255,.85);}
+.ju-papan-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+.ju-tabel-wadah{overflow-x:auto;}.ju-tabel{border-collapse:separate;border-spacing:6px;min-width:100%;}
+.ju-tabel thead th{font-size:12px;padding:8px;border-radius:10px;background:color-mix(in srgb,var(--kw,#475569) 14%,transparent);color:var(--kw,inherit);white-space:nowrap;text-align:left;}
+.ju-th-sesi{width:92px;min-width:92px;text-align:left;font-size:12px;vertical-align:top;padding:8px;background:var(--bg-2,#f4f6f5);border-radius:10px;}
+.ju-th-sesi small{display:block;font-weight:600;color:var(--text-secondary);font-variant-numeric:tabular-nums;}
+.ju-kls{display:inline-grid;place-items:center;min-width:22px;height:22px;border-radius:7px;background:var(--kw,#475569);color:#fff;font-weight:800;font-size:11px;margin-right:6px;}
+.ju-sel{min-width:170px;vertical-align:top;padding:8px;border-radius:12px;border:1px solid var(--border-soft);border-top:3px solid var(--kw,#475569);background:var(--card,#fff);font-size:12px;}
+.ju-sel.kosong{background:transparent;border-style:dashed;}.ju-sel>b{display:block;font-size:12.5px;}
+.ju-mapel{font-size:12px;padding:5px 6px;width:100%;}.ju-teks{font-weight:700;margin-top:4px;}
+.ju-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;}
+.ju-chip{display:inline-flex;align-items:center;gap:3px;background:rgba(15,118,110,.1);color:#0f766e;border-radius:99px;padding:2px 4px 2px 9px;font-size:11px;font-weight:700;}
+.ju-chip button{border:0;background:transparent;color:inherit;cursor:pointer;font-size:13px;line-height:1;padding:0 4px;}
+.ju-chip.bentrok{background:rgba(220,38,38,.12);color:#b91c1c;}
+.ju-tambah{border:1px dashed var(--border-soft);background:transparent;border-radius:99px;padding:2px 9px;font:inherit;font-size:11px;font-weight:700;cursor:pointer;color:var(--accent);}
+.ju-beban{display:flex;flex-wrap:wrap;gap:6px;}.ju-beban span{border:1px solid var(--border-soft);border-radius:99px;padding:3px 10px;font-size:11.5px;}
+.ju-pg-daftar{max-height:46vh;overflow:auto;margin-top:8px;}
+.ju-pg{display:flex;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px dashed var(--border-soft);cursor:pointer;font-size:12.5px;}
+.ju-pg.bentrok{background:rgba(220,38,38,.05);}.ju-pg-nama{flex:1;}.ju-pg-info{font-size:11px;color:var(--text-secondary);white-space:nowrap;}
+.ju-tag{font-style:normal;font-size:9.5px;font-weight:800;background:rgba(15,118,110,.12);color:#0f766e;border-radius:99px;padding:1px 6px;}.ju-tag.abu{background:var(--border-soft);color:var(--text-secondary);}
+.ju-tugas{display:flex;flex-direction:column;gap:8px;}
+.ju-tugas-baris{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;border:1px solid var(--border-soft);border-left:4px solid var(--kw,#475569);}
+.ju-tugas-baris>div{flex:1;min-width:0;display:flex;flex-direction:column;}.ju-tugas-baris small{font-size:11px;color:var(--text-secondary);}
+.ju-dasbor{margin-bottom:12px;border-left:4px solid var(--accent);}.ju-link{display:inline-block;margin-top:8px;font-size:12px;font-weight:700;}
+@media (max-width:640px){.ju-sel{min-width:150px;}.ju-tugas-baris{flex-wrap:wrap;}}
 .peran-ikon{grid-row:1/3;width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:17px;background:color-mix(in srgb,var(--tile) 16%,transparent);}
 .peran-nilai{font-size:20px;font-weight:800;color:var(--tile);line-height:1.1;font-variant-numeric:tabular-nums;}
 .peran-label{font-size:11px;color:var(--text-secondary);font-weight:600;line-height:1.25;}
@@ -1628,6 +1688,9 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
         <div id="kop-soal-list"></div>
       </section>
 
+      <!-- ══ JADWAL UJIAN & PENGAWAS (src/jadwal-ujian.js) ══ -->
+      <section class="page" id="page-jadwal-ujian"><div id="ju-wadah"></div></section>
+
       <!-- ══ INPUT NILAI RAPOR ══ -->
       <section class="page" id="page-input-nilai">
         <div class="card" style="margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
@@ -1638,6 +1701,15 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
             <select id="nl-semester" class="input" onchange="renderInputNilai()"><option>Ganjil</option><option selected>Genap</option></select>
           </div>
           <div><label class="form-label" data-i18n="tahunAjaran">Tahun Ajaran</label><input id="nl-tahun" class="input" value="2025/2026" onchange="renderInputNilai()"/></div>
+        </div>
+        <!-- Leger Excel (src/leger-nilai.js) -->
+        <div class="card lg-kartu">
+          <div class="lg-ikon">📊</div>
+          <div class="lg-teks"><b>Leger Nilai Excel</b><small>Belum terbiasa mengisi di aplikasi? Unduh leger mapel ini (satu lembar per kelas yang Antum ajar), isi di Excel/WPS/Google Sheets, lalu unggah kembali — nilai otomatis masuk.</small></div>
+          <div class="lg-aksi">
+            <button class="btn btn-outline" onclick="unduhLegerNilai()">⬇️ Unduh Leger</button>
+            <label class="btn btn-accent" style="cursor:pointer;">⬆️ Unggah Leger<input type="file" accept=".xlsx,.xls" hidden onchange="unggahLegerNilai(this)"/></label>
+          </div>
         </div>
         <div id="input-nilai-table" style="overflow-x:auto;"></div>
       </section>
@@ -2561,6 +2633,7 @@ const MENU = [
   ]},
   { group: "Nilai & Rapor", items: [
     { key: "ujian", i18n: "menuUjian", icon: "📝", page: "page-ujian", fase1: true },
+    { key: "jadwal-ujian", i18n: "menuJadwalUjian", icon: "🗓️", page: "page-jadwal-ujian", fase1: true },
     { key: "kop-soal", i18n: "menuKopSoal", icon: "📋", page: "page-kop-soal", fase1: true },
     { key: "input-nilai", i18n: "menuInputNilai", icon: "✍️", page: "page-input-nilai", fase1: true },
     { key: "rapor-umum", i18n: "menuRaporUmum", icon: "📄", page: "page-rapor-umum", fase1: true },
@@ -2625,6 +2698,7 @@ const IKON_GARIS = {
   silabus: '<path d="M4 4v16M8 4v16"/><path d="m12 5 4-1 4 15-4 1z"/>',
   "modul-ajar": '<path d="M2 5h6a4 4 0 0 1 4 4v11a3 3 0 0 0-3-3H2z"/><path d="M22 5h-6a4 4 0 0 0-4 4v11a3 3 0 0 1 3-3h7z"/>',
   kaldik: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/>',
+  "jadwal-ujian": '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/><path d="m9 15 2 2 4-4"/>',
   "kop-soal": '<rect x="6" y="4" width="12" height="17" rx="2"/><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M9 11h6M9 15h4"/>',
   "input-nilai": '<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>',
   "rapor-umum": '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M8 13h8M8 17h6"/>',
@@ -3180,6 +3254,7 @@ function refreshCurrentPage() {
     "modul-ajar": renderModulAjarInit,
     "kaldik": renderKaldikInit,
     "kop-soal": renderKopSoalInit,
+    "jadwal-ujian": () => (typeof renderJadwalUjianInit === "function" ? renderJadwalUjianInit() : null),
     "ujian": () => (typeof renderUjianInit === "function" ? renderUjianInit() : null),
     "input-nilai": renderInputNilaiInit,
     "rapor-umum": renderRaporUmumInit,
@@ -4184,9 +4259,10 @@ function _sesiSudahLewat(tanggal, jamSelesai) {
 function _pesanWaKehadiran({ nama, tanggal, mapel, kelas, jamMulai, jamSelesai, jamMasuk, jenis }) {
   const tgl = tanggal ? `${hariIniIndo(new Date(tanggal + "T12:00:00"))}, ${new Date(tanggal + "T12:00:00").toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}` : "-";
   const jam = jamMulai ? `${String(jamMulai).slice(0, 5)}–${String(jamSelesai || "").slice(0, 5)}` : "-";
-  const rincian = `📅 ${tgl}\n📚 ${mapel || "-"} — ${kelas ? formatKelasLabel(kelas) : "-"}\n🕒 ${jam}`;
+  // Ikon lama (BMP) supaya tidak tampil "�" di WhatsApp komputer
+  const rincian = `▪️ ${tgl}\n✏️ ${mapel || "-"} — ${kelas ? formatKelasLabel(kelas) : "-"}\n⏰ ${jam}`;
   const hariIni = tanggal === tanggalISO();
-  const caraAjukan = "buka aplikasi → menu *Riwayat Absen* → tekan tombol *📝 Ajukan Hadir* pada sesi tersebut, isi jurnal & alasannya, lalu tunggu persetujuan admin/kepala sekolah (dicatat sebagai *Hadir Bersyarat*)";
+  const caraAjukan = "buka aplikasi → menu *Riwayat Absen* → tekan tombol *✍️ Ajukan Hadir* pada sesi tersebut, isi jurnal & alasannya, lalu tunggu persetujuan admin/kepala sekolah (dicatat sebagai *Hadir Bersyarat*)";
   if (jenis === "lupa") {
     return `Assalamu'alaikum warahmatullah,\n${nama}\n\nAntum sudah *absen masuk*${jamMasuk ? ` pukul ${formatJam(jamMasuk)}` : ""}, tetapi *belum absen pulang / belum mengisi jurnal* untuk jadwal berikut:\n${rincian}\n\nMohon dilengkapi ya:\n${hariIni ? "• Buka menu *Jurnal Guru* lalu isi jurnalnya, kemudian absen pulang." : `• Silakan ${caraAjukan}.`}\n• Kalau ada kendala, balas pesan ini — admin akan bantu.\n\nJazakallahu khairan.`;
   }
@@ -4257,7 +4333,7 @@ function _tlMintaAjukan(kunci) {
   const g = (LOOKUP.guruAll || []).find((x) => x.id === d.guruId);
   const wa = normalisasiNomorWa(g?.no_wa);
   if (!wa.valid) { toast("No. WA guru belum valid — isi di Data Guru", "err"); return; }
-  const pesan = `Baik, jazakallahu khairan konfirmasinya.\n\nSilakan ajukan hadir untuk sesi ${_tglPendek(d.tanggal)} — ${d.mapel || ""} ${d.kelas ? formatKelasLabel(d.kelas) : ""}:\n1. Buka aplikasi → menu *Riwayat Absen*\n2. Pada sesi tersebut tekan *📝 Ajukan Hadir*\n3. Isi absensi santri, materi, metode & alasannya\n4. Tekan *Kirim*\n\nSetelah admin/kepala sekolah menyetujui, sesi antum tercatat *Hadir Bersyarat*.`;
+  const pesan = `Baik, jazakallahu khairan konfirmasinya.\n\nSilakan ajukan hadir untuk sesi ${_tglPendek(d.tanggal)} — ${d.mapel || ""} ${d.kelas ? formatKelasLabel(d.kelas) : ""}:\n1. Buka aplikasi → menu *Riwayat Absen*\n2. Pada sesi tersebut tekan *✍️ Ajukan Hadir*\n3. Isi absensi santri, materi, metode & alasannya\n4. Tekan *Kirim*\n\nSetelah admin/kepala sekolah menyetujui, sesi antum tercatat *Hadir Bersyarat*.`;
   _simpanKonfirmasiWa(kunci, { t: Date.now(), hasil: "Diminta ajukan hadir" });
   closeModal();
   const a = document.createElement("a");
@@ -5259,7 +5335,9 @@ async function tawarkanKirimWaAdmin(judul, isiPesan) {
     toast("Pengajuan terkirim. Admin akan melihatnya di menu Perizinan (No. WA admin belum valid, jadi WA dilewati).", "ok");
     return;
   }
-  const pesanUntuk = (a) => `Assalamu'alaikum Ustadz ${a.nama},\n\n${isiPesan}\n\nMohon persetujuannya lewat aplikasi (menu Perizinan). Jazakallahu khairan.`;
+  // Tautan langsung: admin cukup menekan tautan → aplikasi terbuka di halaman Perizinan (tombol ACC / Tolak)
+  const tautanAcc = `${location.origin}${location.pathname}?buka=perizinan`;
+  const pesanUntuk = (a) => `Assalamu'alaikum Ustadz ${a.nama},\n\n${isiPesan}\n\n✅ ACC / ✖️ Tolak langsung di aplikasi (ketuk tautan ini):\n${tautanAcc}\n\nJazakallahu khairan.`;
   openModal(`
     <h3>✅ ${escapeHtml(judul)}</h3>
     <div style="font-size:12px;color:var(--text-secondary);margin:-8px 0 12px;">Pengajuan sudah tercatat di aplikasi. Kabari admin lewat WhatsApp supaya cepat diproses:</div>
@@ -7969,6 +8047,13 @@ function _dalamBatasSemester(iso, semesterRanges) {
   return semesterRanges.some((r) => iso >= r.mulai && iso <= r.selesai);
 }
 
+// Item kaldik yang meliburkan KBM kelas: libur + hari UJIAN (UAS/UTS/ujian tahfizh) — saat ujian, guru tidak
+// wajib absen mengajar (tidak ada Alpha) dan hari itu tidak dihitung hari aktif KBM. Tugasnya diganti jadwal
+// mengawas (menu Jadwal Ujian). Rapat, rihlah, lomba, dsb. TIDAK meliburkan KBM. (lihat src/jadwal-ujian.js)
+function _kaldikKbmLibur(items) {
+  const daftar = typeof _kaldikTanpaKbm === "function" ? _kaldikTanpaKbm(items) : (items || []).filter((k) => k.jenis === "libur");
+  return daftar.map((k) => (k.tanggal_selesai ? k : { ...k, tanggal_selesai: k.tanggal_mulai }));
+}
 // Hitung Hari Aktif dalam rentang (dikurangi Minggu jika diblokir & hari libur Kaldik), lalu bandingkan
 // JP Seharusnya (dari jadwal_pelajaran x hari aktif yang cocok) dengan JP Hadir (dari riwayat yang sudah dimuat).
 async function hitungRingkasanKehadiran(dari, sampai, guruIdFilter, rowsRiwayat) {
@@ -7976,7 +8061,7 @@ async function hitungRingkasanKehadiran(dari, sampai, guruIdFilter, rowsRiwayat)
   const p = STATE.pengaturan || {};
   const blokirMinggu = p.blokir_hari_minggu !== false;
   const liburSet = new Set();
-  kaldikSemua.filter((k) => k.jenis === "libur").forEach((k) => {
+  _kaldikKbmLibur(kaldikSemua).forEach((k) => {
     let d = new Date(k.tanggal_mulai + "T00:00:00");
     const akhir = new Date(k.tanggal_selesai + "T00:00:00");
     while (d <= akhir) { liburSet.add(tanggalISO(d)); d.setDate(d.getDate() + 1); }
@@ -8120,7 +8205,7 @@ async function _gabungRiwayatDenganJadwal(rowsAsli, dari, sampai, guruIdFilter) 
   const p = STATE.pengaturan || {};
   const blokirMinggu = p.blokir_hari_minggu !== false;
   const liburSet = new Set();
-  kaldikSemua.filter((k) => k.jenis === "libur").forEach((k) => {
+  _kaldikKbmLibur(kaldikSemua).forEach((k) => {
     let d = new Date(k.tanggal_mulai + "T00:00:00");
     const akhir = new Date(k.tanggal_selesai + "T00:00:00");
     while (d <= akhir) { liburSet.add(tanggalISO(d)); d.setDate(d.getDate() + 1); }
@@ -8217,7 +8302,7 @@ async function renderRiwayatAbsen(pakaiCache) {
     // Filter: sembunyikan sesi alpha yang jatuh pada hari libur kaldik atau di luar batas semester
     try {
       const kaldikSemua = await apiGetKaldikSemua();
-      const liburItems = kaldikSemua.filter(k => k.jenis === "libur");
+      const liburItems = _kaldikKbmLibur(kaldikSemua);
       const semesterRanges = _batasSemesterKaldik(kaldikSemua);
       if (liburItems.length || semesterRanges.length) {
         rows = rows.filter(r => {
@@ -8277,8 +8362,13 @@ async function renderRiwayatAbsen(pakaiCache) {
       // Admin bisa klik badge "Hadir Bersyarat" untuk batalkan (kembali ke Alpha) — pakai badge
       // biasa (tidak bisa diklik) untuk status lain, atau untuk baris virtual (belum ada baris asli
       // di DB, jadi tidak ada sesiId nyata untuk dibatalkan).
+      // Guru sendiri: badge Alpha bisa diketuk → pilih "lupa absen" (Ajukan Hadir) / izin / sakit
+      // (mis. setelah dikonfirmasi admin lewat WA bahwa memang tidak mengajar karena berhalangan).
+      const alphaBisaKlik = bisaLapor && !sudahLapor && !r.jam_masuk && (r.status_kehadiran === "alpha" || !r.status_kehadiran);
       const badgeHtml = (isAdmin() && r.hadir_bersyarat && !r._virtual)
         ? `<span class="badge badge-yellow badge-bersyarat" style="cursor:pointer;" title="Klik untuk batalkan Hadir Bersyarat" onclick="revertSesiKeAlpha('${r.id}')">▲ Hadir Bersyarat</span>`
+        : alphaBisaKlik
+        ? `<button type="button" class="badge badge-red badge-alpha-klik" title="Ketuk untuk menjelaskan: lupa absen, izin, atau sakit" onclick="bukaPilihanAlpha('${r.id}')">✕ ${t("statusAlpha")} ▾</button>`
         : badgeSesi(r);
       return `${badgeHtml}${isAdmin() && (r.status_kehadiran === "alpha" || (!r.status_kehadiran && !r.jam_masuk && r.tanggal && r.tanggal < tanggalISO())) && !r.hadir_bersyarat ? ` <button class="btn btn-outline" style="padding:2px 7px;font-size:13px;line-height:1;" title="${t("perbaikiBtn")}" onclick="${r._virtual ? `perbaikiSesiVirtual('${r.guru_id}','${r.jadwal_id}','${r.kelas_id}','${r.mapel_id}','${r.tanggal}')` : `openPerbaikanAbsenAdmin('${r.id}','${r.guru_id}','${r.tanggal}')`}">🛠️</button>` : ""}${isAdmin() && !r._virtual && r.jam_masuk && r.jurnal_id && !r.jam_pulang ? ` <button class="btn btn-outline" style="padding:2px 7px;font-size:13px;line-height:1;" title="${t("bantuAbsenPulangBtn")}" onclick="bantuAbsenPulangAdmin('${r.id}')">🕒</button>` : ""}${btnLapor}${_tombolWaRiwayat(r)}`;
     };
@@ -8389,6 +8479,44 @@ async function revertSesiKeAlpha(sesiId) {
     toast("Sesi dikembalikan ke Alpha.", "ok");
     await renderRiwayatAbsen();
   } catch (e) { toast("Gagal: " + e.message, "err"); }
+}
+// ── Guru menekan badge "Alpha" pada sesinya sendiri ──
+function bukaPilihanAlpha(id) {
+  const r = (RIWAYAT_ABSEN_CACHE || []).find((x) => x.id === id);
+  if (!r) { toast("Data sesi tidak ditemukan, muat ulang halaman", "err"); return; }
+  const judul = `${r.mapel?.nama_mapel || ""} ${r.kelas?.nama_kelas ? formatKelasLabel(r.kelas.nama_kelas) : ""}`.trim();
+  const jam = r.jadwal_pelajaran?.jam_mulai ? `${String(r.jadwal_pelajaran.jam_mulai).slice(0, 5)}–${String(r.jadwal_pelajaran.jam_selesai || "").slice(0, 5)}` : "";
+  const ajukan = `closeModal();ajukanHadirGuru('${r._virtual ? "" : r.id}','${r.guru_id}','${r.jadwal_id}','${r.kelas_id}','${r.mapel_id}','${r.tanggal}','${escapeHtml(judul.replace(/'/g, ""))}')`;
+  openModal(`
+    <h3>✕ Sesi tercatat Alpha</h3>
+    <div style="font-size:12px;color:var(--text-secondary);margin:-8px 0 12px;">${_tglPendek(r.tanggal)} · ${escapeHtml(judul || "-")}${jam ? " · " + jam : ""}</div>
+    <div class="tl-daftar">
+      <button type="button" class="tl-opsi ok" onclick="${ajukan}"><span class="tl-ikon">🙋</span><span><b>Saya mengajar, tapi lupa absen</b><small>Isi jurnal & alasannya → admin ACC → tercatat Hadir Bersyarat.</small></span></button>
+      <button type="button" class="tl-opsi" onclick="_ajukanIzinSusulan('${r.id}','izin')"><span class="tl-ikon">✉️</span><span><b>Saya tidak mengajar karena IZIN</b><small>Tulis alasannya. Admin menyetujui → tercatat Izin (bukan Alpha).</small></span></button>
+      <button type="button" class="tl-opsi" onclick="_ajukanIzinSusulan('${r.id}','sakit')"><span class="tl-ikon">✚</span><span><b>Saya tidak mengajar karena SAKIT</b><small>Tulis keterangannya. Admin menyetujui → tercatat Sakit.</small></span></button>
+      <button type="button" class="tl-opsi bad" onclick="closeModal()"><span class="tl-ikon">✕</span><span><b>Memang alpha</b><small>Biarkan tercatat Alpha.</small></span></button>
+    </div>`);
+}
+async function _ajukanIzinSusulan(id, jenis) {
+  const r = (RIWAYAT_ABSEN_CACHE || []).find((x) => x.id === id);
+  if (!r || r.guru_id !== STATE.guruId) { toast("Hanya untuk sesi milik sendiri", "err"); return; }
+  closeModal();
+  const label = jenis === "sakit" ? "Sakit" : "Izin";
+  const alasan = await promptTema(`Alasan ${label.toLowerCase()} (mis. ${jenis === "sakit" ? "demam, istirahat di rumah" : "keperluan keluarga"})`, "", { judul: `Ajukan ${label} Susulan`, ikon: jenis === "sakit" ? "✚" : "✉️", teksOk: "Kirim" });
+  if (!alasan || !alasan.trim()) return;
+  if (_SEDANG_KIRIM_PENGAJUAN) return;
+  _SEDANG_KIRIM_PENGAJUAN = true;
+  setGlobalLoading(true, "Mengirim pengajuan...");
+  try {
+    const sesiId = r._virtual ? (await apiBuatSesiAlphaDariVirtual({ guruId: r.guru_id, jadwalId: r.jadwal_id, kelasId: r.kelas_id, mapelId: r.mapel_id, tanggal: r.tanggal })).id : r.id;
+    await apiAjukanIzinSakit(r.guru_id, r.tanggal, jenis, alasan.trim(), [sesiId], null);
+    await renderRiwayatAbsen();
+    refreshKepsekBadge();
+    const jam = r.jadwal_pelajaran?.jam_mulai ? `${String(r.jadwal_pelajaran.jam_mulai).slice(0, 5)}–${String(r.jadwal_pelajaran.jam_selesai || "").slice(0, 5)}` : "-";
+    tawarkanKirimWaAdmin(`Pengajuan ${label} Susulan Terkirim`,
+      `Saya *${_namaSingkatTopbar(STATE.guruNama)}* mengajukan *${label.toUpperCase()} SUSULAN* untuk sesi yang tercatat Alpha:\n▪️ ${_tglPendek(r.tanggal)}\n✏️ ${r.mapel?.nama_mapel || "-"} — ${r.kelas?.nama_kelas ? formatKelasLabel(r.kelas.nama_kelas) : "-"}\n⏰ ${jam}\n\nAlasan: ${alasan.trim()}`);
+  } catch (e) { console.error(e); toast("Gagal mengirim pengajuan: " + e.message, "err"); }
+  finally { _SEDANG_KIRIM_PENGAJUAN = false; setGlobalLoading(false); }
 }
 async function perbaikiSesiVirtual(guruId, jadwalId, kelasId, mapelId, tanggal) {
   if (!bolehPerbaikiSesi(guruId, (tanggal || "").slice(0, 10))) { toast(t("hanyaAdminHapus"), "err"); return; }
@@ -13373,7 +13501,7 @@ async function renderKepsekLupaJurnal() {
     target.innerHTML = `<div class="lupa-list">${daftar.map(({ g, sesi }) => {
       const wa = normalisasiNomorWa(g.no_wa);
       const rincian = sesi.sort((a, b) => a.tanggal.localeCompare(b.tanggal)).map((s) => `• ${_tglPendek(s.tanggal)} — ${s.mapel?.nama_mapel || "-"} ${s.kelas?.nama_kelas || ""}`).join("\n");
-      const pesan = `Assalamu'alaikum ${_namaSingkatTopbar(g.nama)},\n\nSekadar mengingatkan, ada ${sesi.length} sesi yang sudah absen masuk tetapi jurnal & absen pulangnya belum tercatat, sehingga tercatat Alpha:\n${rincian}\n\nAntum bisa melengkapinya sendiri: buka aplikasi → *Riwayat Absen* → tekan *📝 Ajukan Hadir* pada sesi tersebut, isi jurnal & alasannya. Setelah disetujui, tercatat *Hadir Bersyarat* (batas ${AJUKAN_HADIR_MAKS_HARI} hari).\n\nMohon ke depannya isi jurnal sebelum absen pulang ya. Kalau ada kendala di aplikasi, kabari admin. Jazakallahu khairan.`;
+      const pesan = `Assalamu'alaikum ${_namaSingkatTopbar(g.nama)},\n\nSekadar mengingatkan, ada ${sesi.length} sesi yang sudah absen masuk tetapi jurnal & absen pulangnya belum tercatat, sehingga tercatat Alpha:\n${rincian}\n\nAntum bisa melengkapinya sendiri: buka aplikasi → *Riwayat Absen* → tekan *✍️ Ajukan Hadir* pada sesi tersebut, isi jurnal & alasannya. Setelah disetujui, tercatat *Hadir Bersyarat* (batas ${AJUKAN_HADIR_MAKS_HARI} hari).\n\nMohon ke depannya isi jurnal sebelum absen pulang ya. Kalau ada kendala di aplikasi, kabari admin. Jazakallahu khairan.`;
 
       return `<div class="lupa-baris">
         <span class="tj-avatar">${_inisial(g.nama)}</span>
@@ -13536,12 +13664,12 @@ async function renderKepsekAntrian() {
     const rows = await apiGetAntrianHariIni();
     _KEPSEK_IZIN_CACHE = rows;
     if (!rows.length) { target.innerHTML = htmlKosong("✅", "Tidak ada izin/sakit yang menunggu", "Semua pengajuan hari ini sudah diproses."); return; }
-    target.innerHTML = `<div class="tj-grid">${rows.map((r) => `<div class="card tj-kartu">
+    target.innerHTML = `<div class="tj-grid">${rows.map((r) => `<div class="card tj-kartu" id="aju-${r.id}">
       <div class="tj-kepala">
         <span class="tj-avatar">${_inisial(r.guru?.nama)}</span>
         <div style="min-width:0;flex:1;">
           <b class="tj-nama">${escapeHtml(r.guru?.nama || "-")}</b>
-          <div class="tj-jenis">${_tglPendek(r.tanggal)}</div>
+          <div class="tj-jenis">${_tglPendek(r.tanggal)}${typeof apiIzinSusulan === "function" && apiIzinSusulan(r) ? ` · <span class="badge badge-gray" title="Diajukan setelah tanggalnya lewat (dari badge Alpha di Riwayat Absen)">susulan</span>` : ""}</div>
         </div>
         <span class="badge ${r.jenis === "sakit" ? "badge-yellow" : "badge-blue"}">${r.jenis === "sakit" ? "✚ " + t("statusSakit") : "✉ " + t("statusIzin")}</span>
       </div>
@@ -13564,8 +13692,8 @@ async function prosesPengajuanKepsek(id, disetujui) {
     refreshKepsekBadge();
     if (r?.guru_id) {
       _tawarkanKabariGuruWa(r.guru_id,
-        `Pengajuan *${r.jenis === "sakit" ? "sakit" : "izin"}* Antum hari ini *${disetujui ? "DITERIMA ✅" : "DITOLAK ❌"}*.`
-          + (disetujui ? (r.jenis === "sakit" ? " Syafakallah, semoga lekas sembuh." : "") : " Silakan hubungi admin bila ada yang perlu dijelaskan."));
+        `Pengajuan *${r.jenis === "sakit" ? "sakit" : "izin"}* Antum ${r.tanggal === tanggalISO() ? "hari ini" : `untuk ${_tglPendek(r.tanggal)}`} *${disetujui ? "DITERIMA ✅" : "DITOLAK ❌"}*.`
+          + (disetujui ? (r.jenis === "sakit" ? " Syafakallah, semoga lekas sembuh." : "") : (r.tanggal !== tanggalISO() ? " Sesi tersebut tetap tercatat Alpha." : "") + " Silakan hubungi admin bila ada yang perlu dijelaskan."));
     }
   } catch (e) { toast("Gagal memproses: " + e.message, "err"); }
 }
@@ -16060,13 +16188,15 @@ async function handleImportSiswa(evt) {
 <script src="src/rapor-cetak.js?v=1"></script>
 <script src="src/rekap-hadir-cetak.js?v=1"></script>
 <script src="src/kelengkapan-nilai.js?v=2"></script>
-<script src="src/pengumuman.js?v=3"></script>
+<script src="src/pengumuman.js?v=4"></script>
 <script src="src/kesimpulan.js?v=2"></script>
-<script src="src/profil.js?v=4"></script>
+<script src="src/profil.js?v=5"></script>
 <script src="src/kaldik-desain.js?v=5"></script>
 <script src="src/ujian.js?v=5"></script>
 <script src="src/ujian-editor.js?v=3"></script>
 <script src="src/jurnal-otomatis.js?v=6"></script>
-<script src="src/hp.js?v=3"></script>
+<script src="src/hp.js?v=4"></script>
+<script src="src/leger-nilai.js?v=1"></script>
+<script src="src/jadwal-ujian.js?v=1"></script>
 </body>
 </html>

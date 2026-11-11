@@ -19,7 +19,7 @@ const PG_BAWAAN = {
   salam: "Assalamu'alaikum warahmatullahi wabarakatuh.",
   sapaan: "Kepada Bapak/Ustadz dewan guru PKBM Al Umm Barabai yang dirahmati Allah,",
   penutup: "Jazakumullahu khairan atas perhatian dan kerja samanya.\nWassalamu'alaikum warahmatullahi wabarakatuh.",
-  pengirim: "Admin PKBM Al Umm Barabai", hijri: true,
+  pengirim: "Admin PKBM Al Umm Barabai", hijri: true, tag: true,
 };
 const _pgIso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const _pgTgl = (iso) => new Date(iso + "T00:00:00");
@@ -30,7 +30,10 @@ function _pgFmt(iso, opsi = {}) {
   const d = _pgTgl(iso);
   let s = d.toLocaleDateString("id-ID", { weekday: opsi.tanpaHari ? undefined : "long", day: "numeric", month: "long", year: "numeric" });
   if (PG.atur?.hijri && !opsi.tanpaHijri) {
-    try { s += ` (${new Intl.DateTimeFormat("id-u-ca-islamic-umalqura", { day: "numeric", month: "long", year: "numeric" }).format(d).replace(/\s*(H|AH)$/i, "")} H)`; } catch (e) {}
+    // Pakai bulan Hijriah Indonesia (Muharram … Dzulhijjah). Format "id-u-ca-islamic" bawaan browser keliru:
+    // menampilkan nama bulan Masehi ("Juni") dan era "SM" → "20 Juni 1448 SM H".
+    const h = typeof tanggalHijriahHariIni === "function" ? tanggalHijriahHariIni(new Date(iso + "T12:00:00")) : "";
+    if (h) s += ` (${h})`;
   }
   return s;
 }
@@ -150,6 +153,7 @@ function _pgDaftar() {
     <details class="je-atur" style="margin-top:12px"><summary>⚙️ Salam, sapaan, penutup & nama pengirim (${wali ? "wali santri" : "guru"})</summary>
       ${["salam", "sapaan", "penutup", "pengirim"].map((k) => `<div class="field" style="margin:6px 0 0"><label class="form-label" style="text-transform:capitalize">${k}</label><textarea class="input pg-atur" data-k="${k}" rows="${k === "penutup" ? 2 : 1}">${escapeHtml(atur[k])}</textarea></div>`).join("")}
       <label class="je-opsi"><input type="checkbox" id="pg-hijri" ${PG.atur.hijri ? "checked" : ""}> <span>Sertakan tanggal Hijriah</span></label>
+      <label class="je-opsi"><input type="checkbox" id="pg-tag" ${PG.atur.tag ? "checked" : ""}> <span>Tandai (tag) guru dengan @nomor WA pada daftar nama</span></label>
       <button class="btn btn-outline btn-sm" style="margin-top:6px" onclick="_pgSimpanAtur()">💾 Simpan pengaturan</button>
       <div class="uj-sub" style="margin-top:6px">${wali ? "Untuk wali santri: ujian (H-7), pengambilan rapor (H-5), libur lebih dari sehari (H-3), dan kegiatan yang judulnya memuat “wali santri / orang tua” (H-5)." : "Kegiatan dikenali dari judul di kaldik: UAS/PAS/PAT, UTS/PTS, Ujian Tahfizh, Rapat, Pembagian Rapor, dan libur lebih dari sehari. Tanggal kirim: soal H-21 (batas H-14), akhir KBM H-7, nilai H-14 (batas H-7 rapor), rapat H-3 & H-1, libur H-2."}</div>
     </details>`;
@@ -158,22 +162,32 @@ async function _pgSimpanAtur() {
   const atur = PG.untuk === "wali" ? PG.aturWali : PG.atur;
   qsa(".pg-atur").forEach((i) => (atur[i.dataset.k] = i.value.trim()));
   PG.atur.hijri = qs("pg-hijri").checked;
+  if (qs("pg-tag")) PG.atur.tag = qs("pg-tag").checked;
   try { await _kvSimpan("pengumuman:atur", { ...PG.atur, wali: PG.aturWali }); toast("Pengaturan pengumuman tersimpan", "ok"); } catch (e) { toast("Gagal menyimpan: " + e.message, "err"); }
 }
 
 // ── Isi pengumuman ──
 const _pgBungkus = (judul, isi) => { const a = PG.untuk === "wali" ? PG.aturWali : PG.atur; return `📢 *${judul}*\n\n${a.salam}\n${a.sapaan}\n\n${isi}\n\n${a.penutup}\n\n_${a.pengirim}_`; };
+// "Kelas 7" / "kelas 7" / "7" → "7" (nama kelas di data sering sudah memuat kata "Kelas")
+const _pgAngkaKelas = (nama) => { const s = String(nama || "").replace(/^\s*kelas\s+/i, "").trim(); return typeof formatKelasLabel === "function" ? formatKelasLabel(s) : s; };
+// Tag WA: "@62812…" — di grup, WhatsApp menampilkannya sebagai tag bila nomor itu anggota grup
+const _pgTagWa = (g) => { if (!PG.atur?.tag || !g?.no_wa || typeof normalisasiNomorWa !== "function") return ""; const n = normalisasiNomorWa(g.no_wa); return n.valid ? ` @${n.nomor}` : ""; };
 function _pgDaftarTugasGuru() {
-  // guru → [mapel kelas] dari jadwal aktif (untuk pengumpulan soal)
+  // guru → mapel → kelas, dari jadwal aktif (untuk pengumpulan soal). Format rapi berbaris:
+  //   1. *Ust. Abdul Gani* @62812…
+  //      • Aqidah — Kelas 7, 8
   return supa.from("jadwal_pelajaran").select("guru_id,kelas_id,mapel_id").eq("aktif", true).then(unwrap).then((rows) => {
     const per = {};
     rows.forEach((r) => {
       const g = (LOOKUP.guruAll || []).find((x) => x.id === r.guru_id), m = LOOKUP.mapel.find((x) => x.id === r.mapel_id), k = LOOKUP.kelas.find((x) => x.id === r.kelas_id);
       if (!g || !m || !k) return;
-      const teks = `${m.nama_mapel} ${typeof formatKelasLabel === "function" ? "Kelas " + formatKelasLabel(k.nama_kelas) : k.nama_kelas}`;
-      (per[g.nama] = per[g.nama] || new Set()).add(teks);
+      const x = (per[g.id] = per[g.id] || { g, mapel: {} });
+      (x.mapel[m.nama_mapel] = x.mapel[m.nama_mapel] || new Set()).add(_pgAngkaKelas(k.nama_kelas));
     });
-    return Object.keys(per).sort((a, b) => a.localeCompare(b, "id")).map((n) => `• ${_pgNama(n)}: ${[...per[n]].sort().join(", ")}`);
+    const urutKelas = (a, b) => String(a).localeCompare(String(b), "id", { numeric: true });
+    return Object.values(per).sort((a, b) => a.g.nama.localeCompare(b.g.nama, "id")).map((x, i) =>
+      `${i + 1}. *${_pgNama(x.g.nama)}*${_pgTagWa(x.g)}\n` +
+      Object.keys(x.mapel).sort((a, b) => a.localeCompare(b, "id")).map((mp) => `     ▪️ ${mp} — Kelas ${[...x.mapel[mp]].sort(urutKelas).join(", ")}`).join("\n"));
   });
 }
 const _pgNama = (n) => (typeof _namaSingkatTopbar === "function" ? _namaSingkatTopbar(n) : n);
@@ -223,7 +237,7 @@ async function _pgSusunTeks(id) {
     case "soal": {
       const tugas = await _pgDaftarTugasGuru().catch(() => []);
       return _pgBungkus(`PENGUMPULAN SOAL ${judul.toUpperCase()}`,
-        `Sehubungan dengan pelaksanaan *${judul}* pada *${_pgRentang(k.tanggal_mulai, k.tanggal_selesai)}*, Bapak/Ustadz dimohon mengumpulkan *soal ujian beserta kunci jawaban* kepada admin paling lambat:\n\n⏰ *${_pgFmt(s.batas)}* (H-14 ujian)\n\nSoal boleh dikirim dalam bentuk file Word, atau langsung dibuat di menu *Ujian* aplikasi (bisa tempel dari Word, termasuk soal bahasa Arab).${tugas.length ? `\n\nDaftar mapel sesuai jadwal mengajar:\n${tugas.join("\n")}` : ""}${ket}`);
+        `Sehubungan dengan pelaksanaan *${judul}* pada *${_pgRentang(k.tanggal_mulai, k.tanggal_selesai)}*, Bapak/Ustadz dimohon mengumpulkan *soal ujian beserta kunci jawaban* kepada admin paling lambat:\n\n⏰ *${_pgFmt(s.batas)}* (H-14 ujian)\n\nSoal boleh dikirim dalam bentuk file Word, atau langsung dibuat di menu *Ujian* aplikasi (bisa tempel dari Word, termasuk soal bahasa Arab).${tugas.length ? `\n\n📋 *Daftar mapel sesuai jadwal mengajar:*\n\n${tugas.join("\n\n")}` : ""}${ket}`);
     }
     case "jadwal_ujian":
       return _pgBungkus(`PELAKSANAAN ${judul.toUpperCase()}`,
@@ -266,7 +280,7 @@ async function _pgSusunTeks(id) {
 }
 // Senin pekan ini
 const _pgSenin = (iso) => { const d = _pgTgl(iso), g = (d.getDay() + 6) % 7; d.setDate(d.getDate() - g); return _pgIso(d); };
-const _pgKelas = (k) => (k && k.nama_kelas ? (typeof formatKelasLabel === "function" ? "Kelas " + formatKelasLabel(k.nama_kelas) : k.nama_kelas) : "-");
+const _pgKelas = (k) => (k && k.nama_kelas ? "Kelas " + _pgAngkaKelas(k.nama_kelas) : "-");
 async function _pgTeksJurnalPekan() {
   const hariIni = _pgHariIni(), dari = _pgSenin(hariIni);
   const rows = unwrap(await supa.from("absensi_sesi").select("tanggal,guru_id,jurnal_id,jam_masuk,jam_pulang,status_kehadiran,kelas(nama_kelas),mapel(nama_mapel)").gte("tanggal", dari).lte("tanggal", hariIni));
@@ -402,7 +416,7 @@ async function _pgTandai(id) {
   try { await _kvSimpan("pengumuman:riwayat", PG.riwayat); } catch (e) { console.warn(e); }
 }
 async function _pgSalin(id) {
-  const t = qs("pg-teks").value;
+  const t = typeof waAman === "function" ? waAman(qs("pg-teks").value) : qs("pg-teks").value; // emoji aman untuk WA komputer
   try { await navigator.clipboard.writeText(t); toast("📋 Teks disalin — tempel di grup WhatsApp", "ok"); }
   catch (e) { qs("pg-teks").select(); document.execCommand("copy"); toast("📋 Teks disalin", "ok"); }
   _pgTandai(id);

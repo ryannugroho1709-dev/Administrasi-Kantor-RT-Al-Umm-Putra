@@ -166,20 +166,35 @@ function _htmlKartuPengajar(g, jabatan, mapel, wali) {
       <div><div style="font-size:11px;letter-spacing:1.5px;opacity:.85;text-transform:uppercase;">${escapeHtml(p.nama_lembaga_kop || "Rumah Tahfizh Al-Umm Putra Barabai")}</div><div style="font-size:19px;font-weight:800;">KARTU PENGAJAR</div></div>
       <div style="margin-left:auto;font-size:11px;opacity:.85;text-align:right;">Tahun Ajaran<br/><b style="font-size:13px;">${ta}</b></div>
     </div>
-    <div style="display:flex;gap:22px;padding:22px 24px;">
-      <div style="width:120px;height:150px;border-radius:14px;background:#fff;overflow:hidden;flex:none;border:3px solid rgba(255,255,255,.7);">${g.foto_url ? `<img src="${g.foto_url}" crossorigin="anonymous" style="width:100%;height:100%;object-fit:cover;"/>` : `<div style="display:grid;place-items:center;height:100%;font-size:54px;color:#999;">👤</div>`}</div>
+    ${(() => {
+      // Data berbaris rapi ke bawah: label rata kiri (lebar tetap) · titik dua · isi. Jabatan & Wali Kelas
+      // jadi baris sendiri yang jelas (bukan teks kecil di bawah nama).
+      const kelasWali = wali ? "Kelas " + String(formatKelasLabel(wali)).replace(/^\s*kelas\s+/i, "") : "";
+      const tmt = g.tmt ? new Date(g.tmt + "T00:00:00").toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "";
+      const nomorWa = String(g.no_wa || "").replace(/^62/, "0");
+      const rows = [
+        ["Jabatan", jabatan || "Pengajar"],
+        kelasWali ? ["Wali Kelas", kelasWali] : null,
+        ["Status", g.jenis_guru === "luar" ? "Guru Luar" : "Guru Dalam"],
+        ["NIP / NIK", g.nip_nik || "-"],
+        ["Mengampu", (mapel.slice(0, 4).join(", ") || "-") + (mapel.length > 4 ? ` +${mapel.length - 4}` : "")],
+        tmt ? ["TMT", tmt] : null,
+        ["No. WA", nomorWa || "-"],
+      ].filter(Boolean);
+      return `<div style="display:flex;gap:20px;padding:18px 24px 0;align-items:flex-start;">
+      <div style="width:116px;height:146px;border-radius:14px;background:#fff;overflow:hidden;flex:none;border:3px solid rgba(255,255,255,.75);">${g.foto_url ? `<img src="${g.foto_url}" crossorigin="anonymous" style="width:100%;height:100%;object-fit:cover;"/>` : `<div style="display:grid;place-items:center;height:100%;font-size:54px;color:#999;">👤</div>`}</div>
       <div style="flex:1;min-width:0;">
-        <div style="font-size:22px;font-weight:800;line-height:1.2;">${escapeHtml(g.nama)}</div>
-        <div style="font-size:13px;opacity:.9;margin-top:4px;">${escapeHtml(jabatan)}${wali ? " · Wali " + escapeHtml(formatKelasLabel(wali)) : ""}</div>
-        <div style="margin-top:14px;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:12px;">
-          <span style="opacity:.75;">NIP/NIK</span><b>${escapeHtml(g.nip_nik || "-")}</b>
-          <span style="opacity:.75;">Status</span><b>${g.jenis_guru === "luar" ? "Guru Luar" : "Guru Dalam"}</b>
-          <span style="opacity:.75;">Mengampu</span><b style="line-height:1.35;">${escapeHtml(mapel.slice(0, 4).join(", ") || "-")}${mapel.length > 4 ? ` +${mapel.length - 4}` : ""}</b>
-          <span style="opacity:.75;">No. WA</span><b>${escapeHtml(g.no_wa || "-")}</b>
+        <div style="font-size:21px;font-weight:800;line-height:1.2;padding-bottom:8px;margin-bottom:8px;border-bottom:1px solid rgba(255,255,255,.28);">${escapeHtml(g.nama)}</div>
+        <div style="display:grid;grid-template-columns:78px 10px 1fr;row-gap:5px;font-size:12px;line-height:1.3;">
+          ${rows.map(([k, v]) => `<span style="opacity:.75;">${k}</span><span style="opacity:.75;">:</span><b style="font-weight:700;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${escapeHtml(v)}</b>`).join("")}
         </div>
       </div>
-    </div>
-    <div class="pf-qr" data-qr="${escapeHtml(`KARTU PENGAJAR\n${g.nama}\n${jabatan}\nNIP/NIK: ${g.nip_nik || "-"}\n${p.nama_lembaga_kop || "Rumah Tahfizh Al-Umm Putra Barabai"}\nTA ${ta}\nID ${String(g.id).slice(0, 8).toUpperCase()}`)}" style="position:absolute;right:24px;bottom:46px;width:84px;height:84px;background:#fff;border-radius:10px;padding:5px;box-sizing:border-box;"></div>
+      <div style="flex:none;width:86px;text-align:center;padding-top:2px;">
+        <div class="pf-qr" data-qr="${escapeHtml(`KARTU PENGAJAR\n${g.nama}\n${jabatan}${kelasWali ? "\nWali " + kelasWali : ""}\nNIP/NIK: ${g.nip_nik || "-"}\n${p.nama_lembaga_kop || "Rumah Tahfizh Al-Umm Putra Barabai"}\nTA ${ta}\nID ${String(g.id).slice(0, 8).toUpperCase()}`)}" style="width:86px;height:86px;background:#fff;border-radius:10px;padding:5px;box-sizing:border-box;"></div>
+        <div style="font-size:9px;opacity:.75;margin-top:4px;letter-spacing:.5px;">Pindai untuk verifikasi</div>
+      </div>
+    </div>`;
+    })()}
     <div style="position:absolute;left:0;right:0;bottom:0;padding:10px 24px;background:rgba(0,0,0,.18);font-size:10.5px;display:flex;justify-content:space-between;"><span>${escapeHtml(p.alamat || "Barabai, Hulu Sungai Tengah")}</span><span>ID ${String(g.id).slice(0, 8).toUpperCase()}</span></div>
   </div>`;
 }

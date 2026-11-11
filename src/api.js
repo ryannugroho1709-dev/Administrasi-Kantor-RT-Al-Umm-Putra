@@ -547,6 +547,11 @@ async function apiGetAntrianIzinSakit(tanggal) {
 
 async function apiProsesIzinSakit(id, disetujui, diprosesOleh) {
   try {
+    // Izin/sakit SUSULAN yang ditolak → sesi terkait kembali tercatat Alpha (belum pernah absen masuk)
+    if (!disetujui) {
+      const p = unwrap(await supa.from("pengajuan_izin_sakit").select("id,tanggal,created_at").eq("id", id).limit(1))[0];
+      if (apiIzinSusulan(p)) await supa.from("absensi_sesi").update({ status_kehadiran: "alpha" }).eq("pengajuan_id", id).is("jam_masuk", null);
+    }
     return unwrap(
       await supa
         .from("pengajuan_izin_sakit")
@@ -1302,9 +1307,20 @@ async function apiTandaiSlipTerkirim(id) {
 }
 
 // ── KEPALA SEKOLAH: antrian izin/sakit hari ini ──
+// Pengajuan "susulan" = diajukan SETELAH tanggal sesinya lewat (guru menekan badge Alpha di Riwayat Absen,
+// mis. setelah dikonfirmasi admin via WA). Tidak ikut ditutup otomatis sebagai kedaluwarsa.
+const _tglLokal = (iso) => { try { return new Date(iso).toLocaleDateString("en-CA", { timeZone: "Asia/Makassar" }); } catch (e) { return String(iso || "").slice(0, 10); } };
+const apiIzinSusulan = (r) => !!(r && r.created_at && r.tanggal && _tglLokal(r.created_at) > r.tanggal);
 async function apiGetAntrianHariIni() {
   try {
-    return apiGetAntrianIzinSakit(tanggalISOFallback());
+    // hari ini + pengajuan susulan untuk tanggal lampau yang masih menunggu
+    const hariIni = tanggalISOFallback();
+    const rows = unwrap(
+      await supa.from("pengajuan_izin_sakit").select("*,guru(nama)")
+        .eq("status_verifikasi", "menunggu").lte("tanggal", hariIni)
+        .or("dihapus.is.null,dihapus.eq.false").order("created_at")
+    );
+    return rows.filter((r) => r.tanggal === hariIni || apiIzinSusulan(r));
   } catch (e) {
     throw new Error(_pesanErrorRamah(e) || e.message);
   }
@@ -1330,12 +1346,19 @@ async function apiGetRiwayatIzinSakit(dari, sampai) {
 async function apiAutoTutupPengajuanKadaluarsa() {
   try {
     const hariIni = tanggalISOFallback();
+    // Yang ditutup hanya pengajuan yang dibuat pada/sebelum tanggalnya (izin hari itu yang tidak sempat
+    // diproses). Pengajuan SUSULAN (dibuat sesudah tanggalnya) tetap menunggu sampai admin memprosesnya.
+    const calon = unwrap(
+      await supa.from("pengajuan_izin_sakit").select("id,tanggal,created_at")
+        .eq("status_verifikasi", "menunggu").lt("tanggal", hariIni)
+    ).filter((r) => !apiIzinSusulan(r));
+    if (!calon.length) return [];
     return unwrap(
       await supa
         .from("pengajuan_izin_sakit")
         .update({ status_verifikasi: "ditolak", diproses_oleh: "Sistem (kedaluwarsa)", diproses_at: new Date().toISOString() })
+        .in("id", calon.map((r) => r.id))
         .eq("status_verifikasi", "menunggu")
-        .lt("tanggal", hariIni)
         .select()
     );
   } catch (e) {
@@ -1642,16 +1665,19 @@ async function apiImportKaldikBanyak(rows) {
 // Cek apakah tanggal (YYYY-MM-DD) termasuk hari libur kaldik. Kembalikan {libur, judul} atau null.
 async function apiCekTanggalLiburKaldik(tanggal) {
   try {
+    // Libur KBM = libur kaldik ATAU hari ujian (UAS/UTS/ujian tahfizh). Saat ujian, absen mengajar ditutup
+    // dan guru absen lewat "Absen Mengawas" (menu Jadwal Ujian / Dasbor).
     const rows = unwrap(
       await supa
         .from("kaldik_item")
-        .select("judul")
-        .eq("jenis", "libur")
+        .select("judul,jenis,keterangan,tanggal_mulai,tanggal_selesai")
         .lte("tanggal_mulai", tanggal)
-        .gte("tanggal_selesai", tanggal)
-        .limit(1)
+        .or(`tanggal_selesai.gte.${tanggal},and(tanggal_selesai.is.null,tanggal_mulai.eq.${tanggal})`)
     );
-    return rows && rows[0] ? { libur: true, judul: rows[0].judul } : { libur: false };
+    const libur = rows.find((k) => k.jenis === "libur");
+    if (libur) return { libur: true, judul: libur.judul };
+    const ujian = typeof _kaldikTanpaKbm === "function" ? _kaldikTanpaKbm(rows)[0] : null;
+    return ujian ? { libur: true, ujian: true, judul: `${ujian.judul} — KBM libur; bila mengawas, gunakan Absen Mengawas` } : { libur: false };
   } catch (e) {
     throw new Error(_pesanErrorRamah(e) || e.message);
   }
