@@ -114,7 +114,7 @@ function _uaStatus(j, item) {
 }
 async function juPengumpulanSoal(id) {
   const j = JU.daftar.find((x) => x.id === id); if (!j) return;
-  UA.jadwal = j;
+  UA.jadwal = j; UA.segarkan = null;
   const wadah = qs("ju-wadah");
   wadah.innerHTML = loadingHTML();
   try {
@@ -156,7 +156,7 @@ async function uaUnggah(kunci, input) {
     const url = await apiUploadFoto(f, "soal-ujian");
     UA.data = await _kvAmbil("ujian:soal:" + UA.jadwal.id, {}); // ambil terbaru (guru lain mungkin baru mengunggah)
     UA.data[kunci] = { ...(UA.data[kunci] || {}), file_url: url, nama_file: f.name, oleh: STATE.guruNama || "", t: new Date().toISOString() };
-    await _uaSimpan(); toast("📄 Soal terunggah ✓", "ok"); _uaGambar();
+    await _uaSimpan(); toast("📄 Soal terunggah ✓ — admin bisa langsung melihatnya", "ok"); UA.terakhir = { kunci, url, nama: f.name }; UA.segarkan ? UA.segarkan() : _uaGambar();
   } catch (e) { toast("Gagal mengunggah: " + (typeof _diagnosaErrorUploadFoto === "function" ? _diagnosaErrorUploadFoto(e.message) : e.message), "err"); }
   finally { setGlobalLoading(false); }
 }
@@ -165,7 +165,7 @@ async function uaToggleFisik(kunci) {
     UA.data = await _kvAmbil("ujian:soal:" + UA.jadwal.id, {});
     const d = (UA.data[kunci] = UA.data[kunci] || {});
     d.fisik = !d.fisik; d.fisik_oleh = d.fisik ? `${STATE.guruNama || "Admin"} · ${new Date().toLocaleDateString("id-ID")}` : "";
-    await _uaSimpan(); _uaGambar();
+    await _uaSimpan(); UA.segarkan ? UA.segarkan() : _uaGambar();
   } catch (e) { toast("Gagal: " + (e.message || e), "err"); }
 }
 function uaKirimWa() {
@@ -179,5 +179,48 @@ function uaKirimWa() {
   const daftarSudah = sudah.map(([g, xs]) => `✅ ${g === "-" ? "-" : _juNamaGuru(g)}: ${xs.map((x) => `${_juNamaMapel(x.mapelId)} ${_juAngkaKelas(x.kelasId)}`).join(", ")}`).join("\n");
   const total = baris.length, n = baris.filter((x) => x.st.length).length;
   const teks = `✳️ *PENGUMPULAN SOAL ${String(j.judul).toUpperCase()}*\n\nAssalamu'alaikum warahmatullahi wabarakatuh.\nRekap pengumpulan soal: *${n}/${total}* mapel-kelas sudah terkumpul.\n\n⏰ *Belum mengumpulkan:*\n\n${daftarBelum || "Alhamdulillah, semua sudah ✅"}\n\n${daftarSudah ? `*Sudah:*\n${daftarSudah}\n\n` : ""}Soal bisa dibuat langsung di menu *Ujian Online* (otomatis tercatat), diunggah (Word/PDF) di menu *Jadwal Ujian → Pengumpulan Soal*, atau diserahkan kertasnya ke admin.\n${location.origin}${location.pathname}?buka=jadwalujian\n\nJazakumullahu khairan.`;
+  window.open("https://wa.me/?text=" + encodeURIComponent(teks), "_blank", "noopener");
+}
+
+// ── Kumpulkan soal untuk satu mapel-kelas (dari halaman Jadwal Ujian: tombol 📤 atau ketuk mapel di jadwal) ──
+async function uaKumpulkan(jadwalId, mapelId, kelasId) {
+  const j = JU.daftar.find((x) => x.id === jadwalId); if (!j) return;
+  const e = _uaEsc, atur = _uaBolehAtur(), kunci = _uaKunci(mapelId, kelasId);
+  const pengampu = (JU.ajar || []).filter((a) => a.mapel_id === mapelId && a.kelas_id === kelasId).map((a) => a.guru_id);
+  if (!atur && !pengampu.includes(STATE.guruId)) { toast(`Soal ${_juNamaMapel(mapelId)} dikumpulkan oleh pengampunya: ${pengampu.map(_juNamaGuru).join(", ") || "-"}`, "info"); return; }
+  if (!UA.bank || !UA.jadwal || UA.jadwal.id !== j.id) {
+    setGlobalLoading(true, "Memuat…");
+    try { await Promise.all([_uaMuatBank(), _kvAmbil("ujian:soal:" + j.id, {}).then((d) => { UA.data = d || {}; })]); UA.jadwal = j; }
+    finally { setGlobalLoading(false); }
+  }
+  UA.jadwal = j;
+  const st = _uaStatus(j, { mapelId, kelasId }), d = UA.data[kunci] || {};
+  const kapan = Object.entries(j.slot || {}).filter(([k, s]) => s?.m === mapelId && k.split("|")[2] === kelasId && j.hari.includes(k.split("|")[0]))
+    .map(([k]) => { const [t, sid] = k.split("|"), i = j.sesi.findIndex((x) => x.id === sid); return `${_juHariPendek(t)} · Sesi ${i + 1} (${j.sesi[i]?.mulai}–${j.sesi[i]?.selesai})`; });
+  const jenisSoal = j.jenis === "uts" ? "UTS" : "UAS";
+  openModal(`<h3>📤 Kumpulkan soal</h3>
+    <div class="ua-m-info" style="--kw:${_juWarnaKelas(kelasId)}"><span class="ju-kls">${e(_juAngkaKelas(kelasId))}</span><div><b>${e(_juNamaMapel(mapelId))} · Kelas ${e(_juAngkaKelas(kelasId))}</b><small>${e(j.judul)}${kapan.length ? "<br>📅 " + kapan.map(e).join("<br>📅 ") : ""}</small></div></div>
+    <div class="ua-m-status">${st.length ? st.map((s) => s.k === "online" ? `<button class="ua-chip on" onclick="ujCetakSoal('${s.bank[0].id}')" title="Lihat / cetak naskah">${s.label} · ${e(s.bank[0].judul)}</button>`
+      : s.k === "file" ? `<a class="ua-chip on" href="${e(s.url)}" target="_blank" rel="noopener">${s.label} · ${e(s.nama || "berkas")}</a>` : `<span class="ua-chip on">${s.label} ${s.oleh ? "· " + e(s.oleh) : ""}</span>`).join("") : `<span class="ua-chip belum">⏳ Belum ada soal yang terkumpul</span>`}</div>
+    <div class="ua-m-pilih">
+      <button onclick="uaBuatOnline('${mapelId}','${kelasId}','${j.jenis}')"><span>💻</span><b>Buat di Ujian Online</b><small>Ketik / tempel / unggah Word·PDF. Otomatis tercatat terkumpul & bisa dikerjakan santri di HP.</small></button>
+      <label><span>📄</span><b>${d.file_url ? "Ganti berkas" : "Unggah berkas soal"}</b><small>Word / PDF / foto (maks 10 MB) — untuk dicetak admin.</small><input type="file" hidden accept=".doc,.docx,.pdf,image/*" onchange="uaUnggah('${kunci}',this)"></label>
+      <button onclick="uaKabariAdmin('${mapelId}','${kelasId}')"><span>💬</span><b>Kabari admin lewat WA</b><small>Kirim pemberitahuan${d.file_url ? " beserta tautan berkas" : ""} ke admin / grup.</small></button>
+      ${atur ? `<button onclick="uaToggleFisik('${kunci}')"><span>📦</span><b>${d.fisik ? "Batalkan tanda kertas" : "Tandai soal kertas diterima"}</b><small>Untuk soal yang diserahkan dalam bentuk kertas.</small></button>` : ""}
+    </div>
+    <div class="uj-sub" style="margin-top:8px">Soal ${jenisSoal} yang dibuat di <b>Ujian Online</b> untuk mapel & kelas ini otomatis dianggap sudah terkumpul.</div>`);
+}
+async function uaBuatOnline(mapelId, kelasId, jenisJadwal) {
+  closeModal();
+  const jenisNilai = jenisJadwal === "uts" ? "uts" : "uas";
+  const tingkat = String(_juAngkaKelas(kelasId)).replace(/\D/g, "") || _juAngkaKelas(kelasId);
+  showPage("ujian", "page-ujian", "menuUjian");
+  for (let i = 0; i < 30 && !qs("uj-bank"); i++) await new Promise((r) => setTimeout(r, 120));
+  ujEditorBuka(null, { mapel_id: mapelId, tingkat, jenisNilai, judul: `${jenisNilai === "uts" ? "UTS" : "UAS"} ${_juNamaMapel(mapelId)} Kelas ${tingkat}` });
+}
+function uaKabariAdmin(mapelId, kelasId) {
+  const j = UA.jadwal, d = UA.data[_uaKunci(mapelId, kelasId)] || {}, st = _uaStatus(j, { mapelId, kelasId });
+  const cara = st.some((s) => s.k === "online") ? "sudah saya buat di *Ujian Online* (tercatat otomatis di aplikasi)" : d.file_url ? `sudah saya unggah: ${d.file_url}` : "akan saya serahkan dalam bentuk kertas";
+  const teks = `Assalamu'alaikum, Ustadz/Ustadzah.\nSoal *${j.jenis === "uts" ? "UTS" : "UAS"} ${_juNamaMapel(mapelId)} Kelas ${_juAngkaKelas(kelasId)}* (${j.judul}) ${cara}.\n\nJazakumullahu khairan.\n— ${STATE.guruNama || ""}`;
   window.open("https://wa.me/?text=" + encodeURIComponent(teks), "_blank", "noopener");
 }

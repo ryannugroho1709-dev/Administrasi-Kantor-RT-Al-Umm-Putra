@@ -185,7 +185,7 @@ function gameSelesaiBagian() {
   const uraian = S.soal.findIndex((s) => !_gSoalGame(s));
   if (uraian >= 0) {
     S.gayaSelesai = true;
-    dialog(`<div style="text-align:center;font-size:52px">${g.tujuan}</div><h3 style="text-align:center">Bagian permainan selesai!</h3><p style="text-align:center">Tinggal soal <b>uraian</b>. Tulis jawabanmu, lalu kirim.</p><div class="navi"><button class="tombol" onclick="tutupDialog();S.idx=${uraian};tampilSoal()">Lanjut ke uraian ▶</button></div>`);
+    dialog(`<div style="text-align:center;font-size:52px">${g.tujuan}</div><h3 style="text-align:center">Bagian permainan selesai!</h3><p style="text-align:center">Tinggal <b>${S.soal.filter((x) => !_gSoalGame(x)).length} soal lagi</b> (isian / menjodohkan / mengurutkan / uraian) dengan tampilan biasa. Kerjakan, lalu kirim.</p><div class="navi"><button class="tombol" onclick="tutupDialog();S.idx=${uraian};tampilSoal()">Lanjut ▶</button></div>`);
     return;
   }
   render(_gHud() + `<div class="wadah" style="margin-top:14px"><div class="kartu" style="text-align:center"><div style="font-size:64px">${g.tujuan}</div><h2>${S.gaya === "roket" ? "Roketmu sampai di planet!" : S.gaya === "menara" ? "Kamu sampai di puncak menara!" : "Semua balon sudah ditangkap!"}</h2><p class="ket">Semua soal sudah dijawab. Kirim sekarang untuk melihat hasilnya.</p><div class="navi"><button class="tombol garis" onclick="S.idx=gameDaftar()[0];tampilSoal()">Periksa jawaban</button><button class="tombol emas" onclick="tanyaKirim()">Kirim ✓</button></div></div></div>`);

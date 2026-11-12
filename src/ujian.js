@@ -8,7 +8,16 @@
 //  Butuh SQL_UJIAN_SANTRI.sql sudah dijalankan di Supabase.
 // ============================================================
 const UJ = { bank: [], sesi: [], rekapSesi: null, rekapTimer: null };
-const UJ_LABEL = { pg: "Pilihan Ganda", pgk: "PG Kompleks", uraian: "Uraian" };
+const UJ_LABEL = { pg: "Pilihan Ganda", pgk: "PG Kompleks", isian: "Isian Singkat", jodoh: "Menjodohkan", urut: "Mengurutkan", uraian: "Uraian" };
+const UJ_SINGKAT = { pg: "", pgk: "K", isian: "I", jodoh: "J", urut: "U" }; // awalan nomor di analisis soal
+// Versi database ujian (4 = jenis soal Isian/Menjodohkan/Mengurutkan + hapus sesi sudah aktif)
+async function _ujVersi() {
+  if (UJ.versi !== undefined) return UJ.versi;
+  const { data, error } = await supa.rpc("ujian_versi");
+  UJ.versi = error ? 3 : Number(data) || 3;
+  return UJ.versi;
+}
+const _ujRekaman = (v) => { const m = String(v || "").match(/^\[rekaman\]\s*(https?:\/\/\S+)/); return m ? m[1] : null; };
 
 function _ujPesan(e) {
   const m = (e && e.message) || String(e);
@@ -124,33 +133,63 @@ async function ujAturPin(pertama) {
 async function renderUjianInit() {
   const root = qs("ujian-root"); if (!root) return;
   const url = _ujTautanSantri();
-  root.innerHTML = `
-    <div class="card uj-hero">
-      <div style="flex:1;min-width:220px">
-        <div style="font-weight:800;font-size:16px">📝 Ruang Santri</div>
-        <div style="font-size:12.5px;color:var(--text-secondary);line-height:1.6;margin-top:4px">Santri membuka tautan ini (atau tombol <b>🎓 Masuk sebagai Santri</b> di layar Pilih Nama), memilih kelas → ujian/latihan → namanya. Kunci jawaban tidak pernah dikirim ke santri.</div>
-        <div class="uj-tautan"><code>${escapeHtml(url)}</code></div>
+  const nama = typeof _namaSingkatTopbar === "function" ? _namaSingkatTopbar(STATE.guruNama || "") : STATE.guruNama || "";
+  root.innerHTML = `<div class="uj3">
+    <section class="uj3-hero">
+      <i class="uj3-orb a"></i><i class="uj3-orb b"></i><i class="uj3-orb c"></i><i class="uj3-jaring"></i>
+      <div class="uj3-hero-isi">
+        <div class="uj3-kiri">
+          <span class="uj3-pil"><i></i> Pusat Ujian Online${nama ? ` · ${escapeHtml(nama)}` : ""}</span>
+          <h2>Ujian Online</h2>
+          <p>Buat soal (6 jenis, bergambar & beraudio), buka sesi, pantau santri secara langsung. Penilaian otomatis di server — kunci jawaban tidak pernah sampai ke HP santri.</p>
+          <div class="uj3-tautan"><code title="Tautan Ruang Santri">${escapeHtml(url)}</code><button onclick="ujSalinTautan()">📋 Salin</button><button onclick="window.open('${url}','_blank')">↗ Buka</button></div>
+          ${isAdmin() ? `<div class="uj3-admin"><button onclick="ujAturPin()">🔐 Ganti PIN</button><button class="wa" onclick="ujKirimPinWa()">📤 Kirim PIN ke guru</button></div>` : ""}
+        </div>
+        <div class="uj3-stat" id="uj3-stat">${["📚 Bank soal", "🟢 Sesi dibuka", "⏳ Sedang mengerjakan", "✅ Selesai"].map((x) => `<div class="uj3-stat-ubin"><b>–</b><span>${x}</span></div>`).join("")}</div>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start">
-        <button class="btn btn-outline" onclick="ujSalinTautan()">📋 Salin tautan</button>
-        <button class="btn btn-outline" onclick="window.open('${url}','_blank')">↗ Buka</button>
-        ${isAdmin() ? `<button class="btn btn-ghost" onclick="ujAturPin()">🔐 Ganti PIN</button><button class="btn btn-wa" onclick="ujKirimPinWa()">📤 Kirim PIN ke guru</button>` : ""}
-      </div>
-    </div>
-    <div class="card" style="margin-top:14px">
-      <div class="uj-judul-bagian"><span>🟢 Sesi latihan & ujian</span><button class="btn btn-ghost btn-sm" onclick="ujMuat()">↻</button></div>
+    </section>
+    <section class="uj3-cepat">
+      <button class="uj3-ubin" style="--u:5,150,105" onclick="ujEditorBuka()"><span>✨</span><b>Buat soal baru</b><small>PG, isian, jodohkan, urutkan, uraian</small></button>
+      <button class="uj3-ubin" style="--u:124,58,237" onclick="ujEditorBuka().then(()=>UJE.m&&ujeTempelBuka())"><span>📄</span><b>Dari Word / PDF / foto</b><small>soal dibaca otomatis</small></button>
+      <button class="uj3-ubin" style="--u:37,99,235" onclick="ujSalinTautan()"><span>🔗</span><b>Tautan santri</b><small>salin & kirim ke grup</small></button>
+      <label class="uj3-ubin" style="--u:100,116,139" title="Untuk file .json (mis. dari cadangan)"><span>⬆️</span><b>Impor cadangan</b><small>berkas .json</small><input type="file" accept=".json,application/json" style="display:none" onchange="ujImporBank(event)"></label>
+    </section>
+    <div class="card uj3-panel">
+      <div class="uj-judul-bagian"><span>🟢 Sesi latihan & ujian</span><button class="btn btn-ghost btn-sm" onclick="ujMuat()" title="Muat ulang">↻</button></div>
       <div id="uj-sesi">${loadingHTML("Memuat sesi…")}</div>
     </div>
-    <div class="card" style="margin-top:14px">
-      <div class="uj-judul-bagian"><span>📚 Bank soal per bab</span>
-        <span class="uj-aksi">
-          <button class="btn btn-sm uj-b-hijau" onclick="ujEditorBuka()">✨ Buat soal baru</button>
-          <button class="btn btn-sm uj-b-ungu" onclick="ujEditorBuka().then(()=>UJE.m&&ujeTempelBuka())">📋 Tempel dari Word</button>
-          <label class="btn btn-sm uj-b-abu" style="cursor:pointer" title="Untuk file .json (mis. dari cadangan)">⬆️ Impor .json<input type="file" accept=".json,application/json" style="display:none" onchange="ujImporBank(event)"></label>
-        </span></div>
+    <div class="card uj3-panel">
+      <div class="uj-judul-bagian"><span>📚 Bank soal per bab</span></div>
       <div id="uj-bank">${loadingHTML("Memuat bank soal…")}</div>
-    </div>`;
+    </div></div>`;
+  _ujPasangMiring(root);
   await ujMuat();
+}
+// Efek kartu 3D: kartu sedikit miring mengikuti kursor (hanya perangkat dengan mouse)
+function _ujPasangMiring(root) {
+  if (!window.matchMedia || !matchMedia("(hover:hover) and (pointer:fine)").matches || root._miring) return;
+  root._miring = true;
+  root.addEventListener("pointermove", (e) => {
+    const k = e.target.closest && e.target.closest(".uj3-ubin,.uj3-stat-ubin"); if (!k) return;
+    const r = k.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
+    k.style.transform = `perspective(700px) rotateX(${(-y * 8).toFixed(2)}deg) rotateY(${(x * 10).toFixed(2)}deg) translateY(-3px)`;
+  });
+  root.addEventListener("pointerout", (e) => { const k = e.target.closest && e.target.closest(".uj3-ubin,.uj3-stat-ubin"); if (k && !k.contains(e.relatedTarget)) k.style.transform = ""; });
+}
+// Angka di kepala halaman + status santri per sesi yang sedang dibuka (berapa yang mengerjakan / selesai)
+async function _ujStatistikHero() {
+  const buka = UJ.sesi.filter((s) => s.dibuka).slice(0, 10);
+  UJ.statusSesi = UJ.statusSesi || {};
+  await Promise.all(buka.map((s) => supa.rpc("ujian_status_kelas", { p_sesi: s.id }).then(({ data }) => { UJ.statusSesi[s.id] = data || {}; }).catch(() => {})));
+  let kerja = 0, selesai = 0;
+  buka.forEach((s) => Object.values(UJ.statusSesi[s.id] || {}).forEach((v) => (v === "mengerjakan" ? kerja++ : selesai++)));
+  const el = qs("uj3-stat");
+  if (el) {
+    const milik = isAdmin() ? UJ.bank.length : UJ.bank.filter((b) => b.dibuat_oleh === STATE.guruId).length;
+    el.innerHTML = [[milik, isAdmin() ? "📚 Bank soal" : "📚 Bank soal saya"], [buka.length, "🟢 Sesi dibuka"], [kerja, "⏳ Sedang mengerjakan"], [selesai, "✅ Sudah kirim"]]
+      .map(([n, l], i) => `<div class="uj3-stat-ubin" style="animation-delay:${i * 70}ms"><b>${n}</b><span>${l}</span></div>`).join("");
+  }
+  _ujGambarSesi();
 }
 function ujSalinTautan() {
   const url = _ujTautanSantri();
@@ -175,6 +214,8 @@ async function ujMuat() {
     return;
   }
   _ujGambarSesi(); _ujGambarBank();
+  _ujVersi().catch(() => {});
+  _ujStatistikHero().catch(() => {});
 }
 // Nama tampilan bank: mapel gabungan (mis. "Geografi/Sosiologi/Ek") dipecah memakai judul bank → "Ekonomi"
 function _ujNamaMapelTampil(b) {
@@ -222,16 +263,46 @@ function _ujGambarSesi() {
   if (!UJ.sesi.length) { el.innerHTML = `<div class="uj-kosong">Belum ada sesi. Pilih bank soal di bawah lalu tekan <b>▶ Buka sesi</b>.</div>`; return; }
   el.innerHTML = `<div class="uj-daftar">${UJ.sesi.map((s) => {
     const b = UJ.bank.find((x) => x.id === s.bank_id) || {};
-    return `<div class="uj-item ${s.dibuka ? "" : "uj-tutup"}">
-      <div class="uj-ikon">${s.mode === "ujian" ? "📝" : "🎯"}</div>
+    const st = s.dibuka && UJ.statusSesi && UJ.statusSesi[s.id];
+    const nKerja = st ? Object.values(st).filter((v) => v === "mengerjakan").length : 0, nKirim = st ? Object.values(st).length - nKerja : 0;
+    return `<div class="uj-item ${s.dibuka ? "uj-hidup" : "uj-tutup"}">
+      <div class="uj-ikon">${s.mode === "ujian" ? "📝" : "🎯"}${s.dibuka ? `<i class="uj-denyut"></i>` : ""}</div>
       <div style="flex:1;min-width:0"><b>${escapeHtml(b.judul || "Bank soal terhapus")}</b>
         <div class="uj-sub">${escapeHtml(_ujNamaKelas(s.kelas_id))} · <span class="uj-lencana ${s.mode}">${s.mode === "ujian" ? "UJIAN" : "LATIHAN"}</span>${UJ.gaya && UJ.gaya[s.id] && UJ_GAYA[UJ.gaya[s.id]] ? ` · ${UJ_GAYA[UJ.gaya[s.id]][0]} ${UJ_GAYA[UJ.gaya[s.id]][1]}` : ""}${s.durasi_menit ? ` · ${s.durasi_menit} mnt` : ""}${s.token ? ` · token <b>${escapeHtml(s.token)}</b>` : ""} · ${s.dibuka ? "<b style='color:var(--success,#1F8A5F)'>dibuka</b>" : "ditutup"}${s.dikirim_rapor_at ? " · ✅ sudah ke rapor" : ""}
-        · ${new Date(s.created_at).toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "short" })}</div></div>
+        · ${new Date(s.created_at).toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "short" })}</div>
+        ${st ? `<div class="uj-langsung"><span class="kerja">⏳ ${nKerja} mengerjakan</span><span class="kirim">✅ ${nKirim} sudah kirim</span></div>` : ""}</div>
       <div class="uj-aksi">
         <button class="btn btn-accent btn-sm" onclick="ujBukaRekap('${s.id}')">📊 Rekap</button>
         <button class="btn btn-ghost btn-sm" onclick="ujToggleSesi('${s.id}')">${s.dibuka ? "⏹ Tutup" : "▶ Buka lagi"}</button>
+        ${_ujBolehSesi(s) ? `<button class="btn btn-sm uj-b-merah" onclick="ujHapusSesi('${s.id}')" title="Hapus sesi beserta semua jawaban & nilainya (perlu PIN)">🗑️</button>` : ""}
       </div>
     </div>`; }).join("")}</div>`;
+}
+const _ujBolehSesi = (s) => isAdmin() || !s.guru_id || s.guru_id === STATE.guruId;
+// Hapus sesi: semua jawaban & nilai santri di sesi itu ikut terhapus permanen (PIN wajib)
+async function ujHapusSesi(id) {
+  const s = UJ.sesi.find((x) => x.id === id); if (!s) return;
+  if (!_ujBolehSesi(s)) { toast("Hanya guru yang membuka sesi ini atau admin yang bisa menghapusnya", "err"); return; }
+  const b = UJ.bank.find((x) => x.id === s.bank_id) || {};
+  let n = null;
+  try { const { data } = await supa.rpc("ujian_status_kelas", { p_sesi: id }); n = Object.keys(data || {}).length; } catch (e) {}
+  const ok = await konfirmasiTema(`Hapus sesi ${s.mode === "ujian" ? "UJIAN" : "LATIHAN"} "${escapeHtml(b.judul || "-")}" · ${escapeHtml(_ujNamaKelas(s.kelas_id))}?\n\n${n ? `🗑️ <b>${n} jawaban & nilai santri</b> ikut terhapus permanen dan tidak bisa dikembalikan.` : "Belum ada santri yang mengerjakan."}${s.dikirim_rapor_at ? "\n\n⚠️ Nilai sesi ini <b>sudah dikirim ke rapor</b>. Nilai di rapor tidak ikut terhapus — ubah di menu Input Nilai bila perlu." : ""}\n\nBank soalnya tetap ada dan bisa dibuka lagi kapan saja.`, { judul: "Hapus sesi", ikon: "🗑️", teksYa: "Hapus permanen" });
+  if (!ok) return;
+  const pin = await _ujPin("PIN untuk menghapus sesi"); if (!pin) return;
+  try {
+    const r = await supa.rpc("ujian_sesi_hapus", { p_pin: pin, p_sesi: id });
+    if (r.error) {
+      if (!/ujian_sesi_hapus|schema cache|Could not find/i.test(r.error.message || "")) throw new Error(_ujPesan(r.error));
+      // database belum pembaruan 4: hapus langsung (jawaban ikut terhapus otomatis karena terikat ke sesi)
+      const { error } = await supa.from("ujian_sesi").delete().eq("id", id);
+      if (error) throw new Error(_ujPesan(error));
+    }
+    const sisa = await supa.from("ujian_sesi").select("id").eq("id", id);
+    if ((sisa.data || []).length) throw new Error("Sesi belum terhapus di server. Coba lagi.");
+    if (UJ.gaya && UJ.gaya[id]) _ujSimpanGaya(id, "biasa");
+    toast(`🗑️ Sesi terhapus${n ? ` beserta ${n} jawaban & nilainya` : ""}`, "ok");
+    ujMuat();
+  } catch (e) { toast(e.message || String(e), "err"); }
 }
 
 // ── Impor bank soal JSON ──
@@ -245,7 +316,7 @@ function _ujValidasiBank(j) {
   const err = [];
   if (!j || !Array.isArray(j.bagian) || !j.bagian.length) err.push("Tidak ada 'bagian' soal.");
   (j.bagian || []).forEach((b) => {
-    if (!["pg", "pgk", "uraian"].includes(b.jenis)) err.push(`Jenis bagian tidak dikenal: ${b.jenis}`);
+    if (!UJ_LABEL[b.jenis]) err.push(`Jenis bagian tidak dikenal: ${b.jenis}`);
     (b.soal || []).forEach((s) => {
       const id = `${b.jenis} no ${s.no}`;
       if (s.no === undefined) err.push(`Soal tanpa nomor di ${b.jenis}`);
@@ -304,7 +375,10 @@ async function ujLihatKunci(id) {
       const kb = ((k && k.bagian) || []).find((x) => x.jenis === bg.jenis) || { soal: [] };
       return `<div class="uj-judul-bagian" style="margin-top:12px"><span>${UJ_LABEL[bg.jenis]} · ${bg.poin} poin/soal</span></div>` + (bg.soal || []).map((s) => {
         const ks = kb.soal.find((x) => x.no === s.no) || {};
-        const jaw = bg.jenis === "uraian" ? `<div class="uj-kunci-uraian">${escapeHtml(ks.kunci || "-")}${(ks.poin_kunci || []).length ? `<div class="uj-sub">Poin penilaian: ${ks.poin_kunci.map(escapeHtml).join(" · ")}</div>` : ""}</div>`
+        const jaw = bg.jenis === "uraian" ? `<div class="uj-kunci-uraian">${escapeHtml(ks.kunci || "-")}${(ks.poin_kunci || []).length ? `<div class="uj-sub">Poin penilaian: ${ks.poin_kunci.map(escapeHtml).join(" · ")}</div>` : ""}${s.rek ? `<div class="uj-sub">🎤 dijawab dengan rekaman suara</div>` : ""}</div>`
+          : bg.jenis === "isian" ? `<b>${(ks.k || []).map((a, x) => ((ks.k || []).length > 1 ? `(${x + 1}) ` : "") + [].concat(a).map(escapeHtml).join(" / ")).join(" · ") || "-"}</b>`
+          : bg.jenis === "jodoh" ? (s.o || []).map((o, x) => `<div style="font-size:12.5px">${escapeHtml(o)} ↔ <b>${escapeHtml((s.p || [])[(ks.k || [])[x]] ?? "?")}</b></div>`).join("")
+          : bg.jenis === "urut" ? `<b>${(ks.k || []).map((x) => escapeHtml((s.o || [])[x] ?? "?")).join(" → ")}</b>`
           : s.bs ? (s.o || []).map((o, i) => `<div style="font-size:12.5px">${ks.k && ks.k[i] ? "✅ " + escapeHtml(s.bs[0]) : "❌ " + escapeHtml(s.bs[1])} — ${escapeHtml(o)}</div>`).join("")
           : `<b>${[].concat(ks.k).map((i) => H[i] + ". " + escapeHtml((s.o || [])[i] || "")).join(" / ")}</b>`;
         return `<div class="uj-kunci-baris ${ks.cek ? "uj-cek" : ""}"><div class="uj-no">${s.no}</div><div style="flex:1"><div style="font-size:12.5px;margin-bottom:3px">${escapeHtml(String(s.t || "").replace(/\*\*/g, ""))}</div>${jaw}${ks.penjelasan ? `<div class="uj-penjelasan">💡 ${escapeHtml(ks.penjelasan).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")}</div>` : ""}${ks.catatan ? `<div class="uj-sub">📝 ${escapeHtml(ks.catatan)}</div>` : ""}${ks.cek ? `<div class="uj-sub" style="color:#a66a00">🔎 Mohon dicek guru</div>` : ""}</div></div>`;
@@ -332,7 +406,7 @@ function ujBukaSesiModal(bankId) {
     </div>
     <div class="field"><label class="form-label">🎮 Tampilan untuk santri</label>
       <div class="uj-gaya">${Object.entries(UJ_GAYA).map(([k, v], i) => `<label><input type="radio" name="uj-s-gaya" value="${k}" ${i === 0 ? "checked" : ""}><span class="uj-gaya-ikon">${v[0]}</span><b>${v[1]}</b><small>${v[2]}</small></label>`).join("")}</div>
-      <div class="uj-sub" style="margin-top:4px">Soal tetap dari bank soal ini. Mode game berlaku untuk PG, PG Kompleks & Benar/Salah; uraian tetap biasa. Kunci jawaban tetap aman.</div></div>
+      <div class="uj-sub" style="margin-top:4px">Soal tetap dari bank soal ini. Mode game berlaku untuk PG, PG Kompleks & Benar/Salah; soal jenis lain (isian, jodohkan, urutkan, uraian) tetap tampilan biasa. Kunci jawaban tetap aman.</div></div>
     <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;margin:4px 0 10px"><input type="checkbox" id="uj-s-acak"> Acak urutan soal PG untuk tiap santri</label>
     <div class="uj-sub" style="margin-bottom:10px">Nilai dicatat untuk semester <b>${semester} ${ta}</b>.</div>
     <button class="btn btn-accent" style="width:100%" onclick="ujSimpanSesi('${b.id}')">Buka sekarang</button>`);
@@ -416,7 +490,7 @@ function _ujGambarRekap() {
   ((kunci && kunci.bagian) || []).filter((bg) => bg.jenis !== "uraian").forEach((bg) => (bg.soal || []).forEach((so) => {
     const p = Number(so.poin || bg.poin || 1), key = `${bg.jenis}-${so.no}`;
     const penuh = kirim.filter((r) => Number(r.rincian[key]) >= p).length;
-    butir.push({ label: `${bg.jenis === "pg" ? "" : "K"}${so.no}`, persen: kirim.length ? Math.round((penuh * 100) / kirim.length) : null });
+    butir.push({ label: `${UJ_SINGKAT[bg.jenis] ?? ""}${so.no}`, persen: kirim.length ? Math.round((penuh * 100) / kirim.length) : null });
   }));
   el.innerHTML = `
     <h3 style="margin-bottom:2px">📊 ${escapeHtml(b.judul || "")}</h3>
@@ -434,7 +508,7 @@ function _ujGambarRekap() {
       ${ujian ? `<button class="btn btn-sm ${s.tampil_hasil ? "uj-b-hijau" : "uj-b-ungu"}" onclick="ujTampilHasil(${!s.tampil_hasil})" title="Santri bisa melihat nilai per bagian, soal yang benar/belum tepat (tanpa kunci), dan grafik kelas">${s.tampil_hasil ? "👁 Hasil terlihat santri · sembunyikan" : "👁 Tampilkan hasil ke santri"}</button>` : ""}
       <button class="btn btn-ghost btn-sm" onclick="ujUnduhRekap()">⬇️ Excel</button>
     </div>
-    <div style="overflow:auto"><table class="simple-table uj-tabel"><thead><tr><th>No</th><th>Nama</th><th>Status</th><th>PG+PGK<br><small>/${maks.obj}</small></th>${ujian && maks.ur ? `<th>Uraian<br><small>/${maks.ur}</small></th>` : ""}<th>Nilai</th>${ujian ? "<th title='Berapa kali santri keluar dari halaman ujian (membuka aplikasi lain, tab lain, atau mematikan layar) selama mengerjakan'>Pindah<br>layar ⓘ</th>" : "<th>Coba</th>"}<th></th></tr></thead><tbody>
+    <div style="overflow:auto"><table class="simple-table uj-tabel"><thead><tr><th>No</th><th>Nama</th><th>Status</th><th title="PG, PG kompleks, isian, menjodohkan, mengurutkan">Otomatis<br><small>/${maks.obj}</small></th>${ujian && maks.ur ? `<th>Uraian<br><small>/${maks.ur}</small></th>` : ""}<th>Nilai</th>${ujian ? "<th title='Berapa kali santri keluar dari halaman ujian (membuka aplikasi lain, tab lain, atau mematikan layar) selama mengerjakan'>Pindah<br>layar ⓘ</th>" : "<th>Coba</th>"}<th></th></tr></thead><tbody>
       ${siswa.map((sw, i) => { const r = byId[sw.id]; const ur = r && r.skor_uraian ? Object.values(r.skor_uraian).reduce((a, v) => a + Number(v || 0), 0) : null;
         return `<tr><td>${i + 1}</td><td>${escapeHtml(sw.nama)}</td><td style="white-space:nowrap">${r ? st[r.status] : "<span style='color:var(--text-secondary)'>belum</span>"}</td>
         <td>${r && r.skor_otomatis != null ? Number(r.skor_otomatis) : "–"}</td>
@@ -448,7 +522,7 @@ function _ujGambarRekap() {
     ${selesai.length ? _ujGrafikSebaran(selesai, kkm) : ""}
     ${butir.length && kirim.length ? `<div class="uj-judul-bagian" style="margin-top:14px"><span>🔬 Analisis soal (persen santri yang menjawab benar)</span></div>
       <div class="uj-butir">${butir.map((x) => `<div class="${x.persen < 40 ? "sulit" : x.persen < 70 ? "sedang" : "mudah"}"><b>${x.label}</b><span>${x.persen}%</span></div>`).join("")}</div>
-      <div class="uj-sub">Merah = kurang dari 40% benar (materi perlu diulang, atau kuncinya perlu dicek). K = PG kompleks.</div>` : ""}`;
+      <div class="uj-sub">Merah = kurang dari 40% benar (materi perlu diulang, atau kuncinya perlu dicek). K = PG kompleks · I = isian · J = menjodohkan · U = mengurutkan.</div>` : ""}`;
 }
 // Grafik sebaran nilai (batang SVG ringan, tanpa pustaka tambahan)
 function _ujGrafikSebaran(rows, kkm) {
@@ -505,10 +579,11 @@ function ujNilaiUraian(jawabanId) {
     const poin = Number(ks.poin || bgK.poin || 1), so = bgS.soal.find((x) => x.no === ks.no) || {};
     const jaw = ((r.jawaban || {}).uraian || {})[ks.no] || "";
     const lama = r.skor_uraian && r.skor_uraian[ks.no] != null ? r.skor_uraian[ks.no] : "";
-    const saran = _ujSaranUraian(jaw, ks, poin);
+    const rek = _ujRekaman(jaw);
+    const saran = rek ? null : _ujSaranUraian(jaw, ks, poin);
     return `<div class="uj-uraian">
       <div style="font-weight:700;font-size:13px">${ks.no}. ${escapeHtml(so.t || "")}</div>
-      <div class="uj-jawaban">${jaw ? escapeHtml(jaw) : "<i style='color:var(--text-secondary)'>(tidak dijawab)</i>"}</div>
+      <div class="uj-jawaban">${rek ? `🎤 Rekaman suara santri:<br><audio controls preload="none" src="${escapeHtml(rek)}" style="width:100%;margin-top:4px"></audio>` : jaw ? escapeHtml(jaw) : "<i style='color:var(--text-secondary)'>(tidak dijawab)</i>"}</div>
       <div class="uj-kunci-uraian"><b>Kunci:</b> ${escapeHtml(ks.kunci || "-")}${(ks.poin_kunci || []).length ? `<div class="uj-sub">Poin: ${ks.poin_kunci.map(escapeHtml).join(" · ")}</div>` : ""}</div>
       <div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap">
         <label class="form-label" style="margin:0">Skor (0–${poin})</label>
@@ -518,7 +593,7 @@ function ujNilaiUraian(jawabanId) {
       </div></div>`;
   }).join("");
   openModal(`<h3>✍️ Nilai uraian · ${escapeHtml(nama)}</h3>
-    <div class="uj-sub" style="margin-bottom:8px">PG + PGK: <b>${Number(r.skor_otomatis || 0)}</b> poin. Skor yang terisi otomatis hanyalah saran — periksa lalu sesuaikan.</div>
+    <div class="uj-sub" style="margin-bottom:8px">Soal otomatis: <b>${Number(r.skor_otomatis || 0)}</b> poin. Skor yang terisi otomatis hanyalah saran — periksa lalu sesuaikan.</div>
     ${daftar}
     <div style="display:flex;gap:10px;margin-top:12px"><button class="btn btn-outline" style="flex:1" onclick="ujBukaRekap(UJ.rekapSesi)">‹ Kembali</button><button class="btn btn-accent" style="flex:1" onclick="ujSimpanUraian('${r.id}')">Simpan nilai</button></div>`, { lebar: true });
 }
@@ -605,8 +680,57 @@ function ujUnduhRekap() {
   if (!window.XLSX || !UJ.rekap) return;
   const { s, b, siswa, rows } = UJ.rekap;
   const byId = Object.fromEntries(rows.map((r) => [r.siswa_id, r]));
-  const data = siswa.map((sw, i) => { const r = byId[sw.id] || {}; return { No: i + 1, Nama: sw.nama, NIS: sw.nis || "", Status: r.status || "belum", "PG+PGK": r.skor_otomatis ?? "", Uraian: r.skor_uraian ? Object.values(r.skor_uraian).reduce((a, v) => a + Number(v || 0), 0) : "", "Nilai akhir": r.nilai_akhir ?? "", "Pindah layar": r.pindah_tab ?? "" }; });
+  const data = siswa.map((sw, i) => { const r = byId[sw.id] || {}; return { No: i + 1, Nama: sw.nama, NIS: sw.nis || "", Status: r.status || "belum", "Soal otomatis": r.skor_otomatis ?? "", Uraian: r.skor_uraian ? Object.values(r.skor_uraian).reduce((a, v) => a + Number(v || 0), 0) : "", "Nilai akhir": r.nilai_akhir ?? "", "Pindah layar": r.pindah_tab ?? "" }; });
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), "Rekap");
   XLSX.writeFile(wb, `Rekap ${b.judul} - ${_ujNamaKelas(s.kelas_id)}.xlsx`.replace(/[\\/:*?"<>|]/g, "-"));
 }
+
+// ── Kartu Dasbor: Ujian Online milik guru (sesi yang sedang dibuka + bank soalnya) ──
+// Muncul hanya untuk guru yang sudah memakai Ujian Online (punya bank soal / sesi).
+async function _ujSisipkanKartuDasbor() {
+  try {
+    const page = qs("page-dashboard"); if (!page || !STATE.guruId) return;
+    const admin = isAdmin();
+    let qSesi = supa.from("ujian_sesi").select("id,mode,kelas_id,bank_id,token,durasi_menit,created_at,guru_id,bank:ujian_bank(judul,dibuat_oleh)").eq("dibuka", true).order("created_at", { ascending: false }).limit(8);
+    if (!admin) qSesi = qSesi.eq("guru_id", STATE.guruId);
+    const [sesi, bank] = await Promise.all([
+      qSesi.then((r) => r.data || []).catch(() => []),
+      supa.from("ujian_bank").select("id", { count: "exact", head: true }).eq("dibuat_oleh", STATE.guruId).then((r) => r.count || 0).catch(() => 0),
+    ]);
+    page.querySelector("#uj-dasbor")?.remove();
+    if (!sesi.length && !bank) return;
+    const st = {};
+    await Promise.all(sesi.map((s) => supa.rpc("ujian_status_kelas", { p_sesi: s.id }).then(({ data }) => { st[s.id] = data || {}; }).catch(() => {})));
+    const div = document.createElement("div");
+    div.id = "uj-dasbor"; div.className = "card uj-dasbor";
+    div.innerHTML = `<div class="uj-dasbor-h"><span class="uj-dasbor-ikon">💻</span><div><b>Ujian Online ${admin ? "" : "saya"}</b><small>${sesi.length ? `${sesi.length} sesi sedang dibuka` : "Tidak ada sesi yang dibuka"} · ${bank} bank soal ${admin ? "buatan Antum" : ""}</small></div>
+        <button class="btn btn-sm uj-b-ungu" onclick="showPage('ujian','page-ujian','menuUjian')">Buka →</button></div>
+      ${sesi.map((s) => {
+        const v = Object.values(st[s.id] || {}), kerja = v.filter((x) => x === "mengerjakan").length, kirim = v.length - kerja;
+        return `<div class="uj-dasbor-baris" onclick="ujBukaDariDasbor('${s.id}')">
+          <span class="uj-dasbor-mode ${s.mode}">${s.mode === "ujian" ? "📝" : "🎯"}<i class="uj-denyut"></i></span>
+          <div><b>${escapeHtml(s.bank?.judul || "Soal")}</b><small>${escapeHtml(_ujNamaKelas(s.kelas_id))} · ${s.mode === "ujian" ? "UJIAN" : "LATIHAN"}${s.token ? ` · token <b>${escapeHtml(s.token)}</b>` : ""}</small></div>
+          <span class="uj-langsung"><span class="kerja">⏳ ${kerja}</span><span class="kirim">✅ ${kirim}</span></span></div>`;
+      }).join("") || `<div class="uj-sub" style="padding:4px 2px">Soal sudah siap. Buka sesi di menu Ujian Online saat santri akan mengerjakan.</div>`}`;
+    const ju = page.querySelector("#ju-dasbor");
+    if (ju) ju.after(div); else page.insertBefore(div, page.firstElementChild?.nextSibling || null);
+  } catch (e) { console.warn("Kartu Ujian Online gagal:", e); }
+}
+async function ujBukaDariDasbor(sesiId) {
+  showPage("ujian", "page-ujian", "menuUjian");
+  for (let i = 0; i < 40 && !(UJ.sesi || []).some((s) => s.id === sesiId); i++) await new Promise((r) => setTimeout(r, 150));
+  if ((UJ.sesi || []).some((s) => s.id === sesiId)) ujBukaRekap(sesiId);
+}
+(function pasangKartuUjianDasbor() {
+  const coba = () => {
+    if (typeof window.renderDashboard !== "function" || window._ujDasborTerpasang) return;
+    const asli = window.renderDashboard;
+    window.renderDashboard = async function (...a) { const r = await asli.apply(this, a); setTimeout(_ujSisipkanKartuDasbor, 600); return r; };
+    Object.assign(window.renderDashboard, asli); // bawa tanda pemasang lain (mis. kartu mengawas)
+    window._ujDasborTerpasang = true;
+    if (STATE && STATE.currentPage === "dashboard") setTimeout(_ujSisipkanKartuDasbor, 800);
+  };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", coba); else coba();
+  setTimeout(coba, 1600);
+})();

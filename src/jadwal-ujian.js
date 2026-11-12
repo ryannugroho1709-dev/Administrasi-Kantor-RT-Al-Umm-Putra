@@ -57,7 +57,7 @@ async function _juSimpanSemua() { await _kvSimpan(_JU_KUNCI, JU.daftar); }
 async function renderJadwalUjianInit() {
   const wadah = qs("ju-wadah"); if (!wadah) return;
   wadah.innerHTML = loadingHTML();
-  try { await _juMuat(); JU.edit = null; _juGambarDaftar(); }
+  try { await _juMuat(); JU.edit = null; JU._pribadi = null; _juGambarDaftar(); }
   catch (e) { console.error(e); wadah.innerHTML = `<div class="card empty-state">Gagal memuat jadwal ujian: ${_juEsc(e.message || e)}</div>`; }
 }
 
@@ -69,20 +69,137 @@ function _juKaldikUjian() {
   }).map((k) => ({ ...k, _kat: _pgKategori(k), _lewat: (k.tanggal_selesai || k.tanggal_mulai) < hariIni }));
 }
 
+// Jadwal yang sedang / akan berlangsung (paling dekat); kalau semua sudah lewat → yang terakhir
+function _juJadwalAktif() {
+  const hariIni = tanggalISO();
+  const urut = JU.daftar.slice().sort((a, b) => (a.mulai || "").localeCompare(b.mulai || ""));
+  return urut.find((j) => (j.selesai || j.mulai) >= hariIni) || urut[urut.length - 1] || null;
+}
+// Mapel yang diampu guru ini dan diujikan di jadwal j (+ kapan diujikan)
+function _juMapelSaya(j, guruId) {
+  if (!j || !guruId) return [];
+  const per = new Map();
+  (JU.ajar || []).filter((a) => a.guru_id === guruId && (j.kelas || []).includes(a.kelas_id)).forEach((a) => {
+    const k = `${a.mapel_id}|${a.kelas_id}`; if (!per.has(k)) per.set(k, { mapelId: a.mapel_id, kelasId: a.kelas_id, kapan: [] });
+  });
+  Object.entries(j.slot || {}).forEach(([k, s]) => {
+    const [t, sesiId, kelasId] = k.split("|"); if (!s?.m || !j.hari.includes(t)) return;
+    const x = per.get(`${s.m}|${kelasId}`); if (!x) return;
+    const sesi = j.sesi.find((y) => y.id === sesiId); if (sesi) x.kapan.push({ t, sesi, ke: j.sesi.indexOf(sesi) + 1 });
+  });
+  // mapel yang belum masuk jadwal tetap tampil (soalnya tetap perlu dikumpulkan), kecuali kegiatan non-ujian
+  return [...per.values()].filter((x) => x.kapan.length || !_JU_LEWATI_MAPEL.test(_juNamaMapel(x.mapelId)))
+    .filter((x) => !((LOOKUP.mapel || []).find((m) => m.id === x.mapelId) || {}).tanpa_guru)
+    .map((x) => ({ ...x, kapan: x.kapan.sort((a, b) => a.t.localeCompare(b.t) || a.ke - b.ke) }))
+    .sort((a, b) => (a.kapan[0]?.t || "9").localeCompare(b.kapan[0]?.t || "9") || _juNamaMapel(a.mapelId).localeCompare(_juNamaMapel(b.mapelId), "id"));
+}
+// Data pengumpulan soal & kehadiran untuk jadwal aktif (dimuat sekali, lalu halaman digambar ulang)
+async function _juMuatPribadi(j) {
+  if (!j || JU._pribadi === j.id) return;
+  JU._pribadi = j.id;
+  try {
+    await Promise.all([
+      typeof _uaMuatBank === "function" ? _uaMuatBank() : null,
+      _kvAmbil("ujian:soal:" + j.id, {}).then((d) => { if (typeof UA !== "undefined") { UA.data = d || {}; UA.jadwal = j; } }),
+      _juMuatHadir([j.id]),
+    ]);
+  } catch (e) { console.warn("Data pribadi jadwal ujian gagal:", e); }
+  if (qs("ju-wadah") && !JU.edit && STATE.currentPage === "jadwal-ujian") _juGambarDaftar();
+}
 function _juGambarDaftar() {
   const wadah = qs("ju-wadah");
   const atur = _juBolehAtur(), saya = STATE.guruId;
   const usul = atur ? _juKaldikUjian() : [];
-  const daftar = JU.daftar.slice().sort((a, b) => (b.mulai || "").localeCompare(a.mulai || ""));
-  const tugasSaya = _juTugasGuru(saya);
+  const aktif = _juJadwalAktif();
+  const lain = JU.daftar.filter((j) => j !== aktif).sort((a, b) => (b.mulai || "").localeCompare(a.mulai || ""));
+  if (aktif && JU._pribadi !== aktif.id) _juMuatPribadi(aktif);
+  if (typeof UA !== "undefined" && aktif) UA.segarkan = () => { closeModal(); _juGambarDaftar(); };
   wadah.innerHTML = `
     <div class="card ju-hero">
-      <div><b>🗓️ Jadwal Ujian & Pengawas</b><small>${atur ? "Susun jadwal per hari, sesi & kelas (mapel tiap kelas boleh berbeda), pilih pengawas, lalu cetak PDF / bagikan ke grup WA. Selama tanggal ujian di Kalender Akademik, KBM kelas otomatis libur (tidak ada Alpha)." : "Jadwal ujian dan tugas mengawas Antum. Saat mengawas, tekan <b>Absen Mengawas</b> di Dasbor atau di sini."}</small></div>
+      <div><b>🗓️ Jadwal Ujian & Pengawas</b><small>${atur ? "Susun jadwal per hari, sesi & kelas, pilih pengawas, lalu cetak PDF / bagikan ke grup WA. Selama tanggal ujian di Kalender Akademik, KBM kelas otomatis libur (tidak ada Alpha)." : "Jadwal ujian yang sedang berjalan, kapan Antum mengawas, dan soal mapel Antum yang perlu dikumpulkan — semuanya di sini."}</small></div>
       ${atur ? `<button class="btn btn-accent" onclick="juBuatBaru()">＋ Buat jadwal</button>` : ""}
     </div>
-    ${tugasSaya.length ? `<div class="card"><div class="ju-sub">👁️ Tugas mengawas saya</div>${_juHtmlTugas(tugasSaya, true)}</div>` : ""}
     ${usul.length ? `<div class="card ju-usul"><div class="ju-sub">💡 Ujian di Kalender Akademik yang belum dibuat jadwalnya</div>${usul.map((k) => `<div class="ju-usul-baris"><span><b>${_juEsc(k.judul)}</b><small>${_tglPendek(k.tanggal_mulai)}${k.tanggal_selesai && k.tanggal_selesai !== k.tanggal_mulai ? " – " + _tglPendek(k.tanggal_selesai) : ""}${k._lewat ? " · sudah lewat" : ""}</small></span><button class="btn btn-outline btn-sm" onclick="juBuatDariKaldik('${k.id}')">Susun jadwal →</button></div>`).join("")}</div>` : ""}
-    ${daftar.length ? `<div class="ju-grid">${daftar.map(_juHtmlKartuJadwal).join("")}</div>` : `<div class="card empty-state">Belum ada jadwal ujian.${atur ? " Tekan <b>＋ Buat jadwal</b> atau pilih ujian dari Kalender Akademik di atas." : ""}</div>`}`;
+    ${aktif ? _juHtmlAktif(aktif, saya, atur) : `<div class="card empty-state">Belum ada jadwal ujian.${atur ? " Tekan <b>＋ Buat jadwal</b> atau pilih ujian dari Kalender Akademik di atas." : ""}</div>`}
+    ${lain.length ? `<div class="ju-sub" style="margin:18px 2px 8px">📁 Jadwal ujian lainnya</div><div class="ju-grid">${lain.map(_juHtmlKartuJadwal).join("")}</div>` : ""}`;
+}
+// Tampilan utama: jadwal aktif + "Ujian saya" (mengawas & mapel yang diujikan) + papan jadwal lengkap
+function _juHtmlAktif(j, saya, atur) {
+  const hariIni = tanggalISO(), e = _juEsc;
+  const tugas = _juTugasGuru(saya).filter((x) => x.j.id === j.id);
+  const mapel = _juMapelSaya(j, saya);
+  const siapUA = typeof UA !== "undefined" && UA.jadwal && UA.jadwal.id === j.id && UA.bank;
+  const stMapel = mapel.map((x) => ({ ...x, st: siapUA ? _uaStatus(j, x) : null }));
+  const terkumpul = stMapel.filter((x) => x.st && x.st.length).length;
+  const sisaHari = Math.round((_juTgl(j.mulai) - _juTgl(hariIni)) / 86400000);
+  const keHari = j.hari.indexOf(hariIni);
+  const waktu = sisaHari > 0 ? `⏳ dimulai ${sisaHari === 1 ? "besok" : `${sisaHari} hari lagi`}` : keHari >= 0 ? `🔴 sedang berlangsung · hari ke-${keHari + 1} dari ${j.hari.length}` : (j.selesai || j.mulai) < hariIni ? "✔️ sudah selesai" : "🔴 sedang berlangsung";
+  // kelompok tugas mengawas per hari
+  const perHari = new Map(); tugas.forEach((x) => { if (!perHari.has(x.t)) perHari.set(x.t, []); perHari.get(x.t).push(x); });
+  const pilihHari = JU.papanHari && j.hari.includes(JU.papanHari) ? JU.papanHari : (j.hari.includes(hariIni) ? hariIni : j.hari.find((t) => t >= hariIni) || j.hari[0]);
+  return `
+  <div class="card ju2-aktif">
+    <div class="ju2-aktif-h">
+      <div><span class="ju-jenis ju-j-${j.jenis}">${e(_JU_JENIS[j.jenis] || "Ujian")}</span> <span class="ju2-waktu">${waktu}</span>
+        <b class="ju2-judul">${e(j.judul)}</b><small class="ju-ket">${_juHariPanjang(j.mulai)}${j.selesai !== j.mulai ? " – " + _juHariPanjang(j.selesai) : ""} · ${j.hari.length} hari ujian</small></div>
+      <div class="ju2-aksi">
+        <button class="btn btn-outline btn-sm" onclick="juCetakPdf('${j.id}')">🖨️ PDF</button>
+        ${j.jenis !== "tahfizh" ? `<button class="btn btn-outline btn-sm" onclick="juPengumpulanSoal('${j.id}')">📥 ${atur ? "Pengumpulan soal" : "Rekap soal"}</button>` : ""}
+        ${atur ? `<button class="btn btn-accent btn-sm" onclick="juBukaEditor('${j.id}')">✏️ Susun</button><button class="btn btn-wa btn-sm" onclick="juBagikanWa('${j.id}')">💬 WA</button><button class="btn btn-outline btn-sm" onclick="juRekapHadir('${j.id}')">✅ Kehadiran</button>` : ""}
+      </div>
+    </div>
+    <div class="ju2-ringkas">
+      <div style="--c:37,99,235"><b>${tugas.length}</b><span>👁️ tugas mengawas saya</span></div>
+      <div style="--c:124,58,237"><b>${mapel.length}</b><span>📝 mapel saya diujikan</span></div>
+      <div style="--c:${mapel.length && terkumpul === mapel.length ? "22,163,74" : "217,119,6"}"><b>${siapUA ? `${terkumpul}/${mapel.length}` : "…"}</b><span>📥 soal terkumpul</span></div>
+    </div>
+  </div>
+  <div class="ju2-dua">
+    <div class="card ju2-kolom">
+      <div class="ju2-kolom-h"><span class="ju2-ikon" style="--c:37,99,235">👁️</span><div><b>Saya mengawas</b><small>Tekan <b>✋ Absen Mengawas</b> saat bertugas (buka 30 menit sebelum sesi)</small></div></div>
+      ${tugas.length ? [...perHari.entries()].map(([t, xs]) => `<div class="ju2-hari ${t === hariIni ? "kini" : t < hariIni ? "lewat" : ""}"><div class="ju2-hari-h">${t === hariIni ? "📍 Hari ini · " : ""}${_juHariPanjang(t)}</div>${_juHtmlTugas(xs, true)}</div>`).join("")
+        : `<div class="ju2-kosong">🙌 Antum tidak dijadwalkan mengawas di ujian ini.</div>`}
+    </div>
+    <div class="card ju2-kolom">
+      <div class="ju2-kolom-h"><span class="ju2-ikon" style="--c:124,58,237">📝</span><div><b>Mapel saya yang diujikan</b><small>Kumpulkan soal ke admin: buat di Ujian Online, unggah Word/PDF, atau serahkan kertasnya</small></div></div>
+      ${stMapel.length ? stMapel.map((x) => {
+        const sudah = x.st && x.st.length;
+        return `<div class="ju2-mapel ${sudah ? "ok" : ""}" style="--kw:${_juWarnaKelas(x.kelasId)}">
+          <span class="ju-kls">${e(_juAngkaKelas(x.kelasId))}</span>
+          <div class="ju2-mapel-isi"><b>${e(_juNamaMapel(x.mapelId))} · Kelas ${e(_juAngkaKelas(x.kelasId))}</b>
+            <small>${x.kapan.length ? x.kapan.map((k) => `📅 ${_juHariPendek(k.t)} · Sesi ${k.ke} (${k.sesi.mulai}–${k.sesi.selesai})`).join("<br>") : "📅 belum masuk jadwal ujian (tanya admin)"}</small>
+            <div class="ua-st">${x.st == null ? `<span class="ua-chip belum">memuat…</span>` : x.st.map((s) => `<span class="ua-chip on">${s.label}</span>`).join("") || `<span class="ua-chip belum">⏳ Soal belum dikumpulkan</span>`}</div></div>
+          ${j.jenis !== "tahfizh" ? `<button class="btn btn-sm ${sudah ? "btn-ghost" : "btn-accent"}" onclick="uaKumpulkan('${j.id}','${x.mapelId}','${x.kelasId}')">${sudah ? "✓ Kelola" : "📤 Kumpulkan"}</button>` : ""}
+        </div>`; }).join("") : `<div class="ju2-kosong">Tidak ada mapel Antum yang diujikan di jadwal ini.</div>`}
+    </div>
+  </div>
+  <div class="card ju2-papan">
+    <div class="ju2-kolom-h"><span class="ju2-ikon" style="--c:13,148,136">🗓️</span><div><b>Jadwal lengkap</b><small>Ketuk mapel untuk mengumpulkan soalnya. <span class="ju2-tanda saya-awas">👁️ saya mengawas</span> <span class="ju2-tanda saya-mapel">📝 mapel saya</span></small></div>
+      <label class="ju2-saring"><input type="checkbox" ${JU.papanSaya ? "checked" : ""} onchange="JU.papanSaya=this.checked;_juGambarDaftar()"> Hanya yang terkait saya</label></div>
+    <div class="ju-tab ju2-tab">${j.hari.map((t) => { const n = (j.kelas || []).reduce((a, k) => a + j.sesi.filter((s) => { const x = j.slot?.[_juKunci(t, s.id, k)]; return _juLabelSlot(x) && (!JU.papanSaya || _juTerkait(x, k, saya)); }).length, 0); const aku = tugas.some((x) => x.t === t) || mapel.some((m) => m.kapan.some((k) => k.t === t));
+      return `<button class="${t === pilihHari ? "on" : ""} ${t === hariIni ? "kini" : ""}" onclick="JU.papanHari='${t}';_juGambarDaftar()">${_juHariPendek(t)}${aku ? " ⭐" : ""}<small>${n} ujian</small></button>`; }).join("")}</div>
+    ${_juHtmlPapanHari(j, pilihHari, saya, atur)}
+  </div>`;
+}
+const _juTerkait = (x, kelasId, saya) => (x?.p || []).includes(saya) || (x?.m && (JU.ajar || []).some((a) => a.guru_id === saya && a.mapel_id === x.m && a.kelas_id === kelasId));
+function _juHtmlPapanHari(j, t, saya, atur) {
+  if (!t) return `<div class="ju2-kosong">Belum ada hari ujian.</div>`;
+  const e = _juEsc;
+  const blok = j.sesi.map((s, i) => {
+    const sel = (j.kelas || []).map((k) => {
+      const x = j.slot?.[_juKunci(t, s.id, k)], label = _juLabelSlot(x);
+      if (!label) return "";
+      const awas = (x.p || []).includes(saya), milik = x.m && (JU.ajar || []).some((a) => a.guru_id === saya && a.mapel_id === x.m && a.kelas_id === k);
+      if (JU.papanSaya && !awas && !milik) return "";
+      const bisa = x.m && j.jenis !== "tahfizh" && (milik || atur);
+      return `<button class="ju2-sel ${awas ? "awas" : ""} ${milik ? "milik" : ""}" style="--kw:${_juWarnaKelas(k)}" ${bisa ? `onclick="uaKumpulkan('${j.id}','${x.m}','${k}')"` : "disabled"}>
+        <span class="ju2-sel-kls">Kelas ${e(_juAngkaKelas(k))}</span><b>${e(label)}</b>
+        <small>👁️ ${(x.p || []).map(_juNamaGuru).map(e).join(", ") || "pengawas belum ada"}</small>
+        ${awas || milik ? `<span class="ju2-sel-tanda">${awas ? "👁️ Saya mengawas" : ""}${awas && milik ? " · " : ""}${milik ? "📝 Mapel saya" : ""}</span>` : ""}</button>`;
+    }).join("");
+    return sel ? `<div class="ju2-sesi"><div class="ju2-sesi-h"><b>Sesi ${i + 1}</b><span>${s.mulai}–${s.selesai}</span></div><div class="ju2-sel-grid">${sel}</div></div>` : "";
+  }).join("");
+  return blok || `<div class="ju2-kosong">${JU.papanSaya ? "Tidak ada ujian yang terkait Antum di hari ini." : "Belum ada mapel di hari ini."}</div>`;
 }
 
 function _juStatistik(j) {
