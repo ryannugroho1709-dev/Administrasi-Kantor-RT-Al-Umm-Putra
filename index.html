@@ -24,7 +24,7 @@
 <link rel="stylesheet" href="src/hp.css?v=3">
 <link rel="stylesheet" href="src/kuliah.css?v=6">
 <link rel="stylesheet" href="src/modul-baca.css?v=10">
-<link rel="stylesheet" href="src/ujian.css?v=13">
+<link rel="stylesheet" href="src/ujian.css?v=14">
 
 <script>
 // Logo gagal dimuat → coba logo bawaan; kalau bawaan pun gagal, tampilkan ikon 🎓 (bukan huruf "G").
@@ -46,7 +46,7 @@ function _logoAwal(){try{return localStorage.getItem("logoSekolahUrl")||"assets/
 <!-- pdf.js — hanya dipakai fitur "Ambil sampul dari halaman pertama PDF" di Modul Ajar (render page 1 ke canvas) -->
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script>if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";</script>
-<script src="src/api.js?v=18"></script>
+<script src="src/api.js?v=19"></script>
 <script>
 // ── Override apiPerbaikanAbsenAdmin: pakai RPC SECURITY DEFINER (bypass RLS) ──
 // Blok ini di index.html mengoverride versi dari api.js agar pasti termuat,
@@ -1736,25 +1736,14 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
 
       <!-- ══ INPUT NILAI RAPOR ══ -->
       <section class="page" id="page-input-nilai">
-        <div class="card" style="margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
-          <div><label class="form-label" data-i18n="guru">Guru</label><select id="nl-guru" class="input" onchange="onGantiGuruNilai()"></select></div>
-          <div><label class="form-label" data-i18n="mapel">Mapel</label><select id="nl-mapel" class="input" onchange="onGantiMapelNilai()"></select></div>
-          <div><label class="form-label" data-i18n="kelas">Kelas</label><select id="nl-kelas" class="input" onchange="renderInputNilai()"></select></div>
-          <div><label class="form-label" data-i18n="pilihSemester">Semester</label>
-            <select id="nl-semester" class="input" onchange="renderInputNilai()"><option>Ganjil</option><option selected>Genap</option></select>
-          </div>
-          <div><label class="form-label" data-i18n="tahunAjaran">Tahun Ajaran</label><input id="nl-tahun" class="input" value="2025/2026" onchange="renderInputNilai()"/></div>
+        <div class="nl2-filter">
+          <label class="nl2-f nl2-f-guru"><span>👤 <i data-i18n="guru">Guru</i></span><select id="nl-guru" class="input" onchange="onGantiGuruNilai()"></select></label>
+          <label class="nl2-f nl2-f-mapel"><span>📘 <i data-i18n="mapel">Mapel</i></span><select id="nl-mapel" class="input" onchange="onGantiMapelNilai()"></select></label>
+          <label class="nl2-f"><span>🏫 <i data-i18n="kelas">Kelas</i></span><select id="nl-kelas" class="input" onchange="renderInputNilai()"></select></label>
+          <label class="nl2-f"><span>🗓️ <i data-i18n="pilihSemester">Semester</i></span><select id="nl-semester" class="input" onchange="renderInputNilai()"><option>Ganjil</option><option selected>Genap</option></select></label>
+          <label class="nl2-f"><span>📅 <i data-i18n="tahunAjaran">Tahun Ajaran</i></span><input id="nl-tahun" class="input" value="2025/2026" onchange="renderInputNilai()"/></label>
         </div>
-        <!-- Leger Excel (src/leger-nilai.js) -->
-        <div class="card lg-kartu">
-          <div class="lg-ikon">📊</div>
-          <div class="lg-teks"><b>Leger Nilai Excel</b><small>Belum terbiasa mengisi di aplikasi? Unduh leger mapel ini (satu lembar per kelas yang Antum ajar), isi di Excel/WPS/Google Sheets, lalu unggah kembali — nilai otomatis masuk.</small></div>
-          <div class="lg-aksi">
-            <button class="btn btn-outline" onclick="unduhLegerNilai()">⬇️ Unduh Leger</button>
-            <label class="btn btn-accent" style="cursor:pointer;">⬆️ Unggah Leger<input type="file" accept=".xlsx,.xls" hidden onchange="unggahLegerNilai(this)"/></label>
-          </div>
-        </div>
-        <div id="input-nilai-table" style="overflow-x:auto;"></div>
+        <div id="input-nilai-table"></div>
       </section>
 
       <!-- ══ RAPOR UMUM / DINIYYAH ══ -->
@@ -10367,69 +10356,81 @@ function nilaiDariKolom(arr, nama) {
 
 async function gambarTabelNilai() {
   const target = qs("input-nilai-table");
-  const { kolomUH, kolomTugas, rows, adaUTS } = NILAI_STATE;
+  const { kolomUH, kolomTugas, rows } = NILAI_STATE;
   const now = new Date();
   const dariTahun = `${now.getFullYear()}-01-01`;
   const semesterAwal = tanggalISO();
 
-  // ── Tampilan baru: kolom dikelompokkan (UH / Tugas / Ujian / Hasil) dengan pita warna, nama
-  // menempel di kiri saat digeser, angka dihitung LANGSUNG saat diketik, Enter = turun ke siswa
-  // berikutnya (seperti Excel), Capaian Pembelajaran dibuka lewat tombol (tidak makan lebar), dan
-  // di HP tiap siswa jadi kartu ringkas. Kelas & atribut input SAMA seperti sebelumnya, jadi
-  // simpanSemuaNilai() tidak berubah sama sekali.
-  const mapelAktif = (LOOKUP.mapel || []).find((m) => m.id === qs("nl-mapel").value);
-  NILAI_STATE.kkm = mapelAktif ? kkmMapel(mapelAktif, qs("nl-kelas").value) : null;
+  // Tampilan "pusat nilai": kolom mengikuti POLA PENILAIAN mapel (Pengaturan Penilaian):
+  // standar (UH/Tugas/UTS/UAS/Hadir), UAS + Kehadiran, satu nilai (ekskul/muhadhoroh), atau atur sendiri.
+  // Angka dihitung langsung saat diketik (rumus resmi hitungNilaiAkhir = angka di rapor), Enter = turun.
+  const mapelId = qs("nl-mapel").value, kelasId = qs("nl-kelas").value;
+  const mapelAktif = (LOOKUP.mapel || []).find((m) => m.id === mapelId);
+  const kelasAktif = (LOOKUP.kelas || []).find((k) => k.id === kelasId);
+  const P = polaNilai(mapelId); NILAI_STATE.pola = P;
+  if (P.pakai.utsWajib) NILAI_STATE.adaUTS = true;
+  if (!P.pakai.utsBisa) NILAI_STATE.adaUTS = false;
+  const adaUTS = NILAI_STATE.adaUTS, satu = P.pola === "satu", pk = P.pakai;
+  NILAI_STATE.kkm = mapelAktif ? kkmMapel(mapelAktif, kelasId) : null;
   NILAI_STATE.dirty = false;
-  const bSet = (() => { const b = STATE.pengaturan?.bobot_nilai; return b ? (adaUTS ? b.dengan_uts : b.tanpa_uts) : null; })();
-  const bobotChip = bSet ? (adaUTS
-      ? [`UH ${bSet.uh}%`, `Tugas ${bSet.tugas}%`, `UTS ${bSet.uts}%`, `UAS ${bSet.uas}%`, `Hadir ${bSet.kehadiran}%`]
-      : [`UH ${bSet.uh}%`, `Tugas ${bSet.tugas}%`, `UAS ${bSet.uas}%`, `Hadir ${bSet.kehadiran}%`]).map((p) => `<span class="nl-chip">${p}</span>`).join("") : "";
+  const bSet = P.bobot(adaUTS) || {};
+  const NAMA_K = { uh: "UH", tugas: "Tugas", uts: "UTS", uas: "UAS", kehadiran: "Hadir" };
+  const bobotChip = satu ? `<span class="nl2-chip">nilai akhir = nilai yang diisi</span>` : Object.entries(NAMA_K).filter(([k]) => bSet[k] > 0 && (k !== "uts" || adaUTS)).map(([k, l]) => `<span class="nl2-chip">${l} ${bSet[k]}%</span>`).join("");
   const sel = (cls, kolom, val, label) => `<td class="nl-sel" data-label="${escapeHtml(label)}"><input type="number" inputmode="decimal" min="0" max="100" step="0.5" class="input nl-in ${cls}"${kolom ? ` data-kolom="${escapeHtml(kolom)}"` : ""} value="${val}" aria-label="${escapeHtml(label)}"/></td>`;
-  const jmlUjian = (adaUTS ? 1 : 0) + 1;
+  const jmlUjian = (adaUTS ? 1 : 0) + (pk.uas ? 1 : 0);
+  const bolehAtur = isAdmin() || (typeof isKepsek === "function" && isKepsek());
 
   target.innerHTML = `
-    <div class="nl-toolbar">
-      <div class="nl-toolbar-kiri">
-        <button class="btn btn-ghost nl-btn" onclick="tambahKolomNilai('uh')">＋ UH</button>
-        <button class="btn btn-ghost nl-btn" onclick="tambahKolomNilai('tugas')">＋ Tugas</button>
-        <label class="nl-switch"><input type="checkbox" id="nl-ada-uts" ${adaUTS ? "checked" : ""} onchange="toggleUTSNilai(this.checked)"/> <span>UTS</span></label>
-        ${isAdmin() || (typeof isKepsek === "function" && isKepsek()) ? `<button class="btn btn-ghost nl-btn" onclick="bukaPengaturanPenilaian()">⚖️ Bobot & KKM</button>` : ""}
+    <div class="nl2-hero">
+      <i class="nl2-orb a"></i><i class="nl2-orb b"></i>
+      <div class="nl2-hero-kiri">
+        <span class="nl2-pil">${P.info.ikon} Pola: ${escapeHtml(P.info.label)}${bolehAtur ? ` <button onclick="bukaPengaturanPenilaian('pola')">ubah</button>` : ""}</span>
+        <h2>${escapeHtml(mapelAktif?.nama_mapel || "-")}</h2>
+        <div class="nl2-meta">🏫 ${escapeHtml(kelasAktif?.nama_kelas || "-")} · 📅 ${escapeHtml(qs("nl-semester").value)} ${escapeHtml(qs("nl-tahun").value)}</div>
+        <div class="nl2-chips">${bobotChip}${NILAI_STATE.kkm ? `<span class="nl2-chip kkm">🎯 KKM ${NILAI_STATE.kkm}</span>` : ""}</div>
       </div>
-      <div class="nl-toolbar-kanan">
-        <span id="nl-progres" class="nl-progres"></span>
+      <div class="nl2-stat" id="nl2-stat"></div>
+    </div>
+    <div class="nl2-toolbar">
+      <div class="nl2-alat">
+        ${pk.uh ? `<button class="nl2-btn" onclick="tambahKolomNilai('uh')"><span>＋</span>UH</button>` : ""}
+        ${pk.tugas ? `<button class="nl2-btn" onclick="tambahKolomNilai('tugas')"><span>＋</span>Tugas</button>` : ""}
+        ${pk.utsBisa && !pk.utsWajib ? `<label class="nl2-btn nl2-saklar"><input type="checkbox" id="nl-ada-uts" ${adaUTS ? "checked" : ""} onchange="toggleUTSNilai(this.checked)"/><i></i>UTS</label>` : ""}
+        <details class="nl2-menu"><summary class="nl2-btn">📊 Excel ▾</summary><div><button onclick="unduhLegerNilai()">⬇️ Unduh leger (diisi di Excel)</button><label>⬆️ Unggah leger yang sudah diisi<input type="file" accept=".xlsx,.xls" hidden onchange="unggahLegerNilai(this)"/></label></div></details>
+        ${bolehAtur ? `<button class="nl2-btn" onclick="bukaPengaturanPenilaian()">⚖️ Bobot & KKM</button>` : ""}
+      </div>
+      <div class="nl2-simpan">
         <span id="nl-status-simpan" class="nl-status"></span>
-        <button class="btn btn-accent" onclick="simpanSemuaNilai()">💾 Simpan</button>
+        <button class="btn btn-accent nl2-tombol-simpan" onclick="simpanSemuaNilai()">💾 Simpan</button>
       </div>
     </div>
-    ${bobotChip || NILAI_STATE.kkm ? `<div class="nl-info">${bobotChip}${NILAI_STATE.kkm ? `<span class="nl-chip nl-chip-kkm">KKM ${NILAI_STATE.kkm}</span>` : ""}<span class="nl-tips">Enter = turun ke siswa berikutnya</span></div>` : ""}
-    <div class="card nl-wadah">
+    ${satu ? `<div class="nl2-catatan">⭐ Mapel ini memakai <b>satu nilai</b> saja (mis. ekskul / muhadhoroh). Isi satu angka per santri — itulah nilai rapornya.</div>` : ""}
+    <div class="card nl-wadah nl2-wadah">
     <table class="simple-table nl-tabel">
       <thead>
         <tr class="nl-grup">
-          <th rowspan="2" class="nl-col-nama">Nama Siswa</th>
-          <th colspan="${kolomUH.length + 1}" class="nl-g-uh">Ulangan Harian</th>
-          <th colspan="${kolomTugas.length + 1}" class="nl-g-tugas">Tugas</th>
-          <th colspan="${jmlUjian}" class="nl-g-ujian">Ujian</th>
-          <th colspan="3" class="nl-g-hasil">Hasil</th>
+          <th rowspan="2" class="nl-col-nama">Nama Santri <small id="nl-progres" class="nl-progres"></small></th>
+          ${pk.uh ? `<th colspan="${kolomUH.length + 1}" class="nl-g-uh">Ulangan Harian</th>` : ""}
+          ${pk.tugas ? `<th colspan="${kolomTugas.length + 1}" class="nl-g-tugas">Tugas</th>` : ""}
+          ${jmlUjian ? `<th colspan="${jmlUjian}" class="nl-g-ujian">${satu ? "Penilaian" : "Ujian"}</th>` : ""}
+          <th colspan="${pk.kehadiran ? 3 : 2}" class="nl-g-hasil">Hasil</th>
         </tr>
         <tr class="nl-sub">
-          ${kolomUH.map((k, i) => `<th title="${escapeHtml(k)}">${i + 1}</th>`).join("")}<th class="nl-rata">Rata</th>
-          ${kolomTugas.map((k, i) => `<th title="${escapeHtml(k)}">${i + 1}</th>`).join("")}<th class="nl-rata">Rata</th>
-          ${adaUTS ? `<th>UTS</th>` : ""}<th>UAS</th>
-          <th title="${escapeHtml(t("nilaiKehadiranOtomatis"))}">Hadir</th><th>Akhir</th><th>CP</th>
+          ${pk.uh ? kolomUH.map((k, i) => `<th title="${escapeHtml(k)}">${i + 1}</th>`).join("") + `<th class="nl-rata">Rata</th>` : ""}
+          ${pk.tugas ? kolomTugas.map((k, i) => `<th title="${escapeHtml(k)}">${i + 1}</th>`).join("") + `<th class="nl-rata">Rata</th>` : ""}
+          ${adaUTS ? `<th>UTS</th>` : ""}${pk.uas ? `<th>${satu ? "Nilai" : "UAS"}</th>` : ""}
+          ${pk.kehadiran ? `<th title="${escapeHtml(t("nilaiKehadiranOtomatis"))}">Hadir</th>` : ""}<th>Akhir</th><th>CP</th>
         </tr>
       </thead>
       <tbody>
         ${rows.map(({ siswa, nilai }, idx) => `
         <tr data-siswa="${siswa.id}">
           <td class="nl-col-nama"><span class="nl-no">${idx + 1}</span>${siswa.nis ? `<span class="nl-nis">${escapeHtml(siswa.nis)}</span>` : ""}${escapeHtml(siswa.nama)}</td>
-          ${kolomUH.map((k) => sel("nilai-uh", k, nilaiDariKolom(nilai?.ulangan_harian, k), k)).join("")}
-          <td class="rata-uh nl-rata" data-label="Rata UH">${hitungTotalKomponen(nilai?.ulangan_harian) || "-"}</td>
-          ${kolomTugas.map((k) => sel("nilai-tugas", k, nilaiDariKolom(nilai?.tugas, k), k)).join("")}
-          <td class="rata-tugas nl-rata" data-label="Rata Tugas">${hitungTotalKomponen(nilai?.tugas) || "-"}</td>
+          ${pk.uh ? kolomUH.map((k) => sel("nilai-uh", k, nilaiDariKolom(nilai?.ulangan_harian, k), k)).join("") + `<td class="rata-uh nl-rata" data-label="Rata UH">${hitungTotalKomponen(nilai?.ulangan_harian) || "-"}</td>` : ""}
+          ${pk.tugas ? kolomTugas.map((k) => sel("nilai-tugas", k, nilaiDariKolom(nilai?.tugas, k), k)).join("") + `<td class="rata-tugas nl-rata" data-label="Rata Tugas">${hitungTotalKomponen(nilai?.tugas) || "-"}</td>` : ""}
           ${adaUTS ? sel("nilai-uts", "", nilaiDariKolom(nilai?.uts, "UTS"), "UTS") : ""}
-          ${sel("nilai-uas", "", nilaiDariKolom(nilai?.uas, "UAS"), "UAS")}
-          <td class="nilai-kehadiran nl-rata" data-label="Hadir">${nilai?.nilai_kehadiran ?? "…"}</td>
+          ${pk.uas ? sel("nilai-uas", "", nilaiDariKolom(nilai?.uas, "UAS") || (satu ? (nilai?.uas?.[0]?.nilai ?? "") : ""), satu ? "Nilai" : "UAS") : ""}
+          ${pk.kehadiran ? `<td class="nilai-kehadiran nl-rata" data-label="Hadir">${nilai?.nilai_kehadiran ?? "…"}</td>` : ""}
           <td class="nilai-akhir" data-label="Nilai Akhir">-</td>
           <td class="nl-cp-sel" data-label="CP">
             <textarea class="nilai-cp" hidden>${escapeHtml(nilai?.capaian_pembelajaran || "")}</textarea>
@@ -10438,7 +10439,8 @@ async function gambarTabelNilai() {
         </tr>`).join("")}
       </tbody>
     </table>
-    </div>`;
+    </div>
+    <div class="nl2-kaki">Enter = turun ke santri berikutnya · Shift+Enter = naik · nilai akhir dihitung otomatis sama persis dengan rapor</div>`;
 
   qsa("#input-nilai-table tbody tr").forEach((tr) => { _hitungUlangBarisNilai(tr); _perbaruiTombolCP(tr); });
   _perbaruiProgresNilai();
@@ -10461,14 +10463,14 @@ async function gambarTabelNilai() {
   tabel.addEventListener("focusin", (e) => { if (e.target.classList.contains("nl-in")) e.target.select(); });
 
   // isi nilai kehadiran otomatis (async, per siswa) dari rekap semester berjalan
-  rows.forEach(async ({ siswa }) => {
+  if (pk.kehadiran) rows.forEach(async ({ siswa }) => {
     try {
       const persen = await apiHitungNilaiKehadiran(siswa.id, dariTahun, semesterAwal);
       const tr = target.querySelector(`tr[data-siswa="${siswa.id}"]`);
       const cell = tr?.querySelector(".nilai-kehadiran");
       if (cell) cell.textContent = persen;
       NILAI_STATE.kehadiranMap[siswa.id] = persen;
-      if (tr) _hitungUlangBarisNilai(tr);
+      if (tr) { _hitungUlangBarisNilai(tr); _perbaruiProgresNilai(); }
     } catch (e) { /* biarkan tanda "…" jika gagal */ }
   });
 }
@@ -10482,15 +10484,17 @@ function _hitungUlangBarisNilai(tr) {
   const terisi = (arr) => arr.filter((x) => !x.kosong);
   const kehadiran = NILAI_STATE.kehadiranMap[tr.dataset.siswa];
   const hasil = hitungNilaiAkhir({
+    mapel_id: qs("nl-mapel").value,
     ulangan_harian: terisi(uh), tugas: terisi(tugas), ada_uts: NILAI_STATE.adaUTS, uts: terisi(uts), uas: terisi(uas),
-    nilai_kehadiran: typeof kehadiran === "number" ? kehadiran : null,
+    nilai_kehadiran: NILAI_STATE.pola?.pakai.kehadiran === false ? null : typeof kehadiran === "number" ? kehadiran : null,
   });
   const rataUH = tr.querySelector(".rata-uh"), rataT = tr.querySelector(".rata-tugas"), akhir = tr.querySelector(".nilai-akhir");
   if (rataUH) rataUH.textContent = hasil.rataUH || "-";
   if (rataT) rataT.textContent = hasil.rataTugas || "-";
   const adaIsi = [...uh, ...tugas, ...uts, ...uas].some((x) => !x.kosong);
+  const n = adaIsi ? hasil.nilaiAkhir : null;
+  tr.dataset.akhir = n || "";
   if (akhir) {
-    const n = adaIsi ? hasil.nilaiAkhir : null;
     const kkm = NILAI_STATE.kkm;
     akhir.innerHTML = n ? `<span class="nl-akhir ${kkm ? (n >= kkm ? "nl-tuntas" : "nl-belum") : ""}" title="${kkm ? (n >= kkm ? "Tuntas (≥ KKM)" : "Di bawah KKM") : ""}">${n}${kkm ? (n >= kkm ? " ✓" : " ✕") : ""}</span>` : `<span class="nl-kosong">-</span>`;
   }
@@ -10499,8 +10503,18 @@ function _hitungUlangBarisNilai(tr) {
 }
 function _perbaruiProgresNilai() {
   const trs = qsa("#input-nilai-table tbody tr");
+  const lengkap = trs.filter((tr) => tr.classList.contains("nl-lengkap")).length;
   const el = qs("nl-progres");
-  if (el) el.textContent = `${trs.filter((tr) => tr.classList.contains("nl-lengkap")).length}/${trs.length} siswa lengkap`;
+  if (el) el.textContent = `${lengkap}/${trs.length} lengkap`;
+  const st = qs("nl2-stat"); if (!st) return;
+  const akhir = trs.map((tr) => Number(tr.dataset.akhir)).filter((v) => v > 0), kkm = NILAI_STATE.kkm || 0;
+  const rata = akhir.length ? Math.round((akhir.reduce((a, v) => a + v, 0) / akhir.length) * 10) / 10 : "–";
+  const tuntas = akhir.filter((v) => v >= kkm).length, persen = trs.length ? Math.round((lengkap / trs.length) * 100) : 0;
+  st.innerHTML = `
+    <div class="nl2-ubin"><div class="nl2-cincin" style="--p:${persen}"><b>${persen}%</b></div><span>${lengkap}/${trs.length} santri lengkap</span></div>
+    <div class="nl2-ubin"><b>${rata}</b><span>📈 rata-rata kelas</span></div>
+    <div class="nl2-ubin ok"><b>${tuntas}</b><span>✅ tuntas ≥ ${kkm || "-"}</span></div>
+    <div class="nl2-ubin bahaya"><b>${akhir.length - tuntas}</b><span>⚠️ di bawah KKM</span></div>`;
 }
 function _tandaiNilaiBelumDisimpan() {
   NILAI_STATE.dirty = true;
@@ -10579,9 +10593,10 @@ function _simpanIsianTabelKeState() {
     const kumpul = (sel) => qsa(sel, tr).filter((i) => i.value !== "").map((i) => ({ nama: i.dataset.kolom || (sel === ".nilai-uts" ? "UTS" : "UAS"), nilai: Number(i.value) }));
     row.nilai = {
       ...(row.nilai || {}),
-      ulangan_harian: kumpul(".nilai-uh"), tugas: kumpul(".nilai-tugas"),
+      ulangan_harian: NILAI_STATE.pola?.pakai.uh === false ? (row.nilai?.ulangan_harian || []) : kumpul(".nilai-uh"),
+      tugas: NILAI_STATE.pola?.pakai.tugas === false ? (row.nilai?.tugas || []) : kumpul(".nilai-tugas"),
       uts: kumpul(".nilai-uts").length ? kumpul(".nilai-uts") : (row.nilai?.uts || []),
-      uas: kumpul(".nilai-uas"),
+      uas: NILAI_STATE.pola?.pakai.uas === false ? (row.nilai?.uas || []) : kumpul(".nilai-uas"),
       capaian_pembelajaran: tr.querySelector(".nilai-cp")?.value || "",
       nilai_kehadiran: NILAI_STATE.kehadiranMap[tr.dataset.siswa] ?? row.nilai?.nilai_kehadiran ?? null,
     };
@@ -10596,16 +10611,18 @@ async function simpanSemuaNilai() {
   try {
     for (const tr of trs) {
       const siswaId = tr.getAttribute("data-siswa");
-      const ulanganHarian = NILAI_STATE.kolomUH.map((k) => ({ nama: k, nilai: Number(tr.querySelector(`.nilai-uh[data-kolom="${k}"]`)?.value) || 0 }));
-      const tugas = NILAI_STATE.kolomTugas.map((k) => ({ nama: k, nilai: Number(tr.querySelector(`.nilai-tugas[data-kolom="${k}"]`)?.value) || 0 }));
+      // komponen yang disembunyikan pola penilaian (mis. UH/Tugas pada mapel "UAS + Kehadiran") tidak dihapus
+      const lama = NILAI_STATE.rows.find((r) => r.siswa.id === siswaId)?.nilai || {}, pk = NILAI_STATE.pola?.pakai || { uh: true, tugas: true, uas: true };
+      const ulanganHarian = pk.uh ? NILAI_STATE.kolomUH.map((k) => ({ nama: k, nilai: Number(tr.querySelector(`.nilai-uh[data-kolom="${k}"]`)?.value) || 0 })) : (lama.ulangan_harian || []);
+      const tugas = pk.tugas ? NILAI_STATE.kolomTugas.map((k) => ({ nama: k, nilai: Number(tr.querySelector(`.nilai-tugas[data-kolom="${k}"]`)?.value) || 0 })) : (lama.tugas || []);
       const uts = NILAI_STATE.adaUTS ? [{ nama: "UTS", nilai: Number(tr.querySelector(".nilai-uts")?.value) || 0 }] : [];
-      const uas = [{ nama: "UAS", nilai: Number(tr.querySelector(".nilai-uas")?.value) || 0 }];
+      const uas = pk.uas ? [{ nama: "UAS", nilai: Number(tr.querySelector(".nilai-uas")?.value) || 0 }] : (lama.uas || []);
       const cp = tr.querySelector(".nilai-cp")?.value || "";
       const row = {
         siswa_id: siswaId, mapel_id: mapelId, kelas_id: kelasId, guru_id: guruId,
         semester, tahun_ajaran: tahun,
         ulangan_harian: ulanganHarian, tugas, ada_uts: NILAI_STATE.adaUTS, uts, uas,
-        nilai_kehadiran: NILAI_STATE.kehadiranMap[siswaId] ?? null,
+        nilai_kehadiran: NILAI_STATE.kehadiranMap[siswaId] ?? lama.nilai_kehadiran ?? null,
         capaian_pembelajaran: cp,
         diisi_oleh: "guru",
       };
@@ -16247,7 +16264,7 @@ async function handleImportSiswa(evt) {
 <script src="src/presentasi-absen.js?v=4"></script>
 <script src="src/modul-peta.js?v=1"></script>
 <script src="src/jurnal-ekspor.js?v=3"></script>
-<script src="src/rapor-wk.js?v=2"></script>
+<script src="src/rapor-wk.js?v=3"></script>
 <script src="src/rapor-cetak.js?v=2"></script>
 <script src="src/rekap-hadir-cetak.js?v=1"></script>
 <script src="src/kelengkapan-nilai.js?v=2"></script>

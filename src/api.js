@@ -989,20 +989,63 @@ function hitungTotalKomponen(arr) {
   const total = arr.reduce((a, b) => a + (Number(b.nilai) || 0), 0);
   return Math.round((total / arr.length) * 10) / 10;
 }
+// ── POLA PENILAIAN PER MAPEL (Pengaturan Penilaian) ──
+// bobot_nilai.model_mapel = { mapelId: { pola, bobot? } }
+//   standar : UH + Tugas (+UTS) + UAS + Kehadiran, bobot umum
+//   ujian   : hanya ujian (UTS/UAS) + Kehadiran — guru tidak mengadakan UH & tugas
+//   satu    : satu nilai saja (ekskul, muhadhoroh, …) — nilai akhir = nilai itu
+//   khusus  : bobot sendiri per komponen (0 = komponen tidak dipakai)
+const POLA_NILAI = {
+  standar: { label: "Standar", ket: "UH + Tugas + UAS + Kehadiran", ikon: "📚" },
+  ujian: { label: "UAS + Kehadiran", ket: "tanpa ulangan harian & tugas", ikon: "📝" },
+  satu: { label: "Satu nilai", ket: "ekskul, muhadhoroh, dsb.", ikon: "⭐" },
+  khusus: { label: "Atur sendiri", ket: "bobot khusus mapel ini", ikon: "🎛️" },
+};
+const BOBOT_UJIAN_BAWAAN = { tanpa_uts: { uas: 80, kehadiran: 20 }, dengan_uts: { uts: 30, uas: 50, kehadiran: 20 } };
+const BOBOT_STANDAR_BAWAAN = { tanpa_uts: { uh: 30, tugas: 20, uas: 40, kehadiran: 10 }, dengan_uts: { uh: 25, tugas: 15, uts: 20, uas: 30, kehadiran: 10 } };
+const _RE_SATU_NILAI = /ekskul|ekstra|muhad[hz]?[oa]r|pramuka|kultum|khitob|pidato/i;
+function polaNilai(mapelId) {
+  const _state = (typeof STATE !== "undefined" ? STATE : window.STATE);
+  const cfg = _state?.pengaturan?.bobot_nilai || {};
+  const m = (cfg.model_mapel || {})[mapelId];
+  let pola = m?.pola;
+  if (!pola) { // belum diatur: ekskul & muhadhoroh otomatis satu nilai
+    const nama = (typeof LOOKUP !== "undefined" ? (LOOKUP.mapel || []).find((x) => x.id === mapelId)?.nama_mapel : "") || "";
+    pola = _RE_SATU_NILAI.test(nama) ? "satu" : "standar";
+  }
+  if (pola === "khusus" && !m?.bobot) pola = "standar";
+  const bobot = (adaUTS) => {
+    if (pola === "satu") return { uas: 100 };
+    if (pola === "khusus") return m.bobot;
+    const sumber = pola === "ujian" ? (cfg.ujian_saja || BOBOT_UJIAN_BAWAAN) : { tanpa_uts: cfg.tanpa_uts || BOBOT_STANDAR_BAWAAN.tanpa_uts, dengan_uts: cfg.dengan_uts || BOBOT_STANDAR_BAWAAN.dengan_uts };
+    return adaUTS ? sumber.dengan_uts : sumber.tanpa_uts;
+  };
+  // komponen yang ditampilkan di Input Nilai
+  const pakai = pola === "satu" ? { uh: false, tugas: false, uas: true, kehadiran: false, utsBisa: false }
+    : pola === "ujian" ? { uh: false, tugas: false, uas: true, kehadiran: true, utsBisa: true }
+    : pola === "khusus" ? { uh: m.bobot.uh > 0, tugas: m.bobot.tugas > 0, uas: m.bobot.uas > 0, kehadiran: m.bobot.kehadiran > 0, utsBisa: m.bobot.uts > 0, utsWajib: m.bobot.uts > 0 }
+    : { uh: true, tugas: true, uas: true, kehadiran: true, utsBisa: true };
+  return { pola, bobot, pakai, info: POLA_NILAI[pola] };
+}
 function hitungNilaiAkhir(nilaiRow) {
   if (!nilaiRow) return null;
   const rataUH = hitungTotalKomponen(nilaiRow.ulangan_harian);
   const rataTugas = hitungTotalKomponen(nilaiRow.tugas);
-  const rataUTS = nilaiRow.ada_uts ? hitungTotalKomponen(nilaiRow.uts) : null;
+  const pola = nilaiRow.mapel_id ? polaNilai(nilaiRow.mapel_id) : null;
+  const rataUTS = nilaiRow.ada_uts || pola?.pakai.utsWajib ? hitungTotalKomponen(nilaiRow.uts) : null;
   const rataUAS = hitungTotalKomponen(nilaiRow.uas);
   const kehadiran = typeof nilaiRow.nilai_kehadiran === "number" ? nilaiRow.nilai_kehadiran : null;
+  if (pola && pola.pola === "satu") {
+    const v = rataUAS || rataUTS || rataUH || rataTugas || 0;
+    return { rataUH, rataTugas, rataUTS, rataUAS, nilaiAkhir: Math.round(v * 10) / 10 };
+  }
   // STATE di index.html dibuat dengan `const`, jadi TIDAK ada di window.STATE — dulu baris ini pakai
   // window.STATE sehingga bobot nilai dari Pengaturan tidak pernah terbaca (nilai akhir selalu jadi
   // rata-rata biasa). Ambil langsung dari STATE global kalau tersedia.
   const _state = (typeof STATE !== "undefined" ? STATE : window.STATE);
   const bobotConfig = _state?.pengaturan?.bobot_nilai;
   const adaUTS = rataUTS !== null;
-  const b = bobotConfig ? (adaUTS ? bobotConfig.dengan_uts : bobotConfig.tanpa_uts) : null;
+  const b = pola ? pola.bobot(adaUTS) : bobotConfig ? (adaUTS ? bobotConfig.dengan_uts : bobotConfig.tanpa_uts) : null;
   let nilaiAkhir;
   if (b) {
     let total = 0, totalBobot = 0;

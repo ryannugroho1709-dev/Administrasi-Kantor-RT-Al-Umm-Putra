@@ -203,42 +203,83 @@ async function bukaEkskulMassal(prefix) {
   };
 }
 
-// ── Pengaturan penilaian: bobot nilai akhir + KKM tiap mapel (Admin & Kepala Sekolah) ──
-async function bukaPengaturanPenilaian() {
+// ── Pengaturan penilaian: bobot nilai akhir + POLA per mapel + KKM per mapel × kelas (Admin & Kepala Sekolah) ──
+const _ppAngkaKelas = (k) => String(k?.nama_kelas || "").replace(/^\s*kelas\s+/i, "").trim();
+async function bukaPengaturanPenilaian(tabAwal) {
   if (!_rwkBolehAtur()) { toast("Hanya Admin atau Kepala Sekolah", "err"); return; }
   await ensureLookups();
-  const def = { tanpa_uts: { uh: 30, tugas: 20, uas: 40, kehadiran: 10 }, dengan_uts: { uh: 25, tugas: 15, uts: 20, uas: 30, kehadiran: 10 } };
-  const b = STATE.pengaturan?.bobot_nilai || def, tu = b.tanpa_uts || def.tanpa_uts, du = b.dengan_uts || def.dengan_uts;
-  const isian = (id, v) => `<input id="${id}" type="number" min="0" max="100" class="input pp-bobot" value="${v ?? 0}" oninput="_ppTotal()">`;
-  const grup = (judul, pre, o, kunci) => `<div class="pp-grup"><b>${judul}</b><div class="pp-baris">${kunci.map(([k, l]) => `<label>${l}${isian(`pp-${pre}-${k}`, o[k])}</label>`).join("")}</div><div class="pp-total" id="pp-${pre}-total"></div></div>`;
-  const kkmKelas = STATE.pengaturan?.bobot_nilai?.kkm_kelas || {};
-  const kelasUrut = (LOOKUP.kelas || []).slice().sort((a, c) => (parseInt(String(a.nama_kelas).match(/d+/)?.[0] || "99", 10)) - (parseInt(String(c.nama_kelas).match(/d+/)?.[0] || "99", 10)));
+  const cfg = STATE.pengaturan?.bobot_nilai || {};
+  const tu = cfg.tanpa_uts || BOBOT_STANDAR_BAWAAN.tanpa_uts, du = cfg.dengan_uts || BOBOT_STANDAR_BAWAAN.dengan_uts;
+  const us = cfg.ujian_saja || BOBOT_UJIAN_BAWAAN;
+  const isian = (id, v, cls = "pp-bobot") => `<input id="${id}" type="number" min="0" max="100" class="input ${cls}" value="${v ?? 0}" oninput="_ppTotal()">`;
+  const grup = (judul, ket, pre, o, kunci) => `<div class="pp-grup"><b>${judul}</b> <small class="pp-ket">${ket}</small><div class="pp-baris">${kunci.map(([k, l]) => `<label>${l}${isian(`pp-${pre}-${k}`, o[k])}</label>`).join("")}</div><div class="pp-total" id="pp-${pre}-total"></div></div>`;
+  const kkmKelas = cfg.kkm_kelas || {}, model = cfg.model_mapel || {};
+  const kelasUrut = (LOOKUP.kelas || []).slice().sort((a, c) => (parseInt(String(a.nama_kelas).match(/\d+/)?.[0] || "99", 10)) - (parseInt(String(c.nama_kelas).match(/\d+/)?.[0] || "99", 10)));
   const mapel = (LOOKUP.mapel || []).slice().sort((a, b2) => (a.masuk_diniyyah - b2.masuk_diniyyah) || a.nama_mapel.localeCompare(b2.nama_mapel, "id"));
-  openModal(`<h3>⚖️ Pengaturan Penilaian</h3>
-    <div style="font-size:12px;color:var(--text-secondary);margin:-4px 0 12px">Berlaku untuk semua guru, Input Nilai, dan rapor. Bisa diubah Admin & Kepala Sekolah.</div>
-    <div class="rwk-judul">1️⃣ Bobot nilai akhir</div>
-    ${grup("Tanpa UTS", "tu", tu, [["uh", "Ulangan Harian"], ["tugas", "Tugas"], ["uas", "UAS"], ["kehadiran", "Kehadiran"]])}
-    ${grup("Dengan UTS", "du", du, [["uh", "Ulangan Harian"], ["tugas", "Tugas"], ["uts", "UTS"], ["uas", "UAS"], ["kehadiran", "Kehadiran"]])}
-    <div class="rwk-judul" style="display:flex;justify-content:space-between;align-items:center">2️⃣ KKM tiap mapel
-      <span style="font-size:11.5px;font-weight:600">Semua jadi <input id="pp-kkm-semua" type="number" class="input" style="width:64px;padding:3px 6px;display:inline-block" value="70"> <button class="btn btn-ghost btn-sm" onclick="qsa('.pp-kkm').forEach(i=>i.value=qs('pp-kkm-semua').value)">Terapkan</button></span></div>
-    <div style="font-size:11px;color:var(--text-secondary);margin:-4px 0 8px">Angka di kanan = KKM semua kelas. Ketuk <b>Per kelas</b> bila KKM kelas tertentu berbeda (kosong = ikut KKM umum).</div>
-    <div class="pp-kkm-daftar">${mapel.map((m) => { const kk = kkmKelas[m.id] || {}, adaKhusus = Object.keys(kk).length; return `<div class="pp-kkm-item"><div class="pp-kkm-baris"><span class="pp-kkm-nama">${escapeHtml(m.nama_mapel)} <small>${m.masuk_diniyyah ? "diniyyah" : "umum"}</small></span><button type="button" class="btn btn-ghost btn-sm pp-kkm-tgl ${adaKhusus ? "on" : ""}" onclick="this.closest('.pp-kkm-item').classList.toggle('buka')">Per kelas${adaKhusus ? " (" + adaKhusus + ")" : ""} ▾</button><input type="number" min="0" max="100" class="input pp-kkm" data-id="${m.id}" data-awal="${m.kkm ?? 70}" value="${m.kkm ?? 70}"></div>
-      <div class="pp-kkm-kelas">${kelasUrut.map((k) => `<label><span>Kls ${escapeHtml(String(k.nama_kelas).replace(/^s*kelass+/i, ""))}</span><input type="number" min="0" max="100" class="input pp-kkm-k" data-mapel="${m.id}" data-kelas="${k.id}" value="${kk[k.id] ?? ""}" placeholder="${m.kkm ?? 70}"></label>`).join("")}</div></div>`; }).join("")}</div>
-    <button class="btn btn-accent" style="width:100%;margin-top:12px" id="pp-ok">💾 Simpan pengaturan penilaian</button>`, { lebar: true });
-  _ppTotal();
+  const K = [["uh", "UH"], ["tugas", "Tugas"], ["uts", "UTS"], ["uas", "UAS"], ["kehadiran", "Hadir"]];
+  const barisPola = (m) => {
+    const p = polaNilai(m.id).pola, bb = model[m.id]?.bobot || { uh: 20, tugas: 20, uts: 0, uas: 50, kehadiran: 10 };
+    return `<div class="pp2-pola ${p === "khusus" ? "khusus" : ""}" data-id="${m.id}">
+      <div class="pp2-pola-nama"><b>${escapeHtml(m.nama_mapel)}</b><small>${m.masuk_diniyyah ? "diniyyah" : "umum"}</small></div>
+      <div class="pp2-seg">${Object.entries(POLA_NILAI).map(([k, v]) => `<label title="${escapeHtml(v.ket)}"><input type="radio" name="pp-pola-${m.id}" value="${k}" ${p === k ? "checked" : ""} onchange="this.closest('.pp2-pola').classList.toggle('khusus',this.value==='khusus')"><span>${v.ikon} ${v.label}</span></label>`).join("")}</div>
+      <div class="pp2-khusus">${K.map(([k, l]) => `<label>${l}<input type="number" min="0" max="100" class="input pp-kh" data-k="${k}" value="${bb[k] ?? 0}" oninput="_ppTotalKhusus(this)"></label>`).join("")}<span class="pp-total pp-kh-total"></span></div>
+    </div>`;
+  };
+  openModal(`<div class="pp2">
+    <h3>⚖️ Pengaturan Penilaian</h3>
+    <div class="pp2-sub">Berlaku untuk semua guru, Input Nilai, dan rapor. Bisa diubah Admin & Kepala Sekolah.</div>
+    <div class="pp2-tab">
+      <button data-t="bobot" onclick="_ppTab('bobot')">⚖️ Bobot</button>
+      <button data-t="pola" onclick="_ppTab('pola')">🧩 Pola tiap mapel</button>
+      <button data-t="kkm" onclick="_ppTab('kkm')">🎯 KKM per kelas</button>
+    </div>
+    <div class="pp2-panel" data-p="bobot">
+      ${grup("📚 Standar — tanpa UTS", "UH + Tugas + UAS + Kehadiran", "tu", tu, [["uh", "Ulangan Harian"], ["tugas", "Tugas"], ["uas", "UAS"], ["kehadiran", "Kehadiran"]])}
+      ${grup("📚 Standar — dengan UTS", "bila guru mencentang UTS", "du", du, [["uh", "Ulangan Harian"], ["tugas", "Tugas"], ["uts", "UTS"], ["uas", "UAS"], ["kehadiran", "Kehadiran"]])}
+      ${grup("📝 UAS + Kehadiran — tanpa UTS", "mapel tanpa ulangan harian & tugas", "us", us.tanpa_uts || {}, [["uas", "UAS"], ["kehadiran", "Kehadiran"]])}
+      ${grup("📝 UAS + Kehadiran — dengan UTS", "mapel tanpa UH & tugas, ada UTS", "ud", us.dengan_uts || {}, [["uts", "UTS"], ["uas", "UAS"], ["kehadiran", "Kehadiran"]])}
+      <div class="pp2-catatan">⭐ <b>Satu nilai</b> (ekskul, muhadhoroh) tidak memakai bobot — nilai akhir = nilai yang diisi guru. 🎛️ <b>Atur sendiri</b> diatur di tab <b>Pola tiap mapel</b>. Komponen yang belum diisi guru tidak ikut dihitung (bobotnya dibagi ke komponen lain).</div>
+    </div>
+    <div class="pp2-panel" data-p="pola">
+      <div class="pp2-alat"><span>Pilih cara menilai tiap mapel. Kolom yang tidak dipakai otomatis disembunyikan di Input Nilai.</span>
+        <button class="btn btn-ghost btn-sm" onclick="_ppUsulPola()">✨ Ekskul & muhadhoroh = satu nilai</button></div>
+      <div class="pp2-pola-daftar">${mapel.map(barisPola).join("")}</div>
+    </div>
+    <div class="pp2-panel" data-p="kkm">
+      <div class="pp2-alat"><span>Kolom <b>Semua</b> = KKM umum mapel. Isi kotak kelas bila kelas itu berbeda; kosong = ikut KKM umum. Kotak di judul kolom mengisi satu kolom sekaligus.</span>
+        <span class="pp2-semua">Semua mapel jadi <input id="pp-kkm-semua" type="number" class="input" value="70"><button class="btn btn-ghost btn-sm" onclick="qsa('.pp-kkm').forEach(i=>{i.value=qs('pp-kkm-semua').value;_ppKkmUmum(i)})">Terapkan</button></span></div>
+      <div class="pp2-kkm-wadah"><table class="pp2-kkm"><thead><tr><th class="pp2-kkm-nama">Mapel</th><th>Semua</th>${kelasUrut.map((k) => `<th>Kls ${escapeHtml(_ppAngkaKelas(k))}<input type="number" min="0" max="100" class="input pp-kol" placeholder="isi" title="Isi seluruh kolom kelas ini (kosongkan lalu Enter = ikut umum)" onchange="qsa('.pp-kkm-k[data-kelas=&quot;${k.id}&quot;]').forEach(i=>i.value=this.value);this.value=''"></th>`).join("")}</tr></thead>
+        <tbody>${mapel.map((m) => { const kk = kkmKelas[m.id] || {}; return `<tr><td class="pp2-kkm-nama">${escapeHtml(m.nama_mapel)}</td>
+          <td><input type="number" min="0" max="100" class="input pp-kkm" data-id="${m.id}" data-awal="${m.kkm ?? 70}" value="${m.kkm ?? 70}" oninput="_ppKkmUmum(this)"></td>
+          ${kelasUrut.map((k) => `<td><input type="number" min="0" max="100" class="input pp-kkm-k ${kk[k.id] != null ? "beda" : ""}" data-mapel="${m.id}" data-kelas="${k.id}" value="${kk[k.id] ?? ""}" placeholder="${m.kkm ?? 70}" oninput="this.classList.toggle('beda',this.value!=='')"></td>`).join("")}</tr>`; }).join("")}</tbody></table></div>
+    </div>
+    <div class="pp2-kaki"><button class="btn btn-accent" id="pp-ok">💾 Simpan pengaturan penilaian</button></div></div>`, { lebar: true });
+  _ppTab(tabAwal || "bobot"); _ppTotal(); qsa(".pp2-khusus .pp-kh").forEach((i, x) => { if (x % 5 === 0) _ppTotalKhusus(i); });
   qs("pp-ok").onclick = async () => {
     const g = (id) => Number(qs(id)?.value) || 0;
     const tuB = { uh: g("pp-tu-uh"), tugas: g("pp-tu-tugas"), uas: g("pp-tu-uas"), kehadiran: g("pp-tu-kehadiran") };
     const duB = { uh: g("pp-du-uh"), tugas: g("pp-du-tugas"), uts: g("pp-du-uts"), uas: g("pp-du-uas"), kehadiran: g("pp-du-kehadiran") };
+    const usB = { tanpa_uts: { uas: g("pp-us-uas"), kehadiran: g("pp-us-kehadiran") }, dengan_uts: { uts: g("pp-ud-uts"), uas: g("pp-ud-uas"), kehadiran: g("pp-ud-kehadiran") } };
     const jml = (o) => Object.values(o).reduce((a, x) => a + x, 0);
-    if (jml(tuB) !== 100 || jml(duB) !== 100) { toast("Tiap kelompok bobot harus berjumlah tepat 100%", "err"); return; }
+    if ([tuB, duB, usB.tanpa_uts, usB.dengan_uts].some((o) => jml(o) !== 100)) { _ppTab("bobot"); toast("Tiap kelompok bobot harus berjumlah tepat 100%", "err"); return; }
+    // pola per mapel
+    const modelBaru = {}; let salahKhusus = null;
+    qsa(".pp2-pola").forEach((el) => {
+      const pola = el.querySelector("input[type=radio]:checked")?.value || "standar", id = el.dataset.id;
+      if (pola === "khusus") {
+        const bb = {}; el.querySelectorAll(".pp-kh").forEach((i) => { bb[i.dataset.k] = Number(i.value) || 0; });
+        if (jml(bb) !== 100) salahKhusus = salahKhusus || el.querySelector("b").textContent;
+        modelBaru[id] = { pola, bobot: bb };
+      } else if (pola !== "standar" || _RE_SATU_NILAI.test(el.querySelector("b").textContent)) modelBaru[id] = { pola };
+    });
+    if (salahKhusus) { _ppTab("pola"); toast(`Bobot "Atur sendiri" ${salahKhusus} harus berjumlah 100%`, "err"); return; }
     const tb = qs("pp-ok"); tb.disabled = true; tb.textContent = "Menyimpan…";
     try {
       // KKM khusus per kelas (hanya yang diisi & berbeda dari KKM umum mapelnya)
       const kkmBaru = {};
       qsa(".pp-kkm-k").forEach((i) => { const v = i.value === "" ? null : Number(i.value); const umum = Number(qs(`.pp-kkm[data-id="${i.dataset.mapel}"]`)?.value);
         if (v != null && v >= 0 && v <= 100 && v !== umum) (kkmBaru[i.dataset.mapel] = kkmBaru[i.dataset.mapel] || {})[i.dataset.kelas] = v; });
-      const bobotBaru = { tanpa_uts: tuB, dengan_uts: duB, kkm_kelas: kkmBaru };
+      const bobotBaru = { ...cfg, tanpa_uts: tuB, dengan_uts: duB, ujian_saja: usB, model_mapel: modelBaru, kkm_kelas: kkmBaru };
       const upd = await apiSimpanPengaturanSekolah({ bobot_nilai: bobotBaru });
       STATE.pengaturan = { ...STATE.pengaturan, bobot_nilai: upd?.bobot_nilai || bobotBaru };
       let n = 0;
@@ -247,14 +288,30 @@ async function bukaPengaturanPenilaian() {
         unwrap(await supa.from("mapel").update({ kkm: v }).eq("id", i.dataset.id));
         const m = LOOKUP.mapel.find((x) => x.id === i.dataset.id); if (m) m.kkm = v; n++;
       }
-      toast(`⚖️ Bobot tersimpan${n ? ` · KKM ${n} mapel diperbarui` : ""}`, "ok"); closeModal();
+      const nKelas = Object.values(kkmBaru).reduce((a, o) => a + Object.keys(o).length, 0);
+      toast(`⚖️ Tersimpan · ${Object.keys(modelBaru).length} mapel berpola khusus${n ? ` · KKM ${n} mapel` : ""}${nKelas ? ` · ${nKelas} KKM per kelas` : ""}`, "ok"); closeModal();
       if (STATE.currentPage === "input-nilai" && typeof renderInputNilai === "function") renderInputNilai();
       if (STATE.currentPage === "rapor") renderRaporWaliKelas();
     } catch (e) { toast("Gagal menyimpan: " + e.message, "err"); tb.disabled = false; tb.textContent = "💾 Simpan pengaturan penilaian"; }
   };
 }
+function _ppTab(t) {
+  qsa(".pp2-tab button").forEach((b) => b.classList.toggle("on", b.dataset.t === t));
+  qsa(".pp2-panel").forEach((p) => { p.hidden = p.dataset.p !== t; });
+}
+function _ppKkmUmum(i) { qsa(`.pp-kkm-k[data-mapel="${i.dataset.id}"]`).forEach((x) => { x.placeholder = i.value || 70; }); }
+function _ppUsulPola() {
+  let n = 0;
+  qsa(".pp2-pola").forEach((el) => { if (_RE_SATU_NILAI.test(el.querySelector("b").textContent)) { const r = el.querySelector('input[value="satu"]'); if (r && !r.checked) { r.checked = true; el.classList.remove("khusus"); n++; } } });
+  toast(n ? `${n} mapel diubah ke "Satu nilai" — tekan Simpan` : "Sudah sesuai", "ok");
+}
+function _ppTotalKhusus(i) {
+  const w = i.closest(".pp2-khusus"); if (!w) return;
+  const t = [...w.querySelectorAll(".pp-kh")].reduce((a, x) => a + (Number(x.value) || 0), 0), el = w.querySelector(".pp-kh-total");
+  el.textContent = `Total ${t}%${t === 100 ? " ✓" : ""}`; el.style.color = t === 100 ? "#047857" : "#b91c1c";
+}
 function _ppTotal() {
-  [["tu", ["uh", "tugas", "uas", "kehadiran"]], ["du", ["uh", "tugas", "uts", "uas", "kehadiran"]]].forEach(([p, k]) => {
+  [["tu", ["uh", "tugas", "uas", "kehadiran"]], ["du", ["uh", "tugas", "uts", "uas", "kehadiran"]], ["us", ["uas", "kehadiran"]], ["ud", ["uts", "uas", "kehadiran"]]].forEach(([p, k]) => {
     const t = k.reduce((a, x) => a + (Number(qs(`pp-${p}-${x}`)?.value) || 0), 0), el = qs(`pp-${p}-total`);
     if (el) { el.textContent = `Total ${t}%${t === 100 ? " ✓" : " — harus 100%"}`; el.style.color = t === 100 ? "#047857" : "#b91c1c"; }
   });
