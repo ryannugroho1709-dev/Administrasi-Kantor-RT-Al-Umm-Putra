@@ -37,9 +37,10 @@ function _ujeDariBank(b, kunci) {
 }
 
 async function ujEditorBuka(bankId) {
-  const pin = await _ujPin("PIN untuk mengubah soal"); if (!pin) return;
   if (bankId) {
     const b = UJ.bank.find((x) => x.id === bankId); if (!b) return;
+    if (typeof _ujBolehKelola === "function" && !_ujBolehKelola(b)) { _ujTolakBukanMilik(b); return; }
+    const pin = await _ujPin("PIN Ujian"); if (!pin) return; // soal baru: PIN baru ditanya saat menyimpan (cukup sekali per HP)
     try { UJE.m = _ujeDariBank(b, await _ujRpc("ujian_kunci_ambil", { p_pin: pin, p_bank: bankId })); }
     catch (e) { toast(_ujPesan(e), "err"); return; }
   } else {

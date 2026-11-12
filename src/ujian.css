@@ -212,3 +212,8 @@
 .uje-jn span{font-size:24px}.uje-jn b{font-size:13px}.uje-jn small{font-size:10.5px;color:var(--text-secondary)}
 .uje-jn-ke{display:flex;align-items:center;gap:8px;font-size:12px;margin-top:10px;color:var(--text-secondary)}
 .uje-jn-ke .input{width:70px;padding:4px 8px}
+.uj-kunci-lain{font-size:11px;font-weight:700;color:var(--text-secondary);background:var(--border-soft);border-radius:99px;padding:4px 10px;white-space:nowrap;}
+.uj-gaya{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+.uj-gaya label{display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;padding:10px 6px;border:1.5px solid var(--border-soft);border-radius:14px;cursor:pointer;font-size:12.5px;}
+.uj-gaya label input{display:none;}.uj-gaya-ikon{font-size:26px;}.uj-gaya small{font-size:10.5px;color:var(--text-secondary);}
+.uj-gaya label:has(input:checked){border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 25%,transparent);}

@@ -34,6 +34,12 @@ const _ujNamaKelas = (id) => (LOOKUP.kelas.find((k) => k.id === id) || {}).nama_
 const _ujNamaMapel = (id) => (LOOKUP.mapel.find((m) => m.id === id) || {}).nama_mapel || "-";
 // Jenis penilaian tiap bank soal (dipilih saat membuat soal): uh | tugas | uts | uas, + ke- (untuk UH/Tugas).
 // Disimpan di kuliah_pengaturan "ujian:jenis" (tanpa kolom baru di tabel ujian_bank).
+// Tampilan sesi untuk santri (mode game) — disimpan di kuliah_pengaturan "ujian:tampilan" { sesiId: gaya }
+const UJ_GAYA = { biasa: ["📄", "Biasa", "Tampilan soal standar"], roket: ["🚀", "Balapan Roket", "Roket melaju tiap soal dijawab"], tangkap: ["🎈", "Tangkap Jawaban", "Pilihan jawaban jadi balon"], menara: ["🏰", "Panjat Menara", "Naik satu lantai tiap soal"] };
+async function _ujSimpanGaya(sesiId, gaya) {
+  try { const d = await _kvAmbil("ujian:tampilan", {}); if (gaya === "biasa") delete d[sesiId]; else d[sesiId] = gaya; await _kvSimpan("ujian:tampilan", d); UJ.gaya = d; }
+  catch (e) { toast("Mode game belum tersimpan: " + (e.message || e), "err"); }
+}
 const UJ_JENIS_NILAI = { uh: "Ulangan Harian", tugas: "Tugas", uts: "UTS", uas: "UAS" };
 function _ujJenisNilai(b) {
   const x = (UJ.jenisNilai || {})[b && b.id];
@@ -51,22 +57,47 @@ async function _ujSimpanJenis(bankId, jenis, ke, info) {
 const _ujJumlahSoal = (bagian) => (bagian || []).reduce((a, b) => a + (b.soal || []).length, 0);
 
 // ── PIN Kunci Ujian (disimpan di perangkat guru setelah benar sekali) ──
+// PIN ini menjaga KUNCI JAWABAN dari santri (aplikasi santri memakai server yang sama).
+// Guru cukup memasukkannya SEKALI di HP-nya (dikirim admin lewat grup WA), setelah itu tidak ditanya lagi.
 async function _ujPin(judul) {
   let pin = "";
   try { pin = localStorage.getItem("ujianPin") || ""; } catch (e) {}
-  if (pin && (await _ujRpc("ujian_pin_cek", { p_pin: pin }))) return pin;
+  if (pin && UJ.pinOk === pin) return pin; // sudah dicek di sesi ini
+  if (pin && (await _ujRpc("ujian_pin_cek", { p_pin: pin }))) { UJ.pinOk = pin; return pin; }
   const ada = await _ujRpc("ujian_pin_ada", {});
   if (!ada) {
-    if (!isAdmin()) { toast("Admin belum membuat PIN Kunci Ujian. Minta admin membuatnya di menu Ujian & Latihan.", "err"); return null; }
+    if (!isAdmin()) { toast("Admin belum membuat PIN Ujian. Minta admin membuatnya di menu Ujian Online.", "err"); return null; }
     return await ujAturPin(true);
   }
-  const pr = promptTema("Masukkan PIN Kunci Ujian (minta ke admin). PIN diingat di perangkat ini.", "", { judul: judul || "PIN Kunci Ujian", ikon: "🔐", teksOk: "Buka" });
+  const pr = promptTema(pin ? "PIN Ujian sudah diganti admin. Masukkan PIN yang baru (cukup sekali)." : "Cukup SEKALI di HP ini — setelah itu tidak ditanya lagi. PIN dikirim admin lewat grup WA guru; PIN ini menjaga kunci jawaban agar tidak bisa diintip santri.", "", { judul: judul || "PIN Ujian", ikon: "🔐", teksOk: "Simpan" });
   const inp = qs("prompt-tema-input"); if (inp) { inp.type = "password"; inp.autocomplete = "off"; }
   const val = await pr;
   if (!val) return null;
   if (!(await _ujRpc("ujian_pin_cek", { p_pin: val }))) { toast("PIN salah", "err"); return null; }
   try { localStorage.setItem("ujianPin", val); } catch (e) {}
+  UJ.pinOk = val;
+  toast("PIN tersimpan di HP ini ✓ — tidak akan ditanya lagi", "ok");
   return val;
+}
+// Admin: kirim PIN ke grup WA guru sekali tekan
+async function ujKirimPinWa() {
+  const pin = await _ujPin("PIN Ujian"); if (!pin) return;
+  const tautan = location.origin + location.pathname;
+  const teks = `🔐 *PIN UJIAN ONLINE*\n\nAssalamu'alaikum, Asatidz.\nPIN untuk membuat & mengubah soal di menu *Ujian Online*: *${pin}*\n\nCukup dimasukkan SEKALI di HP masing-masing, setelah itu tidak ditanya lagi.\nMohon PIN ini *tidak dibagikan ke santri* — PIN menjaga kunci jawaban.\n\nAplikasi: ${tautan}\nJazakumullahu khairan.`;
+  window.open("https://wa.me/?text=" + encodeURIComponent(teks), "_blank", "noopener");
+}
+// Hak ubah/hapus bank soal: admin semua; guru = soal buatannya sendiri atau mapel yang ia ampu di kelas itu.
+function _ujBolehKelola(b) {
+  if (!b) return false;
+  if (isAdmin()) return true;
+  const saya = STATE.guruId; if (!saya) return false;
+  if (b.dibuat_oleh === saya) return true;
+  const tingkat = parseInt(String(b.tingkat || "").replace(/\D/g, ""), 10);
+  return (UJ.ajarSaya || []).some((a) => a.mapel_id === b.mapel_id && (!tingkat || parseInt(String(_ujNamaKelas(a.kelas_id)).replace(/\D/g, ""), 10) === tingkat));
+}
+function _ujTolakBukanMilik(b) {
+  const pembuat = (LOOKUP.guruAll || []).find((g) => g.id === b?.dibuat_oleh);
+  toast(`Soal ini milik ${pembuat ? pembuat.nama : "guru lain"}. Hanya pembuat, pengampu mapelnya, atau admin yang bisa mengubah/menghapus.`, "err");
 }
 async function ujAturPin(pertama) {
   try {
@@ -82,7 +113,9 @@ async function ujAturPin(pertama) {
     const baru = await p2; if (!baru) return null;
     await _ujRpc("ujian_pin_atur", { p_lama: lama, p_baru: baru });
     try { localStorage.setItem("ujianPin", baru); } catch (e) {}
-    toast("PIN Kunci Ujian tersimpan", "ok");
+    UJ.pinOk = baru;
+    toast("PIN Ujian tersimpan", "ok");
+    if (await konfirmasiTema("Kirim PIN baru ini ke grup WA guru sekarang? Guru cukup memasukkannya sekali di HP masing-masing.", { ikon: "📤", judul: "Bagikan PIN", teksYa: "Kirim ke WA", teksTidak: "Nanti" })) ujKirimPinWa();
     return baru;
   } catch (e) { toast(_ujPesan(e), "err"); return null; }
 }
@@ -101,7 +134,7 @@ async function renderUjianInit() {
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start">
         <button class="btn btn-outline" onclick="ujSalinTautan()">📋 Salin tautan</button>
         <button class="btn btn-outline" onclick="window.open('${url}','_blank')">↗ Buka</button>
-        ${isAdmin() ? `<button class="btn btn-ghost" onclick="ujAturPin()">🔐 PIN</button>` : ""}
+        ${isAdmin() ? `<button class="btn btn-ghost" onclick="ujAturPin()">🔐 Ganti PIN</button><button class="btn btn-wa" onclick="ujKirimPinWa()">📤 Kirim PIN ke guru</button>` : ""}
       </div>
     </div>
     <div class="card" style="margin-top:14px">
@@ -125,7 +158,8 @@ function ujSalinTautan() {
 }
 async function ujMuat() {
   try {
-    UJ.jenisNilai = await _kvAmbil("ujian:jenis", {}).catch(() => ({}));
+    [UJ.jenisNilai, UJ.gaya] = await Promise.all([_kvAmbil("ujian:jenis", {}).catch(() => ({})), _kvAmbil("ujian:tampilan", {}).catch(() => ({}))]);
+    if (STATE.guruId && !isAdmin() && !UJ.ajarSaya) UJ.ajarSaya = await supa.from("jadwal_pelajaran").select("mapel_id,kelas_id").eq("guru_id", STATE.guruId).eq("aktif", true).then(unwrap).catch(() => []);
     const [bank, sesi] = await Promise.all([
       supa.from("ujian_bank").select("id,kode,mapel_id,tingkat,bab,judul,soal,skor_maksimal,updated_at,dibuat_oleh").order("tingkat").order("bab"),
       supa.from("ujian_sesi").select("*").order("created_at", { ascending: false }).limit(60),
@@ -175,10 +209,10 @@ function _ujGambarBank() {
         <div class="uj-sub">${escapeHtml(_ujNamaMapelTampil(b))} · Kelas ${escapeHtml(b.tingkat || "-")} · Bab ${b.bab} · ${_ujJumlahSoal(b.soal)} soal${adaGambar ? " · 🖼️ bergambar" : ""} · → ${escapeHtml(_ujLabelJenis(b))}${pembuat ? ` · oleh ${escapeHtml(typeof _namaSingkatTopbar === "function" ? _namaSingkatTopbar(pembuat.nama) : pembuat.nama)}` : ""}</div></div>
       <div class="uj-aksi">
         <button class="btn btn-accent btn-sm" onclick="ujBukaSesiModal('${b.id}')">▶ Buka sesi</button>
-        <button class="btn btn-sm uj-b-ungu" onclick="ujEditorBuka('${b.id}')" title="Ubah soal, kunci, gambar">✏️ Ubah</button>
-        <button class="btn btn-sm uj-b-emas" onclick="ujLihatKunci('${b.id}')" title="Lihat kunci jawaban (PIN)">🔑</button>
+        ${_ujBolehKelola(b) ? `<button class="btn btn-sm uj-b-ungu" onclick="ujEditorBuka('${b.id}')" title="Ubah soal, kunci, gambar">✏️ Ubah</button>
+        <button class="btn btn-sm uj-b-emas" onclick="ujLihatKunci('${b.id}')" title="Lihat kunci jawaban">🔑</button>` : `<span class="uj-kunci-lain" title="Milik guru lain — hanya pembuat, pengampu mapelnya, atau admin yang bisa mengubah">🔒 milik guru lain</span>`}
         <button class="btn btn-sm uj-b-abu" onclick="ujCetakSoal('${b.id}')" title="Cetak / simpan PDF naskah soal untuk arsip">🖨️</button>
-        ${isAdmin() ? `<button class="btn btn-sm uj-b-merah" onclick="ujHapusBank('${b.id}')" title="Hapus bank soal">🗑️</button>` : ""}
+        ${_ujBolehKelola(b) ? `<button class="btn btn-sm uj-b-merah" onclick="ujHapusBank('${b.id}')" title="Hapus bank soal">🗑️</button>` : ""}
       </div>
     </div>`; }).join("")}</div>`).join("") || `<div class="uj-kosong">Tidak ada bank soal untuk saringan ini.</div>`);
 }
@@ -191,7 +225,7 @@ function _ujGambarSesi() {
     return `<div class="uj-item ${s.dibuka ? "" : "uj-tutup"}">
       <div class="uj-ikon">${s.mode === "ujian" ? "📝" : "🎯"}</div>
       <div style="flex:1;min-width:0"><b>${escapeHtml(b.judul || "Bank soal terhapus")}</b>
-        <div class="uj-sub">${escapeHtml(_ujNamaKelas(s.kelas_id))} · <span class="uj-lencana ${s.mode}">${s.mode === "ujian" ? "UJIAN" : "LATIHAN"}</span>${s.durasi_menit ? ` · ${s.durasi_menit} mnt` : ""}${s.token ? ` · token <b>${escapeHtml(s.token)}</b>` : ""} · ${s.dibuka ? "<b style='color:var(--success,#1F8A5F)'>dibuka</b>" : "ditutup"}${s.dikirim_rapor_at ? " · ✅ sudah ke rapor" : ""}
+        <div class="uj-sub">${escapeHtml(_ujNamaKelas(s.kelas_id))} · <span class="uj-lencana ${s.mode}">${s.mode === "ujian" ? "UJIAN" : "LATIHAN"}</span>${UJ.gaya && UJ.gaya[s.id] && UJ_GAYA[UJ.gaya[s.id]] ? ` · ${UJ_GAYA[UJ.gaya[s.id]][0]} ${UJ_GAYA[UJ.gaya[s.id]][1]}` : ""}${s.durasi_menit ? ` · ${s.durasi_menit} mnt` : ""}${s.token ? ` · token <b>${escapeHtml(s.token)}</b>` : ""} · ${s.dibuka ? "<b style='color:var(--success,#1F8A5F)'>dibuka</b>" : "ditutup"}${s.dikirim_rapor_at ? " · ✅ sudah ke rapor" : ""}
         · ${new Date(s.created_at).toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "short" })}</div></div>
       <div class="uj-aksi">
         <button class="btn btn-accent btn-sm" onclick="ujBukaRekap('${s.id}')">📊 Rekap</button>
@@ -255,6 +289,7 @@ async function ujImporBank(ev) {
 }
 async function ujHapusBank(id) {
   const b = UJ.bank.find((x) => x.id === id); if (!b) return;
+  if (!_ujBolehKelola(b)) { _ujTolakBukanMilik(b); return; }
   if (!(await konfirmasiTema(`Hapus bank soal "${escapeHtml(b.judul)}"?\nSemua sesi & jawaban santri untuk bank ini ikut terhapus. Nilai yang sudah dikirim ke rapor tetap ada.`, { judul: "Hapus bank soal", ikon: "🗑️", teksYa: "Hapus" }))) return;
   try { const pin = await _ujPin(); if (!pin) return; await _ujRpc("ujian_bank_hapus", { p_pin: pin, p_bank: id }); toast("Bank soal dihapus", "ok"); ujMuat(); }
   catch (e) { toast(_ujPesan(e), "err"); }
@@ -295,6 +330,9 @@ function ujBukaSesiModal(bankId) {
       <div class="field" style="flex:1"><label class="form-label">Durasi (menit, kosong = bebas)</label><input id="uj-s-durasi" type="number" min="5" class="input" placeholder="mis. 60"></div>
       <div class="field" style="flex:1"><label class="form-label">Token masuk (opsional)</label><input id="uj-s-token" class="input" maxlength="8" placeholder="kosong = tanpa token" style="text-transform:uppercase"></div>
     </div>
+    <div class="field"><label class="form-label">🎮 Tampilan untuk santri</label>
+      <div class="uj-gaya">${Object.entries(UJ_GAYA).map(([k, v], i) => `<label><input type="radio" name="uj-s-gaya" value="${k}" ${i === 0 ? "checked" : ""}><span class="uj-gaya-ikon">${v[0]}</span><b>${v[1]}</b><small>${v[2]}</small></label>`).join("")}</div>
+      <div class="uj-sub" style="margin-top:4px">Soal tetap dari bank soal ini. Mode game berlaku untuk PG, PG Kompleks & Benar/Salah; uraian tetap biasa. Kunci jawaban tetap aman.</div></div>
     <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;margin:4px 0 10px"><input type="checkbox" id="uj-s-acak"> Acak urutan soal PG untuk tiap santri</label>
     <div class="uj-sub" style="margin-bottom:10px">Nilai dicatat untuk semester <b>${semester} ${ta}</b>.</div>
     <button class="btn btn-accent" style="width:100%" onclick="ujSimpanSesi('${b.id}')">Buka sekarang</button>`);
@@ -315,8 +353,10 @@ async function ujSimpanSesi(bankId) {
     acak: qs("uj-s-acak").checked, dibuka: true, semester, tahun_ajaran: ta,
   };
   try {
-    const { error } = await supa.from("ujian_sesi").insert(row);
+    const { data: baru, error } = await supa.from("ujian_sesi").insert(row).select("id").single();
     if (error) throw error;
+    const gaya = document.querySelector('input[name="uj-s-gaya"]:checked')?.value || "biasa";
+    if (gaya !== "biasa" && baru?.id) await _ujSimpanGaya(baru.id, gaya);
     closeModal(); toast(`Sesi dibuka untuk ${_ujNamaKelas(row.kelas_id)}${row.token ? " · token " + row.token : ""}`, "ok"); ujMuat();
   } catch (e) { toast(_ujPesan(e), "err"); }
 }
