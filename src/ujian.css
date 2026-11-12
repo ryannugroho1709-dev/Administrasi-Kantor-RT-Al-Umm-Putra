@@ -416,3 +416,9 @@ table.pp2-kkm{border-collapse:separate;border-spacing:0;width:100%;font-size:12p
 .pp2-kkm td .pp-kkm-k.beda{background:rgba(217,119,6,.12);border-color:rgba(217,119,6,.45);color:#b45309}
 .pp2-kaki{position:sticky;bottom:-1px;padding:10px 0 2px;margin-top:12px;background:var(--surface,#fff);border-top:1px solid var(--border-soft,#e3e8ef)}.pp2-kaki .btn{width:100%}
 @media (max-width:700px){.nl2-filter{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:10px}.nl2-filter .input{font-size:13px;padding:7px 8px;min-height:0}.nl2-f>span{font-size:10.5px}}
+/* ── remedial ── */
+.btn.uj-b-oranye{background:linear-gradient(135deg,#f59e0b,#ea580c);color:#fff;border:0;box-shadow:0 4px 12px rgba(234,88,12,.25)}
+.uj-rem-pita{margin:8px 0 2px;padding:9px 12px;border-radius:12px;font-size:12.5px;line-height:1.55;background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(234,88,12,.08));border:1px solid rgba(234,88,12,.25)}
+.uj-rem-saklar{display:flex;gap:10px;align-items:flex-start;padding:12px;border-radius:14px;border:1.5px solid var(--border-color,#e2e8f0);cursor:pointer}
+.uj-rem-saklar input{width:20px;height:20px;margin-top:2px;accent-color:#ea580c}
+.uj-rem-saklar small{display:block;font-size:12px;color:var(--text-secondary)}

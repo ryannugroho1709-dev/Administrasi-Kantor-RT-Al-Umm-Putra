@@ -21,6 +21,8 @@ const _ujRekaman = (v) => { const m = String(v || "").match(/^\[rekaman\]\s*(htt
 
 function _ujPesan(e) {
   const m = (e && e.message) || String(e);
+  if (/remedial|riwayat/i.test(m) && /column|schema cache|does not exist/i.test(m))
+    return "Fitur remedial butuh pembaruan database: jalankan SQL_UJIAN_SANTRI_5.sql di Supabase → SQL Editor.";
   if (/susulan|tampil_hasil|ujian_hasil_rinci/i.test(m) && /column|schema cache|does not exist/i.test(m))
     return "Fitur ini butuh pembaruan database: jalankan SQL_UJIAN_SANTRI_2.sql di Supabase → SQL Editor.";
   if (/ujian_\w+.*(does not exist|schema cache)|relation .*ujian_/i.test(m) || /Could not find the function public\.ujian/i.test(m))
@@ -452,7 +454,7 @@ async function ujBukaRekap(sesiId) {
   UJ.rekapTimer = setInterval(() => {
     const s = UJ.sesi.find((x) => x.id === UJ.rekapSesi);
     if (!qs("uj-rekap")) { clearInterval(UJ.rekapTimer); return; }
-    if (s && s.dibuka && !document.hidden) _ujMuatRekap(pin, true);
+    if (s && (s.dibuka || s.remedial) && !document.hidden) _ujMuatRekap(pin, true);
   }, 30000);
 }
 async function _ujMuatRekap(pin, diam) {
@@ -469,6 +471,12 @@ async function _ujMuatRekap(pin, diam) {
   } catch (e) { if (!diam && qs("uj-rekap")) qs("uj-rekap").innerHTML = `<div style="padding:14px">⚠️ ${escapeHtml(_ujPesan(e))}</div>`; return; }
   _ujGambarRekap();
 }
+// Nilai yang dipakai: nilai terbaik (remedial / latihan diulang), kalau belum ada pakai nilai akhir
+function _ujNilaiResmi(r) {
+  if (!r) return null;
+  const a = r.nilai_akhir != null ? Number(r.nilai_akhir) : null, t = r.nilai_terbaik != null ? Number(r.nilai_terbaik) : null;
+  return a == null ? t : t == null ? a : Math.max(a, t);
+}
 function _ujMaks(kunci) {
   let obj = 0, ur = 0;
   ((kunci && kunci.bagian) || []).forEach((bg) => (bg.soal || []).forEach((s) => { const p = Number(s.poin || bg.poin || 1); bg.jenis === "uraian" ? (ur += p) : (obj += p); }));
@@ -480,8 +488,10 @@ function _ujGambarRekap() {
   const maks = _ujMaks(kunci);
   const byId = Object.fromEntries(rows.map((r) => [r.siswa_id, r]));
   const st = { mengerjakan: "⏳ mengerjakan", dikirim: "📨 tunggu nilai uraian", dinilai: "✅ selesai" };
-  const selesai = rows.filter((r) => r.status === "dinilai" && r.nilai_akhir != null);
+  const stRem = { mengerjakan: "🔁 sedang remedial", dikirim: "📨 remedial · tunggu uraian", dinilai: "✅ selesai remedial" };
+  const selesai = rows.filter((r) => _ujNilaiResmi(r) != null).map((r) => ({ ...r, nilai_akhir: _ujNilaiResmi(r) }));
   const rata = selesai.length ? Math.round(selesai.reduce((a, r) => a + Number(r.nilai_akhir), 0) / selesai.length) : null;
+  const remidi = rows.filter((r) => (r.percobaan || 1) > 1).length;
   const kkm = typeof kkmMapel === "function" ? kkmMapel(b.mapel_id, s.kelas_id) : ((LOOKUP.mapel.find((m) => m.id === b.mapel_id) || {}).kkm || 75);
   const ujian = s.mode === "ujian";
   // analisis butir: % santri yang mendapat poin penuh per soal objektif
@@ -501,19 +511,23 @@ function _ujGambarRekap() {
       <div><b>${rows.filter((r) => r.status === "dikirim").length}</b><span>uraian belum dinilai</span></div>
       <div><b>${rata ?? "–"}</b><span>rata-rata</span></div>
       <div><b>${selesai.filter((r) => Number(r.nilai_akhir) >= kkm).length}</b><span>tuntas (≥${kkm})</span></div>
+      ${ujian && (s.remedial || remidi) ? `<div><b>${remidi}</b><span>sudah remedial</span></div>` : ""}
     </div>
+    ${ujian && s.remedial ? `<div class="uj-rem-pita">🔁 <b>Remedial dibuka</b> · ${s.remedial_batas != null ? `untuk santri dengan nilai di bawah <b>${Math.round(s.remedial_batas)}</b>` : "untuk semua santri"} · boleh mengulang <b>${s.remedial_kali || 1}×</b> · nilai terbaik yang dipakai. Kunci jawaban disembunyikan dari santri selama remedial dibuka.</div>` : ""}
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">
       <button class="btn btn-outline btn-sm" onclick="_ujMuatRekap(UJ.rekap.pin)">↻ Muat ulang</button>
       ${ujian ? `<button class="btn btn-accent btn-sm" onclick="ujPilihKirimRapor()">📤 Kirim ke rapor (UH / UTS / UAS)</button>` : ""}
-      ${ujian ? `<button class="btn btn-sm ${s.tampil_hasil ? "uj-b-hijau" : "uj-b-ungu"}" onclick="ujTampilHasil(${!s.tampil_hasil})" title="Santri bisa melihat nilai per bagian, soal yang benar/belum tepat (tanpa kunci), dan grafik kelas">${s.tampil_hasil ? "👁 Hasil terlihat santri · sembunyikan" : "👁 Tampilkan hasil ke santri"}</button>` : ""}
+      ${ujian ? `<button class="btn btn-sm ${s.remedial ? "uj-b-oranye" : "uj-b-abu"}" onclick="ujAturRemedial()" title="Santri boleh mengerjakan ulang; nilai terbaik yang dipakai">🔁 ${s.remedial ? "Remedial dibuka" : "Remedial"}</button>` : ""}
+      ${ujian ? `<button class="btn btn-sm ${s.tampil_hasil ? "uj-b-hijau" : "uj-b-ungu"}" onclick="ujTampilHasil(${!s.tampil_hasil})" title="Santri bisa melihat nilai per bagian, soal yang benar/belum tepat beserta KUNCI JAWABAN & pembahasan, dan grafik kelas">${s.tampil_hasil ? "👁 Hasil terlihat santri · sembunyikan" : "👁 Tampilkan hasil ke santri"}</button>` : ""}
       <button class="btn btn-ghost btn-sm" onclick="ujUnduhRekap()">⬇️ Excel</button>
     </div>
     <div style="overflow:auto"><table class="simple-table uj-tabel"><thead><tr><th>No</th><th>Nama</th><th>Status</th><th title="PG, PG kompleks, isian, menjodohkan, mengurutkan">Otomatis<br><small>/${maks.obj}</small></th>${ujian && maks.ur ? `<th>Uraian<br><small>/${maks.ur}</small></th>` : ""}<th>Nilai</th>${ujian ? "<th title='Berapa kali santri keluar dari halaman ujian (membuka aplikasi lain, tab lain, atau mematikan layar) selama mengerjakan'>Pindah<br>layar ⓘ</th>" : "<th>Coba</th>"}<th></th></tr></thead><tbody>
       ${siswa.map((sw, i) => { const r = byId[sw.id]; const ur = r && r.skor_uraian ? Object.values(r.skor_uraian).reduce((a, v) => a + Number(v || 0), 0) : null;
-        return `<tr><td>${i + 1}</td><td>${escapeHtml(sw.nama)}</td><td style="white-space:nowrap">${r ? st[r.status] : "<span style='color:var(--text-secondary)'>belum</span>"}</td>
+        return `<tr><td>${i + 1}</td><td>${escapeHtml(sw.nama)}</td><td style="white-space:nowrap">${r ? (ujian && (r.percobaan || 1) > 1 ? stRem : st)[r.status] : "<span style='color:var(--text-secondary)'>belum</span>"}</td>
         <td>${r && r.skor_otomatis != null ? Number(r.skor_otomatis) : "–"}</td>
         ${ujian && maks.ur ? `<td>${r && r.status !== "mengerjakan" ? `<button class="btn btn-${r.status === "dikirim" ? "accent" : "ghost"} btn-sm" onclick="ujNilaiUraian('${r.id}')">${ur != null ? ur : "Nilai"}</button>` : "–"}</td>` : ""}
-        <td><b class="${r && r.nilai_akhir != null ? (Number(r.nilai_akhir) >= kkm ? "uj-tuntas" : "uj-belum") : ""}">${r && r.nilai_akhir != null ? Math.round(r.nilai_akhir) : "–"}</b>${!ujian && r && r.nilai_terbaik != null ? `<div class="uj-sub">terbaik ${Math.round(r.nilai_terbaik)}</div>` : ""}</td>
+        ${ujian ? (() => { const nr = _ujNilaiResmi(r); const riw = ((r && r.riwayat) || []).filter((x) => x && x.nilai != null); return `<td><b class="${nr != null ? (nr >= kkm ? "uj-tuntas" : "uj-belum") : ""}">${nr != null ? Math.round(nr) : "–"}</b>${riw.length ? `<div class="uj-sub" title="Nilai tiap percobaan">${riw.map((x) => Math.round(x.nilai)).join(" → ")} → ${r.nilai_akhir != null ? Math.round(r.nilai_akhir) : "…"}</div>` : ""}</td>`; })()
+          : `<td><b class="${r && r.nilai_akhir != null ? (Number(r.nilai_akhir) >= kkm ? "uj-tuntas" : "uj-belum") : ""}">${r && r.nilai_akhir != null ? Math.round(r.nilai_akhir) : "–"}</b>${r && r.nilai_terbaik != null ? `<div class="uj-sub">terbaik ${Math.round(r.nilai_terbaik)}</div>` : ""}</td>`}
         <td>${r ? (ujian ? (r.pindah_tab ? `<span style="color:#c0392b;font-weight:700">${r.pindah_tab}×</span>` : "0") : r.percobaan) : ""}</td>
         <td>${r ? `<button class="btn btn-ghost btn-sm" title="Hapus jawaban supaya santri bisa mengulang" onclick="ujResetJawaban('${r.id}','${escapeHtml(sw.nama).replace(/'/g, "")}')">↺</button>`
           : ujian ? `<button class="btn btn-sm ${(s.susulan || []).includes(sw.id) ? "uj-b-ungu" : "uj-b-abu"}" title="Izinkan ujian susulan (santri izin/sakit) walaupun sesi sudah ditutup" onclick="ujSusulan('${sw.id}')">🩺 ${(s.susulan || []).includes(sw.id) ? "Susulan ✓" : "Susulan"}</button>` : ""}</td></tr>`; }).join("")}
@@ -542,8 +556,43 @@ async function ujTampilHasil(nilai) {
   const { error } = await supa.from("ujian_sesi").update({ tampil_hasil: nilai }).eq("id", s.id);
   if (error) { toast(_ujPesan(error), "err"); return; }
   s.tampil_hasil = nilai; const x = UJ.sesi.find((y) => y.id === s.id); if (x) x.tampil_hasil = nilai;
-  toast(nilai ? "Santri sekarang bisa melihat rincian hasilnya (tanpa kunci)" : "Rincian hasil disembunyikan dari santri", "ok");
+  toast(nilai ? "Santri sekarang bisa melihat rincian hasil + kunci jawaban & pembahasan" : "Rincian hasil disembunyikan dari santri", "ok");
   _ujGambarRekap();
+}
+// ── Remedial: santri boleh mengerjakan ulang; nilai terbaik yang dipakai ──
+function ujAturRemedial() {
+  const { s, b } = UJ.rekap;
+  const kkm = typeof kkmMapel === "function" ? kkmMapel(b.mapel_id, s.kelas_id) : 75;
+  const batas = s.remedial_batas == null ? (s.remedial ? "semua" : "kkm") : Number(s.remedial_batas) === Number(kkm) ? "kkm" : "lain";
+  openModal(`<h3>🔁 Remedial</h3>
+    <div class="uj-sub" style="margin:-4px 0 12px">Santri mengerjakan ulang soal yang sama. Jawaban lama tetap tersimpan, dan <b>nilai terbaik</b> yang dipakai (termasuk saat dikirim ke rapor).</div>
+    <label class="uj-rem-saklar"><input type="checkbox" id="rem-aktif" ${s.remedial ? "checked" : ""}> <span><b>Buka remedial</b><small>Sesi yang sudah ditutup tetap bisa dikerjakan santri yang berhak remedial</small></span></label>
+    <div class="form-label" style="margin-top:12px">Siapa yang boleh remedial?</div>
+    <div class="rc-pilih" style="grid-template-columns:repeat(3,1fr)">
+      <label><input type="radio" name="rem-batas" value="kkm" ${batas === "kkm" ? "checked" : ""}> 🎯 <b>Di bawah KKM</b><span>nilai &lt; ${kkm}</span></label>
+      <label><input type="radio" name="rem-batas" value="lain" ${batas === "lain" ? "checked" : ""}> ✏️ <b>Di bawah nilai…</b><span>atur angkanya di bawah</span></label>
+      <label><input type="radio" name="rem-batas" value="semua" ${batas === "semua" ? "checked" : ""}> 👥 <b>Semua santri</b><span>perbaikan nilai</span></label>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px">✏️ Batas nilai (untuk pilihan "Di bawah nilai…"): <input type="number" id="rem-nilai" class="input" min="1" max="100" value="${batas === "lain" ? Math.round(s.remedial_batas) : kkm}" style="width:80px" oninput="document.querySelector('input[name=rem-batas][value=lain]').checked=true"></div>
+    <div class="form-label" style="margin-top:12px">Boleh mengulang berapa kali?</div>
+    <select id="rem-kali" class="input" style="max-width:200px">${[1, 2, 3].map((n) => `<option value="${n}" ${Number(s.remedial_kali || 1) === n ? "selected" : ""}>${n} kali</option>`).join("")}</select>
+    <div class="uj-sub" style="margin-top:10px">💡 Selama remedial dibuka, kunci jawaban <b>disembunyikan</b> dari semua santri supaya tidak bocor. Tutup remedial bila sudah selesai, lalu tekan <b>Kirim ke rapor</b> lagi agar nilai terbaik masuk rapor.</div>
+    <div style="display:flex;gap:10px;margin-top:14px"><button class="btn btn-outline" style="flex:1" onclick="ujBukaRekap(UJ.rekapSesi)">‹ Kembali</button><button class="btn btn-accent" style="flex:2" onclick="ujSimpanRemedial()">Simpan</button></div>`);
+}
+async function ujSimpanRemedial() {
+  const { s, b } = UJ.rekap;
+  const kkm = typeof kkmMapel === "function" ? kkmMapel(b.mapel_id, s.kelas_id) : 75;
+  const pil = (document.querySelector("input[name=rem-batas]:checked") || {}).value || "kkm";
+  const ubah = {
+    remedial: qs("rem-aktif").checked,
+    remedial_batas: pil === "semua" ? null : pil === "kkm" ? kkm : Math.max(1, Math.min(100, Number(qs("rem-nilai").value) || kkm)),
+    remedial_kali: Number(qs("rem-kali").value) || 1,
+  };
+  const { error } = await supa.from("ujian_sesi").update(ubah).eq("id", s.id);
+  if (error) { toast(_ujPesan(error), "err"); return; }
+  Object.assign(s, ubah); const x = UJ.sesi.find((y) => y.id === s.id); if (x) Object.assign(x, ubah);
+  toast(ubah.remedial ? "🔁 Remedial dibuka — santri yang berhak bisa mengerjakan ulang" : "Remedial ditutup", "ok");
+  ujBukaRekap(UJ.rekapSesi);
 }
 async function ujSusulan(siswaId) {
   const s = UJ.rekap.s, daftar = new Set(s.susulan || []);
@@ -639,8 +688,8 @@ async function ujKirimRapor(jenis = "uh", ke = null) {
   const sesiId = UJ.rekapSesi;
   const kolom = jenis === "uas" ? "uas" : jenis === "uts" ? "uts" : jenis === "tugas" ? "tugas" : "ulangan_harian";
   if (!b.mapel_id) { toast("Bank soal belum punya mapel", "err"); return; }
-  const siap = rows.filter((r) => r.status === "dinilai" && r.nilai_akhir != null);
-  const belum = rows.filter((r) => r.status === "dikirim").length;
+  const siap = rows.filter((r) => _ujNilaiResmi(r) != null).map((r) => ({ ...r, nilai_akhir: _ujNilaiResmi(r) }));
+  const belum = rows.filter((r) => r.status === "dikirim" && _ujNilaiResmi(r) == null).length;
   if (!siap.length) { toast("Belum ada nilai akhir yang siap dikirim", "err"); return; }
   const sem = s.semester ? { semester: s.semester, ta: s.tahun_ajaran } : (() => { const x = _ujSemesterSekarang(s.created_at.slice(0, 10)); return { semester: x.semester, ta: x.ta }; })();
   const idx = kolom === "ulangan_harian" || kolom === "tugas" ? Math.max(0, (Number(ke) || Number(b.bab) || 1) - 1) : 0;
@@ -680,7 +729,7 @@ function ujUnduhRekap() {
   if (!window.XLSX || !UJ.rekap) return;
   const { s, b, siswa, rows } = UJ.rekap;
   const byId = Object.fromEntries(rows.map((r) => [r.siswa_id, r]));
-  const data = siswa.map((sw, i) => { const r = byId[sw.id] || {}; return { No: i + 1, Nama: sw.nama, NIS: sw.nis || "", Status: r.status || "belum", "Soal otomatis": r.skor_otomatis ?? "", Uraian: r.skor_uraian ? Object.values(r.skor_uraian).reduce((a, v) => a + Number(v || 0), 0) : "", "Nilai akhir": r.nilai_akhir ?? "", "Pindah layar": r.pindah_tab ?? "" }; });
+  const data = siswa.map((sw, i) => { const r = byId[sw.id] || {}; return { No: i + 1, Nama: sw.nama, NIS: sw.nis || "", Status: r.status || "belum", "Soal otomatis": r.skor_otomatis ?? "", Uraian: r.skor_uraian ? Object.values(r.skor_uraian).reduce((a, v) => a + Number(v || 0), 0) : "", "Nilai akhir": r.nilai_akhir ?? "", "Nilai dipakai (terbaik)": _ujNilaiResmi(r) ?? "", Percobaan: r.percobaan ?? "", "Pindah layar": r.pindah_tab ?? "" }; });
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), "Rekap");
   XLSX.writeFile(wb, `Rekap ${b.judul} - ${_ujNamaKelas(s.kelas_id)}.xlsx`.replace(/[\\/:*?"<>|]/g, "-"));

@@ -42,7 +42,7 @@
   .pilihan small{color:var(--abu);font-size:12.5px}
   .chip{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:99px;background:#f1f5f3;color:#44514c;margin:4px 4px 0 0}
   .lencana{font-size:11px;font-weight:800;padding:4px 9px;border-radius:99px;white-space:nowrap}
-  .l-ujian{background:#fdecea;color:var(--merah)} .l-latihan{background:#e6effe;color:var(--biru)} .l-selesai{background:#e3f3ec;color:var(--hijau2)} .l-proses{background:#fff4d6;color:#8a6500} .l-susulan{background:#f3e8ff;color:var(--ungu)}
+  .l-ujian{background:#fdecea;color:var(--merah)} .l-latihan{background:#e6effe;color:var(--biru)} .l-selesai{background:#e3f3ec;color:var(--hijau2)} .l-proses{background:#fff4d6;color:#8a6500} .l-susulan{background:#f3e8ff;color:var(--ungu)} .l-remedial{background:#ffedd5;color:#c2410c}
   .cari{width:100%;padding:13px 14px;border:1.5px solid var(--garis);border-radius:14px;font:inherit;margin-bottom:12px;background:#fbfdfc}
   .cari:focus{outline:none;border-color:var(--hijau3)}
   .tombol{border:0;border-radius:14px;padding:13px 18px;font-weight:800;font-size:15px;background:linear-gradient(135deg,var(--hijau2),var(--hijau3));color:#fff;box-shadow:0 6px 16px rgba(19,113,91,.25);transition:transform .12s}
@@ -194,6 +194,113 @@
   body.mode-ujian .kartu-soal{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
   body.mode-ujian .kartu-soal input,body.mode-ujian .kartu-soal textarea{-webkit-user-select:text;user-select:text}
   .tanda-air{position:fixed;inset:0;pointer-events:none;z-index:3;overflow:hidden;opacity:.07;display:flex;flex-wrap:wrap;align-content:flex-start;gap:60px 50px;padding:40px 10px;transform:rotate(-24deg) scale(1.4);font-weight:800;font-size:15px;color:#0b4a3c;white-space:nowrap}
+  /* ── keyboard Arab ── */
+  .kb-saklar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px}
+  .kb-saklar button{display:inline-flex;align-items:center;gap:7px;border:1.5px solid var(--garis);background:#fff;border-radius:99px;padding:7px 13px;font-size:12.5px;font-weight:700;color:#44514c}
+  .kb-saklar.on button{background:linear-gradient(135deg,#0f172a,#134e4a);border-color:transparent;color:#fff;box-shadow:0 6px 16px rgba(19,78,74,.3)}
+  .kb-saklar small{font-size:11.5px;color:var(--abu);flex:1;min-width:160px}
+  .kb-lampu{width:8px;height:8px;border-radius:50%;background:#cbd5e1}
+  .kb-saklar.on .kb-lampu{background:#34d399;box-shadow:0 0 8px #34d399}
+  .kb-ar{position:fixed;left:0;right:0;bottom:0;z-index:15;transform:translateY(105%);transition:transform .22s ease;background:linear-gradient(180deg,#0f1f1b,#0a1512);padding:8px 6px calc(8px + env(safe-area-inset-bottom));box-shadow:0 -10px 30px rgba(0,0,0,.3);border-top:1px solid rgba(52,211,153,.35)}
+  .kb-ar.buka{transform:none}
+  .kb-isi{max-width:640px;margin:0 auto}
+  .kb-baris{display:flex;gap:5px;justify-content:center;margin-bottom:5px}
+  .kb-t{flex:1;min-width:0;max-width:52px;height:46px;border:0;border-radius:10px;background:linear-gradient(180deg,#25433b,#1a332c);color:#eafff7;font-family:'Amiri','Traditional Arabic',serif;font-size:22px;line-height:1;box-shadow:0 2px 0 #06100d,inset 0 1px 0 rgba(255,255,255,.08);touch-action:manipulation;user-select:none;-webkit-user-select:none}
+  .kb-t.ditekan{animation:kbTekan .18s ease}
+  @keyframes kbTekan{50%{background:#34d399;color:#04241b;transform:translateY(1px)}}
+  .kb-t.hrk{font-size:26px;max-width:72px;height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}.kb-t.hrk small{font-family:"Plus Jakarta Sans",sans-serif;font-size:9px;color:#7fa69a;line-height:1}
+  .kb-t.fn{font-family:"Plus Jakarta Sans",sans-serif;font-size:13px;font-weight:800;max-width:84px;background:linear-gradient(180deg,#1e2d3d,#152231)}
+  .kb-t.fn.on{background:#34d399;color:#04241b}
+  .kb-t.hapus{font-size:18px}.kb-t:disabled{opacity:.35}
+  .kb-t.spasi{max-width:none;flex:4;font-family:"Plus Jakarta Sans",sans-serif;font-size:12px;color:#9fb8b0}
+  .kb-baris.bawah{margin-bottom:0}
+  .kb-ket{text-align:center;font-size:10.5px;color:#7fa69a;margin:-1px 0 6px}
+  body.kb-terbuka .navi-bawah{display:none}
+  body.kb-terbuka #akar{padding-bottom:260px}
+  /* ── hasil 4.0 ── */
+  .h4-hero{position:relative;overflow:hidden;border-radius:24px;padding:18px 18px 16px;margin-bottom:14px;color:#e8fff7;background:radial-gradient(120% 90% at 0% 0%,#14532d 0%,transparent 55%),radial-gradient(90% 80% at 100% 100%,#0e7490 0%,transparent 60%),linear-gradient(135deg,#04140f,#0b2a24 55%,#0a1f2b);box-shadow:0 20px 40px rgba(4,30,24,.35),inset 0 1px 0 rgba(255,255,255,.08);animation:naik .4s ease both}
+  .h4-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);background-size:26px 26px;mask-image:radial-gradient(circle at 70% 40%,#000 0%,transparent 75%);-webkit-mask-image:radial-gradient(circle at 70% 40%,#000 0%,transparent 75%)}
+  .h4-orb{position:absolute;border-radius:50%;filter:blur(30px);opacity:.55;animation:h4melayang 8s ease-in-out infinite}
+  .h4-orb.a{width:160px;height:160px;background:#10b981;top:-60px;right:-40px}.h4-orb.b{width:120px;height:120px;background:#06b6d4;bottom:-50px;left:20%;animation-delay:-3s}
+  @keyframes h4melayang{50%{transform:translate(-14px,12px) scale(1.08)}}
+  .h4-kepala{position:relative;display:flex;align-items:center;gap:10px}
+  .h4-kepala .avatar{box-shadow:0 0 0 2px rgba(255,255,255,.25)}
+  .h4-nm{flex:1;min-width:0}.h4-nm b{display:block;font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.h4-nm small{font-size:11.5px;opacity:.7}
+  .h4-mode{font-size:10.5px;font-weight:800;letter-spacing:1.2px;padding:5px 10px;border-radius:99px;background:rgba(244,63,94,.18);color:#fecdd3;border:1px solid rgba(244,63,94,.4)}
+  .h4-mode.lat{background:rgba(56,189,248,.15);color:#bae6fd;border-color:rgba(56,189,248,.4)}
+  .h4-tengah{position:relative;display:flex;align-items:center;gap:16px;margin-top:10px;flex-wrap:wrap;justify-content:center}
+  .h4-cincin{margin:0}
+  .h4-cincin .angka{color:#fff;text-shadow:0 0 18px rgba(52,211,153,.55)}
+  .h4-cincin .angka small{color:rgba(232,255,247,.6)}
+  .h4-info{flex:1;min-width:200px}
+  .h4-label{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;opacity:.65;font-weight:700}
+  .h4-pesan{font-size:18px;font-weight:800;margin:3px 0 8px}
+  .h4-predikat{display:inline-flex;align-items:center;gap:9px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:6px 12px 6px 6px;backdrop-filter:blur(6px)}
+  .h4-predikat b{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:18px;background:linear-gradient(135deg,#fde68a,#f59e0b);color:#3b2600;box-shadow:0 0 14px rgba(245,158,11,.45)}
+  .h4-predikat span{font-size:13px;font-weight:700}
+  .h4-chip{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .h4-chip span{font-size:11.5px;padding:5px 10px;border-radius:99px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12)}
+  .h4-ubin{position:relative;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px}
+  .h4-ubin div{border-radius:14px;padding:10px 4px;text-align:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(6px)}
+  .h4-ubin b{display:block;font-size:22px;font-variant-numeric:tabular-nums}.h4-ubin span{font-size:10.5px;opacity:.75}
+  .h4-ubin .b b{color:#6ee7b7;text-shadow:0 0 12px rgba(110,231,183,.5)}.h4-ubin .s b{color:#fde68a}.h4-ubin .x b{color:#fda4af}.h4-ubin .k b{color:#cbd5e1}
+  .h4-remedial{display:flex;gap:14px;align-items:flex-start;background:linear-gradient(135deg,#fff7ed,#fef3c7);border:1px solid #fcd9a4}
+  .h4-remedial.selesai{background:linear-gradient(135deg,#f0fdf4,#ecfeff);border-color:#bbf7d0}
+  .h4-rem-ikon{width:48px;height:48px;border-radius:16px;display:grid;place-items:center;font-size:24px;background:linear-gradient(135deg,#f59e0b,#ea580c);box-shadow:0 8px 18px rgba(234,88,12,.3);flex:none}
+  .h4-remedial.selesai .h4-rem-ikon{background:linear-gradient(135deg,#10b981,#0891b2);box-shadow:0 8px 18px rgba(8,145,178,.3)}
+  .h4-jejak{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px;font-size:12px}
+  .h4-jejak span{background:#fff;border:1px solid var(--garis);padding:4px 9px;border-radius:99px}.h4-jejak span.kini{border-color:#f59e0b}.h4-jejak i{font-style:normal;color:var(--abu)}
+  .h4-kunci-tutup{display:flex;gap:12px;align-items:center}.h4-kunci-tutup>span{font-size:30px}
+  .h4-dua{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:0 14px}
+  .h4-bar{height:10px;background:#e8eef0}
+  .h4-peta{display:flex;flex-wrap:wrap;gap:0 22px}.h4-grup .grup-label{margin:10px 0 6px}.h4-grup .soal-chip{display:flex;flex-wrap:wrap;gap:6px}.h4-grup .soal-chip button{width:46px}
+  .h4-saring{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0 4px;position:sticky;top:0;z-index:3;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);padding:8px 0}
+  .h4-saring button{border:1.5px solid var(--garis);background:#fff;border-radius:99px;padding:7px 12px;font-size:12.5px;font-weight:700;color:#44514c}
+  .h4-saring button b{margin-left:4px;font-size:11px;background:#eef2f1;border-radius:99px;padding:1px 7px}
+  .h4-saring button.on{background:#0f172a;border-color:#0f172a;color:#fff}.h4-saring button.on b{background:rgba(255,255,255,.18)}
+  .h4-soal{border:1px solid var(--garis);border-left:4px solid var(--warna);border-radius:16px;padding:13px 14px;margin-top:10px;background:#fff;scroll-margin-top:60px;animation:naik .3s ease both}
+  .h4-soal.st-benar{border-left-color:#10b981}.h4-soal.st-salah{border-left-color:#f43f5e}.h4-soal.st-sebagian{border-left-color:#f59e0b}.h4-soal.st-kosong{border-left-color:#94a3b8}
+  .h4-soal.sorot{animation:h4sorot 1.4s ease}
+  @keyframes h4sorot{0%,40%{box-shadow:0 0 0 4px rgba(34,211,238,.45)}100%{box-shadow:none}}
+  .h4-soal-kepala{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+  .h4-no{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;background:var(--warna);color:#fff;font-weight:800;font-size:13px}
+  .h4-jenis{font-size:11px;font-weight:800;color:var(--warna);text-transform:uppercase;letter-spacing:.5px}
+  .h4-poin{margin-left:auto;font-size:11.5px;font-weight:800;color:var(--abu);font-variant-numeric:tabular-nums}
+  .h4-soal-teks{font-size:15px;line-height:1.65;white-space:pre-wrap;margin-bottom:10px}
+  .h4-soal-teks.arab,.h4-soal-teks:dir(rtl){font-family:'Amiri','Traditional Arabic',serif;font-size:1.3em;line-height:1.95}
+  .h4-titik{display:inline-block;min-width:54px;border-bottom:2px dashed var(--warna);color:transparent}
+  .h4-opsi{display:grid;gap:6px}
+  .h4-opsi>div{display:flex;align-items:flex-start;gap:9px;border:1.5px solid var(--garis);border-radius:12px;padding:8px 10px;font-size:14px;line-height:1.5;flex-wrap:wrap}
+  .h4-opsi .h{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:11.5px;font-weight:800;background:#eef2f1;color:#5b6670}
+  .h4-opsi .t{flex:1;min-width:0}
+  .h4-opsi em{font-style:normal;font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:99px;white-space:nowrap}
+  .h4-opsi .kunci{border-color:#10b981;background:linear-gradient(90deg,#ecfdf5,#fff)}.h4-opsi .kunci .h{background:#10b981;color:#fff}
+  .h4-opsi .keliru{border-color:#fda4af;background:linear-gradient(90deg,#fff1f2,#fff)}.h4-opsi .keliru .h{background:#f43f5e;color:#fff}
+  .tg-k{background:#d1fae5;color:#065f46}.tg-p{background:#e0e7ff;color:#3730a3}
+  .h4-tabel{display:grid;gap:6px}
+  .h4-tabel .th,.h4-tabel .tr{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;align-items:start;font-size:13.5px;line-height:1.5}
+  .h4-tabel .th{font-size:11px;font-weight:800;color:var(--abu);text-transform:uppercase;letter-spacing:.4px;padding:0 10px}
+  .h4-tabel .tr{border:1.5px solid var(--garis);border-radius:12px;padding:8px 10px}
+  .h4-tabel .tr.ok{border-color:#a7f3d0;background:#f0fdf4}.h4-tabel .tr.no{border-color:#fecdd3;background:#fff7f8}
+  .h4-tabel small{display:block;font-size:10.5px;color:var(--abu);font-weight:700}
+  .h4-tabel .nomor{font-weight:800;color:var(--warna);flex:none}
+  .h4-tabel b i{font-style:normal;color:var(--abu);font-weight:400}
+  .h4-urut{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+  .h4-urut>div{display:flex;flex-direction:column;gap:5px;border:1px dashed var(--garis);border-radius:12px;padding:9px}
+  .h4-urut small{font-size:10.5px;font-weight:800;color:var(--abu);text-transform:uppercase}
+  .h4-urut span{display:flex;gap:7px;align-items:flex-start;font-size:13.5px;border-radius:9px;padding:5px 8px;background:#f8fafc}
+  .h4-urut span i{font-style:normal;font-size:10.5px;font-weight:800;color:#fff;background:#64748b;border-radius:6px;padding:1px 6px;flex:none}
+  .h4-urut span.ok{background:#ecfdf5}.h4-urut span.ok i{background:#10b981}.h4-urut span.no{background:#fff1f2}.h4-urut span.no i{background:#f43f5e}
+  .h4-uraian{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+  .h4-uraian>div{border-radius:12px;padding:10px 12px;font-size:14px;line-height:1.6}.h4-uraian>div>div{white-space:pre-wrap}
+  .h4-tabel b:dir(rtl),.h4-uraian div:dir(rtl),.h4-urut span:dir(rtl),.h4-opsi .t:dir(rtl){font-family:'Amiri','Traditional Arabic',serif;font-size:1.22em}
+  .h4-uraian small{display:block;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;white-space:normal}
+  .h4-uraian .mu{background:#f8fafc;border:1px dashed #cbd5e1}.h4-uraian .mu small{color:#64748b}
+  .h4-uraian .kc{background:linear-gradient(135deg,#ecfdf5,#f0f9ff);border:1px solid #a7f3d0}.h4-uraian .kc small{color:#047857}
+  .h4-uraian ul{margin:6px 0 0;padding-left:18px;white-space:normal;font-size:13px}
+  .h4-kosong{color:var(--abu)}
+  .h4-kunci-kecil{font-size:11.5px;color:var(--abu);margin-top:6px}
+  @media (max-width:420px){.h4-ubin b{font-size:18px}.h4-pesan{font-size:16px}.h4-tengah{gap:8px}.kb-t{height:42px;font-size:20px}}
 </style>
 </head>
 <body>
@@ -204,9 +311,9 @@
 <script>
 // =====================================================================
 //  RUANG SANTRI — latihan & ujian per bab (tanpa login; santri pilih namanya)
-//  Kunci jawaban tidak pernah dikirim ke halaman ini: penilaian dilakukan
-//  di server (RPC ujian_kirim). Rincian hasil (ujian_hasil_rinci) hanya berisi
-//  status benar/belum tepat per soal — tanpa jawaban yang benar.
+//  Kunci jawaban tidak pernah dikirim SAAT mengerjakan: penilaian dilakukan di server
+//  (RPC ujian_kirim). Setelah dikirim, rincian hasil (ujian_hasil_rinci) memuat kunci
+//  & pembahasan (latihan langsung; ujian setelah dibuka guru & remedial ditutup).
 // =====================================================================
 const supa = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
 const $ = (id) => document.getElementById(id);
@@ -229,7 +336,7 @@ function pesanGalat(e) {
   if (/function .* does not exist|ujian_/i.test(m) && /does not exist|schema cache/i.test(m)) return "Fitur ujian belum diaktifkan oleh admin (SQL belum dijalankan).";
   return m;
 }
-function render(html) { $("akar").innerHTML = html; window.scrollTo(0, 0); }
+function render(html) { $("akar").innerHTML = html; window.scrollTo(0, 0); try { kbTampil(); } catch (e) {} }
 function kepala(sub, judul) { return `<div class="atas"><h1>${judul || "📝 Ruang Santri"}</h1><p>${esc(sub || "PKBM Al-Umm Barabai · Latihan & Ujian")}</p></div>`; }
 function dialog(html) { $("dialog").innerHTML = html; $("lapis").classList.add("buka"); }
 function tutupDialog() { $("lapis").classList.remove("buka"); }
@@ -245,7 +352,8 @@ function audioHTML(url) { return url ? `<div class="audio-soal"><span>🔊 Denga
 async function ambilSesi() {
   const kolom = "id,mode,durasi_menit,acak,kelas_id,bank_id,created_at,dibuka,kelas:kelas(nama_kelas),bank:ujian_bank(judul,bab,tingkat,mapel:mapel(nama_mapel))";
   // sesi dibuka + sesi tertutup yang punya peserta susulan / hasilnya sudah dibuka guru
-  let r = await supa.from("ujian_sesi").select(kolom + ",susulan,tampil_hasil").or("dibuka.eq.true,susulan.neq.{},tampil_hasil.eq.true").order("created_at", { ascending: false }).limit(40);
+  let r = await supa.from("ujian_sesi").select(kolom + ",susulan,tampil_hasil,remedial").or("dibuka.eq.true,susulan.neq.{},tampil_hasil.eq.true,remedial.eq.true").order("created_at", { ascending: false }).limit(40);
+  if (r.error && /remedial/.test(r.error.message || "")) r = await supa.from("ujian_sesi").select(kolom + ",susulan,tampil_hasil").or("dibuka.eq.true,susulan.neq.{},tampil_hasil.eq.true").order("created_at", { ascending: false }).limit(40);
   if (r.error && /susulan|tampil_hasil/.test(r.error.message || "")) r = await supa.from("ujian_sesi").select(kolom).eq("dibuka", true).order("created_at", { ascending: false });
   if (r.error) throw r.error;
   return r.data || [];
@@ -279,7 +387,7 @@ function pilihKelas(kelasId) {
     <p class="judul-langkah">📚 Langkah ${adaPilihanKelas ? 2 : 1}</p><h2>Pilih yang mau dikerjakan</h2>
     <div class="daftar">${list.map((s, i) => {
       const ujian = s.mode === "ujian", tutup = s.dibuka === false;
-      const lab = tutup ? ((s.susulan || []).length ? ["l-susulan", s.tampil_hasil ? "SUSULAN · HASIL" : "SUSULAN"] : ["l-selesai", "LIHAT HASIL"]) : ujian ? ["l-ujian", "UJIAN"] : ["l-latihan", "LATIHAN"];
+      const lab = s.remedial ? ["l-remedial", tutup ? "REMEDIAL" : "UJIAN · REMEDIAL"] : tutup ? ((s.susulan || []).length ? ["l-susulan", s.tampil_hasil ? "SUSULAN · HASIL" : "SUSULAN"] : ["l-selesai", "LIHAT HASIL"]) : ujian ? ["l-ujian", "UJIAN"] : ["l-latihan", "LATIHAN"];
       return `<button class="pilihan anim" style="animation-delay:${i * 50}ms" onclick="pilihSesi('${s.id}')">
       <span class="badge" style="background:${ujian ? "linear-gradient(135deg,#fde2e2,#fbd0c2)" : "linear-gradient(135deg,#dbe8ff,#e7dcff)"}">${ujian ? "📝" : "🎯"}</span>
       <span class="isi"><b>${esc(s.bank?.judul || "Soal")}</b>
@@ -397,6 +505,7 @@ function tampilPetunjuk(r) {
     <ol class="aturan">
       <li>${S.sisa !== null ? `Waktu <b>${Math.round(S.sisa / 60)} menit</b> — sudah mulai berjalan, jadi segera tekan Mulai.` : "Tidak ada batas waktu."}</li>
       <li>Ketuk jawaban untuk memilih. Soal <b style="color:var(--ungu)">PG Kompleks</b> boleh lebih dari satu jawaban.${jum("isian") ? " <b style='color:var(--c-isian)'>Isian</b>: ketik jawaban singkat di kotaknya." : ""}${jum("jodoh") ? " <b style='color:var(--c-jodoh)'>Menjodohkan</b>: pilih huruf pasangan yang tepat." : ""}${jum("urut") ? " <b style='color:var(--c-urut)'>Mengurutkan</b>: ketuk bagian sesuai urutan yang benar." : ""}</li>
+      ${S.soal.some((x) => (x.jenis === "isian" || x.jenis === "uraian") && soalArab(x)) ? "<li>Soal berbahasa Arab: <b>⌨️ keyboard Arab</b> muncul otomatis saat kamu mengetuk kotak jawaban.</li>" : ""}
       <li>Belum yakin? Tekan <b>🚩 Ragu-ragu</b>, lalu periksa lagi sebelum mengirim.</li>
       <li>Jawaban tersimpan otomatis. Kalau HP mati atau internet putus, buka lagi dan pilih namamu — jawaban tidak hilang.</li>
       ${ujian ? "<li>Tetap di halaman ini. Keluar dari halaman ujian (membuka WhatsApp, Google, aplikasi lain) <b>tercatat oleh ustadz</b>. Menyalin & menempel teks dimatikan selama ujian.</li>" : "<li>Latihan boleh diulang. Setelah kirim, kamu bisa melihat soal mana yang belum tepat.</li>"}
@@ -467,8 +576,8 @@ function tampilSoal() {
   } else if (s.jenis === "isian") {
     // titik kosong ___ di teks soal jadi kotak isian; tanpa ___ → satu kotak di bawah soal
     const jw = S.jawab.isian[s.no] || [];
-    const kotak = (x, satu) => `<input class="isian-kotak ${satu ? "isian-satu" : ""}" dir="auto" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${satu ? "✏️ Ketik jawabanmu…" : "…"}" value="${esc(jw[x] || "")}" oninput="ketikIsian(${x},this.value)">`;
-    isi = /_{3,}/.test(s.t || "") ? `<div class="petunjuk" style="background:#e6f7f5;color:#0f766e">✏️ Isi kotak kosong pada soal di atas.</div>` : kotak(0, true);
+    const kotak = (x, satu) => `<input class="isian-kotak ${satu ? "isian-satu" : ""}" dir="auto" ${kbAktif(s) ? `inputmode="none"` : ""} autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${satu ? "✏️ Ketik jawabanmu…" : "…"}" value="${esc(jw[x] || "")}" oninput="ketikIsian(${x},this.value)">`;
+    isi = (/_{3,}/.test(s.t || "") ? `<div class="petunjuk" style="background:#e6f7f5;color:#0f766e">✏️ Isi kotak kosong pada soal di atas.</div>` : kotak(0, true)) + kbSaklarHTML(s);
   } else if (s.jenis === "jodoh") {
     const jw = S.jawab.jodoh[s.no] || [], pakai = new Set(jw.filter((x) => x !== null && x !== undefined));
     isi = `<div class="petunjuk" style="background:#fdf2f8;color:#9d174d">🔗 Pasangkan: untuk tiap pernyataan, ketuk <b>huruf</b> jawaban yang tepat.</div>
@@ -485,10 +594,10 @@ function tampilSoal() {
     isi = rekamHTML(s);
   } else {
     const v = S.jawab.uraian[s.no] || "";
-    isi = `<textarea id="uraian" dir="auto" placeholder="✍️ Tulis jawabanmu di sini…" oninput="ketikUraian(this.value)">${esc(v)}</textarea><div class="hitung-kata" id="hitung-kata">${v.trim() ? v.trim().split(/\s+/).length : 0} kata</div>`;
+    isi = `<textarea id="uraian" dir="auto" ${kbAktif(s) ? `inputmode="none"` : ""} placeholder="✍️ Tulis jawabanmu di sini…" oninput="ketikUraian(this.value)">${esc(v)}</textarea><div class="hitung-kata" id="hitung-kata">${v.trim() ? v.trim().split(/\s+/).length : 0} kata</div>` + kbSaklarHTML(s);
   }
   const teksSoal = s.jenis === "isian" && /_{3,}/.test(s.t || "")
-    ? (() => { let x = -1; const jw = S.jawab.isian[s.no] || []; return String(s.t).split(/_{3,}/).map((bag, i, arr) => fmt(bag) + (i < arr.length - 1 ? (x++, `<input class="isian-kotak" dir="auto" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${x + 1}" value="${esc(jw[x] || "")}" oninput="ketikIsian(${x},this.value)">`) : "")).join(""); })()
+    ? (() => { let x = -1; const jw = S.jawab.isian[s.no] || []; return String(s.t).split(/_{3,}/).map((bag, i, arr) => fmt(bag) + (i < arr.length - 1 ? (x++, `<input class="isian-kotak" dir="auto" ${kbAktif(s) ? `inputmode="none"` : ""} autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${x + 1}" value="${esc(jw[x] || "")}" oninput="ketikIsian(${x},this.value)">`) : "")).join(""); })()
     : fmt(s.t);
   const stimTeks = typeof stimulus === "object" && stimulus ? stimulus.teks : stimulus;
   const ragu = S.ragu.has(kunciRagu(s));
@@ -687,12 +796,16 @@ async function kirim(otomatis) {
   }
 }
 
-// ── Hasil: nilai + (kalau dibuka guru / latihan) rincian per soal tanpa kunci ──
+// ── Hasil: nilai + rincian per soal + KUNCI JAWABAN & pembahasan (latihan langsung; ujian setelah dibuka guru) ──
 function cincin(n) {
-  const r = 70, k = 2 * Math.PI * r, warna = n >= 80 ? "#13715b" : n >= 60 ? "#d4a72c" : "#d64545";
-  return `<div class="cincin"><svg width="100%" height="100%" viewBox="0 0 170 170"><circle cx="85" cy="85" r="${r}" fill="none" stroke="#edf1ef" stroke-width="14"/>
-    <circle id="busur" cx="85" cy="85" r="${r}" fill="none" stroke="${warna}" stroke-width="14" stroke-linecap="round" stroke-dasharray="${k}" stroke-dashoffset="${k}" style="transition:stroke-dashoffset 1.2s ease" data-akhir="${k * (1 - n / 100)}"/></svg>
-    <div class="angka"><div>${Math.round(n)}<small>dari 100</small></div></div></div>`;
+  const r = 70, k = 2 * Math.PI * r;
+  const [w1, w2] = n >= 80 ? ["#34d399", "#22d3ee"] : n >= 60 ? ["#fbbf24", "#f97316"] : ["#fb7185", "#f43f5e"];
+  return `<div class="cincin h4-cincin"><svg width="100%" height="100%" viewBox="0 0 170 170"><defs><linearGradient id="gr-cincin" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${w1}"/><stop offset="1" stop-color="${w2}"/></linearGradient>
+      <filter id="pendar"><feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+    <circle cx="85" cy="85" r="${r}" fill="none" stroke="rgba(255,255,255,.10)" stroke-width="12"/>
+    <circle cx="85" cy="85" r="${r - 15}" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="1" stroke-dasharray="2 5"/>
+    <circle id="busur" cx="85" cy="85" r="${r}" fill="none" stroke="url(#gr-cincin)" stroke-width="12" stroke-linecap="round" filter="url(#pendar)" stroke-dasharray="${k}" stroke-dashoffset="${k}" style="transition:stroke-dashoffset 1.4s cubic-bezier(.2,.8,.2,1)" data-akhir="${k * (1 - Math.max(0, Math.min(100, n)) / 100)}"/></svg>
+    <div class="angka"><div><span id="angka-nilai" data-n="${Math.round(n)}">0</span><small>dari 100</small></div></div></div>`;
 }
 function serpihan() {
   for (let i = 0; i < 26; i++) {
@@ -702,103 +815,314 @@ function serpihan() {
     document.body.appendChild(e); setTimeout(() => e.remove(), 3600);
   }
 }
+const predikat = (n) => n >= 90 ? ["A", "Istimewa"] : n >= 80 ? ["B", "Baik sekali"] : n >= 70 ? ["C", "Baik"] : n >= 60 ? ["D", "Cukup"] : ["E", "Perlu belajar lagi"];
 async function tampilHasil(r) {
   const latihan = (r.mode || S.sesi.mode) === "latihan";
-  render(kepala(S.sesi.bank?.judul, "📊 Hasil") + `<div class="wadah"><div class="kartu"><div class="memuat">Menyiapkan hasil…</div></div></div>`);
+  render(kepala(S.sesi.bank?.judul, "📊 Hasil") + `<div class="wadah"><div class="kartu"><div class="memuat">Menganalisis jawabanmu…</div></div></div>`);
   let rinci = null;
-  if (r.status === "dinilai") {
-    try { rinci = await rpc("ujian_hasil_rinci", { p_sesi: S.sesi.id, p_siswa: S.murid.id }); } catch (e) { rinci = null; }
-    if (rinci && rinci.boleh && !S.bagian.length) { try { await muatBank(); } catch (e) {} }
-  }
+  try { rinci = await rpc("ujian_hasil_rinci", { p_sesi: S.sesi.id, p_siswa: S.murid.id }); } catch (e) { rinci = null; }
+  if (rinci && rinci.boleh && !S.bagian.length) { try { await muatBank(); } catch (e) {} }
   S.rinci = rinci;
-  const tombol = `<div class="navi" style="margin-top:18px;flex-wrap:wrap">
+  const rem = (rinci && rinci.remedial) || r.remedial || null;
+  const boleh = !!(rinci && rinci.boleh);
+  const tombol = `<div class="navi" style="flex-wrap:wrap">
       ${latihan && S.sesi.dibuka !== false ? `<button class="tombol" onclick="masuk(true)">↻ Ulangi latihan</button>` : ""}
       <button class="tombol garis" onclick="selesai()">Selesai</button></div>`;
   let isi;
-  if (r.nilai_akhir !== null && r.nilai_akhir !== undefined) {
-    const n = Number(r.nilai_akhir);
-    const pesan = n >= 90 ? "Masya Allah, luar biasa! 🌟" : n >= 75 ? "Barakallahu fiik, bagus! 👍" : n >= 60 ? "Lumayan, terus belajar ya 💪" : "Jangan menyerah, pelajari lagi bab ini 📖";
-    isi = (typeof gameAktif === "function" && gameAktif() ? gameAdeganHasil(r, rinci) : "") + `<div class="kartu"><div class="hasil-atas">
-        <div style="font-weight:800;font-size:16px">${esc(S.murid.nama)}</div>
-        <div class="ket">${latihan ? "Nilai latihanmu" : "Nilai akhirmu"}</div>
-        ${cincin(n)}
-        <div class="pesan-hasil">${pesan}</div>
-        ${latihan && r.nilai_terbaik != null ? `<div class="ket">🏆 Nilai terbaikmu: <b>${Math.round(r.nilai_terbaik)}</b>${(rinci && rinci.percobaan) || r.percobaan ? ` · percobaan ke-${(rinci && rinci.percobaan) || r.percobaan}` : ""}</div>` : ""}
-      </div>${!(rinci && rinci.boleh) ? tombol : ""}</div>
-      ${rinci && rinci.boleh ? rincianHTML(rinci) + `<div class="kartu">${tombol}</div>` : `<div class="kartu ket" style="text-align:center">🔒 Rincian soal yang benar & belum tepat akan muncul setelah ustadz membukanya.</div>`}`;
+  const nAkhir = r.nilai_akhir ?? (rinci && rinci.nilai_akhir);
+  if (nAkhir !== null && nAkhir !== undefined) {
+    const n = Number(nAkhir);
+    const terbaik = Math.max(n, Number((rinci && rinci.nilai_terbaik) ?? r.nilai_terbaik ?? 0));
+    const ke = (rinci && rinci.percobaan) || r.percobaan || 1;
+    const pesan = n >= 90 ? "Masya Allah, luar biasa! 🌟" : n >= 75 ? "Barakallahu fiik, bagus! 👍" : n >= 60 ? "Lumayan, terus belajar ya 💪" : "Jangan menyerah, pelajari lagi ya 📖";
+    const [hp, ket] = predikat(n);
+    const hit = (st) => boleh ? rinci.soal.filter((x) => x.status === st).length : null;
+    const total = boleh ? rinci.soal.length : 0;
+    isi = (typeof gameAktif === "function" && gameAktif() ? gameAdeganHasil(r, rinci) : "") + `
+      <div class="h4-hero">
+        <div class="h4-grid"></div><div class="h4-orb a"></div><div class="h4-orb b"></div>
+        <div class="h4-kepala"><span class="avatar" style="background:${warnaNama(S.murid.nama)}">${esc(inisial(S.murid.nama))}</span>
+          <div class="h4-nm"><b>${esc(S.murid.nama)}</b><small>${esc(S.sesi.kelas?.nama_kelas || "")} · ${esc(S.sesi.bank?.mapel?.nama_mapel || "")}</small></div>
+          <span class="h4-mode ${latihan ? "lat" : ""}">${latihan ? "LATIHAN" : ke > 1 ? "REMEDIAL" : "UJIAN"}</span></div>
+        <div class="h4-tengah">
+          ${cincin(n)}
+          <div class="h4-info">
+            <div class="h4-label">${latihan ? "Nilai latihanmu" : ke > 1 ? `Nilai percobaan ke-${ke}` : "Nilai akhirmu"}</div>
+            <div class="h4-pesan">${pesan}</div>
+            <div class="h4-predikat"><b>${hp}</b><span>${ket}</span></div>
+            <div class="h4-chip">
+              ${terbaik > n || (ke > 1 && !latihan) ? `<span>🏆 Nilai ${latihan ? "terbaik" : "yang dipakai"}: <b>${Math.round(terbaik)}</b></span>` : latihan && r.nilai_terbaik != null ? `<span>🏆 Terbaik: <b>${Math.round(terbaik)}</b></span>` : ""}
+              ${ke > 1 ? `<span>🔁 Percobaan ke-${ke}</span>` : ""}
+              ${boleh ? `<span>🎯 ${hit("benar")}/${total} soal benar</span>` : ""}
+            </div>
+          </div>
+        </div>
+        ${boleh ? `<div class="h4-ubin">
+          <div class="b"><b>${hit("benar")}</b><span>Benar</span></div>
+          <div class="s"><b>${hit("sebagian")}</b><span>Sebagian</span></div>
+          <div class="x"><b>${hit("salah")}</b><span>Belum tepat</span></div>
+          <div class="k"><b>${hit("kosong")}</b><span>Kosong</span></div></div>` : ""}
+      </div>
+      ${remedialHTML(rem, n)}
+      ${boleh ? rincianHTML(rinci) : `<div class="kartu h4-kunci-tutup"><span>🔒</span><div><b>Pembahasan belum dibuka</b><div class="ket">Soal yang benar & belum tepat beserta kunci jawabannya akan muncul setelah ustadz membukanya.</div></div></div>`}
+      <div class="kartu">${tombol}</div>`;
   } else if (r.status === "mengerjakan") {
     isi = `<div class="kartu kosong"><div class="besar">⏳</div>Kamu belum selesai mengerjakan.${tombol}</div>`;
   } else {
     isi = `<div class="kartu" style="text-align:center"><div style="font-size:52px">✅</div><h2 style="margin:6px 0">Jawaban terkirim</h2>
-      <div class="ket">Nilai akhir keluar setelah ustadz menilai soal uraian.<br>Cek lagi nanti: buka halaman ini, pilih ujian yang sama, lalu pilih namamu.</div>${tombol}</div>`;
+      <div class="ket">Nilai akhir keluar setelah ustadz menilai soal uraian.<br>Cek lagi nanti: buka halaman ini, pilih ujian yang sama, lalu pilih namamu.</div><div style="margin-top:16px">${tombol}</div></div>`;
   }
   render(kepala(S.sesi.bank?.judul, "📊 Hasil") + `<div class="wadah">${isi}</div>`);
   requestAnimationFrame(() => setTimeout(() => {
     const b = $("busur"); if (b) b.style.strokeDashoffset = b.dataset.akhir;
+    const a = $("angka-nilai");
+    if (a) { const akhir = Number(a.dataset.n), t0 = performance.now(); const jalan = (t) => { const p = Math.min(1, (t - t0) / 1300); a.textContent = Math.round(akhir * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(jalan); }; requestAnimationFrame(jalan); }
     document.querySelectorAll("[data-lebar]").forEach((x) => (x.style.width = x.dataset.lebar));
     document.querySelectorAll("[data-tinggi]").forEach((x) => (x.style.height = x.dataset.tinggi));
   }, 60));
-  if (r.nilai_akhir >= 90) serpihan();
+  if (Number(nAkhir) >= 90) serpihan();
+}
+// Kartu remedial: tombol mengerjakan ulang + riwayat percobaan
+function remedialHTML(rem, n) {
+  if (!rem || !rem.aktif) return "";
+  const riw = (rem.riwayat || []).filter((x) => x && x.nilai != null);
+  const jejak = riw.length ? `<div class="h4-jejak">${riw.map((x) => `<span>Ke-${x.ke}: <b>${Math.round(x.nilai)}</b></span>`).join("<i>→</i>")}<i>→</i><span class="kini">Sekarang: <b>${Math.round(n)}</b></span></div>` : "";
+  if (rem.bisa) return `<div class="kartu h4-remedial">
+      <div class="h4-rem-ikon">🔁</div>
+      <div style="flex:1;min-width:0"><b>Remedial dibuka ustadz</b>
+        <div class="ket">Kamu boleh mengerjakan ulang ${rem.sisa > 1 ? `(sisa <b>${rem.sisa}×</b>)` : "<b>1 kali lagi</b>"}. Tenang, <b>nilai terbaikmu</b> yang dipakai — nilai tidak akan turun.${rem.batas != null ? ` Batas tuntas: <b>${Math.round(rem.batas)}</b>.` : ""}</div>
+        ${jejak}
+        <button class="tombol emas" style="margin-top:10px" onclick="mulaiRemedial()">🔁 Mulai remedial</button></div></div>`;
+  return riw.length ? `<div class="kartu h4-remedial selesai"><div class="h4-rem-ikon">🏁</div><div style="flex:1;min-width:0"><b>Riwayat remedial</b><div class="ket">Nilai terbaik yang dipakai untuk rapor.</div>${jejak}</div></div>` : "";
+}
+function mulaiRemedial() {
+  dialog(`<div style="text-align:center;font-size:44px">🔁</div><h3 style="text-align:center">Mulai remedial?</h3>
+    <p style="text-align:center">Soal dikerjakan ulang dari awal${S.sesi.durasi_menit ? ` dengan waktu <b>${S.sesi.durasi_menit} menit</b>` : ""}. Jawaban lama tetap tersimpan, dan <b>nilai terbaik</b> yang dipakai.</p>
+    <div class="navi"><button class="tombol garis" onclick="tutupDialog()">Nanti</button><button class="tombol" onclick="masuk(true)">Bismillah, mulai</button></div>`);
 }
 const ST_LABEL = { benar: ["✅", "Benar"], sebagian: ["◐", "Sebagian benar"], salah: ["❌", "Belum tepat"], kosong: ["⭕", "Tidak dijawab"], tidak_dinilai: ["➖", "Tidak dinilai"] };
 function rincianHTML(r) {
-  const hit = (st) => r.soal.filter((x) => x.status === st).length;
   const bagian = (r.bagian || []).filter((b) => b.maks > 0);
   const k = r.kelas || {};
   const ember = ["< 60", "60–69", "70–79", "80–89", "90+"];
   const n = Number(r.nilai_akhir), punyaku = n < 60 ? 0 : n < 70 ? 1 : n < 80 ? 2 : n < 90 ? 3 : 4;
   const maxS = Math.max(1, ...(k.sebaran || [0]));
-  const perluBelajar = r.soal.filter((x) => x.status === "salah" || x.status === "kosong" || x.status === "sebagian");
-  const urut = JENIS;
+  const perlu = r.soal.filter((x) => x.status === "salah" || x.status === "kosong" || x.status === "sebagian");
+  S.saring = perlu.length ? "perlu" : "semua";
   return `
-  <div class="kartu">
-    <div class="judul-seksi"><span class="ikon" style="background:#dcf5ea">🧮</span>Ringkasan jawaban</div>
-    <div class="statistik">
-      <div style="--bg:#dcf5ea"><b style="color:#11704f">${hit("benar")}</b><span>✅ benar</span></div>
-      <div style="--bg:#fff1cc"><b style="color:#8a6500">${hit("sebagian")}</b><span>◐ sebagian</span></div>
-      <div style="--bg:#fde2e2"><b style="color:#b42318">${hit("salah")}</b><span>❌ belum tepat</span></div>
-      <div style="--bg:#eef0f2"><b style="color:#5b6670">${hit("kosong")}</b><span>⭕ kosong</span></div>
+  <div class="h4-dua">
+    <div class="kartu">
+      <div class="judul-seksi"><span class="ikon" style="background:#e6effe">📊</span>Penguasaan per bagian</div>
+      ${bagian.map((b) => { const p = Math.round((b.dapat * 100) / b.maks); return `<div class="bar-baris"><div class="bar-label"><span>${LABEL[b.jenis]}</span><span style="color:${HEX[b.jenis]}">${p}%</span></div><div class="bar h4-bar"><i style="width:0;background:linear-gradient(90deg,${HEX[b.jenis]},color-mix(in srgb,${HEX[b.jenis]} 55%,#22d3ee))" data-lebar="${p}%"></i></div></div>`; }).join("")}
     </div>
-    <div class="judul-seksi" style="margin-top:14px"><span class="ikon" style="background:#e6effe">📊</span>Nilai per bagian</div>
-    ${bagian.map((b) => { const p = Math.round((b.dapat * 100) / b.maks); return `<div class="bar-baris"><div class="bar-label"><span>${LABEL[b.jenis]}</span><span style="color:${HEX[b.jenis]}">${p}%</span></div><div class="bar"><i style="width:0;background:${HEX[b.jenis]}" data-lebar="${p}%"></i></div></div>`; }).join("")}
+    ${k.n > 1 ? `<div class="kartu">
+      <div class="judul-seksi"><span class="ikon" style="background:#fff1cc">👥</span>Posisimu di kelas</div>
+      <div class="ket" style="margin-bottom:6px">Rata-rata <b>${k.rata}</b> · tertinggi <b>${Math.round(k.tertinggi)}</b> · ${k.n} santri</div>
+      <div class="grafik-kelas">${(k.sebaran || []).map((v, i) => `<div class="${i === punyaku ? "kamu" : ""}"><b>${v}</b><span class="tiang" style="height:0" data-tinggi="${Math.max(4, (v / maxS) * 100)}%"></span><span>${ember[i]}</span>${i === punyaku ? "<b>⬆ kamu</b>" : "<span>&nbsp;</span>"}</div>`).join("")}</div>
+    </div>` : ""}
   </div>
-  ${k.n > 1 ? `<div class="kartu">
-    <div class="judul-seksi"><span class="ikon" style="background:#fff1cc">👥</span>Posisimu di kelas</div>
-    <div class="ket" style="margin-bottom:6px">Rata-rata kelas <b>${k.rata}</b> · tertinggi <b>${Math.round(k.tertinggi)}</b> · ${k.n} santri sudah dinilai</div>
-    <div class="grafik-kelas">${(k.sebaran || []).map((v, i) => `<div class="${i === punyaku ? "kamu" : ""}"><b>${v}</b><span class="tiang" style="height:0" data-tinggi="${Math.max(4, (v / maxS) * 100)}%"></span><span>${ember[i]}</span>${i === punyaku ? "<b>⬆ kamu</b>" : "<span>&nbsp;</span>"}</div>`).join("")}</div>
-  </div>` : ""}
-  <div class="kartu">
-    <div class="judul-seksi"><span class="ikon" style="background:#fde2e2">🔎</span>Soal per nomor</div>
-    <div class="ket" style="margin-bottom:8px">${perluBelajar.length ? `Ada <b>${perluBelajar.length} soal</b> yang perlu kamu pelajari lagi. Ketuk nomornya untuk melihat soal & jawabanmu.` : "Semua soal kamu jawab dengan benar. Masya Allah! 🌟"}</div>
-    ${urut.filter((j) => r.soal.some((x) => x.jenis === j)).map((j) => `<div class="grup-label"><i style="background:${HEX[j]}"></i>${LABEL[j]}</div>
-      <div class="soal-chip">${r.soal.filter((x) => x.jenis === j).map((x) => `<button class="s-${x.status}" onclick="lihatRinciSoal('${j}',${esc(JSON.stringify(x.no))})">${x.no}<small>${ST_LABEL[x.status][0]}</small></button>`).join("")}</div>`).join("")}
-    <div id="detail-soal"></div>
-    <div class="legenda">${Object.entries(ST_LABEL).filter(([k2]) => k2 !== "tidak_dinilai" || hit(k2)).map(([, v]) => `<span style="--c:transparent">${v[0]} ${v[1]}</span>`).join("")}</div>
+  <div class="kartu h4-bahas">
+    <div class="judul-seksi"><span class="ikon" style="background:linear-gradient(135deg,#a7f3d0,#bae6fd)">🧠</span>Pembahasan & kunci jawaban</div>
+    <div class="ket" style="margin-bottom:10px">${perlu.length ? `Ada <b>${perlu.length} soal</b> yang perlu kamu pelajari lagi. Ketuk nomor untuk langsung ke pembahasannya.` : "Semua soal kamu jawab dengan benar. Masya Allah! 🌟"}
+      ${r.ada_kunci === false ? `<br>🔒 Kunci jawaban disembunyikan selama <b>remedial</b> masih dibuka.` : r.ada_kunci === undefined ? `<br>ℹ️ Kunci jawaban akan tampil setelah sistem sekolah diperbarui.` : ""}</div>
+    <div class="h4-peta">${JENIS.filter((j) => r.soal.some((x) => x.jenis === j)).map((j) => `<div class="h4-grup"><div class="grup-label"><i style="background:${HEX[j]}"></i>${LABEL[j]}</div>
+      <div class="soal-chip">${r.soal.filter((x) => x.jenis === j).map((x) => `<button class="s-${x.status}" onclick="keBahas('${j}',${esc(JSON.stringify(x.no))})">${x.no}<small>${ST_LABEL[x.status][0]}</small></button>`).join("")}</div></div>`).join("")}</div>
+    <div class="h4-saring" id="h4-saring">
+      <button data-s="perlu" class="${S.saring === "perlu" ? "on" : ""}" onclick="saringBahas('perlu')">📌 Perlu dipelajari <b>${perlu.length}</b></button>
+      <button data-s="semua" class="${S.saring === "semua" ? "on" : ""}" onclick="saringBahas('semua')">📚 Semua <b>${r.soal.length}</b></button>
+      <button data-s="benar" onclick="saringBahas('benar')">✅ Benar <b>${r.soal.filter((x) => x.status === "benar").length}</b></button>
+    </div>
+    <div id="daftar-bahas">${daftarBahasHTML()}</div>
   </div>`;
 }
-// Tampilkan soal + jawaban santri sendiri + statusnya. Jawaban yang benar TIDAK ditampilkan.
-function lihatRinciSoal(jenis, no) {
-  const r = S.rinci; if (!r) return;
-  const st = r.soal.find((x) => x.jenis === jenis && x.no == no);
+function daftarBahasHTML() {
+  const r = S.rinci; if (!r) return "";
+  const cocok = (x) => S.saring === "semua" || (S.saring === "benar" ? x.status === "benar" : x.status !== "benar" && x.status !== "tidak_dinilai");
+  const daftar = r.soal.filter(cocok);
+  return daftar.length ? daftar.map(bahasHTML).join("") : `<div class="kosong" style="padding:16px">Tidak ada soal di kelompok ini.</div>`;
+}
+function saringBahas(s) {
+  S.saring = s;
+  document.querySelectorAll("#h4-saring button").forEach((b) => b.classList.toggle("on", b.dataset.s === s));
+  $("daftar-bahas").innerHTML = daftarBahasHTML();
+}
+function keBahas(jenis, no) {
+  let el = document.getElementById(`bahas-${jenis}-${no}`);
+  if (!el) { saringBahas("semua"); el = document.getElementById(`bahas-${jenis}-${no}`); }
+  if (!el) return;
+  el.scrollIntoView({ behavior: "smooth", block: "start" });
+  el.classList.remove("sorot"); void el.offsetWidth; el.classList.add("sorot");
+}
+// Samakan tulisan seperti di server (huruf kecil, tanpa harakat & tanda baca di ujung)
+const normal = (t) => String(t ?? "").replace(/[ً-ْٰ]/g, "").replace(/^[\s\p{P}]+|[\s\p{P}]+$/gu, "").replace(/\s+/g, " ").toLowerCase();
+function bahasHTML(st) {
+  const jenis = st.jenis, no = st.no;
   const bg = (S.bagian || []).find((b) => b.jenis === jenis) || { soal: [] };
   const s = bg.soal.find((x) => x.no == no) || {};
-  const j = (r.jawaban || {})[jenis] || {};
-  let jawabanku;
-  if (jenis === "pg") jawabanku = j[no] !== undefined ? fmt((s.o || [])[j[no]] || "") : "<i>tidak dijawab</i>";
-  else if (jenis === "pgk" && s.bs) jawabanku = (s.o || []).map((o, i) => `• ${fmt(o)} → <b>${j[no] && j[no][i] === true ? esc(s.bs[0]) : j[no] && j[no][i] === false ? esc(s.bs[1]) : "—"}</b>`).join("<br>");
-  else if (jenis === "pgk") jawabanku = (j[no] || []).length ? j[no].map((i) => "• " + fmt((s.o || [])[i] || "")).join("<br>") : "<i>tidak dijawab</i>";
-  else if (jenis === "isian") jawabanku = adaIsi(j[no] || []) ? (j[no] || []).map((v, i) => `${(j[no] || []).length > 1 ? `(${i + 1}) ` : ""}<b>${esc(v || "—")}</b>`).join(" · ") : "<i>tidak dijawab</i>";
-  else if (jenis === "jodoh") jawabanku = adaIsi(j[no] || []) ? (s.o || []).map((o, i) => `• ${fmt(o)} → <b>${j[no][i] != null ? esc((s.p || [])[j[no][i]] || "") : "—"}</b>`).join("<br>") : "<i>tidak dijawab</i>";
-  else if (jenis === "urut") jawabanku = (j[no] || []).length ? j[no].map((i) => fmt((s.o || [])[i] || "")).join(" → ") : "<i>tidak dijawab</i>";
-  else if (urlRekaman(j[no])) jawabanku = `<audio controls src="${esc(urlRekaman(j[no]))}" style="width:100%"></audio>`;
-  else jawabanku = String(j[no] || "").trim() ? esc(j[no]) : "<i>tidak dijawab</i>";
-  $("detail-soal").innerHTML = `<div class="detail-soal"><b>${LABEL[jenis]} no. ${esc(no)}</b> · <span class="lencana s-${st.status}">${ST_LABEL[st.status][0]} ${ST_LABEL[st.status][1]}${st.dapat != null ? ` · ${st.dapat}/${st.maks} poin` : ""}</span>
-    <div style="margin-top:8px" class="teks-soal" dir="auto">${fmt(s.t || "")}</div>${gambarHTML(s.g)}
-    <div style="margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff;border:1px dashed var(--garis)"><span style="font-size:12px;color:var(--abu)">Jawabanmu:</span><br><div dir="auto">${jawabanku}</div></div>
-    ${st.penjelasan ? `<div class="penjelasan"><b>💡 Penjelasan singkat</b><div>${fmt(st.penjelasan)}</div></div>`
-      : st.status !== "benar" ? `<div class="ket" style="margin-top:6px">💡 Baca lagi materi bab ini atau tanyakan ke ustadz.</div>` : ""}</div>`;
-  $("detail-soal").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  const j = ((S.rinci.jawaban || {})[jenis] || {})[no];
+  const k = st.kunci;
+  const ada = k !== undefined && k !== null;
+  const ar = soalArab({ t: s.t || "", o: s.o || [] });
+  const teks = jenis === "isian" ? fmt(s.t || "").replace(/_{3,}/g, (m, i) => `<span class="h4-titik">……</span>`) : fmt(s.t || "");
+  return `<div class="h4-soal st-${st.status}" id="bahas-${jenis}-${esc(no)}" style="--warna:${HEX[jenis]}">
+    <div class="h4-soal-kepala"><span class="h4-no">${esc(no)}</span><span class="h4-jenis">${LABEL[jenis]}</span>
+      <span class="lencana s-${st.status}">${ST_LABEL[st.status][0]} ${ST_LABEL[st.status][1]}</span>
+      ${st.dapat != null ? `<span class="h4-poin">${+Number(st.dapat).toFixed(2)}/${st.maks} poin</span>` : ""}</div>
+    ${s.stimulus ? `<div class="stimulus" dir="auto" style="font-size:13.5px">${fmt(typeof s.stimulus === "object" ? s.stimulus.teks : s.stimulus)}</div>` : ""}
+    ${audioHTML(s.au)}
+    <div class="h4-soal-teks ${ar ? "arab" : ""}" dir="auto">${teks}</div>${gambarHTML(s.g)}
+    ${jawabanKunciHTML(jenis, s, j, k, ada)}
+    ${st.penjelasan ? `<div class="penjelasan"><b>💡 Pembahasan</b><div dir="auto">${fmt(st.penjelasan)}</div></div>` : ""}
+  </div>`;
 }
+function jawabanKunciHTML(jenis, s, j, k, ada) {
+  const kosong = `<i class="h4-kosong">tidak dijawab</i>`;
+  const o = s.o || [];
+  const tutup = ada ? "" : `<div class="h4-kunci-kecil">🔒 Kunci jawaban belum ditampilkan.</div>`;
+  if (jenis === "pg" || (jenis === "pgk" && !s.bs)) {
+    const pilih = jenis === "pg" ? (j !== undefined && j !== null ? [j] : []) : (j || []);
+    const benar = ada ? [].concat(k) : [];
+    return `<div class="h4-opsi">${o.map((tx, i) => {
+      const kb = benar.includes(i), dp = pilih.includes(i);
+      const cls = kb ? "kunci" : dp ? "keliru" : "";
+      return `<div class="${cls} ${dp ? "dipilih" : ""}"><span class="h">${HURUF[i]}</span><span class="t" dir="auto">${fmt(tx)}${s.og && s.og[i] ? gambarHTML(s.og[i]) : ""}</span>
+        ${kb ? `<em class="tg-k">✓ Kunci</em>` : ""}${dp ? `<em class="tg-p">${kb ? "Pilihanmu ✓" : "Pilihanmu"}</em>` : ""}</div>`;
+    }).join("")}</div>${!pilih.length ? `<div class="h4-kunci-kecil">Kamu tidak memilih jawaban.</div>` : ""}${tutup}`;
+  }
+  if (jenis === "pgk") { // tabel Benar/Salah
+    return `<div class="h4-tabel"><div class="th"><span>Pernyataan</span><span>Jawabanmu</span>${ada ? "<span>Kunci</span>" : ""}</div>${o.map((tx, i) => {
+      const v = j && j[i], kv = ada ? k[i] : undefined;
+      const lab = (x) => x === true ? esc(s.bs[0]) : x === false ? esc(s.bs[1]) : "—";
+      const ok = ada && v === kv;
+      return `<div class="tr ${ada ? (ok ? "ok" : "no") : ""}"><span dir="auto">${fmt(tx)}</span><span>${lab(v)}</span>${ada ? `<span><b>${lab(kv)}</b></span>` : ""}</div>`;
+    }).join("")}</div>${tutup}`;
+  }
+  if (jenis === "isian") {
+    const nTitik = Math.max(1, s.n || (String(s.t || "").match(/_{3,}/g) || []).length, ada ? k.length : 0);
+    return `<div class="h4-tabel">${Array.from({ length: nTitik }, (_, i) => {
+      const v = (j || [])[i], alt = ada ? [].concat(k[i] || []) : [];
+      const ok = ada && v && alt.some((a) => normal(a) === normal(v));
+      return `<div class="tr ${ada ? (ok ? "ok" : "no") : ""}">${nTitik > 1 ? `<span class="nomor">(${i + 1})</span>` : ""}<span><small>Jawabanmu</small><b dir="auto">${v && String(v).trim() ? esc(v) : kosong}</b></span>${ada ? `<span><small>Kunci</small><b dir="auto">${alt.map(esc).join(" <i>/</i> ")}</b></span>` : ""}</div>`;
+    }).join("")}</div>${ada && k.some((a) => [].concat(a).length > 1) ? `<div class="h4-kunci-kecil">Tanda / = jawaban lain yang juga dianggap benar.</div>` : ""}${tutup}`;
+  }
+  if (jenis === "jodoh") {
+    const p = s.p || [];
+    return `<div class="h4-tabel">${o.map((tx, i) => {
+      const v = j && j[i], kv = ada ? k[i] : undefined, ok = ada && v === kv;
+      return `<div class="tr ${ada ? (ok ? "ok" : "no") : ""}"><span dir="auto">${fmt(tx)}</span><span><small>Jawabanmu</small><b dir="auto">${v != null ? `${HURUF[v]}. ${fmt(p[v] || "")}` : kosong}</b></span>${ada ? `<span><small>Kunci</small><b dir="auto">${HURUF[kv]}. ${fmt(p[kv] || "")}</b></span>` : ""}</div>`;
+    }).join("")}</div>${tutup}`;
+  }
+  if (jenis === "urut") {
+    const jw = j || [];
+    return `<div class="h4-urut"><div><small>Urutanmu</small>${jw.length ? jw.map((x, i) => `<span class="${ada ? (k[i] === x ? "ok" : "no") : ""}"><i>${i + 1}</i>${fmt(o[x] || "")}</span>`).join("") : kosong}</div>
+      ${ada ? `<div><small>Urutan yang benar</small>${k.map((x, i) => `<span class="ok"><i>${i + 1}</i>${fmt(o[x] || "")}</span>`).join("")}</div>` : ""}</div>${tutup}`;
+  }
+  // uraian
+  const rek = urlRekaman(j);
+  const jw = rek ? `<audio controls src="${esc(rek)}" style="width:100%"></audio>` : String(j || "").trim() ? `<div dir="auto">${esc(j)}</div>` : kosong;
+  return `<div class="h4-uraian"><div class="mu"><small>Jawabanmu</small>${jw}</div>
+    ${ada ? `<div class="kc"><small>Kunci / contoh jawaban</small><div dir="auto">${fmt(k.teks || "—")}</div>
+      ${(k.poin || []).length ? `<ul>${k.poin.map((x) => `<li dir="auto">${fmt(x)}</li>`).join("")}</ul>` : ""}</div>` : ""}</div>${tutup}`;
+}
+
+// ── Keyboard Arab (isian & uraian) ──
+// Menyala otomatis bila soalnya berbahasa Arab; bisa dinyalakan/dimatikan santri.
+// Saat menyala: (1) papan tombol Arab muncul di layar, keyboard HP disembunyikan;
+// (2) ketikan dari keyboard laptop/HP/bluetooth otomatis diubah jadi huruf Arab (tata letak keyboard Arab standar).
+const KB = { nyala: new Set(), mati: new Set(), harakat: false, target: null };
+const PETA_AR = { q: "ض", w: "ص", e: "ث", r: "ق", t: "ف", y: "غ", u: "ع", i: "ه", o: "خ", p: "ح", "[": "ج", "]": "د", a: "ش", s: "س", d: "ي", f: "ب", g: "ل", h: "ا", j: "ت", k: "ن", l: "م", ";": "ك", "'": "ط", z: "ئ", x: "ء", c: "ؤ", v: "ر", b: "لا", n: "ى", m: "ة", ",": "و", ".": "ز", "/": "ظ", "`": "ذ", "?": "؟" };
+const PETA_AR_SHIFT = { Q: "َ", W: "ً", E: "ُ", R: "ٌ", A: "ِ", S: "ٍ", X: "ْ", "~": "ّ", H: "أ", Y: "إ", N: "آ", G: "لأ", T: "لإ", B: "لآ", J: "ـ", K: "،", P: "؛", "<": "،", ">": "." };
+const BARIS_AR = [["ض", "ص", "ث", "ق", "ف", "غ", "ع", "ه", "خ", "ح", "ج", "د"], ["ش", "س", "ي", "ب", "ل", "ا", "ت", "ن", "م", "ك", "ط"], ["ذ", "ئ", "ء", "ؤ", "ر", "ى", "ة", "و", "ز", "ظ"], ["أ", "إ", "آ", "لا", "ـ", "،", "؟", "."]];
+const HARAKAT = [["َ", "fathah"], ["ِ", "kasrah"], ["ُ", "dhammah"], ["ً", "fathatain"], ["ٍ", "kasratain"], ["ٌ", "dhammatain"], ["ْ", "sukun"], ["ّ", "syaddah"]];
+const kunciKB = (s) => s ? s.jenis + "-" + s.no : "";
+function kbAktif(s) {
+  s = s || S.soal[S.idx];
+  if (!s || !(s.jenis === "isian" || (s.jenis === "uraian" && !s.rek))) return false;
+  const k = kunciKB(s);
+  return KB.nyala.has(k) || (soalArab(s) && !KB.mati.has(k));
+}
+// tombol saklar di bawah kotak jawaban
+function kbSaklarHTML(s) {
+  const on = kbAktif(s);
+  return `<div class="kb-saklar ${on ? "on" : ""}"><button type="button" onclick="kbSaklar()"><span class="kb-lampu"></span>⌨️ Keyboard Arab <b>${on ? "AKTIF" : "MATI"}</b></button>
+    <small>${on ? "Ketik dengan tombol di bawah, atau keyboard HP/laptop — otomatis jadi huruf Arab" : "Nyalakan bila ingin menjawab dengan huruf Arab"}</small></div>`;
+}
+function kbSaklar() {
+  const s = S.soal[S.idx], k = kunciKB(s), on = kbAktif(s);
+  if (on) { KB.nyala.delete(k); KB.mati.add(k); } else { KB.mati.delete(k); KB.nyala.add(k); }
+  tampilSoal();
+  setTimeout(() => { const el = document.querySelector(".isian-kotak, #uraian"); if (el) { el.focus(); kbTampil(); } }, 30);
+}
+function kbTampil() {
+  const p = $("kb-ar"); if (!p) return;
+  const buka = kbAktif() && KB.target && document.body.contains(KB.target);
+  if (buka) {
+    p.innerHTML = `<div class="kb-isi" dir="rtl">
+      ${KB.harakat ? `<div class="kb-baris">${HARAKAT.map(([h, nm]) => `<button type="button" class="kb-t hrk" data-h="${h}">ـ${h}<small>${nm}</small></button>`).join("")}</div>`
+        : BARIS_AR.map((baris) => `<div class="kb-baris">${baris.map((h) => `<button type="button" class="kb-t" data-h="${h}">${h}</button>`).join("")}</div>`).join("")}
+      <div class="kb-baris bawah" dir="ltr">
+        <button type="button" class="kb-t fn" data-f="tutup" title="Matikan keyboard Arab">ABC</button>
+        <button type="button" class="kb-t fn" data-f="mundur" title="Soal sebelumnya" ${S.idx === 0 ? "disabled" : ""}>‹</button>
+        <button type="button" class="kb-t fn ${KB.harakat ? "on" : ""}" data-f="harakat">${KB.harakat ? "ا ب ت" : "◌َ ◌ِ ◌ُ"}</button>
+        <button type="button" class="kb-t spasi" data-h=" ">spasi</button>
+        ${KB.target && KB.target.tagName === "TEXTAREA" ? `<button type="button" class="kb-t fn" data-h="\n">↵</button>` : ""}
+        <button type="button" class="kb-t fn hapus" data-f="hapus">⌫</button>
+        <button type="button" class="kb-t fn" data-f="maju" title="Soal berikutnya">${S.idx < S.soal.length - 1 ? "›" : "✓"}</button>
+      </div></div>`;
+  }
+  p.classList.toggle("buka", !!buka);
+  document.body.classList.toggle("kb-terbuka", !!buka);
+}
+function kbSisip(el, teks) {
+  if (!el) return;
+  const a = el.selectionStart ?? el.value.length, b = el.selectionEnd ?? el.value.length;
+  el.setRangeText(teks, a, b, "end");
+  el.dispatchEvent(new Event("input", { bubbles: true }));
+}
+function kbHapus(el) {
+  if (!el) return;
+  let a = el.selectionStart ?? el.value.length, b = el.selectionEnd ?? el.value.length;
+  if (a === b) { if (!a) return; a = a - 1; if (/[\uDC00-\uDFFF]/.test(el.value[a]) && a > 0) a--; }
+  el.setRangeText("", a, b, "end");
+  el.dispatchEvent(new Event("input", { bubbles: true }));
+}
+(function pasangKB() {
+  const panel = document.createElement("div"); panel.id = "kb-ar"; panel.className = "kb-ar";
+  document.body.appendChild(panel);
+  // pointerdown + preventDefault: kotak jawaban tetap fokus (keyboard HP tidak muncul-hilang)
+  panel.addEventListener("pointerdown", (e) => {
+    const t = e.target.closest(".kb-t"); if (!t) return;
+    e.preventDefault();
+    const el = KB.target;
+    if (t.dataset.f === "tutup") { kbSaklar(); return; }
+    if (t.dataset.f === "harakat") { KB.harakat = !KB.harakat; kbTampil(); return; }
+    if (t.dataset.f === "hapus") { kbHapus(el); return; }
+    const fokusLagi = () => setTimeout(() => { const x = document.querySelector(".isian-kotak, #uraian"); if (x && kbAktif()) { x.focus(); KB.target = x; kbTampil(); } }, 30);
+    if (t.dataset.f === "mundur") { if (S.idx > 0) { geser(-1); fokusLagi(); } return; }
+    if (t.dataset.f === "maju") { if (S.idx < S.soal.length - 1) { geser(1); fokusLagi(); } else tanyaKirim(); return; }
+    kbSisip(el, t.dataset.h);
+    t.classList.remove("ditekan"); void t.offsetWidth; t.classList.add("ditekan");
+    if (KB.harakat) { KB.harakat = false; kbTampil(); }
+  });
+  const kotak = (el) => el && el.matches && el.matches("input.isian-kotak, textarea#uraian");
+  document.addEventListener("focusin", (e) => { if (kotak(e.target)) { KB.target = e.target; kbTampil(); } });
+  // keyboard fisik (laptop / keyboard bluetooth / HP yang mengirim kode tombol)
+  document.addEventListener("keydown", (e) => {
+    if (!kotak(e.target) || !kbAktif() || e.ctrlKey || e.metaKey || e.altKey || e.isComposing) return;
+    const h = PETA_AR_SHIFT[e.key] || PETA_AR[e.key] || PETA_AR[String(e.key).toLowerCase()];
+    if (!h || e.key.length !== 1) return;
+    e.preventDefault(); kbSisip(e.target, h);
+  }, true);
+  // cadangan untuk keyboard HP yang tidak mengirim kode tombol: huruf latin yang masuk langsung diubah
+  document.addEventListener("input", (e) => {
+    if (!kotak(e.target) || !kbAktif() || e.isComposing || !/[A-Za-z]/.test(e.target.value)) return;
+    const el = e.target, pos = el.selectionStart ?? el.value.length;
+    const ubah = (t) => t.replace(/[A-Za-z]/g, (c) => PETA_AR[c.toLowerCase()] || c);
+    const depan = ubah(el.value.slice(0, pos)), blk = ubah(el.value.slice(pos));
+    el.value = depan + blk; el.setSelectionRange(depan.length, depan.length);
+  }, true);
+})();
+
 function selesai() { S.murid = null; S.soal = []; S.token = ""; S.rinci = null; pilihSesi(S.sesi.id); }
 
 mulai();
