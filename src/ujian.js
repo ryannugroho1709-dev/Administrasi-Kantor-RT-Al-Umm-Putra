@@ -253,7 +253,8 @@ function _ujGambarBank() {
       <div class="uj-aksi">
         <button class="btn btn-accent btn-sm" onclick="ujBukaSesiModal('${b.id}')">▶ Buka sesi</button>
         ${_ujBolehKelola(b) ? `<button class="btn btn-sm uj-b-ungu" onclick="ujEditorBuka('${b.id}')" title="Ubah soal, kunci, gambar">✏️ Ubah</button>
-        <button class="btn btn-sm uj-b-emas" onclick="ujLihatKunci('${b.id}')" title="Lihat kunci jawaban">🔑</button>` : `<span class="uj-kunci-lain" title="Milik guru lain — hanya pembuat, pengampu mapelnya, atau admin yang bisa mengubah">🔒 milik guru lain</span>`}
+        <button class="btn btn-sm uj-b-emas" onclick="ujLihatKunci('${b.id}')" title="Lihat kunci jawaban">🔑</button>
+        <button class="btn btn-sm uj-b-hijau" onclick="ujUjiCoba('${b.id}')" title="Kerjakan soal seperti santri untuk mengecek soal, kunci & tingkat kesulitan — nilainya tidak disimpan ke mana pun">🧪 Uji coba</button>` : `<span class="uj-kunci-lain" title="Milik guru lain — hanya pembuat, pengampu mapelnya, atau admin yang bisa mengubah">🔒 milik guru lain</span>`}
         <button class="btn btn-sm uj-b-abu" onclick="ujCetakSoal('${b.id}')" title="Cetak / simpan PDF naskah soal untuk arsip">🖨️</button>
         ${_ujBolehKelola(b) ? `<button class="btn btn-sm uj-b-merah" onclick="ujHapusBank('${b.id}')" title="Hapus bank soal">🗑️</button>` : ""}
       </div>
@@ -366,6 +367,29 @@ async function ujHapusBank(id) {
   if (!(await konfirmasiTema(`Hapus bank soal "${escapeHtml(b.judul)}"?\nSemua sesi & jawaban santri untuk bank ini ikut terhapus. Nilai yang sudah dikirim ke rapor tetap ada.`, { judul: "Hapus bank soal", ikon: "🗑️", teksYa: "Hapus" }))) return;
   try { const pin = await _ujPin(); if (!pin) return; await _ujRpc("ujian_bank_hapus", { p_pin: pin, p_bank: id }); toast("Bank soal dihapus", "ok"); ujMuat(); }
   catch (e) { toast(_ujPesan(e), "err"); }
+}
+// ── Uji coba soal oleh guru/admin: kerjakan seperti santri, nilai & kunci langsung keluar, TIDAK disimpan ke mana pun ──
+// Data (soal + kunci) dititipkan ke penyimpanan HP/laptop guru sendiri, lalu dibuka di halaman santri dengan ?coba=…
+function _ujBukaUjiCoba(data, jendela) {
+  try {
+    Object.keys(localStorage).filter((k) => k.startsWith("ujiCoba:")).forEach((k) => {
+      try { if (Date.now() - (JSON.parse(localStorage.getItem(k)) || {}).t > 12 * 3600e3) localStorage.removeItem(k); } catch (e) { localStorage.removeItem(k); }
+    });
+    const id = Date.now().toString(36);
+    localStorage.setItem("ujiCoba:" + id, JSON.stringify({ ...data, t: Date.now(), guru: (STATE.guru && STATE.guru.nama) || "" }));
+    const url = "santri.html?coba=" + id;
+    if (jendela && !jendela.closed) jendela.location.href = url; else if (!window.open(url, "_blank")) location.href = url;
+  } catch (e) { if (jendela) jendela.close(); toast("Uji coba gagal dibuka: " + e.message, "err"); }
+}
+async function ujUjiCoba(id) {
+  const b = UJ.bank.find((x) => x.id === id); if (!b) return;
+  const pin = await _ujPin("PIN untuk uji coba soal (melihat kunci)"); if (!pin) return;
+  const w = window.open("about:blank", "_blank"); // dibuka langsung supaya tidak diblokir peramban
+  try {
+    if (w) w.document.write("<p style='font-family:sans-serif;text-align:center;margin-top:40vh'>🧪 Menyiapkan uji coba…</p>");
+    const kunci = await _ujRpc("ujian_kunci_ambil", { p_pin: pin, p_bank: id });
+    _ujBukaUjiCoba({ judul: b.judul, mapel: _ujNamaMapel(b.mapel_id), tingkat: b.tingkat, soal: b.soal || [], kunci }, w);
+  } catch (e) { if (w) w.close(); toast(_ujPesan(e), "err"); }
 }
 async function ujLihatKunci(id) {
   const b = UJ.bank.find((x) => x.id === id); if (!b) return;

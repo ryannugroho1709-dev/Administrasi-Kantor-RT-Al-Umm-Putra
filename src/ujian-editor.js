@@ -142,6 +142,7 @@ function _ujeGambar() {
     <div class="uje-kaki">
       <div id="uje-ringkas" class="uj-sub">${_ujeRingkas()}</div>
       <button class="btn btn-sm uje-b-json" onclick="ujeUnduhJson()" title="Unduh cadangan (berisi kunci)">⬇️ Cadangan</button>
+      <button class="btn uj-b-hijau" onclick="ujeUjiCoba()" title="Coba kerjakan soal ini seperti santri (draf yang sedang diubah pun bisa) — tidak disimpan">🧪 Uji coba</button>
       <button class="btn btn-accent" onclick="ujeSimpan()">💾 Simpan bank soal</button>
     </div></div>`, { lebar: true });
   if (tetap) { panel.querySelector(".uje")?.classList.add("tetap"); panel.scrollTop = gulir; }
@@ -778,6 +779,15 @@ function _ujeKeBank() {
   if (!m.mapel_id) galat.push("Mapel belum dipilih.");
   const skor = bagian.reduce((a, b) => a + b.poin * b.soal.length, 0);
   return { galat, bank: { id: m.kode, judul: m.judul.trim(), mapel_id: m.mapel_id, kelas: m.tingkat, bab: m.bab, skor_maksimal: skor, bagian } };
+}
+// Uji coba draf yang sedang diubah (belum perlu disimpan; tanpa PIN karena guru sedang memegang soalnya)
+function ujeUjiCoba() {
+  const { galat, bank } = _ujeKeBank();
+  if (!bank.bagian.length) { toast("Belum ada soal untuk diuji coba", "err"); return; }
+  const kurang = galat.filter((g) => /kunci|belum diisi|jawaban/i.test(g));
+  if (kurang.length) toast("⚠️ " + kurang.slice(0, 2).join(" · ") + (kurang.length > 2 ? ` (+${kurang.length - 2})` : "") + " — soal itu akan selalu dinilai salah", "err");
+  const { publik, kunci } = _ujPisahKunci(bank);
+  _ujBukaUjiCoba({ judul: (bank.judul || "Soal") + " (draf)", mapel: _ujNamaMapel(bank.mapel_id), tingkat: bank.kelas, soal: publik, kunci });
 }
 async function ujeSimpan() {
   const { galat, bank } = _ujeKeBank();

@@ -194,6 +194,8 @@
   body.mode-ujian .kartu-soal{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
   body.mode-ujian .kartu-soal input,body.mode-ujian .kartu-soal textarea{-webkit-user-select:text;user-select:text}
   .tanda-air{position:fixed;inset:0;pointer-events:none;z-index:3;overflow:hidden;opacity:.07;display:flex;flex-wrap:wrap;align-content:flex-start;gap:60px 50px;padding:40px 10px;transform:rotate(-24deg) scale(1.4);font-weight:800;font-size:15px;color:#0b4a3c;white-space:nowrap}
+  body.mode-coba::before{content:"🧪 UJI COBA GURU · tidak disimpan · tidak masuk nilai";position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:40;background:linear-gradient(135deg,#16a34a,#0891b2);color:#fff;font-size:11px;font-weight:800;letter-spacing:.4px;padding:4px 14px;border-radius:0 0 12px 12px;box-shadow:0 4px 12px rgba(0,0,0,.2);white-space:nowrap;pointer-events:none}
+  .h4-coba{background:linear-gradient(135deg,#f0fdf4,#ecfeff);border:1px solid #bbf7d0}.h4-coba ul{margin:0;padding-left:20px;font-size:13.5px;line-height:1.75;color:#334155}
   /* ── keyboard Arab ── */
   .kb-saklar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px}
   .kb-saklar button{display:inline-flex;align-items:center;gap:7px;border:1.5px solid var(--garis);background:#fff;border-radius:99px;padding:7px 13px;font-size:12.5px;font-weight:700;color:#44514c}
@@ -496,7 +498,7 @@ function mulaiKerja() {
 function tampilPetunjuk(r) {
   const ujian = S.sesi.mode === "ujian";
   const jum = (j) => S.soal.filter((s) => s.jenis === j).length;
-  render(kepala(S.sesi.bank?.judul, ujian ? "📝 Ujian" : "🎯 Latihan") + `<div class="wadah"><div class="kartu">
+  render(kepala(S.sesi.bank?.judul, S.coba ? "🧪 Uji coba soal" : ujian ? "📝 Ujian" : "🎯 Latihan") + `<div class="wadah"><div class="kartu">
     <div style="display:flex;align-items:center;gap:12px"><span class="avatar" style="width:48px;height:48px;background:${warnaNama(S.murid.nama)}">${esc(inisial(S.murid.nama))}</span>
       <div><div style="font-size:12px;color:var(--abu)">Bismillah, selamat mengerjakan</div><b style="font-size:17px">${esc(S.murid.nama)}</b></div></div>
     ${typeof gameAktif === "function" && gameAktif() ? gameIntroHTML() : ""}
@@ -508,7 +510,7 @@ function tampilPetunjuk(r) {
       ${S.soal.some((x) => (x.jenis === "isian" || x.jenis === "uraian") && soalArab(x)) ? "<li>Soal berbahasa Arab: <b>⌨️ keyboard Arab</b> muncul otomatis saat kamu mengetuk kotak jawaban.</li>" : ""}
       <li>Belum yakin? Tekan <b>🚩 Ragu-ragu</b>, lalu periksa lagi sebelum mengirim.</li>
       <li>Jawaban tersimpan otomatis. Kalau HP mati atau internet putus, buka lagi dan pilih namamu — jawaban tidak hilang.</li>
-      ${ujian ? "<li>Tetap di halaman ini. Keluar dari halaman ujian (membuka WhatsApp, Google, aplikasi lain) <b>tercatat oleh ustadz</b>. Menyalin & menempel teks dimatikan selama ujian.</li>" : "<li>Latihan boleh diulang. Setelah kirim, kamu bisa melihat soal mana yang belum tepat.</li>"}
+      ${S.coba ? "<li><b>Uji coba guru:</b> jawaban & nilai <b>tidak disimpan</b> ke mana pun. Setelah kirim, nilai, kunci jawaban & pembahasan langsung tampil — cocok untuk mengecek kunci & tingkat kesulitan.</li>" : ujian ? "<li>Tetap di halaman ini. Keluar dari halaman ujian (membuka WhatsApp, Google, aplikasi lain) <b>tercatat oleh ustadz</b>. Menyalin & menempel teks dimatikan selama ujian.</li>" : "<li>Latihan boleh diulang. Setelah kirim, kamu bisa melihat soal mana yang belum tepat.</li>"}
     </ol>
     <button class="tombol lebar" style="margin-top:16px" onclick="mulaiKerja()">Bismillah, mulai ▶</button>
   </div></div>`);
@@ -684,7 +686,7 @@ function ulangUrut() { delete S.jawab.urut[S.soal[S.idx].no]; berubah(); tampilS
 // ── Jawaban rekaman suara (ujian speaking / membaca / hafalan) ──
 // Rekaman diunggah ke penyimpanan sekolah; yang disimpan sebagai jawaban hanya tautannya: "[rekaman] https://…"
 const REKAM = { rec: null, potongan: [], mulai: 0, t: null, sibuk: false, maks: 180 };
-const urlRekaman = (v) => { const m = String(v || "").match(/^\[rekaman\]\s*(https?:\/\/\S+)/); return m ? m[1] : null; };
+const urlRekaman = (v) => { const m = String(v || "").match(/^\[rekaman\]\s*((?:https?:\/\/|blob:)\S+)/); return m ? m[1] : null; };
 function rekamHTML(s) {
   const url = urlRekaman(S.jawab.uraian[s.no]);
   if (REKAM.rec) return `<div class="rekam"><button class="tombol-rekam aktif" onclick="rekamBerhenti()">⏹</button><div class="waktu-rekam" id="waktu-rekam">00:00</div><div class="ket">Sedang merekam… tekan ⏹ bila selesai (maks ${REKAM.maks / 60} menit)</div></div>`;
@@ -713,6 +715,7 @@ async function rekamUnggah() {
   REKAM.rec = null; REKAM.sibuk = true; tampilSoal();
   const blob = new Blob(REKAM.potongan, { type: tipe.split(";")[0] });
   const ext = /mp4/.test(tipe) ? "m4a" : /ogg/.test(tipe) ? "ogg" : "webm";
+  if (S.coba) { S.jawab.uraian[s.no] = "[rekaman] " + URL.createObjectURL(blob); berubah(); REKAM.sibuk = false; tampilSoal(); return; }
   try {
     const path = `ujian-jawab/${S.sesi.id}/${S.murid.id}-${s.jenis}${s.no}-${Date.now()}.${ext}`;
     const { error } = await supa.storage.from("foto").upload(path, blob, { contentType: blob.type, upsert: true });
@@ -731,6 +734,7 @@ function berubah() {
 }
 async function simpanServer() {
   if (S.terkirim) return;
+  if (S.coba) { const el = $("simpan-info"); if (el) el.textContent = "🧪 uji coba · tidak disimpan"; return; }
   try {
     await rpc("ujian_simpan_draf", { p_sesi: S.sesi.id, p_siswa: S.murid.id, p_jawaban: S.jawab, p_pindah_tab: S.pindahTab });
     const el = $("simpan-info"); if (el) el.textContent = "☁️ tersimpan";
@@ -783,6 +787,7 @@ function tanyaKirim() {
 async function kirim(otomatis) {
   if (S.terkirim) return;
   clearTimeout(S.simpanT);
+  if (S.coba) { S.rinciCoba = nilaiCoba(); S.terkirim = true; hapusLokal(); tutupDialog(); S.soal = []; tampilHasil({ status: "dinilai", nilai_akhir: S.rinciCoba.nilai_akhir, mode: "coba" }); return; }
   dialog(`<div class="memuat">${otomatis ? "Waktu habis — jawaban dikirim otomatis…" : "Mengirim jawaban…"}</div>`);
   try {
     const r = await rpc("ujian_kirim", { p_sesi: S.sesi.id, p_siswa: S.murid.id, p_jawaban: S.jawab, p_pindah_tab: S.pindahTab });
@@ -820,14 +825,16 @@ async function tampilHasil(r) {
   const latihan = (r.mode || S.sesi.mode) === "latihan";
   render(kepala(S.sesi.bank?.judul, "📊 Hasil") + `<div class="wadah"><div class="kartu"><div class="memuat">Menganalisis jawabanmu…</div></div></div>`);
   let rinci = null;
-  try { rinci = await rpc("ujian_hasil_rinci", { p_sesi: S.sesi.id, p_siswa: S.murid.id }); } catch (e) { rinci = null; }
+  if (S.coba) rinci = S.rinciCoba;
+  else try { rinci = await rpc("ujian_hasil_rinci", { p_sesi: S.sesi.id, p_siswa: S.murid.id }); } catch (e) { rinci = null; }
   if (rinci && rinci.boleh && !S.bagian.length) { try { await muatBank(); } catch (e) {} }
   S.rinci = rinci;
   const rem = (rinci && rinci.remedial) || r.remedial || null;
   const boleh = !!(rinci && rinci.boleh);
   const tombol = `<div class="navi" style="flex-wrap:wrap">
-      ${latihan && S.sesi.dibuka !== false ? `<button class="tombol" onclick="masuk(true)">↻ Ulangi latihan</button>` : ""}
-      <button class="tombol garis" onclick="selesai()">Selesai</button></div>`;
+      ${S.coba ? `<button class="tombol" onclick="mulaiUjiCoba()">↻ Uji coba lagi</button><button class="tombol garis" onclick="window.close();setTimeout(()=>location.href='./',300)">Tutup</button>`
+        : `${latihan && S.sesi.dibuka !== false ? `<button class="tombol" onclick="masuk(true)">↻ Ulangi latihan</button>` : ""}
+      <button class="tombol garis" onclick="selesai()">Selesai</button>`}</div>`;
   let isi;
   const nAkhir = r.nilai_akhir ?? (rinci && rinci.nilai_akhir);
   if (nAkhir !== null && nAkhir !== undefined) {
@@ -843,11 +850,11 @@ async function tampilHasil(r) {
         <div class="h4-grid"></div><div class="h4-orb a"></div><div class="h4-orb b"></div>
         <div class="h4-kepala"><span class="avatar" style="background:${warnaNama(S.murid.nama)}">${esc(inisial(S.murid.nama))}</span>
           <div class="h4-nm"><b>${esc(S.murid.nama)}</b><small>${esc(S.sesi.kelas?.nama_kelas || "")} · ${esc(S.sesi.bank?.mapel?.nama_mapel || "")}</small></div>
-          <span class="h4-mode ${latihan ? "lat" : ""}">${latihan ? "LATIHAN" : ke > 1 ? "REMEDIAL" : "UJIAN"}</span></div>
+          <span class="h4-mode ${latihan || S.coba ? "lat" : ""}">${S.coba ? "UJI COBA" : latihan ? "LATIHAN" : ke > 1 ? "REMEDIAL" : "UJIAN"}</span></div>
         <div class="h4-tengah">
           ${cincin(n)}
           <div class="h4-info">
-            <div class="h4-label">${latihan ? "Nilai latihanmu" : ke > 1 ? `Nilai percobaan ke-${ke}` : "Nilai akhirmu"}</div>
+            <div class="h4-label">${S.coba ? "Nilai uji coba (tidak disimpan)" : latihan ? "Nilai latihanmu" : ke > 1 ? `Nilai percobaan ke-${ke}` : "Nilai akhirmu"}</div>
             <div class="h4-pesan">${pesan}</div>
             <div class="h4-predikat"><b>${hp}</b><span>${ket}</span></div>
             <div class="h4-chip">
@@ -864,6 +871,7 @@ async function tampilHasil(r) {
           <div class="k"><b>${hit("kosong")}</b><span>Kosong</span></div></div>` : ""}
       </div>
       ${remedialHTML(rem, n)}
+      ${S.coba && boleh ? catatanCobaHTML(rinci) : ""}
       ${boleh ? rincianHTML(rinci) : `<div class="kartu h4-kunci-tutup"><span>🔒</span><div><b>Pembahasan belum dibuka</b><div class="ket">Soal yang benar & belum tepat beserta kunci jawabannya akan muncul setelah ustadz membukanya.</div></div></div>`}
       <div class="kartu">${tombol}</div>`;
   } else if (r.status === "mengerjakan") {
@@ -1123,9 +1131,100 @@ function kbHapus(el) {
   }, true);
 })();
 
-function selesai() { S.murid = null; S.soal = []; S.token = ""; S.rinci = null; pilihSesi(S.sesi.id); }
+// ── MODE UJI COBA (guru/admin) — santri.html?coba=… ──
+// Soal & kunci dititipkan aplikasi guru di penyimpanan perangkat ini. Tidak ada yang dikirim/ditulis ke server:
+// mulai, simpan draf, kirim, dan penilaian semuanya dikerjakan di perangkat (rumus sama dengan server).
+function mulaiUjiCoba() {
+  const id = new URLSearchParams(location.search).get("coba");
+  let d = null;
+  try { d = JSON.parse(localStorage.getItem("ujiCoba:" + id) || "null"); } catch (e) {}
+  if (!d) {
+    render(kepala("Uji coba soal", "🧪 Uji coba") + `<div class="wadah"><div class="kartu kosong"><div class="besar">🧪</div>Data uji coba tidak ditemukan di perangkat ini.<br>Buka dari aplikasi guru: <b>Ujian Online → 🧪 Uji coba</b> pada bank soal.<br><br><a class="tombol" href="./" style="text-decoration:none;display:inline-block">‹ Ke aplikasi guru</a></div></div>`);
+    return;
+  }
+  document.body.classList.add("mode-coba");
+  S.coba = d; S.gaya = null; S.gayaSelesai = true;
+  S.sesi = { id: "coba-" + id, mode: "coba", acak: false, durasi_menit: null, dibuka: true, kelas_id: null, kelas: { nama_kelas: d.tingkat ? "Kelas " + d.tingkat : "" }, bank: { judul: d.judul, mapel: { nama_mapel: d.mapel || "" } } };
+  S.murid = { id: "guru", nama: d.guru || "Guru (uji coba)" };
+  S.bagian = d.soal || [];
+  siapkanSoal(S.bagian);
+  S.jawab = normalJawab({}); S.ragu = new Set(); S.idx = 0; S.sisa = null; S.terkirim = false; S.pindahTab = 0; S.rinci = null;
+  hapusLokal();
+  tampilPetunjuk({});
+}
+const bulat2 = (x) => Math.round(x * 100) / 100;
+// Saran skor uraian dari kata kunci "poin penilaian" (sama seperti saran di layar guru)
+function saranUraianCoba(jw, ks, poin) {
+  const t = String(jw || "").toLowerCase();
+  if (!t.trim()) return 0;
+  if (urlRekaman(jw)) return null;
+  const pk = ks.poin_kunci || [];
+  if (!pk.length) return null;
+  const kena = pk.filter((p) => String(p).toLowerCase().split(/[^a-z0-9à-ÿ؀-ۿ-]+/i).filter((w) => w.length >= 4).some((w) => t.includes(w))).length;
+  return Math.round((poin * kena) / pk.length);
+}
+function nilaiCoba() {
+  const K = S.coba.kunci || { bagian: [] }, J = S.jawab;
+  let skor = 0, maks = 0, adaPerkiraan = false;
+  const soal = [], bagian = [];
+  (K.bagian || []).forEach((b) => {
+    const jen = b.jenis; let bd = 0, bm = 0;
+    (b.soal || []).forEach((s) => {
+      const poin = Number(s.poin ?? b.poin ?? 1), jw = (J[jen] || {})[s.no], k = s.k;
+      let d = 0, terjawab;
+      if (jen === "uraian") {
+        terjawab = String(jw || "").trim() !== "";
+        d = saranUraianCoba(jw, s, poin);
+        if (d != null && terjawab) adaPerkiraan = true;
+      } else {
+        terjawab = jen === "pg" ? typeof jw === "number" : adaIsi(jw ?? null);
+        if (jen === "pg") { if (typeof jw === "number" && [].concat(k).includes(jw)) d = poin; }
+        else if (jen === "isian") {
+          const kk = Array.isArray(k) ? k : [];
+          const cocok = kk.filter((alt, i) => { const v = (jw || [])[i]; return typeof v === "string" && normal(v) !== "" && [].concat(alt).some((a) => normal(a) === normal(v)); }).length;
+          d = bulat2((poin * cocok) / Math.max(kk.length, 1));
+        } else if (jen === "jodoh" || jen === "urut") {
+          const kk = Array.isArray(k) ? k : [];
+          const cocok = kk.filter((x, i) => typeof (jw || [])[i] === "number" && jw[i] === x).length;
+          d = bulat2((poin * cocok) / Math.max(kk.length, 1));
+        } else if (Array.isArray(k) && typeof k[0] === "boolean") {
+          const cocok = k.filter((x, i) => typeof (jw || [])[i] === "boolean" && jw[i] === x).length;
+          d = bulat2((poin * cocok) / Math.max(k.length, 1));
+        } else if (Array.isArray(jw)) {
+          const kk = [].concat(k ?? []), u = [...new Set(jw)];
+          const benar = u.filter((x) => kk.includes(x)).length, salah = u.length - benar;
+          d = bulat2((poin * Math.max(0, benar - salah)) / Math.max(kk.length, 1));
+        }
+      }
+      const st = d == null ? "tidak_dinilai" : !terjawab ? "kosong" : d >= poin ? "benar" : d > 0 ? "sebagian" : "salah";
+      if (d != null) { skor += d; maks += poin; bd += d; bm += poin; }
+      soal.push({ jenis: jen, no: s.no, status: st, dapat: d, maks: poin, penjelasan: (s.penjelasan || "").trim() || null,
+        kunci: jen === "uraian" ? { teks: s.kunci || "", poin: s.poin_kunci || [] } : k });
+    });
+    bagian.push({ jenis: jen, dapat: bd, maks: bm });
+  });
+  return { status: "dinilai", mode: "coba", boleh: true, ada_kunci: true, nilai_akhir: maks ? Math.round((skor * 100) / maks) : 0,
+    bagian, soal, jawaban: JSON.parse(JSON.stringify(J)), kelas: { n: 0 }, perkiraan: adaPerkiraan };
+}
+// Catatan khusus guru: soal yang kuncinya patut dicek & saran tingkat kesulitan
+function catatanCobaHTML(r) {
+  const salah = r.soal.filter((x) => x.status === "salah" || x.status === "sebagian");
+  const tanpaKunci = r.soal.filter((x) => x.jenis !== "uraian" && (x.kunci == null || (Array.isArray(x.kunci) && !x.kunci.length)));
+  const uraianTanpaPoin = r.soal.filter((x) => x.jenis === "uraian" && !(x.kunci && (x.kunci.poin || []).length));
+  return `<div class="kartu h4-coba">
+    <div class="judul-seksi"><span class="ikon" style="background:#dcfce7">🧪</span>Catatan uji coba untuk guru</div>
+    <ul>
+      <li>Nilai ini <b>tidak disimpan</b> dan tidak masuk rapor, rekap, maupun nilai santri mana pun.</li>
+      ${salah.length ? `<li>Kalau Anda yakin sudah menjawab benar tetapi soal berikut dinilai salah/sebagian, <b>periksa kuncinya</b>: ${salah.map((x) => `<b>${LABEL[x.jenis]} ${esc(x.no)}</b>`).join(", ")}.</li>` : `<li>Semua soal yang Anda jawab dinilai benar — kunci & penilaian otomatis berjalan baik ✅</li>`}
+      ${tanpaKunci.length ? `<li style="color:#b42318">⚠️ Belum ada kunci: ${tanpaKunci.map((x) => `${LABEL[x.jenis]} ${esc(x.no)}`).join(", ")} — soal ini akan selalu dinilai salah.</li>` : ""}
+      ${uraianTanpaPoin.length ? `<li>Uraian tanpa "poin penilaian" (no. ${uraianTanpaPoin.map((x) => esc(x.no)).join(", ")}) tidak bisa diperkirakan otomatis — di ujian asli Anda menilainya sendiri.</li>` : ""}
+      ${r.perkiraan ? `<li>Skor uraian di sini hanya <b>perkiraan</b> dari kata kunci poin penilaian.</li>` : ""}
+      <li>Tingkat kesulitan: coba minta 1–2 guru lain ikut uji coba. Setelah ujian asli, buka <b>Rekap → 🔬 Analisis soal</b>: soal yang dijawab benar &lt; 40% santri = terlalu sulit / kunci perlu dicek, &gt; 90% = terlalu mudah.</li>
+    </ul></div>`;
+}
+function selesai() { if (S.coba) { mulaiUjiCoba(); return; } S.murid = null; S.soal = []; S.token = ""; S.rinci = null; pilihSesi(S.sesi.id); }
 
-mulai();
+if (new URLSearchParams(location.search).has("coba")) mulaiUjiCoba(); else mulai();
 </script>
 </body>
 </html>
