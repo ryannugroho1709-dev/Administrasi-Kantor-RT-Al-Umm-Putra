@@ -46,7 +46,7 @@ function _logoAwal(){try{return localStorage.getItem("logoSekolahUrl")||"assets/
 <!-- pdf.js — hanya dipakai fitur "Ambil sampul dari halaman pertama PDF" di Modul Ajar (render page 1 ke canvas) -->
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script>if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";</script>
-<script src="src/api.js?v=17"></script>
+<script src="src/api.js?v=18"></script>
 <script>
 // ── Override apiPerbaikanAbsenAdmin: pakai RPC SECURITY DEFINER (bypass RLS) ──
 // Blok ini di index.html mengoverride versi dari api.js agar pasti termuat,
@@ -10191,17 +10191,26 @@ const KOP_SOAL_KATEGORI = [
   { key: "umum_genap_c", label: "Kop Soal Umum — Genap — Paket C" },
 ];
 let KOP_SOAL_CACHE = [];
+// Kop soal bawaan (ikut terpasang di situs, folder kop-soal/) — dipakai bila admin belum mengunggah versi baru.
+const KOP_SOAL_BAWAAN = {
+  diniyyah_ganjil_b: "KOP SOAL PAS GANJIL DINIYYAH PAKET B.docx", diniyyah_ganjil_c: "KOP SOAL PAS GANJIL DINIYYAH PAKET C.docx",
+  umum_ganjil_b: "KOP SOAL PAS GANJIL PKBM (UMUM) Paket B.docx", umum_ganjil_c: "KOP SOAL PAS GANJIL PKBM (UMUM) Paket C.docx",
+  diniyyah_genap_b: "KOP SOAL PAS GENAP DINIYYAH Paket B.docx", diniyyah_genap_c: "KOP SOAL PAS GENAP DINIYYAH PAKET C.docx",
+  umum_genap_b: "KOP SOAL PAS GENAP PKBM (UMUM) Paket B.docx", umum_genap_c: "KOP SOAL PAS GENAP PKBM (UMUM) Paket C.docx",
+};
 async function renderKopSoalInit() { await renderKopSoal(); }
 function kopSoalKartu(labelMapel, kategori) {
-  const row = KOP_SOAL_CACHE.find((r) => r.kategori === kategori);
-  // Berkas yang masih menunjuk ke server Supabase LAMA (sudah dihapus) tidak bisa dibuka lagi → minta unggah ulang
-  const hilang = !!row?.file_url && !String(row.file_url).startsWith(window.SUPABASE_URL || "https://izvsypocfpaerahfpgrk.supabase.co") && /supabase\.co/.test(row.file_url);
+  let row = KOP_SOAL_CACHE.find((r) => r.kategori === kategori);
+  // Berkas yang masih menunjuk ke server Supabase LAMA (sudah dihapus) tidak bisa dibuka lagi
+  let hilang =!!row?.file_url && !String(row.file_url).startsWith(window.SUPABASE_URL || "https://izvsypocfpaerahfpgrk.supabase.co") && /supabase\.co/.test(row.file_url);
+  // … pakai kop bawaan yang ikut terpasang di situs (folder kop-soal/) bila belum ada unggahan baru
+  if ((!row?.file_url || hilang) && KOP_SOAL_BAWAAN[kategori]) { row = { file_url: "kop-soal/" + kategori + ".docx", nama_file: KOP_SOAL_BAWAAN[kategori] }; hilang = false; }
   return `<div style="border:1px solid ${hilang ? "var(--bad)" : "var(--border-soft)"};border-radius:12px;padding:10px;">
     <div style="font-weight:700;font-size:11.5px;">${labelMapel}</div>
     <div style="font-size:10px;color:${hilang ? "var(--bad)" : "var(--text-secondary)"};margin:5px 0 8px;">${hilang ? `⚠️ Berkas "${escapeHtml(row.nama_file || "kop")}" tersimpan di server lama yang sudah tidak aktif.${isAdmin() ? " Unggah ulang berkasnya." : " Admin perlu mengunggah ulang."}` : row?.file_url ? escapeHtml(row.nama_file || "file") : `<span data-i18n="belumAdaFile">${t("belumAdaFile")}</span>`}</div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;">
       ${isAdmin() ? `<label class="btn ${hilang ? "btn-accent" : "btn-ghost"}" style="padding:4px 8px;font-size:11px;cursor:pointer;" title="${t("unggah")}">⬆️ ${hilang ? "Unggah ulang" : t("unggah")}<input type="file" style="display:none" onchange="uploadKopSoal('${kategori}', this)"/></label>` : ""}
-      ${row?.file_url && !hilang ? `<a class="btn btn-outline" style="padding:4px 8px;font-size:11px;" href="${row.file_url}" target="_blank" rel="noopener" download title="${t("unduh")}">⬇️ ${t("unduh")}</a>` : ""}
+      ${row?.file_url && !hilang ? `<a class="btn btn-outline" style="padding:4px 8px;font-size:11px;" href="${row.file_url}" target="_blank" rel="noopener" download="${escapeHtml(row.nama_file || "kop-soal.docx")}" title="${t("unduh")}">⬇️ ${t("unduh")}</a>` : ""}
     </div>
   </div>`;
 }

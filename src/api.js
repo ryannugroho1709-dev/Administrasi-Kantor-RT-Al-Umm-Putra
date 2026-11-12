@@ -1957,7 +1957,10 @@ async function apiGetKopSoalSemua() {
   return unwrap(await supa.from("kop_soal").select("*"));
 }
 async function apiSimpanKopSoal(row) {
-  return unwrap(await supa.from("kop_soal").upsert(row, { onConflict: "kategori" }).select());
+  // Kolom id di server baru tidak punya nilai otomatis → pakai id baris lama (kalau ada) atau buat id baru.
+  const lama = unwrap(await supa.from("kop_soal").select("id").eq("kategori", row.kategori).limit(1));
+  const id = (lama && lama[0] && lama[0].id) || (crypto.randomUUID ? crypto.randomUUID() : "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) => (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16)));
+  return unwrap(await supa.from("kop_soal").upsert({ id, ...row }, { onConflict: "kategori" }).select());
 }
 
 // ── MODUL AJAR (perpustakaan buku/modul, gaya rak e-reader) ──
