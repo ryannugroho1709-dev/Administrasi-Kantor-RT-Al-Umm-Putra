@@ -20,7 +20,7 @@
 <!-- Tema elegan + pilihan palet (menu ✨ di topbar). "klasik" = tampilan hijau lama. Dipasang
      sedini mungkin supaya tidak sempat "berkedip" tampilan lain dulu. Disimpan per perangkat. -->
 <link rel="stylesheet" href="src/tema-elegan.css?v=5">
-<link rel="stylesheet" href="src/kas.css?v=4">
+<link rel="stylesheet" href="src/kas.css?v=5">
 <link rel="stylesheet" href="src/hp.css?v=3">
 <link rel="stylesheet" href="src/kuliah.css?v=6">
 <link rel="stylesheet" href="src/modul-baca.css?v=10">
@@ -14296,121 +14296,7 @@ function bopGantiTahunData() {
   STATE.bopDataTahun = Number(qs("bop-data-tahun").value) || STATE.bopDataTahun;
   _renderBopDataUI();
 }
-async function _renderBopDataUI() {
-  const root = qs("bop-data-root");
-  root.innerHTML = loadingHTML();
-  try {
-    const [items, anggaran, realisasi] = await Promise.all([
-      apiGetBopAnggaranItem(),
-      apiGetBopAnggaranBulan(STATE.bopDataTahun),
-      apiGetBopRealisasi(STATE.bopDataTahun),
-    ]);
-    _BOP_CACHE = { items, anggaran, realisasi };
-    const anggaranMap = {};
-    anggaran.forEach((a) => { anggaranMap[a.item_id + "_" + a.bulan] = a; });
-    const realisasiSumMap = {};
-    realisasi.forEach((r) => { const k = r.item_id + "_" + r.bulan; realisasiSumMap[k] = (realisasiSumMap[k] || 0) + Number(r.nominal); });
-    const semuaBulan = Array.from({ length: 12 }, (_, i) => i + 1);
-
-    const totalAnggaranTahun = anggaran.reduce((s, a) => s + Number(a.nominal || 0), 0);
-    const totalRealisasiTahun = realisasi.reduce((s, r) => s + Number(r.nominal || 0), 0);
-
-    const kolPx = [150, ...Array(12).fill(85), 100];
-    const totalWidth = kolPx.reduce((a, b) => a + b, 0);
-
-    const barisItem = items.map((item) => {
-      const selBulan = semuaBulan.map((bln) => {
-        const a = anggaranMap[item.id + "_" + bln];
-        const nominal = a ? Number(a.nominal) : 0;
-        const sumReal = realisasiSumMap[item.id + "_" + bln] || 0;
-        const lunas = (a?.lunas_manual) || (nominal > 0 && sumReal >= nominal);
-        const cls = !nominal ? "bop-kosong" : (lunas ? "bop-lunas" : "");
-        return `<td class="bop-cell ${cls}" onclick="bopBukaSelDetail('${item.id}',${bln})">${nominal ? formatRupiah(nominal, { strip: true }) : "-"}</td>`;
-      }).join("");
-      const totalItem = semuaBulan.reduce((s, bln) => s + (anggaranMap[item.id + "_" + bln] ? Number(anggaranMap[item.id + "_" + bln].nominal) : 0), 0);
-      return `<tr>
-        <td class="sticky-col-1" style="font-weight:700;">${escapeHtml(item.nama)} <button class="btn btn-outline" style="padding:1px 5px;font-size:10px;margin-left:4px;" title="Hapus item" onclick="bopHapusItem('${item.id}',${JSON.stringify(item.nama)})">🗑️</button></td>
-        ${selBulan}
-        <td style="font-weight:800;text-align:right;">${formatRupiah(totalItem, { strip: true })}</td>
-      </tr>`;
-    }).join("");
-
-    const totalBulanFooter = semuaBulan.map((bln) => {
-      const tot = items.reduce((s, item) => s + (anggaranMap[item.id + "_" + bln] ? Number(anggaranMap[item.id + "_" + bln].nominal) : 0), 0);
-      return `<td style="text-align:right;">${formatRupiah(tot, { strip: true })}</td>`;
-    }).join("");
-
-    root.innerHTML = `
-      <div class="bop-stat-row">
-        <div class="bop-stat-card"><div class="bop-stat-label">Total Anggaran ${STATE.bopDataTahun}</div><div class="bop-stat-value">${formatRupiah(totalAnggaranTahun)}</div></div>
-        <div class="bop-stat-card"><div class="bop-stat-label">Total Terealisasi</div><div class="bop-stat-value" style="color:var(--ok);">${formatRupiah(totalRealisasiTahun)}</div></div>
-        <div class="bop-stat-card"><div class="bop-stat-label">Sisa Anggaran</div><div class="bop-stat-value">${formatRupiah(totalAnggaranTahun - totalRealisasiTahun)}</div></div>
-      </div>
-      <div class="card" style="margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;">
-        <div><label class="form-label">Tahun</label><input type="number" id="bop-data-tahun" class="input" style="width:100px;" value="${STATE.bopDataTahun}" onchange="bopGantiTahunData()"/></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-outline" style="padding:6px 12px;font-size:12px;" onclick="bopTambahItem()">➕ Tambah Item</button>
-          <button class="btn btn-outline" style="padding:6px 12px;font-size:12px;" onclick="bopLihatRiwayatSemua()">📜 Riwayat Semua Transaksi</button>
-          <button class="btn btn-accent" style="padding:6px 12px;font-size:12px;" onclick="bopEksporAnggaranPDF()">🖨️ Ekspor PDF</button>
-          <button class="btn btn-outline" style="padding:6px 12px;font-size:12px;" onclick="bopUnduhTemplateExcel()">📥 Unduh Excel</button>
-          <label class="btn btn-outline" style="padding:6px 12px;font-size:12px;cursor:pointer;">📤 Impor Excel<input type="file" accept=".xlsx,.xls" style="display:none" onchange="bopImporExcel(event)"/></label>
-        </div>
-      </div>
-      <div class="card desktop-only-table" style="overflow-x:auto;">
-        <table class="simple-table bop-table table-wrap" style="table-layout:fixed;width:100%;min-width:${totalWidth}px;">
-          <colgroup>${kolPx.map((w) => `<col style="width:${w}px;"/>`).join("")}</colgroup>
-          <thead><tr>
-            <th class="sticky-col-1">Item</th>
-            ${NAMA_BULAN_KALDIK.slice(1).map((nm) => `<th>${nm.slice(0, 3)}</th>`).join("")}
-            <th>Total</th>
-          </tr></thead>
-          <tbody>${barisItem || `<tr><td colspan="14" class="empty-state">Belum ada item anggaran.</td></tr>`}</tbody>
-          <tfoot><tr><td class="sticky-col-1">TOTAL</td>${totalBulanFooter}<td style="text-align:right;">${formatRupiah(totalAnggaranTahun, { strip: true })}</td></tr></tfoot>
-        </table>
-      </div>
-      <div class="mobile-only-cards">
-        ${items.length ? items.map((item) => {
-          const totalItem = semuaBulan.reduce((s, bln) => s + (anggaranMap[item.id + "_" + bln] ? Number(anggaranMap[item.id + "_" + bln].nominal) : 0), 0);
-          const selBulanKartu = semuaBulan.map((bln) => {
-            const a = anggaranMap[item.id + "_" + bln];
-            const nominal = a ? Number(a.nominal) : 0;
-            const sumReal = realisasiSumMap[item.id + "_" + bln] || 0;
-            const lunas = (a?.lunas_manual) || (nominal > 0 && sumReal >= nominal);
-            const cls = !nominal ? "bop-kosong" : (lunas ? "bop-lunas" : "");
-            return `<div class="bop-bulan-cell ${cls}" onclick="bopBukaSelDetail('${item.id}',${bln})">
-              <div class="bop-bulan-label">${NAMA_BULAN_KALDIK[bln].slice(0, 3)}</div>
-              <div class="bop-bulan-nilai">${nominal ? formatRupiah(nominal, { strip: true }) : "-"}</div>
-            </div>`;
-          }).join("");
-          return `<div class="card bop-item-card">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-              <b style="font-size:13px;">${escapeHtml(item.nama)}</b>
-              <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-                <span style="font-weight:800;font-size:12.5px;">${formatRupiah(totalItem, { strip: true })}</span>
-                <button class="btn btn-outline" style="padding:2px 6px;font-size:10px;" title="Hapus item" onclick="bopHapusItem('${item.id}',${JSON.stringify(item.nama)})">🗑️</button>
-              </div>
-            </div>
-            <div class="bop-bulan-grid">${selBulanKartu}</div>
-          </div>`;
-        }).join("") : `<div class="card empty-state">Belum ada item anggaran.</div>`}
-        <div class="card" style="font-weight:800;display:flex;justify-content:space-between;">
-          <span>TOTAL ${STATE.bopDataTahun}</span><span>${formatRupiah(totalAnggaranTahun, { strip: true })}</span>
-        </div>
-      </div>
-      <div style="font-size:11px;color:var(--text-secondary);margin-top:8px;">💡 Klik salah satu sel bulan untuk mengisi nominal, mencatat realisasi belanja, atau menandai lunas. Nominal yang <span style="text-decoration:line-through;">tercoret</span> = sudah lunas.</div>
-    `;
-  } catch (e) { console.error(e); root.innerHTML = `<div class="card empty-state">Gagal memuat Data BOP: ${e.message}</div>`; }
-}
-async function bopTambahItem() {
-  const nama = await promptTema("Nama item anggaran (mis. Snack, Internet, Tutor)", "", { judul: "Tambah Item Anggaran", ikon: "➕", teksOk: "Tambah" });
-  if (!nama) return;
-  try {
-    const urutan = (_BOP_CACHE.items[_BOP_CACHE.items.length - 1]?.urutan || 0) + 1;
-    await apiTambahBopAnggaranItem(nama, urutan);
-    toast("Item ditambahkan", "ok");
-    await _renderBopDataUI();
-  } catch (e) { toast("Gagal menambah: " + e.message, "err"); }
-}
+// _renderBopDataUI & bopTambahItem: lihat src/bop-data.js (tampilan RAB baru)
 async function bopHapusItem(id, nama) {
   if (!(await konfirmasiTema(`Hapus item "${nama}" dari Data BOP? Riwayat anggaran/transaksi bulan-bulan sebelumnya tetap tersimpan di database, cuma tidak ditampilkan lagi di tabel.`, { ikon: "🗑️", judul: "Hapus Item" }))) return;
   try {
@@ -14529,148 +14415,7 @@ function _normNamaBop(s) { return String(s || "").trim().toLowerCase().replace(/
 // ── Ekspor PDF Rencana Anggaran BOP (tabel item x 12 bulan, kop surat + logo, landscape 1 halaman) ──
 // Desain disamakan dengan Ekspor Rekap Laporan Kinerja: gradient hijau + logo di kop, zebra-stripe,
 // font kecil supaya 14 kolom (No, Item, 12 bulan, Total) tetap muat di 1 halaman landscape.
-async function bopEksporAnggaranPDF() {
-  if (!_BOP_CACHE.items.length) { toast("Belum ada item anggaran untuk diekspor", "err"); return; }
-  setGlobalLoading(true, "Menyiapkan PDF...");
-  try {
-    const p = await apiGetPengaturanSekolah();
-    const { items, anggaran } = _BOP_CACHE;
-    const anggaranMap = {};
-    anggaran.forEach((a) => { anggaranMap[a.item_id + "_" + a.bulan] = a; });
-    const semuaBulan = Array.from({ length: 12 }, (_, i) => i + 1);
-    const totalAnggaranTahun = anggaran.reduce((s, a) => s + Number(a.nominal || 0), 0);
-    const rupiahStrip = (n) => formatRupiah(n, { strip: true });
-    const headers = ["No", "Nama Item", ...NAMA_BULAN_KALDIK.slice(1).map((nm) => nm.slice(0, 3)), "Total"];
-    const kop = _bopKopSuratHtml(p, "RENCANA ANGGARAN BOP", `Tahun ${STATE.bopDataTahun}`);
-
-    const baris = items.map((item, i) => {
-      const totalItem = semuaBulan.reduce((s, bln) => s + (anggaranMap[item.id + "_" + bln] ? Number(anggaranMap[item.id + "_" + bln].nominal) : 0), 0);
-      const selBulan = semuaBulan.map((bln) => {
-        const nominal = anggaranMap[item.id + "_" + bln] ? Number(anggaranMap[item.id + "_" + bln].nominal) : 0;
-        return `<td style="padding:2px 3px;text-align:right;font-size:7.3pt;border-bottom:1px solid #F0F5F1;">${nominal ? rupiahStrip(nominal) : "-"}</td>`;
-      }).join("");
-      return `<tr style="background:${i % 2 ? "#FAFCFA" : "#fff"};">
-        <td style="padding:2px 3px;text-align:center;font-size:7.3pt;border-bottom:1px solid #F0F5F1;">${i + 1}</td>
-        <td style="padding:2px 4px;font-size:7.3pt;border-bottom:1px solid #F0F5F1;font-weight:600;word-wrap:break-word;">${escapeHtml(item.nama)}</td>
-        ${selBulan}
-        <td style="padding:2px 3px;text-align:right;font-size:7.3pt;border-bottom:1px solid #F0F5F1;font-weight:700;">${rupiahStrip(totalItem)}</td>
-      </tr>`;
-    }).join("");
-
-    const totalBulanFooter = semuaBulan.map((bln) => {
-      const tot = items.reduce((s, item) => s + (anggaranMap[item.id + "_" + bln] ? Number(anggaranMap[item.id + "_" + bln].nominal) : 0), 0);
-      return `<td style="padding:3px;text-align:right;font-size:7.3pt;border-top:1.5px solid ${_warnaDok().utama};">${rupiahStrip(tot)}</td>`;
-    }).join("");
-
-    const kolLebar = [4, 15, ...Array(12).fill(5.7), 8.6];
-    const sumLebar = kolLebar.reduce((a, b) => a + b, 0);
-    const colgroup = kolLebar.map((w) => `<col style="width:${((w / sumLebar) * 100).toFixed(2)}%"/>`).join("");
-
-    const html = `
-    <div style="font-family:'Plus Jakarta Sans',Arial,sans-serif;color:#132A20;">
-      ${kop}
-      <div style="border:1px solid #E1EAE3;border-top:none;border-radius:0 0 14px 14px;overflow:hidden;margin-top:-1px;">
-        <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
-          <colgroup>${colgroup}</colgroup>
-          <thead><tr style="background:${_warnaDok().lembut};">
-            ${headers.map((h, ci) => `<th style="padding:3px 4px;font-size:7.5pt;font-weight:800;color:#132A20;border-bottom:1.5px solid ${_warnaDok().utama};text-align:${ci === 1 ? "left" : "center"};">${h}</th>`).join("")}
-          </tr></thead>
-          <tbody>${baris || `<tr><td colspan="${headers.length}" style="padding:10px;text-align:center;color:#999;">Belum ada item anggaran.</td></tr>`}</tbody>
-          <tfoot><tr style="background:#F5F7F3;font-weight:800;">
-            <td colspan="2" style="padding:3px 4px;text-align:right;font-size:7.5pt;border-top:1.5px solid ${_warnaDok().utama};">TOTAL</td>
-            ${totalBulanFooter}
-            <td style="padding:3px;text-align:right;font-size:7.5pt;border-top:1.5px solid ${_warnaDok().utama};">${rupiahStrip(totalAnggaranTahun)}</td>
-          </tr></tfoot>
-        </table>
-      </div>
-      <div style="display:flex;justify-content:flex-end;margin-top:10px;">
-        <div style="text-align:center;font-size:9pt;line-height:1.3;min-width:220px;">
-          <div>${escapeHtml(p.tempat_terbit || p.alamat || "Hulu Sungai Tengah")}, ${new Date().toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" })}</div>
-          <div style="margin-top:4px;color:#5E7267;">${escapeHtml(_jabatanBendahara(p))},</div>
-          <br/><br/><br/>
-          <div style="font-weight:700;">${escapeHtml(_namaBendahara(p))}</div>
-        </div>
-      </div>
-    </div>`;
-    eksporHtmlSebagaiPDF(`Rencana Anggaran BOP ${STATE.bopDataTahun}`, html, { landscape: true });
-  } finally { setGlobalLoading(false); }
-}
-
-// Dibuat pakai ExcelJS (bukan xlsx.js yang dipakai di tempat lain) karena xlsx.js versi komunitas
-// tidak bisa menulis styling (warna/border/logo) ke file .xlsx — cuma ExcelJS yang bisa untuk kebutuhan
-// "tampilan rapi" ini. Baris judul/logo sengaja diletakkan DI ATAS baris header ("Nama Item" + 12 bulan)
-// — makanya bopImporExcel() di bawah dibuat mencari baris headernya sendiri, bukan asumsi baris 1.
-async function bopUnduhTemplateExcel() {
-  if (typeof ExcelJS === "undefined") { toast("Pustaka Excel belum termuat, coba refresh halaman lalu ulangi.", "err"); return; }
-  setGlobalLoading(true, "Menyiapkan Excel...");
-  try {
-    const p = await apiGetPengaturanSekolah();
-    const anggaranMap = {};
-    _BOP_CACHE.anggaran.forEach((a) => { anggaranMap[a.item_id + "_" + a.bulan] = Number(a.nominal) || 0; });
-    const bulanNama = NAMA_BULAN_KALDIK.slice(1);
-    const totalKolom = 1 + bulanNama.length;
-
-    const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet("Data BOP", { views: [{ state: "frozen", ySplit: 5 }] });
-
-    ws.mergeCells(1, 2, 2, totalKolom);
-    const judulCell = ws.getCell(1, 2);
-    judulCell.value = `RENCANA ANGGARAN BOP — ${p.nama_lembaga_kop || "RUMAH TAHFIZH AL-UMM PUTRA BARABAI"}`;
-    judulCell.font = { bold: true, size: 13, color: { argb: "FF132A20" } };
-    judulCell.alignment = { vertical: "middle", horizontal: "left" };
-    ws.mergeCells(3, 2, 3, totalKolom);
-    const subCell = ws.getCell(3, 2);
-    subCell.value = `Tahun ${STATE.bopDataTahun}`;
-    subCell.font = { italic: true, size: 10, color: { argb: "FF5E7267" } };
-    subCell.alignment = { vertical: "middle", horizontal: "left" };
-    ws.getRow(1).height = 22; ws.getRow(2).height = 10; ws.getRow(3).height = 16; ws.getRow(4).height = 8;
-
-    try {
-      const logoUrl = p.logo_kiri_url || p.logo_kanan_url || urlLogoSekolah();
-      if (logoUrl) {
-        const buf = await (await fetch(logoUrl)).arrayBuffer();
-        const ext = /\.jpe?g(\?|$)/i.test(logoUrl) ? "jpeg" : "png";
-        const imgId = wb.addImage({ buffer: buf, extension: ext });
-        ws.addImage(imgId, { tl: { col: 0.1, row: 0.1 }, ext: { width: 48, height: 48 } });
-      }
-    } catch (e) { console.warn("Logo tidak bisa disisipkan ke Excel (dilewati):", e.message); }
-
-    const headerRow = ws.getRow(5);
-    headerRow.values = ["Nama Item", ...bulanNama];
-    headerRow.height = 20;
-    headerRow.eachCell((cell) => {
-      cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
-      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1F8A5F" } };
-      cell.alignment = { vertical: "middle", horizontal: "center" };
-      cell.border = { top: { style: "thin", color: { argb: "FFBFD9CB" } }, bottom: { style: "thin", color: { argb: "FFBFD9CB" } }, left: { style: "thin", color: { argb: "FFBFD9CB" } }, right: { style: "thin", color: { argb: "FFBFD9CB" } } };
-    });
-
-    const items = _BOP_CACHE.items.length ? _BOP_CACHE.items : [{ nama: "(contoh) Snack" }];
-    items.forEach((item, i) => {
-      const nilai = bulanNama.map((_, bi) => anggaranMap[item.id + "_" + (bi + 1)] || 0);
-      const row = ws.addRow([item.nama, ...nilai]);
-      const zebra = i % 2 === 1;
-      row.eachCell((cell, colNumber) => {
-        cell.border = { top: { style: "hair", color: { argb: "FFE1EAE3" } }, bottom: { style: "hair", color: { argb: "FFE1EAE3" } }, left: { style: "hair", color: { argb: "FFE1EAE3" } }, right: { style: "hair", color: { argb: "FFE1EAE3" } } };
-        if (zebra) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF5FAF7" } };
-        if (colNumber === 1) { cell.font = { bold: true }; }
-        else { cell.numFmt = "#,##0"; cell.alignment = { horizontal: "right" }; }
-      });
-    });
-
-    ws.getColumn(1).width = 24;
-    for (let c = 2; c <= totalKolom; c++) ws.getColumn(c).width = 13;
-
-    const buf = await wb.xlsx.writeBuffer();
-    const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `Data_BOP_${STATE.bopDataTahun}.xlsx`;
-    document.body.appendChild(link); link.click(); link.remove();
-    toast("Excel terunduh — edit nominalnya (atau tambah baris item baru), lalu upload lagi lewat 'Impor Excel'", "ok");
-  } catch (e) { console.error(e); toast("Gagal membuat Excel: " + e.message, "err"); }
-  finally { setGlobalLoading(false); }
-}
+// bopEksporAnggaranPDF & bopUnduhTemplateExcel: lihat src/bop-data.js (RAB berkop)
 async function bopImporExcel(event) {
   const file = event.target.files[0];
   event.target.value = "";
@@ -16342,6 +16087,7 @@ async function handleImportSiswa(evt) {
 </script>
 <script src="src/kas.js?v=4"></script>
 <script src="src/kas-banyak.js?v=1"></script>
+<script src="src/bop-data.js?v=1"></script>
 <script src="src/kuliah.js?v=19"></script>
 <script src="src/modul-baca.js?v=11"></script>
 <script src="src/sampul.js?v=1"></script>
@@ -16352,16 +16098,16 @@ async function handleImportSiswa(evt) {
 <script src="src/rapor-cetak.js?v=2"></script>
 <script src="src/rekap-hadir-cetak.js?v=1"></script>
 <script src="src/kelengkapan-nilai.js?v=2"></script>
-<script src="src/pengumuman.js?v=4"></script>
+<script src="src/pengumuman.js?v=5"></script>
 <script src="src/kesimpulan.js?v=2"></script>
 <script src="src/profil.js?v=5"></script>
 <script src="src/kaldik-desain.js?v=6"></script>
-<script src="src/ujian.js?v=11"></script>
+<script src="src/ujian.js?v=12"></script>
 <script src="src/ujian-editor.js?v=8"></script>
 <script src="src/jurnal-otomatis.js?v=6"></script>
 <script src="src/hp.js?v=5"></script>
 <script src="src/leger-nilai.js?v=2"></script>
-<script src="src/jadwal-ujian.js?v=4"></script>
+<script src="src/jadwal-ujian.js?v=5"></script>
 <script src="src/ujian-arsip.js?v=3"></script>
 <script src="src/tur.js?v=1"></script>
 <script src="src/dapodik.js?v=1"></script>

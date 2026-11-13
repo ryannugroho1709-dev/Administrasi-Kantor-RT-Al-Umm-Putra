@@ -534,7 +534,8 @@ async function _juSisipkanKartuDasbor() {
     div.id = "ju-dasbor"; div.className = "card ju-dasbor";
     const adaHariIni = tugas.some((x) => x.t === hariIni);
     div.innerHTML = `<div class="ju-sub">📋 ${adaHariIni ? "Jadwal mengawas hari ini" : "Jadwal mengawas pekan ini"}</div>${_juHtmlTugas(tugas.slice(0, 6), true)}<a class="ju-link" href="#" onclick="event.preventDefault();showPage('jadwal-ujian','page-jadwal-ujian','menuJadwalUjian')">Lihat jadwal ujian lengkap →</a>`;
-    page.insertBefore(div, page.firstElementChild?.nextSibling || null);
+    const sesudah = page.querySelector("#pg-ingat") || page.querySelector(".dash-hero");
+    if (sesudah) sesudah.after(div); else page.appendChild(div);
   } catch (e) { console.warn("Kartu mengawas gagal:", e); }
 }
 (function pasangKartuDasbor() {

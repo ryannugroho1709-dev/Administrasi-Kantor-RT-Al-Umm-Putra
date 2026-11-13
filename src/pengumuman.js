@@ -444,7 +444,7 @@ async function _pgPasangPengingat() {
   let n = 0; try { n = await _pgHitungJatuhTempo(); } catch (e) { return; }
   let el = document.getElementById("pg-ingat");
   if (!n) { el?.remove(); return; }
-  if (!el) { el = document.createElement("div"); el.id = "pg-ingat"; halaman.prepend(el); }
+  if (!el) { el = document.createElement("div"); el.id = "pg-ingat"; const hero = halaman.querySelector(".dash-hero"); hero ? hero.after(el) : halaman.prepend(el); }
   el.className = "pg-ingat";
   el.innerHTML = `<span>🔔</span><div><b>${n} pengumuman perlu dikirim</b><small>sesuai kalender akademik — ke grup guru / wali santri</small></div><button class="btn btn-wa btn-sm" onclick="sessionStorage.removeItem('pgIngat:${_pgHariIni()}');bukaPengumumanWa()">📢 Buka</button>`;
 }

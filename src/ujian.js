@@ -790,7 +790,10 @@ async function _ujSisipkanKartuDasbor() {
           <span class="uj-langsung"><span class="kerja">⏳ ${kerja}</span><span class="kirim">✅ ${kirim}</span></span></div>`;
       }).join("") || `<div class="uj-sub" style="padding:4px 2px">Soal sudah siap. Buka sesi di menu Ujian Online saat santri akan mengerjakan.</div>`}`;
     const ju = page.querySelector("#ju-dasbor");
-    if (ju) ju.after(div); else page.insertBefore(div, page.firstElementChild?.nextSibling || null);
+    // selalu DI BAWAH kartu "Selamat datang"
+    page.querySelectorAll("#uj-dasbor").forEach((x) => x.remove()); // cegah kartu dobel bila terpanggil dua kali bersamaan
+    const sesudah = ju || page.querySelector("#pg-ingat") || page.querySelector(".dash-hero");
+    if (sesudah) sesudah.after(div); else page.appendChild(div);
   } catch (e) { console.warn("Kartu Ujian Online gagal:", e); }
 }
 async function ujBukaDariDasbor(sesiId) {
