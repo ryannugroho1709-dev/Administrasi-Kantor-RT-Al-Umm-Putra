@@ -320,7 +320,7 @@ async function ujeUnggahGambar(j, i, input, k) {
 }
 async function ujeUnggahAudio(j, i, input) {
   const f = input.files && input.files[0]; if (!f) return;
-  if (f.size > 15 * 1024 * 1024) { toast("Audio maksimal 15 MB. Perkecil dulu (mis. mp3 64 kbps).", "err"); return; }
+  if (f.size > 8 * 1024 * 1024) { toast("Audio maksimal 8 MB. Perkecil dulu (mis. mp3 64 kbps mono ≈ 0,5 MB per menit).", "err"); return; }
   const lbl = input.closest("label"); if (lbl && lbl.firstChild) lbl.firstChild.textContent = "⏳ Mengunggah… ";
   try {
     const nama = /\.\w{2,4}$/.test(f.name) ? f.name : f.name + ".mp3";

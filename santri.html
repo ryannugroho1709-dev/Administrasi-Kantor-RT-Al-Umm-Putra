@@ -347,8 +347,14 @@ function warnaNama(nama) { let h = 0; for (const c of String(nama)) h = (h * 31 
 function inisial(nama) { return String(nama).split(/\s+/).filter(Boolean).slice(0, 2).map((x) => x[0]).join("").toUpperCase(); }
 function perbesar(src) { $("gambar-besar").src = src; $("lapis-gambar").classList.add("buka"); }
 // Teks dengan tautan gambar: [gambar: https://...] → <img>
-function gambarHTML(url) { return url ? `<img class="gambar-soal" src="${esc(url)}" alt="Gambar soal" loading="lazy" onclick="perbesar(this.src)">` : ""; }
-function audioHTML(url) { return url ? `<div class="audio-soal"><span>🔊 Dengarkan</span><audio controls preload="metadata" controlsList="nodownload" src="${esc(url)}"></audio></div>` : ""; }
+// Media soal lewat perantara cache Cloudflare (/media/…) supaya kuota unduhan Supabase tidak habis saat
+// ratusan santri membuka soal bergambar/beraudio. Bila perantara gagal → otomatis kembali ke alamat asli.
+const _ASAL_MEDIA = (window.SUPABASE_URL || "") + "/storage/v1/object/public/foto/";
+const _pakaiPerantara = /^https?:$/.test(location.protocol) && !/^(localhost|127\.|192\.168\.|10\.)/.test(location.hostname);
+function mediaUrl(u) { u = String(u || ""); return _pakaiPerantara && u.startsWith(_ASAL_MEDIA) ? "/media/" + u.slice(_ASAL_MEDIA.length) : u; }
+function mediaGagal(el, asli) { if (el.dataset.ulang) return; el.dataset.ulang = 1; el.src = asli; }
+function gambarHTML(url) { return url ? `<img class="gambar-soal" src="${esc(mediaUrl(url))}" alt="Gambar soal" loading="lazy" onerror="mediaGagal(this,'${esc(url)}')" onclick="perbesar(this.src)">` : ""; }
+function audioHTML(url) { return url ? `<div class="audio-soal"><span>🔊 Dengarkan</span><audio controls preload="metadata" controlsList="nodownload" src="${esc(mediaUrl(url))}" onerror="mediaGagal(this,'${esc(url)}')"></audio></div>` : ""; }
 
 // ── Langkah 1: pilih kelas ──
 async function ambilSesi() {
@@ -700,7 +706,7 @@ async function rekamMulai() {
     REKAM.abaikan = true; // jendela izin mikrofon jangan dihitung "pindah layar"
     const aliran = await navigator.mediaDevices.getUserMedia({ audio: true }).finally(() => setTimeout(() => { REKAM.abaikan = false; }, 1500));
     const tipe = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"].find((t) => MediaRecorder.isTypeSupported?.(t)) || "";
-    REKAM.rec = new MediaRecorder(aliran, tipe ? { mimeType: tipe, audioBitsPerSecond: 48000 } : undefined);
+    REKAM.rec = new MediaRecorder(aliran, tipe ? { mimeType: tipe, audioBitsPerSecond: 32000 } : undefined);
     REKAM.potongan = []; REKAM.mulai = Date.now(); REKAM.soal = S.soal[S.idx];
     REKAM.rec.ondataavailable = (e) => { if (e.data && e.data.size) REKAM.potongan.push(e.data); };
     REKAM.rec.onstop = () => { aliran.getTracks().forEach((t) => t.stop()); rekamUnggah(); };

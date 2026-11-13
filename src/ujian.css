@@ -461,3 +461,39 @@ table.pp2-kkm{border-collapse:separate;border-spacing:0;width:100%;font-size:12p
 @media (max-width:560px){.tur-baru-item{flex-wrap:wrap}.tur-baru-item .btn{width:100%}}
 .nl2-lama{margin:0 0 12px;padding:10px 12px;border-radius:14px;font-size:12.5px;line-height:1.6;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.35)}
 .nl2-lama .btn{margin-left:4px}
+/* ── cocokkan Dapodik ── */
+.dpk-sub{font-size:12.5px;color:var(--text-secondary);margin:-4px 0 12px;line-height:1.55}
+.dpk-cakupan{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.dpk-cakupan label{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:14px;border:1.5px solid var(--border-soft,#e3e8ef);cursor:pointer;font-size:13px}
+.dpk-cakupan label:has(input:checked){border-color:var(--primary,#2563eb);background:rgba(37,99,235,.06)}
+.dpk-cakupan input{display:none}.dpk-cakupan small{color:var(--text-secondary);font-size:11.5px}
+.dpk-unggah{display:flex;flex-direction:column;align-items:center;gap:4px;padding:22px;border-radius:18px;border:2px dashed rgba(37,99,235,.35);background:rgba(37,99,235,.04);cursor:pointer;text-align:center}
+.dpk-unggah span{font-size:30px}.dpk-unggah small{color:var(--text-secondary)}
+.dpk-ubin{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.dpk-ubin button{border:1.5px solid var(--border-soft,#e3e8ef);background:var(--card-bg,#fff);border-radius:14px;padding:10px 4px;cursor:pointer;color:inherit}
+.dpk-ubin b{display:block;font-size:22px}.dpk-ubin span{font-size:11px;color:var(--text-secondary)}
+.dpk-ubin .ok b{color:#16a34a}.dpk-ubin .beda b{color:#d97706}.dpk-ubin .belum b{color:#dc2626}.dpk-ubin .baru b{color:#2563eb}
+.dpk-ubin button.on{border-color:currentColor;box-shadow:0 6px 16px rgba(15,23,42,.1);background:var(--surface-2,#f1f5f9)}
+.dpk-isi{max-height:56vh;overflow:auto}
+.dpk-ket{font-size:12.5px;line-height:1.6;padding:9px 12px;border-radius:12px;background:var(--surface-2,#f1f5f9);margin-bottom:10px}
+.dpk-kartu{border:1px solid var(--border-soft,#e3e8ef);border-radius:14px;padding:10px 12px;margin-bottom:8px}
+.dpk-kartu-h{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px}.dpk-kartu-h span{font-size:12px;color:var(--text-secondary)}
+.dpk-nonaktif{color:#dc2626;font-style:normal;font-weight:700}
+.dpk-beda{display:grid;grid-template-columns:20px 100px 1fr 16px 1fr;gap:6px;align-items:center;font-size:12.5px;padding:5px 0;border-top:1px dashed var(--border-soft,#e3e8ef);cursor:pointer}
+.dpk-k{font-weight:700;color:var(--text-secondary)}.dpk-a{color:#b91c1c;text-decoration:line-through;text-decoration-color:rgba(185,28,28,.4);word-break:break-word}.dpk-d{color:#15803d;font-weight:700;word-break:break-word}.dpk-panah{color:var(--text-secondary)}
+.dpk-catatan{font-size:11.5px;color:var(--text-secondary);margin-top:4px}
+.dpk-daftar{display:grid;gap:6px}
+.dpk-baris{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;border:1px solid var(--border-soft,#e3e8ef);font-size:13px}
+.dpk-baris>div{flex:1;min-width:0}.dpk-baris small{display:block;color:var(--text-secondary);font-size:11.5px}
+.dpk-no{width:24px;height:24px;border-radius:8px;display:grid;place-items:center;background:var(--surface-2,#f1f5f9);font-size:11px;font-weight:800;flex:none}
+.dpk-ok{color:#16a34a;font-weight:800}
+.dpk-semua{display:flex;gap:6px;align-items:center;font-size:12.5px;font-weight:700;margin-bottom:6px}
+.dpk-aksi{width:100%;margin-top:10px}.dpk-aksi-baris{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}.dpk-aksi-baris .btn{flex:1}
+.dpk-kosong{text-align:center;padding:24px;color:var(--text-secondary)}
+.dpk-pita{display:flex;align-items:center;gap:12px;margin-bottom:12px;border:1px solid var(--border-soft,#e3e8ef)}
+.dpk-pita>span{font-size:24px}.dpk-pita>div{flex:1;min-width:0}.dpk-pita small{display:block;color:var(--text-secondary);font-size:12px}
+.dpk-pita.ada{border-color:rgba(220,38,38,.35);background:rgba(220,38,38,.04)}.dpk-pita.ok{border-color:rgba(22,163,74,.3);background:rgba(22,163,74,.04)}
+.dpk-merah{color:#dc2626}
+.dpk-tanda{display:inline-block;font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px;margin-left:6px;vertical-align:1px;white-space:nowrap}
+.dpk-tanda.ok{background:rgba(22,163,74,.12);color:#15803d}.dpk-tanda.belum{background:rgba(220,38,38,.12);color:#b91c1c}
+@media (max-width:560px){.dpk-ubin{grid-template-columns:repeat(2,1fr)}.dpk-beda{grid-template-columns:20px 1fr;}.dpk-beda .dpk-a,.dpk-beda .dpk-d{grid-column:2}.dpk-panah{display:none}}

@@ -24,7 +24,7 @@
 <link rel="stylesheet" href="src/hp.css?v=3">
 <link rel="stylesheet" href="src/kuliah.css?v=6">
 <link rel="stylesheet" href="src/modul-baca.css?v=10">
-<link rel="stylesheet" href="src/ujian.css?v=16">
+<link rel="stylesheet" href="src/ujian.css?v=17">
 
 <script>
 // Logo gagal dimuat → coba logo bawaan; kalau bawaan pun gagal, tampilkan ikon 🎓 (bukan huruf "G").
@@ -1949,6 +1949,7 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
             <label class="btn btn-ghost" style="cursor:pointer;"><span data-i18n="importExcel">Impor Excel</span>
               <input type="file" id="siswa-file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleImportSiswa(event)"/></label>
             <button class="btn btn-ghost" onclick="eksporDataSiswaAdministrasi()" data-i18n="eksporExcel">Ekspor Excel</button>
+            <button class="btn btn-outline" onclick="dpkBuka()" title="Cocokkan Data Siswa dengan file Peserta Didik dari Dapodik">🛡️ Cek Dapodik</button>
             <button class="btn btn-accent" onclick="openFormSiswa(null)" data-i18n="tambah">Tambah</button>
             <label class="btn btn-ghost admin-only" style="cursor:pointer;display:none;" title="Upload foto banyak santri sekaligus — cocokkan nama file dengan nama santri">📷 Upload Foto
               <input type="file" id="siswa-foto-bulk-input" accept="image/*" multiple style="display:none" onchange="handleUploadFotoMassalSiswa(event)"/></label>
@@ -15880,6 +15881,7 @@ async function renderDataSiswaInit() {
   await ensureLookups();
   populateSelect("ds-filter-kelas", LOOKUP.kelas, "id", "nama_kelas", true);
   populateSelect("ds-bulk-kelas-target", LOOKUP.kelas, "id", "nama_kelas", true);
+  if (typeof dpkMuatSnap === "function") await dpkMuatSnap();
   renderDataSiswa();
 }
 let DATA_SISWA_MODE_PILIH = false; // saat false, kolom checkbox disembunyikan supaya tabel rapi; muncul hanya kalau tombol 🗑️ diklik
@@ -15944,7 +15946,7 @@ async function renderDataSiswa() {
         <div class="data-kartu-kepala" onclick='openFormSiswa(${data})'>
           ${s.foto_url ? `<img src="${s.foto_url}" class="data-foto" style="object-position:center 15%;" alt=""/>` : `<span class="tj-avatar data-foto">${_inisial(s.nama)}</span>`}
           <div style="min-width:0;flex:1;">
-            <b class="tj-nama">${escapeHtml(s.nama)}</b>
+            <b class="tj-nama">${escapeHtml(s.nama)}</b>${typeof dpkTanda === "function" ? dpkTanda(s) : ""}
             <div class="tj-jenis">${badgeKelas(s.kelas?.nama_kelas)} · Angkatan ${escapeHtml(s.angkatan || "-")}</div>
             <div class="tj-jenis">NISN ${escapeHtml(s.nisn || "-")} · ${escapeHtml(s.nama_ayah || s.nama_ibu || "Orang tua -")}</div>
           </div>
@@ -15956,14 +15958,14 @@ async function renderDataSiswa() {
         </div>
       </div>`;
     }).join("")}</div>`;
-    target.innerHTML = kartuHp + `<div class="card${DATA_SISWA_MODE_PILIH ? "" : " desktop-only-table"}" style="overflow-x:auto;"><table class="simple-table table-wrap ds-tabel" style="table-layout:fixed;width:100%;min-width:${dsTableWidth}px;">
+    target.innerHTML = (typeof dpkRingkasHTML === "function" ? dpkRingkasHTML() : "") + kartuHp + `<div class="card${DATA_SISWA_MODE_PILIH ? "" : " desktop-only-table"}" style="overflow-x:auto;"><table class="simple-table table-wrap ds-tabel" style="table-layout:fixed;width:100%;min-width:${dsTableWidth}px;">
       ${dsColGroup}
       <thead><tr>${kolom.map((k) => `<th style="white-space:nowrap;">${k}</th>`).join("")}</tr></thead>
       <tbody>${rows.map((s) => `<tr>
         ${DATA_SISWA_MODE_PILIH ? `<td style="white-space:nowrap;"><input type="checkbox" class="ds-check" value="${s.id}" onchange="perbaruiBarBulkSiswa()"/></td>` : ""}
         <td style="white-space:nowrap;">${s.foto_url ? `<img src="${s.foto_url}" style="width:48px;height:48px;border-radius:8px;object-fit:cover;object-position:center 15%;"/>` : `<div style="width:48px;height:48px;border-radius:8px;background:var(--accent-dim);"></div>`}</td>
         <td style="white-space:nowrap;">${s.angkatan || "-"}</td>
-        <td style="font-weight:700;white-space:nowrap;cursor:pointer;" title="Klik untuk edit" onclick='openFormSiswa(${JSON.stringify(s).replace(/'/g,"&#39;")})'>${escapeHtml(s.nama)}</td>
+        <td style="font-weight:700;white-space:nowrap;cursor:pointer;" title="Klik untuk edit" onclick='openFormSiswa(${JSON.stringify(s).replace(/'/g,"&#39;")})'>${escapeHtml(s.nama)}${typeof dpkTanda === "function" ? " " + dpkTanda(s) : ""}</td>
         <td style="white-space:nowrap;">${badgeKelas(s.kelas?.nama_kelas)}</td>
         <td style="white-space:nowrap;">${s.tempat_lahir || "-"}</td>
         <td style="white-space:nowrap;">${s.tanggal_lahir ? new Date(s.tanggal_lahir).toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"}) : "-"}</td>
@@ -16349,5 +16351,6 @@ async function handleImportSiswa(evt) {
 <script src="src/jadwal-ujian.js?v=4"></script>
 <script src="src/ujian-arsip.js?v=3"></script>
 <script src="src/tur.js?v=1"></script>
+<script src="src/dapodik.js?v=1"></script>
 </body>
 </html>
