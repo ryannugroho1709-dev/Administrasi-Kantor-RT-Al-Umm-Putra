@@ -149,6 +149,7 @@ function renderKas() {
         </div>
         <button class="btn kas-btn-masuk" onclick="bukaFormKas('masuk')">＋ Uang Masuk</button>
         <button class="btn kas-btn-keluar" onclick="bukaFormKas('keluar')">－ Uang Keluar</button>
+        <button class="btn kas-btn-banyak" onclick="bukaCatatBanyakKas()" title="Catat banyak transaksi sekaligus dari teks, foto, atau tabel">⚡ Catat Banyak</button>
       </div>
     </div>
     <div class="pg-tab-bar kas-tab" role="tablist">${tabs.map(([k, l]) => `<button type="button" class="${KAS.tab === k ? "aktif" : ""}" onclick="KAS.tab='${k}';renderKas()">${l}</button>`).join("")}</div>
@@ -275,7 +276,7 @@ function htmlKasTransaksi() {
     </div>
     <div class="kas-total-filter"><span>${rows.length} transaksi</span><span class="masuk">+ ${_kasRp(masuk)}</span><span class="keluar">− ${_kasRp(keluar)}</span></div>
     ${rows.length ? Object.entries(grup).map(([tgl, list]) => `<div class="kas-grup-tgl">${_tglPendek(tgl)}</div>${list.map(htmlKasBaris).join("")}`).join("")
-      : htmlKosong("🔍", "Tidak ada transaksi", `Belum ada transaksi yang cocok di ${namaBulanIndo(KAS.bulan)}.`, `<button class="btn btn-ghost" onclick="bukaPilihJenisKas()">＋ Catat Transaksi</button>`)}
+      : htmlKosong("🔍", "Tidak ada transaksi", `Belum ada transaksi yang cocok di ${namaBulanIndo(KAS.bulan)}.`, `<button class="btn btn-ghost" onclick="bukaPilihJenisKas()">＋ Catat Transaksi</button> <button class="btn btn-accent" onclick="bukaCatatBanyakKas()">⚡ Catat Banyak</button>`)}
   </div>`;
 }
 
@@ -779,6 +780,7 @@ function bukaPilihJenisKas() {
       <button type="button" class="masuk" onclick="bukaFormKas('masuk')"><span>⬇️</span><b>Uang Masuk</b><small>Infaq, donasi, dana BOP...</small></button>
       <button type="button" class="keluar" onclick="bukaFormKas('keluar')"><span>⬆️</span><b>Uang Keluar</b><small>Belanja, honor, tagihan...</small></button>
       <button type="button" class="transfer" onclick="bukaFormKas('transfer')"><span>🔁</span><b>Pindah Saldo</b><small>Setor ke bank, tarik tunai</small></button>
+      <button type="button" class="banyak" onclick="bukaCatatBanyakKas()"><span>⚡</span><b>Catat Banyak</b><small>Tempel teks / foto laporan</small></button>
     </div>
   `);
 }

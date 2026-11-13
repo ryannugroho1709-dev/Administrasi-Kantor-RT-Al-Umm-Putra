@@ -189,3 +189,41 @@ table.simple-table.kas-buku{min-width:640px;font-size:11.5px;}
   .kas-akun-chip{flex:1;min-width:120px;}
 }
 @media (prefers-reduced-motion:reduce){.kas-bar-masuk,.kas-bar-keluar{animation:none;}}
+/* ── Catat banyak sekaligus ── */
+.kas-btn-banyak{background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;border:0}
+.kas-pilih-jenis .banyak{border-color:rgba(124,58,237,.35)}
+.kb-sub{font-size:12.5px;color:var(--text-secondary);margin:-4px 0 12px;line-height:1.55}
+.kb-sumber{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px}
+.kb-sumber>button,.kb-sumber>label{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;padding:14px;border-radius:16px;border:1.5px solid var(--border-soft,#e3e8ef);background:var(--card-bg,#fff);cursor:pointer;color:inherit;font:inherit}
+.kb-sumber span{font-size:26px}.kb-sumber b{font-size:14px}.kb-sumber small{font-size:11.5px;color:var(--text-secondary);line-height:1.4}
+.kb-sumber>*:hover{border-color:rgba(124,58,237,.5);box-shadow:0 6px 16px rgba(124,58,237,.12)}
+.kb-ket{font-size:11.5px;color:var(--text-secondary);margin-top:6px;line-height:1.55}
+.kb-atas{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px}.kb-atas label{display:flex;flex-direction:column;gap:3px;font-size:11.5px;font-weight:700;color:var(--text-secondary)}
+.kb-peringatan{font-size:12px;line-height:1.55;padding:8px 11px;border-radius:12px;background:rgba(217,119,6,.08);border:1px solid rgba(217,119,6,.3);margin-bottom:8px}
+.kb-cek-saldo{font-size:12.5px;padding:9px 12px;border-radius:12px;margin-bottom:8px;font-weight:600}
+.kb-cek-saldo.ok{background:rgba(22,163,74,.1);color:#15803d}.kb-cek-saldo.beda{background:rgba(220,38,38,.08);color:#b91c1c}.kb-cek-saldo.info{background:var(--surface-2,#f1f5f9);color:var(--text-secondary);font-weight:500}
+.kb-daftar{display:grid;gap:8px;max-height:52vh;overflow:auto;padding:2px}
+.kb-baris{display:grid;grid-template-columns:22px 132px 92px 120px 1fr 170px 28px;gap:6px;align-items:center;padding:8px;border-radius:14px;border:1px solid var(--border-soft,#e3e8ef);border-left:4px solid #dc2626;background:var(--card-bg,#fff)}
+.kb-baris.masuk{border-left-color:#16a34a}.kb-baris.mati{opacity:.45}.kb-baris.salah{background:rgba(220,38,38,.05);border-color:rgba(220,38,38,.4)}
+.kb-baris .input{padding:7px 9px;font-size:13px;min-width:0}
+.kb-cek{width:18px;height:18px}
+.kb-tgl.ikut{color:var(--text-secondary);font-style:italic}
+.kb-jenis{border:0;border-radius:10px;padding:8px 6px;font-weight:800;font-size:12px;cursor:pointer;background:rgba(220,38,38,.1);color:#b91c1c}
+.kb-baris.masuk .kb-jenis{background:rgba(22,163,74,.12);color:#15803d}
+.kb-nom{font-weight:800;text-align:right;font-variant-numeric:tabular-nums}
+.kb-kat.ragu{border-color:rgba(217,119,6,.6);background:rgba(217,119,6,.06)}
+.kb-hapus{border:0;background:none;color:var(--text-secondary);font-size:15px;cursor:pointer}
+.kb-info{grid-column:2/-1;display:flex;flex-wrap:wrap;gap:5px}.kb-info:empty{display:none}
+.kb-info span{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--surface-2,#f1f5f9);color:var(--text-secondary)}
+.kb-info .ok{background:rgba(22,163,74,.12);color:#15803d}.kb-info .beda{background:rgba(220,38,38,.12);color:#b91c1c}.kb-info .dobel{background:rgba(217,119,6,.15);color:#b45309}.kb-info .ikut{font-weight:600}
+.kb-tambah{width:100%;margin-top:8px;border:1.5px dashed var(--border-soft,#cbd5e1);background:none;border-radius:12px;padding:9px;font-weight:700;color:var(--text-secondary);cursor:pointer}
+.kb-kaki{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}.kb-kaki #kb-total{flex:1;font-size:13px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.kb-kaki .masuk{color:#15803d;font-weight:800}.kb-kaki .keluar{color:#b91c1c;font-weight:800}
+@media (max-width:720px){
+  .kb-sumber{grid-template-columns:1fr}.kb-sumber>*{flex-direction:row;align-items:center;flex-wrap:wrap;gap:4px 10px}.kb-sumber small{flex-basis:100%;padding-left:36px}
+  .kb-atas{grid-template-columns:1fr}
+  .kb-baris{grid-template-columns:22px 1fr 1fr 28px;grid-template-areas:"c t j h" "c n n n" "c u u u" "c k k k" "c i i i"}
+  .kb-cek{grid-area:c;align-self:start;margin-top:8px}.kb-tgl{grid-area:t}.kb-jenis{grid-area:j}.kb-hapus{grid-area:h}.kb-nom{grid-area:n;font-size:16px}.kb-ur{grid-area:u}.kb-kat{grid-area:k}.kb-info{grid-area:i}
+  .kb-kaki .btn{width:100%}
+}
+.kas-pilih-jenis .banyak span{background:rgba(124,58,237,.12)}
