@@ -422,3 +422,42 @@ table.pp2-kkm{border-collapse:separate;border-spacing:0;width:100%;font-size:12p
 .uj-rem-saklar{display:flex;gap:10px;align-items:flex-start;padding:12px;border-radius:14px;border:1.5px solid var(--border-color,#e2e8f0);cursor:pointer}
 .uj-rem-saklar input{width:20px;height:20px;margin-top:2px;accent-color:#ea580c}
 .uj-rem-saklar small{display:block;font-size:12px;color:var(--text-secondary)}
+.pp2-pisah{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:12.5px;font-weight:700;padding-top:6px;border-top:1px dashed var(--border-soft,#e3e8ef)}
+.pp2-pisah input{flex:1;min-width:220px;padding:6px 10px;font-size:13px}.pp2-pisah small{flex-basis:100%;font-weight:500;color:var(--text-secondary);font-size:11.5px}
+/* ── mapel gabungan & pola otomatis di Input Nilai ── */
+.nl2-subtab{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 12px;padding:6px;border-radius:16px;background:var(--surface-2,#eef2f7);border:1px solid var(--border-soft,#e3e8ef)}
+.nl2-subtab button{border:0;border-radius:12px;padding:8px 14px;font-weight:800;font-size:13px;background:transparent;color:var(--text-secondary);cursor:pointer}
+.nl2-subtab button.on{background:var(--card-bg,#fff);color:var(--primary,#1d4ed8);box-shadow:0 4px 12px rgba(15,23,42,.1)}
+.nl2-subtab button.rekap{margin-left:auto}
+.nl2-subtab small{flex-basis:100%;font-size:11.5px;color:var(--text-secondary);padding:0 6px 2px}
+.nl2-induk{display:block;font-size:12px;font-weight:600;opacity:.75;margin-top:2px}
+.nl-det{display:block;font-size:9.5px;font-weight:700;color:var(--text-secondary);margin-top:1px;letter-spacing:.2px}
+.nl2-rekap-kepala{display:flex;flex-direction:column;gap:3px;margin-bottom:10px}.nl2-rekap-kepala small{color:var(--text-secondary);font-size:12px}
+@media (max-width:640px){.nl2-subtab button{flex:1;padding:8px 6px}.nl2-subtab button.rekap{margin-left:0;flex-basis:100%}}
+.uje-pas100{border:1px solid rgba(37,99,235,.3);background:rgba(37,99,235,.08);color:#1d4ed8;border-radius:99px;padding:2px 10px;font-size:11.5px;font-weight:800;cursor:pointer;margin-left:4px}
+/* ── tur panduan (tutorial bersorot) ── */
+.tur-lapis{position:fixed;inset:0;z-index:99990}
+.tur-sorot{position:fixed;border-radius:16px;box-shadow:0 0 0 9999px rgba(6,12,28,.74),0 0 0 3px #38bdf8,0 0 26px 6px rgba(56,189,248,.55);transition:top .35s ease,left .35s ease,width .35s ease,height .35s ease;pointer-events:none;animation:turDenyut 1.6s ease-in-out infinite}
+@keyframes turDenyut{50%{box-shadow:0 0 0 9999px rgba(6,12,28,.74),0 0 0 5px #7dd3fc,0 0 36px 12px rgba(56,189,248,.45)}}
+.tur-panah{position:fixed;transform:translateX(-50%);font-size:34px;line-height:1;pointer-events:none;filter:drop-shadow(0 4px 10px rgba(0,0,0,.45));animation:turPanah .9s ease-in-out infinite;transition:left .35s ease,top .35s ease}
+.tur-panah.atas{animation-name:turPanahAtas}
+@keyframes turPanah{50%{transform:translate(-50%,10px)}}@keyframes turPanahAtas{50%{transform:translate(-50%,-10px)}}
+.tur-balon{position:fixed;background:#fff;color:#0f172a;border-radius:18px;padding:14px 16px;box-shadow:0 18px 50px rgba(0,0,0,.35);transition:top .35s ease,left .35s ease;font-size:14px;line-height:1.55}
+.tur-balon.muncul{animation:turMuncul .3s ease both}@keyframes turMuncul{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}
+.tur-balon>b{display:block;font-size:15.5px;margin:2px 0 4px}.tur-balon p{margin:0 0 10px;color:#334155}
+.tur-langkah{font-size:11px;font-weight:800;letter-spacing:.5px;color:#0284c7;text-transform:uppercase}
+.tur-titik{display:flex;gap:5px;margin-bottom:10px}.tur-titik i{width:7px;height:7px;border-radius:99px;background:#cbd5e1;transition:width .2s}.tur-titik i.on{width:20px;background:#0284c7}
+.tur-aksi{display:flex;align-items:center;gap:8px}.tur-aksi span{flex:1}
+.tur-lewati{border:0;background:none;color:#64748b;font-weight:700;font-size:13px;cursor:pointer;padding:6px 2px}
+.tur-btn{border:0;border-radius:12px;padding:8px 14px;font-weight:800;font-size:13.5px;background:linear-gradient(135deg,#0284c7,#2563eb);color:#fff;cursor:pointer}
+.tur-btn.garis{background:#fff;color:#0f172a;border:1.5px solid #cbd5e1}
+.tur-tanya{display:inline-flex;align-items:center;gap:4px;border:1px solid rgba(2,132,199,.3);background:rgba(2,132,199,.08);color:#0369a1;border-radius:99px;padding:5px 11px;font-size:12px;font-weight:800;cursor:pointer}
+.tur-baru{border:1px solid rgba(2,132,199,.25);background:linear-gradient(135deg,rgba(14,165,233,.08),rgba(124,58,237,.06))}
+.tur-baru-h{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px}.tur-baru-h>div{flex:1}.tur-baru-h small{display:block;color:var(--text-secondary);font-size:12px}
+.tur-baru-ikon{font-size:22px}.tur-baru-x{border:0;background:none;font-size:16px;color:var(--text-secondary);cursor:pointer}
+.tur-baru-daftar{display:grid;gap:8px}
+.tur-baru-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:var(--card-bg,#fff);border:1px solid var(--border-soft,#e3e8ef)}
+.tur-baru-item>span{font-size:22px}.tur-baru-item>div{flex:1;min-width:0}.tur-baru-item small{display:block;color:var(--text-secondary);font-size:12px}
+@media (max-width:560px){.tur-baru-item{flex-wrap:wrap}.tur-baru-item .btn{width:100%}}
+.nl2-lama{margin:0 0 12px;padding:10px 12px;border-radius:14px;font-size:12.5px;line-height:1.6;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.35)}
+.nl2-lama .btn{margin-left:4px}

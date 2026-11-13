@@ -24,7 +24,7 @@
 <link rel="stylesheet" href="src/hp.css?v=3">
 <link rel="stylesheet" href="src/kuliah.css?v=6">
 <link rel="stylesheet" href="src/modul-baca.css?v=10">
-<link rel="stylesheet" href="src/ujian.css?v=15">
+<link rel="stylesheet" href="src/ujian.css?v=16">
 
 <script>
 // Logo gagal dimuat → coba logo bawaan; kalau bawaan pun gagal, tampilkan ikon 🎓 (bukan huruf "G").
@@ -46,7 +46,7 @@ function _logoAwal(){try{return localStorage.getItem("logoSekolahUrl")||"assets/
 <!-- pdf.js — hanya dipakai fitur "Ambil sampul dari halaman pertama PDF" di Modul Ajar (render page 1 ke canvas) -->
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script>if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";</script>
-<script src="src/api.js?v=19"></script>
+<script src="src/api.js?v=20"></script>
 <script>
 // ── Override apiPerbaikanAbsenAdmin: pakai RPC SECURITY DEFINER (bypass RLS) ──
 // Blok ini di index.html mengoverride versi dari api.js agar pasti termuat,
@@ -10334,7 +10334,12 @@ async function renderInputNilai() {
   if (!kelasId || !mapelId) { target.innerHTML = `<div class="card empty-state">Pilih mapel dan kelas.</div>`; return; }
   target.innerHTML = loadingHTML();
   try {
-    const data = await apiGetNilaiRaporByKelasMapel(kelasId, mapelId, semester, tahun);
+    const asli = await apiGetNilaiRaporByKelasMapel(kelasId, mapelId, semester, tahun);
+    // Mapel gabungan (mis. Geografi/Sosiologi/Ekonomi): nilai diisi terpisah per mapel (tab), rapor = rata-ratanya
+    const subs = typeof subMapel === "function" ? subMapel(mapelId) : [];
+    const pilihLama = window._nlSubPilih && window._nlSubPilih.mapelId === mapelId ? window._nlSubPilih.sub : null;
+    const sub = subs.length ? (pilihLama === "rekap" || subs.includes(pilihLama) ? pilihLama : subs[0]) : null;
+    const data = sub && sub !== "rekap" ? asli.map((d) => ({ ...d, nilai: d.nilai ? lensaSub(d.nilai, sub) : d.nilai })) : asli;
     const kolomUHSet = new Set(["Ulangan Harian 1"]);
     const kolomTugasSet = new Set(["Tugas 1"]);
     let adaUTS = false;
@@ -10344,7 +10349,7 @@ async function renderInputNilai() {
       (nilai.tugas || []).forEach((x) => kolomTugasSet.add(x.nama));
       if (nilai.ada_uts) adaUTS = true;
     });
-    NILAI_STATE = { kolomUH: [...kolomUHSet], kolomTugas: [...kolomTugasSet], rows: data, adaUTS, kehadiranMap: {} };
+    NILAI_STATE = { kolomUH: [...kolomUHSet], kolomTugas: [...kolomTugasSet], rows: data, adaUTS, kehadiranMap: {}, subs, sub, asli };
     await gambarTabelNilai();
   } catch (e) { console.error(e); target.innerHTML = `<div class="card empty-state">Gagal memuat nilai.</div>`; }
 }
@@ -10375,17 +10380,23 @@ async function gambarTabelNilai() {
   NILAI_STATE.dirty = false;
   const bSet = P.bobot(adaUTS) || {};
   const NAMA_K = { uh: "UH", tugas: "Tugas", uts: "UTS", uas: "UAS", kehadiran: "Hadir" };
-  const bobotChip = satu ? `<span class="nl2-chip">nilai akhir = nilai yang diisi</span>` : Object.entries(NAMA_K).filter(([k]) => bSet[k] > 0 && (k !== "uts" || adaUTS)).map(([k, l]) => `<span class="nl2-chip">${l} ${bSet[k]}%</span>`).join("");
+  const _chipB = (o) => Object.entries(NAMA_K).filter(([k]) => o[k] > 0 && (k !== "uts" || adaUTS)).map(([k, l]) => `${l} ${o[k]}%`).join(" · ");
+  const subs = NILAI_STATE.subs || [], subAktif = NILAI_STATE.sub;
+  const tabSub = subs.length ? `<div class="nl2-subtab" data-tur="nl-sub">${subs.map((s) => `<button class="${s === subAktif ? "on" : ""}" onclick="nlPilihSub('${escapeHtml(s).replace(/'/g, "")}')">${escapeHtml(s)}</button>`).join("")}<button class="rekap ${subAktif === "rekap" ? "on" : ""}" onclick="nlPilihSub('rekap')">📊 Rekap rata-rata</button><small>Mapel gabungan: nilai diisi terpisah per mapel, nilai rapor = rata-rata ketiganya.</small></div>` : "";
+  if (subAktif === "rekap") { target.innerHTML = tabSub + _nlRekapSubHTML(mapelAktif, kelasAktif); return; }
+  const nLama = subs.length ? _nlJumlahLama() : 0;
+  const pitaLama = nLama ? `<div class="nl2-lama">⚠️ <b>${nLama} santri punya nilai lama</b> yang diisi sebelum mapel ini dipisah. Nilai lama itu <b>tidak ikut dihitung</b> lagi. Bila nilai itu milik <b>${escapeHtml(subAktif)}</b>, pindahkan ke sini: <button class="btn btn-sm btn-accent" onclick="nlPindahLama()">📥 Pindahkan ke ${escapeHtml(subAktif)}</button></div>` : "";
+  const bobotChip = P.pola === "otomatis" ? `<span class="nl2-chip" title="Dideteksi per santri">🤖 ada UH/Tugas → ${_chipB(P.bobot(adaUTS, "standar"))}</span><span class="nl2-chip" title="Dideteksi per santri">🤖 hanya ujian → ${_chipB(P.bobot(adaUTS, "ujian"))}</span>` : satu ? `<span class="nl2-chip">nilai akhir = nilai yang diisi</span>` : Object.entries(NAMA_K).filter(([k]) => bSet[k] > 0 && (k !== "uts" || adaUTS)).map(([k, l]) => `<span class="nl2-chip">${l} ${bSet[k]}%</span>`).join("");
   const sel = (cls, kolom, val, label) => `<td class="nl-sel" data-label="${escapeHtml(label)}"><input type="number" inputmode="decimal" min="0" max="100" step="0.5" class="input nl-in ${cls}"${kolom ? ` data-kolom="${escapeHtml(kolom)}"` : ""} value="${val}" aria-label="${escapeHtml(label)}"/></td>`;
   const jmlUjian = (adaUTS ? 1 : 0) + (pk.uas ? 1 : 0);
   const bolehAtur = isAdmin() || (typeof isKepsek === "function" && isKepsek());
 
-  target.innerHTML = `
+  target.innerHTML = tabSub + pitaLama + `
     <div class="nl2-hero">
       <i class="nl2-orb a"></i><i class="nl2-orb b"></i>
       <div class="nl2-hero-kiri">
         <span class="nl2-pil">${P.info.ikon} Pola: ${escapeHtml(P.info.label)}${bolehAtur ? ` <button onclick="bukaPengaturanPenilaian('pola')">ubah</button>` : ""}</span>
-        <h2>${escapeHtml(mapelAktif?.nama_mapel || "-")}</h2>
+        <h2>${escapeHtml(subAktif ? subAktif : mapelAktif?.nama_mapel || "-")}${subAktif ? `<small class="nl2-induk">bagian dari ${escapeHtml(mapelAktif?.nama_mapel || "")}</small>` : ""}</h2>
         <div class="nl2-meta">🏫 ${escapeHtml(kelasAktif?.nama_kelas || "-")} · 📅 ${escapeHtml(qs("nl-semester").value)} ${escapeHtml(qs("nl-tahun").value)}</div>
         <div class="nl2-chips">${bobotChip}${NILAI_STATE.kkm ? `<span class="nl2-chip kkm">🎯 KKM ${NILAI_STATE.kkm}</span>` : ""}</div>
       </div>
@@ -10397,7 +10408,7 @@ async function gambarTabelNilai() {
         ${pk.tugas ? `<button class="nl2-btn" onclick="tambahKolomNilai('tugas')"><span>＋</span>Tugas</button>` : ""}
         ${pk.utsBisa && !pk.utsWajib ? `<label class="nl2-btn nl2-saklar"><input type="checkbox" id="nl-ada-uts" ${adaUTS ? "checked" : ""} onchange="toggleUTSNilai(this.checked)"/><i></i>UTS</label>` : ""}
         <details class="nl2-menu"><summary class="nl2-btn">📊 Excel ▾</summary><div><button onclick="unduhLegerNilai()">⬇️ Unduh leger (diisi di Excel)</button><label>⬆️ Unggah leger yang sudah diisi<input type="file" accept=".xlsx,.xls" hidden onchange="unggahLegerNilai(this)"/></label></div></details>
-        ${bolehAtur ? `<button class="nl2-btn" onclick="bukaPengaturanPenilaian()">⚖️ Bobot & KKM</button>` : ""}
+        ${bolehAtur ? `<button class="nl2-btn" onclick="bukaPengaturanPenilaian()">⚖️ Bobot & KKM</button>` : ""}<button class="tur-tanya" onclick="turUlang('input-nilai')">❓ Panduan</button>
       </div>
       <div class="nl2-simpan">
         <span id="nl-status-simpan" class="nl-status"></span>
@@ -10498,7 +10509,13 @@ function _hitungUlangBarisNilai(tr) {
     const kkm = NILAI_STATE.kkm;
     akhir.innerHTML = n ? `<span class="nl-akhir ${kkm ? (n >= kkm ? "nl-tuntas" : "nl-belum") : ""}" title="${kkm ? (n >= kkm ? "Tuntas (≥ KKM)" : "Di bawah KKM") : ""}">${n}${kkm ? (n >= kkm ? " ✓" : " ✕") : ""}</span>` : `<span class="nl-kosong">-</span>`;
   }
-  const lengkap = [...uh, ...tugas, ...uts, ...uas].every((x) => !x.kosong);
+  let lengkap = [...uh, ...tugas, ...uts, ...uas].every((x) => !x.kosong);
+  if (NILAI_STATE.pola?.pola === "otomatis") {
+    // otomatis: cukup UAS (+UTS) terisi bila guru tidak memakai UH/Tugas; kalau memakai, semua kolomnya terisi
+    const harian = [...uh, ...tugas];
+    lengkap = [...uts, ...uas].every((x) => !x.kosong) && (harian.every((x) => x.kosong) || harian.every((x) => !x.kosong));
+    if (akhir && n) akhir.insertAdjacentHTML("beforeend", `<small class="nl-det">${hasil.deteksi === "ujian" ? "UAS+Hadir" : "Standar"}</small>`);
+  }
   tr.classList.toggle("nl-lengkap", lengkap);
 }
 function _perbaruiProgresNilai() {
@@ -10568,6 +10585,52 @@ window.addEventListener("beforeunload", (e) => {
   if (STATE.currentPage === "input-nilai" && typeof NILAI_STATE !== "undefined" && NILAI_STATE?.dirty) { e.preventDefault(); e.returnValue = ""; }
 });
 
+async function nlPilihSub(sub) {
+  if (NILAI_STATE?.dirty) {
+    const ok = await konfirmasiTema("Nilai di tab ini belum disimpan. Simpan dulu sebelum pindah?", { ikon: "💾", judul: "Belum disimpan", teksYa: "Simpan & pindah", teksTidak: "Buang perubahan" });
+    window._nlSubPilih = { mapelId: qs("nl-mapel").value, sub };
+    if (ok) { await simpanSemuaNilai(); return; }
+  }
+  window._nlSubPilih = { mapelId: qs("nl-mapel").value, sub };
+  renderInputNilai();
+}
+// Nilai lama (tanpa penanda mapel) di mapel gabungan — diisi sebelum dipisah
+const _nlLamaDari = (n) => ["ulangan_harian", "tugas", "uts", "uas"].some((k) => (n?.[k] || []).some((x) => x && !x.sub && Number(x.nilai) > 0));
+function _nlJumlahLama() { return (NILAI_STATE.asli || []).filter((r) => _nlLamaDari(r.nilai)).length; }
+async function nlPindahLama() {
+  const sub = NILAI_STATE.sub; if (!sub || sub === "rekap") return;
+  const daftar = (NILAI_STATE.asli || []).filter((r) => _nlLamaDari(r.nilai));
+  if (!daftar.length) return;
+  if (!(await konfirmasiTema(`Pindahkan nilai lama ${daftar.length} santri ke mapel <b>${escapeHtml(sub)}</b>?
+Nilai mapel lain tidak berubah.`, { ikon: "📥", judul: "Pindahkan nilai lama", teksYa: "Pindahkan" }))) return;
+  try {
+    setGlobalLoading(true, "Memindahkan nilai lama…");
+    for (const r of daftar) {
+      const { id, updated_at, mapel, siswa, ...sisa } = r.nilai;
+      const row = { ...sisa };
+      ["ulangan_harian", "tugas", "uts", "uas"].forEach((k) => { row[k] = (r.nilai[k] || []).filter((x) => x && (x.sub || Number(x.nilai) > 0)).map((x) => (x.sub ? x : { ...x, sub })); });
+      row.ada_uts = row.uts.length > 0 || !!r.nilai.ada_uts;
+      await apiSimpanNilaiRapor(row);
+    }
+    toast(`📥 Nilai lama ${daftar.length} santri dipindahkan ke ${sub}`, "ok");
+  } catch (e) { toast("Gagal memindahkan: " + e.message, "err"); }
+  finally { setGlobalLoading(false); }
+  renderInputNilai();
+}
+// Rekap mapel gabungan: nilai akhir tiap mapel + rata-rata (= nilai rapor)
+function _nlRekapSubHTML(mapelAktif, kelasAktif) {
+  const subs = NILAI_STATE.subs || [], kkm = NILAI_STATE.kkm || 0;
+  const baris = (NILAI_STATE.asli || []).map(({ siswa, nilai }, i) => {
+    const hs = nilai ? hitungNilaiAkhir({ ...nilai, mapel_id: mapelAktif?.id }) : null;
+    const per = (hs && hs.perSub) || {};
+    const lama = nilai && !(hs && hs.gabungan) && hs && hs.nilaiAkhir > 0 ? hs.nilaiAkhir : null;
+    const v = hs && hs.gabungan ? hs.nilaiAkhir : null;
+    return `<tr><td class="nl-col-nama"><span class="nl-no">${i + 1}</span>${escapeHtml(siswa.nama)}</td>${subs.map((s) => `<td data-label="${escapeHtml(s)}">${per[s] && per[s].nilaiAkhir > 0 ? per[s].nilaiAkhir : '<span class="nl-kosong">-</span>'}</td>`).join("")}
+      <td data-label="Nilai rapor">${v ? `<span class="nl-akhir ${kkm ? (v >= kkm ? "nl-tuntas" : "nl-belum") : ""}">${v}</span>` : lama ? `<span class="nl-kosong" title="Nilai lama sebelum mapel ini dipisah">${lama} (lama)</span>` : '<span class="nl-kosong">-</span>'}</td></tr>`;
+  }).join("");
+  return `<div class="card nl2-wadah"><div class="nl2-rekap-kepala"><b>📊 ${escapeHtml(mapelAktif?.nama_mapel || "")} · ${escapeHtml(kelasAktif?.nama_kelas || "")}</b><small>Nilai rapor = rata-rata nilai akhir ${subs.map(escapeHtml).join(", ")} (mapel yang belum diisi tidak ikut dihitung). Ubah nilai lewat tab tiap mapel.</small></div>
+    <div style="overflow:auto"><table class="simple-table nl-tabel"><thead><tr><th class="nl-col-nama">Nama Santri</th>${subs.map((s) => `<th>${escapeHtml(s)}</th>`).join("")}<th>Nilai rapor</th></tr></thead><tbody>${baris}</tbody></table></div></div>`;
+}
 async function tambahKolomNilai(jenis) {
   const label = jenis === "uh" ? "Nama kolom Ulangan Harian baru:" : "Nama kolom Tugas baru:";
   const def   = jenis === "uh" ? `Ulangan Harian ${NILAI_STATE.kolomUH.length + 1}` : `Tugas ${NILAI_STATE.kolomTugas.length + 1}`;
@@ -10626,6 +10689,12 @@ async function simpanSemuaNilai() {
         capaian_pembelajaran: cp,
         diisi_oleh: "guru",
       };
+      if (NILAI_STATE.sub && NILAI_STATE.sub !== "rekap") {
+        const sub = NILAI_STATE.sub, asliN = (NILAI_STATE.asli || []).find((r) => r.siswa.id === siswaId)?.nilai || {};
+        ["ulangan_harian", "tugas", "uts", "uas"].forEach((k) => { row[k] = [...(asliN[k] || []).filter((x) => x && x.sub !== sub), ...(row[k] || []).map((x) => ({ ...x, sub }))]; });
+        row.ada_uts = (row.uts || []).some((x) => x.sub ? true : false) || !!asliN.ada_uts;
+        if (asliN.capaian_pembelajaran && !cp) row.capaian_pembelajaran = asliN.capaian_pembelajaran;
+      }
       await apiSimpanNilaiRapor(row);
     }
     toast(t("jurnalTersimpan"), "ok");
@@ -12049,7 +12118,7 @@ async function renderSlipTable() {
         <td style="white-space:nowrap;font-weight:700;">${escapeHtml(r.guru?.nama || "-")}</td>
         <td style="text-align:center;">${r.jp_paket_b || 0}</td>
         <td style="text-align:center;">${r.jp_paket_c || 0}</td>
-        <td style="text-align:center;">${r.jumlah_jp || 0}</td>
+        <td style="text-align:center;">${r.jumlah_jp || 0}${r.jp_mengawas ? `<div style="font-size:10px;color:var(--text-secondary);white-space:nowrap" title="Kehadiran mengawas ujian dihitung seperti JP mengajar">📋 ${r.jp_mengawas} JP mengawas</div>` : ""}</td>
         ${tampilkanTunjangan ? `<td style="white-space:nowrap;">${formatRupiah(Number(r.tunjangan_wali_kelas || 0))}</td>` : ""}
         <td style="white-space:nowrap;"><b>${formatRupiah(Number(r.total || 0))}</b></td>
       </tr>`).join("")}
@@ -12061,7 +12130,7 @@ async function renderSlipTable() {
 }
 
 function isiSlipTeks(r) {
-  return `Slip Gaji — ${r.guru?.nama}\nPeriode: ${r.bulan}/${r.tahun}\nJP Paket B: ${r.jp_paket_b || 0}\nJP Paket C: ${r.jp_paket_c || 0}\nTotal JP: ${r.jumlah_jp || 0}\nTunjangan Wali Kelas: ${formatRupiah(Number(r.tunjangan_wali_kelas || 0))}\nJumlah Honor: ${formatRupiah(Number(r.total || 0))}\n\nPKBM Al Umm Barabai`;
+  return `Slip Gaji — ${r.guru?.nama}\nPeriode: ${r.bulan}/${r.tahun}\nJP Paket B: ${r.jp_paket_b || 0}\nJP Paket C: ${r.jp_paket_c || 0}\nTotal JP: ${r.jumlah_jp || 0}${r.jp_mengawas ? ` (termasuk ${r.jp_mengawas} JP mengawas ujian)` : ""}\nTunjangan Wali Kelas: ${formatRupiah(Number(r.tunjangan_wali_kelas || 0))}\nJumlah Honor: ${formatRupiah(Number(r.total || 0))}\n\nPKBM Al Umm Barabai`;
 }
 async function kirimSlipEmail(r) {
   if (!window.EMAILJS_PUBLIC_KEY || !window.EMAILJS_SERVICE_ID || !window.EMAILJS_TEMPLATE_ID_SLIP) {
@@ -16264,20 +16333,21 @@ async function handleImportSiswa(evt) {
 <script src="src/presentasi-absen.js?v=4"></script>
 <script src="src/modul-peta.js?v=1"></script>
 <script src="src/jurnal-ekspor.js?v=3"></script>
-<script src="src/rapor-wk.js?v=3"></script>
+<script src="src/rapor-wk.js?v=4"></script>
 <script src="src/rapor-cetak.js?v=2"></script>
 <script src="src/rekap-hadir-cetak.js?v=1"></script>
 <script src="src/kelengkapan-nilai.js?v=2"></script>
 <script src="src/pengumuman.js?v=4"></script>
 <script src="src/kesimpulan.js?v=2"></script>
 <script src="src/profil.js?v=5"></script>
-<script src="src/kaldik-desain.js?v=5"></script>
-<script src="src/ujian.js?v=10"></script>
-<script src="src/ujian-editor.js?v=7"></script>
+<script src="src/kaldik-desain.js?v=6"></script>
+<script src="src/ujian.js?v=11"></script>
+<script src="src/ujian-editor.js?v=8"></script>
 <script src="src/jurnal-otomatis.js?v=6"></script>
 <script src="src/hp.js?v=5"></script>
-<script src="src/leger-nilai.js?v=1"></script>
-<script src="src/jadwal-ujian.js?v=3"></script>
-<script src="src/ujian-arsip.js?v=2"></script>
+<script src="src/leger-nilai.js?v=2"></script>
+<script src="src/jadwal-ujian.js?v=4"></script>
+<script src="src/ujian-arsip.js?v=3"></script>
+<script src="src/tur.js?v=1"></script>
 </body>
 </html>

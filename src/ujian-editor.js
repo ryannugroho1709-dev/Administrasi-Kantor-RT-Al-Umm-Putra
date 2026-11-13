@@ -107,9 +107,33 @@ function _ujeRingkas() {
   const totalSoal = UJE_JENIS.reduce((a, j) => a + m.bagian[j].soal.length, 0);
   const totalPoin = UJE_JENIS.reduce((a, j) => a + m.bagian[j].soal.length * (Number(m.bagian[j].poin) || 0), 0);
   const tanpaKunci = UJE_JENIS.reduce((a, j) => a + m.bagian[j].soal.filter((s) => !_ujeAdaKunci(j, s)).length, 0);
-  return `${totalSoal} soal · total ${totalPoin} poin (nilai otomatis diubah ke skala 100)${tanpaKunci ? ` · <b style="color:#c0392b">${tanpaKunci} soal belum ada kunci</b>` : ""}`;
+  const pas = Math.abs(totalPoin - 100) < 0.01;
+  return `${totalSoal} soal · total <b>${totalPoin}</b> poin${pas ? " ✓" : ` <button type="button" class="uje-pas100" onclick="ujePas100()" title="Sesuaikan poin tiap bagian secara seimbang supaya totalnya 100">⚖️ Jadikan 100</button>`} · nilai santri selalu otomatis skala 100${tanpaKunci ? ` · <b style="color:#c0392b">${tanpaKunci} soal belum ada kunci</b>` : ""}`;
+}
+// Total poin dijaga 100: bila tadinya pas 100 lalu soal ditambah/dihapus, poin tiap bagian disesuaikan otomatis
+function _ujeTotalPoin() { const m = UJE.m; return UJE_JENIS.reduce((a, j) => a + m.bagian[j].soal.length * (Number(m.bagian[j].poin) || 0), 0); }
+function ujePas100(diam) {
+  const m = UJE.m, isi = UJE_JENIS.filter((j) => m.bagian[j].soal.length);
+  const total = _ujeTotalPoin(); if (!total || !isi.length) return;
+  const f = 100 / total;
+  isi.forEach((j) => { m.bagian[j].poin = Math.max(0.5, Math.round((Number(m.bagian[j].poin) || 1) * f * 2) / 2); });
+  // sisa selisih (karena pembulatan 0,5): taruh di bagian yang jumlah soalnya pas
+  let sisa = Math.round((100 - _ujeTotalPoin()) * 2) / 2;
+  for (const j of isi.slice().sort((a, b) => m.bagian[a].soal.length - m.bagian[b].soal.length)) {
+    const n = m.bagian[j].soal.length, langkah = sisa / n;
+    if (sisa && Math.abs(langkah * 2 - Math.round(langkah * 2)) < 1e-9 && m.bagian[j].poin + langkah > 0) { m.bagian[j].poin += langkah; sisa = 0; break; }
+  }
+  const akhir = _ujeTotalPoin();
+  if (!diam) { toast(Math.abs(akhir - 100) < 0.01 ? "⚖️ Total poin sekarang 100" : `⚖️ Total poin ${akhir} (paling dekat ke 100) — nilai santri tetap skala 100`, "ok"); _ujeGambar(); }
+}
+function _ujeJaga100() {
+  const m = UJE.m; if (!m) return;
+  const n = UJE_JENIS.reduce((a, j) => a + m.bagian[j].soal.length, 0);
+  if (UJE._jagaM === m && n !== UJE._nSoal && UJE._pas100 && Math.abs(_ujeTotalPoin() - 100) > 0.01) { ujePas100(true); toast("⚖️ Poin disesuaikan otomatis supaya total tetap 100", "info"); }
+  UJE._jagaM = m; UJE._nSoal = n; UJE._pas100 = Math.abs(_ujeTotalPoin() - 100) < 0.01;
 }
 function _ujeGambar() {
+  _ujeJaga100();
   const m = UJE.m, tab = UJE.tab, bg = m.bagian[tab];
   // pertahankan posisi gulir saat menggambar ulang (mis. setelah menandai kunci di soal ke-20)
   const panel = qs("modal-panel"), tetap = panel && panel.querySelector(".uje") && UJE._tabTerakhir === tab, gulir = panel ? panel.scrollTop : 0;

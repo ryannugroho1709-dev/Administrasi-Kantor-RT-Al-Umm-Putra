@@ -222,6 +222,7 @@ async function bukaPengaturanPenilaian(tabAwal) {
     return `<div class="pp2-pola ${p === "khusus" ? "khusus" : ""}" data-id="${m.id}">
       <div class="pp2-pola-nama"><b>${escapeHtml(m.nama_mapel)}</b><small>${m.masuk_diniyyah ? "diniyyah" : "umum"}</small></div>
       <div class="pp2-seg">${Object.entries(POLA_NILAI).map(([k, v]) => `<label title="${escapeHtml(v.ket)}"><input type="radio" name="pp-pola-${m.id}" value="${k}" ${p === k ? "checked" : ""} onchange="this.closest('.pp2-pola').classList.toggle('khusus',this.value==='khusus')"><span>${v.ikon} ${v.label}</span></label>`).join("")}</div>
+      ${/[/(]/.test(m.nama_mapel) ? `<div class="pp2-pisah">🔀 Dipisah jadi: <input class="input pp-sub" data-id="${m.id}" value="${escapeHtml(subMapel(m.id).join(", "))}" placeholder="mis. Geografi, Sosiologi, Ekonomi (kosong = tidak dipisah)"><small>Input Nilai & jadwal ujian dipisah per mapel ini; nilai rapor = rata-ratanya.</small></div>` : ""}
       <div class="pp2-khusus">${K.map(([k, l]) => `<label>${l}<input type="number" min="0" max="100" class="input pp-kh" data-k="${k}" value="${bb[k] ?? 0}" oninput="_ppTotalKhusus(this)"></label>`).join("")}<span class="pp-total pp-kh-total"></span></div>
     </div>`;
   };
@@ -238,10 +239,10 @@ async function bukaPengaturanPenilaian(tabAwal) {
       ${grup("📚 Standar — dengan UTS", "bila guru mencentang UTS", "du", du, [["uh", "Ulangan Harian"], ["tugas", "Tugas"], ["uts", "UTS"], ["uas", "UAS"], ["kehadiran", "Kehadiran"]])}
       ${grup("📝 UAS + Kehadiran — tanpa UTS", "mapel tanpa ulangan harian & tugas", "us", us.tanpa_uts || {}, [["uas", "UAS"], ["kehadiran", "Kehadiran"]])}
       ${grup("📝 UAS + Kehadiran — dengan UTS", "mapel tanpa UH & tugas, ada UTS", "ud", us.dengan_uts || {}, [["uts", "UTS"], ["uas", "UAS"], ["kehadiran", "Kehadiran"]])}
-      <div class="pp2-catatan">⭐ <b>Satu nilai</b> (ekskul, muhadhoroh) tidak memakai bobot — nilai akhir = nilai yang diisi guru. 🎛️ <b>Atur sendiri</b> diatur di tab <b>Pola tiap mapel</b>. Komponen yang belum diisi guru tidak ikut dihitung (bobotnya dibagi ke komponen lain).</div>
+      <div class="pp2-catatan">🤖 <b>Otomatis</b> (bawaan): bila guru mengisi UH/Tugas → dipakai bobot <b>Standar</b>; bila hanya UAS/UTS (+ kehadiran) → bobot <b>UAS + Kehadiran</b>. Dideteksi per santri, jadi Antum cukup mengatur bobotnya di sini.<br>⭐ <b>Satu nilai</b> (ekskul, muhadhoroh) tidak memakai bobot — nilai akhir = nilai yang diisi guru. 🎛️ <b>Atur sendiri</b> diatur di tab <b>Pola tiap mapel</b>. Komponen yang belum diisi guru tidak ikut dihitung (bobotnya dibagi ke komponen lain).</div>
     </div>
     <div class="pp2-panel" data-p="pola">
-      <div class="pp2-alat"><span>Pilih cara menilai tiap mapel. Kolom yang tidak dipakai otomatis disembunyikan di Input Nilai.</span>
+      <div class="pp2-alat"><span>🤖 <b>Otomatis</b> = pola dipilih sendiri dari nilai yang diisi guru (cocok sementara pola belum diseragamkan). Pilih pola lain bila ingin dikunci.</span>
         <button class="btn btn-ghost btn-sm" onclick="_ppUsulPola()">✨ Ekskul & muhadhoroh = satu nilai</button></div>
       <div class="pp2-pola-daftar">${mapel.map(barisPola).join("")}</div>
     </div>
@@ -265,12 +266,12 @@ async function bukaPengaturanPenilaian(tabAwal) {
     // pola per mapel
     const modelBaru = {}; let salahKhusus = null;
     qsa(".pp2-pola").forEach((el) => {
-      const pola = el.querySelector("input[type=radio]:checked")?.value || "standar", id = el.dataset.id;
+      const pola = el.querySelector("input[type=radio]:checked")?.value || "otomatis", id = el.dataset.id;
       if (pola === "khusus") {
         const bb = {}; el.querySelectorAll(".pp-kh").forEach((i) => { bb[i.dataset.k] = Number(i.value) || 0; });
         if (jml(bb) !== 100) salahKhusus = salahKhusus || el.querySelector("b").textContent;
         modelBaru[id] = { pola, bobot: bb };
-      } else if (pola !== "standar" || _RE_SATU_NILAI.test(el.querySelector("b").textContent)) modelBaru[id] = { pola };
+      } else if (pola !== "otomatis" || _RE_SATU_NILAI.test(el.querySelector("b").textContent)) modelBaru[id] = { pola };
     });
     if (salahKhusus) { _ppTab("pola"); toast(`Bobot "Atur sendiri" ${salahKhusus} harus berjumlah 100%`, "err"); return; }
     const tb = qs("pp-ok"); tb.disabled = true; tb.textContent = "Menyimpan…";
@@ -279,7 +280,9 @@ async function bukaPengaturanPenilaian(tabAwal) {
       const kkmBaru = {};
       qsa(".pp-kkm-k").forEach((i) => { const v = i.value === "" ? null : Number(i.value); const umum = Number(qs(`.pp-kkm[data-id="${i.dataset.mapel}"]`)?.value);
         if (v != null && v >= 0 && v <= 100 && v !== umum) (kkmBaru[i.dataset.mapel] = kkmBaru[i.dataset.mapel] || {})[i.dataset.kelas] = v; });
-      const bobotBaru = { ...cfg, tanpa_uts: tuB, dengan_uts: duB, ujian_saja: usB, model_mapel: modelBaru, kkm_kelas: kkmBaru };
+      const subBaru = { ...(cfg.sub_mapel || {}) };
+      qsa(".pp-sub").forEach((i) => { subBaru[i.dataset.id] = i.value.split(/[,;]/).map((s) => s.trim()).filter(Boolean); if (subBaru[i.dataset.id].length < 2) subBaru[i.dataset.id] = []; });
+      const bobotBaru = { ...cfg, tanpa_uts: tuB, dengan_uts: duB, ujian_saja: usB, model_mapel: modelBaru, kkm_kelas: kkmBaru, sub_mapel: subBaru };
       const upd = await apiSimpanPengaturanSekolah({ bobot_nilai: bobotBaru });
       STATE.pengaturan = { ...STATE.pengaturan, bobot_nilai: upd?.bobot_nilai || bobotBaru };
       let n = 0;
@@ -289,7 +292,7 @@ async function bukaPengaturanPenilaian(tabAwal) {
         const m = LOOKUP.mapel.find((x) => x.id === i.dataset.id); if (m) m.kkm = v; n++;
       }
       const nKelas = Object.values(kkmBaru).reduce((a, o) => a + Object.keys(o).length, 0);
-      toast(`⚖️ Tersimpan · ${Object.keys(modelBaru).length} mapel berpola khusus${n ? ` · KKM ${n} mapel` : ""}${nKelas ? ` · ${nKelas} KKM per kelas` : ""}`, "ok"); closeModal();
+      toast(`⚖️ Tersimpan · ${Object.keys(modelBaru).length} mapel berpola tetap${n ? ` · KKM ${n} mapel` : ""}${nKelas ? ` · ${nKelas} KKM per kelas` : ""}`, "ok"); closeModal();
       if (STATE.currentPage === "input-nilai" && typeof renderInputNilai === "function") renderInputNilai();
       if (STATE.currentPage === "rapor") renderRaporWaliKelas();
     } catch (e) { toast("Gagal menyimpan: " + e.message, "err"); tb.disabled = false; tb.textContent = "💾 Simpan pengaturan penilaian"; }

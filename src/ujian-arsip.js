@@ -69,7 +69,9 @@ async function ujCetakSoal(bankId, denganKunci) {
 }
 
 // ── Pengumpulan soal per jadwal ujian ───────────────────────
-const _uaKunci = (mapelId, kelasId) => `${mapelId}|${kelasId}`;
+const _uaKunci = (mapelId, kelasId) => `${mapelId}|${kelasId}`; // mapelId boleh kode gabungan "id::Ekonomi"
+const _uaBase = (kode) => String(kode || "").split("::")[0];
+const _uaSub = (kode) => String(kode || "").split("::")[1] || "";
 const _uaBolehAtur = () => (typeof isAdmin === "function" && isAdmin()) || (typeof isKepsekOrTU === "function" && isKepsekOrTU());
 async function _uaMuatBank() {
   const [bank, jenis] = await Promise.all([
@@ -82,17 +84,19 @@ async function _uaMuatBank() {
 // Daftar wajib: mapel × kelas yang ada di jadwal ujian (bila sudah disusun), selain itu semua dari jadwal pelajaran
 function _uaDaftarWajib(j) {
   const dariSlot = new Set();
-  Object.entries(j.slot || {}).forEach(([k, s]) => { const [t, , kelasId] = k.split("|"); if (j.hari.includes(t) && s?.m) dariSlot.add(_uaKunci(s.m, kelasId)); });
+  Object.entries(j.slot || {}).forEach(([k, s]) => { const [t, , kelasId] = k.split("|"); if (j.hari.includes(t) && s?.m) dariSlot.add(_uaKunci(_juKode(s), kelasId)); });
   const per = new Map();
   (JU.ajar || []).forEach((a) => {
     if (!j.kelas.includes(a.kelas_id)) return;
-    const k = _uaKunci(a.mapel_id, a.kelas_id);
-    if (dariSlot.size && !dariSlot.has(k)) return;
     const m = (LOOKUP.mapel || []).find((x) => x.id === a.mapel_id); if (!m || m.tanpa_guru) return;
-    if (!per.has(k)) per.set(k, { mapelId: a.mapel_id, kelasId: a.kelas_id, guru: new Set() });
-    per.get(k).guru.add(a.guru_id);
+    (_juSubs(a.mapel_id).length ? _juSubs(a.mapel_id).map((s) => a.mapel_id + "::" + s) : [a.mapel_id]).forEach((kode) => {
+      const k = _uaKunci(kode, a.kelas_id);
+      if (dariSlot.size && !dariSlot.has(k)) return;
+      if (!per.has(k)) per.set(k, { mapelId: kode, kelasId: a.kelas_id, guru: new Set() });
+      per.get(k).guru.add(a.guru_id);
+    });
   });
-  dariSlot.forEach((k) => { if (!per.has(k)) { const [m, kl] = k.split("|"); per.set(k, { mapelId: m, kelasId: kl, guru: new Set() }); } });
+  dariSlot.forEach((k) => { if (!per.has(k)) { const [m, kl] = k.split("|"); per.set(k, { mapelId: m, kelasId: kl, guru: new Set((JU.ajar || []).filter((a) => a.mapel_id === _uaBase(m) && a.kelas_id === kl).map((a) => a.guru_id)) }); } });
   return [...per.values()];
 }
 // Bank soal Ujian Online yang cocok (mapel + tingkat kelas + jenis UTS/UAS sesuai jadwal)
@@ -100,7 +104,8 @@ function _uaBankCocok(j, mapelId, kelasId) {
   const angka = String(_juAngkaKelas(kelasId)).replace(/\D/g, "");
   const jenisPerlu = j.jenis === "uts" ? ["uts"] : j.jenis === "uas" ? ["uas"] : ["uts", "uas"];
   const batas = new Date(_juTgl(j.mulai).getTime() - 150 * 86400000).toISOString();
-  return (UA.bank || []).filter((b) => b.mapel_id === mapelId && String(b.tingkat || "").replace(/\D/g, "") === angka && (b.updated_at || "") >= batas)
+  const sub = _uaSub(mapelId).toLowerCase();
+  return (UA.bank || []).filter((b) => b.mapel_id === _uaBase(mapelId) && (!sub || String(b.judul || "").toLowerCase().includes(sub)) && String(b.tingkat || "").replace(/\D/g, "") === angka && (b.updated_at || "") >= batas)
     .filter((b) => { const x = UA.jenis?.[b.id]; const jn = x?.jenis || (typeof _ujJenisNilai === "function" ? _ujJenisNilai(b).jenis : "uh"); return jenisPerlu.includes(jn); });
 }
 function _uaStatus(j, item) {
@@ -186,7 +191,7 @@ function uaKirimWa() {
 async function uaKumpulkan(jadwalId, mapelId, kelasId) {
   const j = JU.daftar.find((x) => x.id === jadwalId); if (!j) return;
   const e = _uaEsc, atur = _uaBolehAtur(), kunci = _uaKunci(mapelId, kelasId);
-  const pengampu = (JU.ajar || []).filter((a) => a.mapel_id === mapelId && a.kelas_id === kelasId).map((a) => a.guru_id);
+  const pengampu = (JU.ajar || []).filter((a) => a.mapel_id === _uaBase(mapelId) && a.kelas_id === kelasId).map((a) => a.guru_id);
   if (!atur && !pengampu.includes(STATE.guruId)) { toast(`Soal ${_juNamaMapel(mapelId)} dikumpulkan oleh pengampunya: ${pengampu.map(_juNamaGuru).join(", ") || "-"}`, "info"); return; }
   if (!UA.bank || !UA.jadwal || UA.jadwal.id !== j.id) {
     setGlobalLoading(true, "Memuat…");
@@ -195,7 +200,7 @@ async function uaKumpulkan(jadwalId, mapelId, kelasId) {
   }
   UA.jadwal = j;
   const st = _uaStatus(j, { mapelId, kelasId }), d = UA.data[kunci] || {};
-  const kapan = Object.entries(j.slot || {}).filter(([k, s]) => s?.m === mapelId && k.split("|")[2] === kelasId && j.hari.includes(k.split("|")[0]))
+  const kapan = Object.entries(j.slot || {}).filter(([k, s]) => (_juKode(s) === mapelId || (!_uaSub(mapelId) && s?.m === mapelId)) && k.split("|")[2] === kelasId && j.hari.includes(k.split("|")[0]))
     .map(([k]) => { const [t, sid] = k.split("|"), i = j.sesi.findIndex((x) => x.id === sid); return `${_juHariPendek(t)} · Sesi ${i + 1} (${j.sesi[i]?.mulai}–${j.sesi[i]?.selesai})`; });
   const jenisSoal = j.jenis === "uts" ? "UTS" : "UAS";
   openModal(`<h3>📤 Kumpulkan soal</h3>
@@ -216,7 +221,7 @@ async function uaBuatOnline(mapelId, kelasId, jenisJadwal) {
   const tingkat = String(_juAngkaKelas(kelasId)).replace(/\D/g, "") || _juAngkaKelas(kelasId);
   showPage("ujian", "page-ujian", "menuUjian");
   for (let i = 0; i < 30 && !qs("uj-bank"); i++) await new Promise((r) => setTimeout(r, 120));
-  ujEditorBuka(null, { mapel_id: mapelId, tingkat, jenisNilai, judul: `${jenisNilai === "uts" ? "UTS" : "UAS"} ${_juNamaMapel(mapelId)} Kelas ${tingkat}` });
+  ujEditorBuka(null, { mapel_id: _uaBase(mapelId), tingkat, jenisNilai, judul: `${jenisNilai === "uts" ? "UTS" : "UAS"} ${_juNamaMapel(mapelId)} Kelas ${tingkat}` });
 }
 function uaKabariAdmin(mapelId, kelasId) {
   const j = UA.jadwal, d = UA.data[_uaKunci(mapelId, kelasId)] || {}, st = _uaStatus(j, { mapelId, kelasId });

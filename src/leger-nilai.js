@@ -37,6 +37,7 @@ async function _lgDaftarKelas(p) {
 
 // ── 1. UNDUH ─────────────────────────────────────────────────
 async function unduhLegerNilai() {
+  if (typeof subMapel === "function" && subMapel(qs("nl-mapel")?.value).length) { toast("Mapel gabungan (dipisah per mapel) belum bisa lewat leger Excel — isi langsung di tabel tiap tab mapel", "info"); if (arguments[0] && arguments[0].value !== undefined) arguments[0].value = ""; return; }
   const p = _lgPilihan();
   if (!p.mapelId) { toast("Pilih mapel dulu", "err"); return; }
   if (!window.ExcelJS) { toast("Pustaka Excel belum termuat, coba muat ulang halaman", "err"); return; }
@@ -125,6 +126,7 @@ const _lgAngka = (v) => {
 const _lgNorm = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
 async function unggahLegerNilai(input) {
+  if (typeof subMapel === "function" && subMapel(qs("nl-mapel")?.value).length) { toast("Mapel gabungan (dipisah per mapel) belum bisa lewat leger Excel — isi langsung di tabel tiap tab mapel", "info"); if (arguments[0] && arguments[0].value !== undefined) arguments[0].value = ""; return; }
   const f = input.files && input.files[0]; input.value = "";
   if (!f) return;
   if (!window.XLSX) { toast("Pustaka Excel belum termuat", "err"); return; }

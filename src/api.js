@@ -991,11 +991,14 @@ function hitungTotalKomponen(arr) {
 }
 // ── POLA PENILAIAN PER MAPEL (Pengaturan Penilaian) ──
 // bobot_nilai.model_mapel = { mapelId: { pola, bobot? } }
+//   otomatis: (bawaan) dideteksi per santri dari nilai yang diisi guru — ada UH/Tugas → bobot Standar,
+//             hanya UAS/UTS (+ Kehadiran) → bobot "UAS + Kehadiran"
 //   standar : UH + Tugas (+UTS) + UAS + Kehadiran, bobot umum
 //   ujian   : hanya ujian (UTS/UAS) + Kehadiran — guru tidak mengadakan UH & tugas
 //   satu    : satu nilai saja (ekskul, muhadhoroh, …) — nilai akhir = nilai itu
 //   khusus  : bobot sendiri per komponen (0 = komponen tidak dipakai)
 const POLA_NILAI = {
+  otomatis: { label: "Otomatis", ket: "dideteksi dari nilai yang diisi guru", ikon: "🤖" },
   standar: { label: "Standar", ket: "UH + Tugas + UAS + Kehadiran", ikon: "📚" },
   ujian: { label: "UAS + Kehadiran", ket: "tanpa ulangan harian & tugas", ikon: "📝" },
   satu: { label: "Satu nilai", ket: "ekskul, muhadhoroh, dsb.", ikon: "⭐" },
@@ -1011,13 +1014,15 @@ function polaNilai(mapelId) {
   let pola = m?.pola;
   if (!pola) { // belum diatur: ekskul & muhadhoroh otomatis satu nilai
     const nama = (typeof LOOKUP !== "undefined" ? (LOOKUP.mapel || []).find((x) => x.id === mapelId)?.nama_mapel : "") || "";
-    pola = _RE_SATU_NILAI.test(nama) ? "satu" : "standar";
+    pola = _RE_SATU_NILAI.test(nama) ? "satu" : "otomatis";
   }
   if (pola === "khusus" && !m?.bobot) pola = "standar";
-  const bobot = (adaUTS) => {
+  // deteksi (khusus pola otomatis): "standar" bila ada UH/Tugas, "ujian" bila hanya UAS/UTS (+Hadir)
+  const bobot = (adaUTS, deteksi) => {
     if (pola === "satu") return { uas: 100 };
     if (pola === "khusus") return m.bobot;
-    const sumber = pola === "ujian" ? (cfg.ujian_saja || BOBOT_UJIAN_BAWAAN) : { tanpa_uts: cfg.tanpa_uts || BOBOT_STANDAR_BAWAAN.tanpa_uts, dengan_uts: cfg.dengan_uts || BOBOT_STANDAR_BAWAAN.dengan_uts };
+    const jenis = pola === "otomatis" ? (deteksi || "standar") : pola;
+    const sumber = jenis === "ujian" ? (cfg.ujian_saja || BOBOT_UJIAN_BAWAAN) : { tanpa_uts: cfg.tanpa_uts || BOBOT_STANDAR_BAWAAN.tanpa_uts, dengan_uts: cfg.dengan_uts || BOBOT_STANDAR_BAWAAN.dengan_uts };
     return adaUTS ? sumber.dengan_uts : sumber.tanpa_uts;
   };
   // komponen yang ditampilkan di Input Nilai
@@ -1027,8 +1032,38 @@ function polaNilai(mapelId) {
     : { uh: true, tugas: true, uas: true, kehadiran: true, utsBisa: true };
   return { pola, bobot, pakai, info: POLA_NILAI[pola] };
 }
+// Mapel GABUNGAN (mis. "Geografi/Sosiologi/Ekonomi"): nilai tiap mapel disimpan di baris yang sama dengan
+// penanda {sub:"Ekonomi"} pada tiap isian UH/Tugas/UTS/UAS. Nilai rapor = rata-rata nilai akhir tiap mapel.
+const _SINGKATAN_SUB = { ek: "Ekonomi", eko: "Ekonomi", ekon: "Ekonomi", geo: "Geografi", sos: "Sosiologi", sosio: "Sosiologi", bio: "Biologi", fis: "Fisika", kim: "Kimia", sej: "Sejarah" };
+function subMapel(mapelId) {
+  const _state = (typeof STATE !== "undefined" ? STATE : window.STATE);
+  const atur = (_state?.pengaturan?.bobot_nilai?.sub_mapel || {})[mapelId];
+  if (Array.isArray(atur)) return atur.filter(Boolean);
+  const nama = (typeof LOOKUP !== "undefined" ? (LOOKUP.mapel || []).find((x) => x.id === mapelId)?.nama_mapel : "") || "";
+  if (!nama.includes("/")) return [];
+  const bagian = nama.split("/").map((s) => s.trim()).filter(Boolean).map((s) => _SINGKATAN_SUB[s.toLowerCase()] || s);
+  return bagian.length >= 2 ? bagian : [];
+}
+const _KOMP_NILAI = ["ulangan_harian", "tugas", "uts", "uas"];
+const _adaSub = (row) => _KOMP_NILAI.some((k) => (row?.[k] || []).some((x) => x && x.sub));
+// Ambil isian satu mapel (sub) saja dari baris gabungan, tanpa penanda sub
+function lensaSub(row, sub) {
+  if (!row) return row;
+  const o = { ...row };
+  _KOMP_NILAI.forEach((k) => { o[k] = (row[k] || []).filter((x) => x && x.sub === sub).map(({ sub: _s, ...x }) => x); });
+  o.ada_uts = o.uts.length > 0;
+  return o;
+}
 function hitungNilaiAkhir(nilaiRow) {
   if (!nilaiRow) return null;
+  if (_adaSub(nilaiRow)) {
+    const subs = [...new Set(_KOMP_NILAI.flatMap((k) => (nilaiRow[k] || []).map((x) => x && x.sub).filter(Boolean)))];
+    const perSub = {};
+    subs.forEach((s) => { perSub[s] = hitungNilaiAkhir(lensaSub(nilaiRow, s)); });
+    const ada = subs.filter((s) => perSub[s] && perSub[s].nilaiAkhir > 0);
+    const rata = (key) => { const v = ada.map((s) => perSub[s][key]).filter((x) => x > 0); return v.length ? Math.round((v.reduce((a, b) => a + b, 0) / v.length) * 10) / 10 : 0; };
+    return { rataUH: rata("rataUH"), rataTugas: rata("rataTugas"), rataUTS: rata("rataUTS") || null, rataUAS: rata("rataUAS"), nilaiAkhir: rata("nilaiAkhir"), perSub, gabungan: true };
+  }
   const rataUH = hitungTotalKomponen(nilaiRow.ulangan_harian);
   const rataTugas = hitungTotalKomponen(nilaiRow.tugas);
   const pola = nilaiRow.mapel_id ? polaNilai(nilaiRow.mapel_id) : null;
@@ -1045,7 +1080,8 @@ function hitungNilaiAkhir(nilaiRow) {
   const _state = (typeof STATE !== "undefined" ? STATE : window.STATE);
   const bobotConfig = _state?.pengaturan?.bobot_nilai;
   const adaUTS = rataUTS !== null;
-  const b = pola ? pola.bobot(adaUTS) : bobotConfig ? (adaUTS ? bobotConfig.dengan_uts : bobotConfig.tanpa_uts) : null;
+  const deteksi = pola && pola.pola === "otomatis" ? (rataUH > 0 || rataTugas > 0 ? "standar" : "ujian") : null;
+  const b = pola ? pola.bobot(adaUTS, deteksi) : bobotConfig ? (adaUTS ? bobotConfig.dengan_uts : bobotConfig.tanpa_uts) : null;
   let nilaiAkhir;
   if (b) {
     let total = 0, totalBobot = 0;
@@ -1061,7 +1097,7 @@ function hitungNilaiAkhir(nilaiRow) {
     const valid = komponen.filter((v) => v > 0);
     nilaiAkhir = valid.length ? Math.round((valid.reduce((a, b) => a + b, 0) / valid.length) * 10) / 10 : 0;
   }
-  return { rataUH, rataTugas, rataUTS, rataUAS, nilaiAkhir };
+  return { rataUH, rataTugas, rataUTS, rataUAS, nilaiAkhir, deteksi };
 }
 
 // ── REKAP KEHADIRAN -> NILAI KEHADIRAN OTOMATIS ──
