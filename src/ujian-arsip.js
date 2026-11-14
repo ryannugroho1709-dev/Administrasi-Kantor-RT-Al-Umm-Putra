@@ -204,9 +204,18 @@ function uaKirimWa() {
   baris.forEach((x) => [...(x.guru.size ? x.guru : ["-"])].forEach((g) => { if (!per.has(g)) per.set(g, []); per.get(g).push(x); }));
   const urut = [...per.entries()].map(([g, xs]) => ({ g, xs: xs.sort((a, b) => (a.st.length ? 1 : 0) - (b.st.length ? 1 : 0) || _juNamaMapel(a.mapelId).localeCompare(_juNamaMapel(b.mapelId), "id") || String(_juAngkaKelas(a.kelasId)).localeCompare(String(_juAngkaKelas(b.kelasId)), "id", { numeric: true })), sisa: xs.filter((x) => !x.st.length).length }))
     .sort((a, b) => (b.sisa > 0) - (a.sisa > 0) || _juNamaGuru(a.g).localeCompare(_juNamaGuru(b.g), "id"));
-  const daftar = urut.map((o, i) => `${i + 1}. *${o.g === "-" ? "Belum ada pengampu" : _juNamaGuru(o.g)}*${o.g === "-" ? "" : tag(o.g)} — ${o.sisa ? `${o.xs.length - o.sisa}/${o.xs.length} terkumpul` : "✅ lengkap"}\n${o.xs.map((x) => x.st.length ? `     ✅ ${_juNamaMapel(x.mapelId)} - Kelas ${_juAngkaKelas(x.kelasId)} _(sudah)_` : `     ⏳ ${_juNamaMapel(x.mapelId)} - Kelas ${_juAngkaKelas(x.kelasId)} *(belum)*`).join("\n")}`).join("\n\n");
+  // Ringkas: mapel yang sama digabung → "Aqidah (9, 10, 11)"; rincian tiap ustadz dalam blok kutipan WA (> …)
+  const ringkas = (xs) => { const m = new Map(); xs.forEach((x) => { const k = _juNamaMapel(x.mapelId); if (!m.has(k)) m.set(k, []); m.get(k).push(_juAngkaKelas(x.kelasId)); });
+    return [...m.entries()].map(([mp, kl]) => `${mp} (${kl.sort((a, b) => String(a).localeCompare(String(b), "id", { numeric: true })).join(", ")})`).join(", "); };
+  const nama = (g) => (g === "-" ? "Belum ada pengampu" : _juNamaGuru(g));
+  const belumL = urut.filter((o) => o.sisa), lengkap = urut.filter((o) => !o.sisa);
+  const blokBelum = belumL.map((o, i) => {
+    const sudah = o.xs.filter((x) => x.st.length), belum = o.xs.filter((x) => !x.st.length);
+    return `*${i + 1}. ${nama(o.g)}*${o.g === "-" ? "" : tag(o.g)}\n> ⏳ *Belum ${belum.length}:* ${ringkas(belum)}${sudah.length ? `\n> ✅ _Sudah ${sudah.length}:_ ${ringkas(sudah)}` : ""}`;
+  }).join("\n\n");
+  const blokLengkap = lengkap.length ? `*SUDAH LENGKAP* ✅\n${lengkap.map((o) => `${nama(o.g)} (${o.xs.length}/${o.xs.length})`).join(", ")}` : "";
   const total = baris.length, n = baris.filter((x) => x.st.length).length, b = _uaBatas(j);
-  const teks = `✳️ *PENGUMPULAN SOAL ${String(j.judul).toUpperCase()}*\n\nAssalamu'alaikum warahmatullahi wabarakatuh.\nRekap pengumpulan soal: *${n}/${total}* mapel-kelas sudah terkumpul.\n⏳ Batas pengumpulan: *${_juHariPanjang(b)}* (${_uaLabelH(b).toUpperCase()})\n\n${daftar || "Alhamdulillah, semua sudah ✅"}\n\nSoal bisa dibuat langsung di menu *Ujian Online* (otomatis tercatat), diunggah (Word/PDF) di menu *Jadwal Ujian → Pengumpulan Soal*, atau diserahkan kertasnya ke admin.\n${location.origin}${location.pathname}?buka=jadwalujian\n\nJazakumullahu khairan.`;
+  const teks = `*PENGUMPULAN SOAL*\n*${String(j.judul).toUpperCase()}*\n\nAssalamu'alaikum warahmatullahi wabarakatuh.\n\n📥 Terkumpul: *${n} dari ${total}* mapel-kelas\n⏳ Batas: *${_juHariPanjang(b)}* (*${_uaLabelH(b).toUpperCase()}*)\n\n${belumL.length ? `*BELUM LENGKAP* (${belumL.length} ustadz)\n\n${blokBelum}` : "Alhamdulillah, semua soal sudah terkumpul ✅"}${blokLengkap ? `\n\n${blokLengkap}` : ""}\n\n_Soal bisa dibuat di menu Ujian Online (otomatis tercatat), diunggah Word/PDF di menu Jadwal Ujian, atau diserahkan kertasnya ke admin._\n${location.origin}${location.pathname}?buka=jadwalujian\n\nJazakumullahu khairan.`;
   window.open("https://wa.me/?text=" + encodeURIComponent(teks), "_blank", "noopener");
 }
 
