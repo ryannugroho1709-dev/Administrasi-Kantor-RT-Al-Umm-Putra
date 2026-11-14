@@ -45,9 +45,11 @@ function _bopHitung() {
   });
   const kebutuhan = bulan.reduce((s, x) => s + x.rencana, 0);
   const terealisasi = realisasi.filter((r) => idAktif.has(r.item_id)).reduce((s, r) => s + Number(r.nominal || 0), 0);
-  const dana = (BOPX.rencana?.dana || []).reduce((s, d) => s + (Number(d.nominal) || 0), 0);
+  const cair = (BOPX.rencana?.dana || []).reduce((s, d) => s + (Number(d.nominal) || 0), 0);
+  const rumus = _bopDanaRumus(BOPX.rencana?.rumus);
+  const dana = rumus ? rumus.bersih : cair; // dana dari jumlah santri × satuan biaya; bila belum diatur → total pencairan
   const status = (it, b) => { const n = ang[it.id + "_" + b] || 0, r = real[it.id + "_" + b] || 0; return { n, r, lunas: !!lunasM[it.id + "_" + b] || (n > 0 && r >= n), sebagian: r > 0 && r < n }; };
-  return { ang, real, bulan, kebutuhan, terealisasi, dana, selisih: dana - kebutuhan, status };
+  return { ang, real, bulan, kebutuhan, terealisasi, dana, cair, rumus, selisih: dana - kebutuhan, status };
 }
 function _bopPolaItem(it, H) {
   const p = BOPX.rencana?.pola?.[it.id];
@@ -115,7 +117,7 @@ function _bopGambar() {
       <div class="bx-tahun"><button onclick="bopGeserTahun(-1)" aria-label="Tahun sebelumnya">‹</button><b>${th}</b><button onclick="bopGeserTahun(1)" aria-label="Tahun berikutnya">›</button></div>
     </div>
     <div class="bx-kpi">
-      <button class="bx-k" onclick="bopAturDana()"><span>🏦 Dana BOP</span><b>${_bopRp(H.dana)}</b><small>${(BOPX.rencana.dana || []).length ? `${BOPX.rencana.dana.length} tahap · ubah` : "ketuk untuk mengisi"}</small></button>
+      <button class="bx-k" onclick="bopAturDana()"><span>🏦 Dana BOP</span><b>${_bopRp(H.dana)}</b><small>${H.rumus ? `B ${BOPX.rencana.rumus.siswaB} + C ${BOPX.rencana.rumus.siswaC} santri${H.rumus.pajak || H.rumus.potong ? " · setelah potongan" : ""}${H.cair ? ` · cair ${_bopRp(H.cair)}` : ""}` : (BOPX.rencana.dana || []).length ? `${BOPX.rencana.dana.length} tahap · ubah` : "ketuk untuk menghitung"}</small>${(() => { const r2 = _bopDanaRumus(BOPX.rencanaSemua?.[String(th + 1)]?.rumus); return r2 ? `<small class="bx-depan">🔮 Perkiraan ${th + 1}: ${_bopRp(r2.bersih)}</small>` : ""; })()}</button>
       <div class="bx-k"><span>🧾 Kebutuhan (rencana)</span><b>${_bopRp(H.kebutuhan)}</b><small>${_BOP_CACHE.items.length} item anggaran</small></div>
       <div class="bx-k st-${st.k}"><span>⚖️ Selisih dana</span><b>${st.ikon} ${st.t}</b><small>${H.dana ? (H.selisih < 0 ? "anggaran melebihi dana" : H.selisih > 0 ? "dana belum terpakai rencana" : "rencana = dana") : "isi dana BOP dulu"}</small></div>
       <div class="bx-k"><span>✅ Terealisasi</span><b>${_bopRp(H.terealisasi)}</b><div class="bx-bar"><i style="width:${persenReal}%"></i></div><small>${persenReal}% dari ${H.dana ? "dana" : "rencana"} · sisa ${_bopRp((H.dana || H.kebutuhan) - H.terealisasi)}</small></div>
@@ -218,19 +220,87 @@ function _bopHtmlTahun(H) {
     <div class="bx-catatan">Ketuk sel bulan untuk mengubah nominal, mencatat belanja, atau menandai lunas. Sel hijau = sudah lunas.</div>`;
 }
 
-// ── DANA BOP (per tahap) ──
-function bopAturDana() {
+// ── DANA BOP: dihitung dari jumlah santri × satuan biaya (Paket B = kelas 7–9, Paket C = kelas 10–12) ──
+// Contoh: Paket B 56 × 1.500.000 = 84.000.000; Paket C 25 × 1.800.000 = 45.000.000 → total 129.000.000 (sebelum pajak).
+const _BOP_SATUAN = { B: 1500000, C: 1800000 };
+function _bopDanaRumus(r) {
+  if (!r) return null;
+  const B = (Number(r.siswaB) || 0) * (Number(r.satuanB) || 0), C = (Number(r.siswaC) || 0) * (Number(r.satuanC) || 0), bruto = B + C;
+  const pajak = Math.round((bruto * (Number(r.pajak) || 0)) / 100), potong = Number(r.potongan) || 0;
+  return { B, C, bruto, pajak, potong, bersih: bruto - pajak - potong };
+}
+async function _bopJumlahSantri() {
+  const per = {}; // angka kelas → jumlah santri aktif
+  try { (await apiGetAllSiswa(null)).forEach((s) => { const n = parseInt(String(s.kelas?.nama_kelas || "").match(/\d+/)?.[0] || "0", 10); if (n) per[n] = (per[n] || 0) + 1; }); } catch (e) { console.warn(e); }
+  return { per, B: [7, 8, 9].reduce((a, k) => a + (per[k] || 0), 0), C: [10, 11, 12].reduce((a, k) => a + (per[k] || 0), 0) };
+}
+async function bopAturDana() {
+  setGlobalLoading(true, "Menghitung jumlah santri…");
+  const js = await _bopJumlahSantri(); setGlobalLoading(false);
+  BOPX.santri = js;
+  const r = BOPX.rencana.rumus || { satuanB: _BOP_SATUAN.B, satuanC: _BOP_SATUAN.C, siswaB: js.B, siswaC: js.C, pajak: 0, potongan: 0 };
   const d = (BOPX.rencana.dana || []).length ? BOPX.rencana.dana : [{ label: "Tahap 1", nominal: "", tanggal: "" }, { label: "Tahap 2", nominal: "", tanggal: "" }];
-  openModal(`<h3>🏦 Dana BOP ${STATE.bopDataTahun}</h3>
-    <div class="bx-sub">Isi dana yang diterima (atau yang akan cair) per tahap. Dipakai untuk membandingkan dengan total kebutuhan.</div>
-    <div id="bx-dana">${d.map((x, i) => _bopBarisDana(x, i)).join("")}</div>
-    <button type="button" class="kb-tambah" onclick="qs('bx-dana').insertAdjacentHTML('beforeend',_bopBarisDana({label:'Tahap '+(qsa('.bx-dana-baris').length+1)},qsa('.bx-dana-baris').length))">＋ Tambah tahap</button>
-    <button class="btn btn-accent" style="width:100%;margin-top:12px" onclick="bopSimpanDana()">💾 Simpan dana BOP</button>`);
+  const angka = (id, v, cls = "") => `<input id="${id}" class="input ${cls}" inputmode="numeric" value="${v ? formatRibuan(v) : v === 0 ? "0" : ""}" oninput="this.value=formatRibuan(this.value);_bopSegarkanDana()">`;
+  const per = js.per;
+  openModal(`<div class="bx-dana">
+    <h3>🏦 Dana BOP ${STATE.bopDataTahun}</h3>
+    <div class="bx-sub">Dana BOP dihitung dari <b>jumlah santri × satuan biaya</b> per paket. Totalnya menjadi anggaran yang dicocokkan dengan Rancangan Anggaran.</div>
+    <div class="bx-rumus">
+      <div class="bx-rumus-baris"><b>Paket B</b><small>kelas 7–9</small>${angka("bd-sb", r.siswaB)}<span>santri ×</span>${angka("bd-rb", r.satuanB)}<span>=</span><output id="bd-hb"></output></div>
+      <div class="bx-rumus-baris"><b>Paket C</b><small>kelas 10–12</small>${angka("bd-sc", r.siswaC)}<span>santri ×</span>${angka("bd-rc", r.satuanC)}<span>=</span><output id="bd-hc"></output></div>
+      <div class="bx-rumus-total"><span>Total sebelum pajak</span><output id="bd-bruto"></output></div>
+      <div class="bx-rumus-potong"><label>Potongan pajak <span><input id="bd-pajak" class="input" inputmode="decimal" value="${r.pajak || 0}" oninput="_bopSegarkanDana()"> %</span></label><output id="bd-pajak-rp"></output></div>
+      <div class="bx-rumus-potong"><label>Potongan lain (Rp)</label>${angka("bd-potong", r.potongan || 0)}</div>
+      <div class="bx-rumus-total bersih"><span>Dana BOP dipakai untuk anggaran</span><output id="bd-bersih"></output></div>
+    </div>
+    <div class="bx-santri-ket">📊 Data Siswa saat ini: ${[7, 8, 9, 10, 11, 12].filter((k) => per[k]).map((k) => `kelas ${k}: <b>${per[k]}</b>`).join(" · ") || "belum ada data"} → Paket B <b>${js.B}</b>, Paket C <b>${js.C}</b>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="qs('bd-sb').value=${js.B};qs('bd-sc').value=${js.C};_bopSegarkanDana()">↻ Pakai jumlah ini</button></div>
+    <details class="bx-lipat" ${STATE.bopDataTahun >= Number(tanggalISO().slice(0, 4)) ? "open" : ""}><summary>🔮 Perkiraan BOP tahun ${STATE.bopDataTahun + 1}</summary>
+      <div class="bx-sub" style="margin-top:6px">Santri naik kelas: kelas 7–8 → Paket B, kelas 10–11 → Paket C (kelas 9 & 12 lulus). Isi perkiraan santri baru.</div>
+      <div class="bx-rumus-baris"><b>Santri baru kelas 7</b>${angka("bd-baru7", per[7] || 0)}<b>Santri baru / lanjut kelas 10</b>${angka("bd-baru10", per[10] || 0)}</div>
+      <div class="bx-proyeksi" id="bd-proyeksi"></div>
+      <button type="button" class="btn btn-outline btn-sm" onclick="bopSimpanProyeksi()">📌 Simpan sebagai rencana dana ${STATE.bopDataTahun + 1}</button>
+    </details>
+    <details class="bx-lipat"><summary>💵 Catatan pencairan per tahap (opsional)</summary>
+      <div class="bx-sub" style="margin-top:6px">Untuk mencatat dana yang sudah benar-benar cair.</div>
+      <div id="bx-dana">${d.map((x, i) => _bopBarisDana(x, i)).join("")}</div>
+      <button type="button" class="kb-tambah" onclick="qs('bx-dana').insertAdjacentHTML('beforeend',_bopBarisDana({label:'Tahap '+(qsa('.bx-dana-baris').length+1)},qsa('.bx-dana-baris').length))">＋ Tambah tahap</button>
+    </details>
+    <button class="btn btn-accent" style="width:100%;margin-top:12px" onclick="bopSimpanDana()">💾 Simpan dana BOP</button>
+  </div>`, { lebar: true });
+  _bopSegarkanDana();
+}
+const _bdAngka = (id) => Number(String(qs(id)?.value || "").replace(/\D/g, "")) || 0;
+function _bopBacaRumus() {
+  return { siswaB: _bdAngka("bd-sb"), satuanB: _bdAngka("bd-rb"), siswaC: _bdAngka("bd-sc"), satuanC: _bdAngka("bd-rc"), pajak: Number(String(qs("bd-pajak")?.value || "0").replace(",", ".")) || 0, potongan: _bdAngka("bd-potong") };
+}
+function _bopSegarkanDana() {
+  const r = _bopBacaRumus(), h = _bopDanaRumus(r);
+  qs("bd-hb").textContent = _bopRp(h.B); qs("bd-hc").textContent = _bopRp(h.C); qs("bd-bruto").textContent = _bopRp(h.bruto);
+  qs("bd-pajak-rp").textContent = h.pajak ? "− " + _bopRp(h.pajak) : ""; qs("bd-bersih").textContent = _bopRp(h.bersih);
+  const js = BOPX.santri || { per: {} }, per = js.per;
+  const B2 = (per[7] || 0) + (per[8] || 0) + _bdAngka("bd-baru7"), C2 = (per[10] || 0) + (per[11] || 0) + _bdAngka("bd-baru10");
+  const h2 = _bopDanaRumus({ ...r, siswaB: B2, siswaC: C2 });
+  BOPX.proyeksi = { ...r, siswaB: B2, siswaC: C2 };
+  const el = qs("bd-proyeksi"); if (el) el.innerHTML = `Paket B <b>${B2}</b> × ${_bopRp(r.satuanB)} = ${_bopRp(h2.B)}<br>Paket C <b>${C2}</b> × ${_bopRp(r.satuanC)} = ${_bopRp(h2.C)}<br>Perkiraan total ${STATE.bopDataTahun + 1}: <b>${_bopRp(h2.bruto)}</b>${h2.pajak || h2.potong ? ` · setelah potongan <b>${_bopRp(h2.bersih)}</b>` : ""} <span class="${h2.bruto >= h.bruto ? "naik" : "turun"}">${h2.bruto >= h.bruto ? "▲" : "▼"} ${_bopRp(Math.abs(h2.bruto - h.bruto))} dari ${STATE.bopDataTahun}</span>`;
 }
 function _bopBarisDana(x, i) { return `<div class="bx-dana-baris"><input class="input" data-k="label" value="${escapeHtml(x.label || "")}" placeholder="Tahap"><input class="input" data-k="nominal" inputmode="numeric" value="${x.nominal ? formatRibuan(x.nominal) : ""}" placeholder="Nominal" oninput="this.value=formatRibuan(this.value)"><input class="input" type="date" data-k="tanggal" value="${x.tanggal || ""}" title="Tanggal cair (opsional)"><button type="button" class="kb-hapus" onclick="this.parentElement.remove()">✕</button></div>`; }
 async function bopSimpanDana() {
-  BOPX.rencana.dana = qsa(".bx-dana-baris").map((r) => ({ label: r.querySelector("[data-k=label]").value.trim(), nominal: Number(r.querySelector("[data-k=nominal]").value.replace(/\D/g, "")) || 0, tanggal: r.querySelector("[data-k=tanggal]").value || null })).filter((x) => x.nominal > 0);
-  try { await _bopSimpanRencana(); closeModal(); toast("🏦 Dana BOP tersimpan", "ok"); _bopGambar(); } catch (e) { toast("Gagal menyimpan: " + e.message, "err"); }
+  const r = _bopBacaRumus();
+  if (!(r.siswaB * r.satuanB + r.siswaC * r.satuanC)) { toast("Isi jumlah santri & satuan biaya dulu", "err"); return; }
+  BOPX.rencana.rumus = r;
+  BOPX.rencana.dana = qsa(".bx-dana-baris").map((x) => ({ label: x.querySelector("[data-k=label]").value.trim(), nominal: Number(x.querySelector("[data-k=nominal]").value.replace(/\D/g, "")) || 0, tanggal: x.querySelector("[data-k=tanggal]").value || null })).filter((x) => x.nominal > 0);
+  try { await _bopSimpanRencana(); closeModal(); toast(`🏦 Dana BOP ${STATE.bopDataTahun}: ${_bopRp(_bopDanaRumus(r).bersih)}`, "ok"); _bopGambar(); } catch (e) { toast("Gagal menyimpan: " + e.message, "err"); }
+}
+async function bopSimpanProyeksi() {
+  const p = BOPX.proyeksi; if (!p) return;
+  const th = String(STATE.bopDataTahun + 1);
+  try {
+    const semua = (await _kvAmbil("bop:rencana", {}).catch(() => ({}))) || {};
+    semua[th] = { dana: [], pola: {}, ...(semua[th] || {}), rumus: p };
+    await _kvSimpan("bop:rencana", semua); BOPX.rencanaSemua = semua;
+    toast(`📌 Perkiraan dana BOP ${th} tersimpan: ${_bopRp(_bopDanaRumus(p).bersih)}`, "ok");
+  } catch (e) { toast("Gagal: " + e.message, "err"); }
 }
 
 // ── TAMBAH ITEM (bisa banyak sekaligus) & ATUR POLA ──
@@ -346,7 +416,8 @@ async function bopEksporAnggaranPDF() {
         <td style="padding:4px 12px 4px 0">Dana BOP diterima</td><td style="padding:4px 18px 4px 0;font-weight:800">${_bopRp(H.dana)}</td>
         <td style="padding:4px 12px 4px 0">Total kebutuhan</td><td style="padding:4px 18px 4px 0;font-weight:800">${_bopRp(H.kebutuhan)}</td>
         <td style="padding:4px 12px 4px 0">Selisih</td><td style="padding:4px 0;font-weight:800">${st}</td></tr>
-        ${(BOPX.rencana.dana || []).length ? `<tr><td colspan="6" style="padding:2px 0;color:#5B6470;font-size:8.5pt">Rincian dana: ${BOPX.rencana.dana.map((d) => `${escapeHtml(d.label)} ${_bopRp(d.nominal)}${d.tanggal ? ` (${d.tanggal})` : ""}`).join(" · ")}</td></tr>` : ""}</table>
+        ${H.rumus ? `<tr><td colspan="6" style="padding:2px 0;color:#1F2328;font-size:9pt">Perhitungan dana: Paket B ${BOPX.rencana.rumus.siswaB} santri × ${_bopRp(BOPX.rencana.rumus.satuanB)} = ${_bopRp(H.rumus.B)} · Paket C ${BOPX.rencana.rumus.siswaC} santri × ${_bopRp(BOPX.rencana.rumus.satuanC)} = ${_bopRp(H.rumus.C)} · Total ${_bopRp(H.rumus.bruto)}${H.rumus.pajak ? ` − pajak ${BOPX.rencana.rumus.pajak}% (${_bopRp(H.rumus.pajak)})` : ""}${H.rumus.potong ? ` − potongan ${_bopRp(H.rumus.potong)}` : ""}</td></tr>` : ""}
+        ${(BOPX.rencana.dana || []).length ? `<tr><td colspan="6" style="padding:2px 0;color:#5B6470;font-size:8.5pt">Rincian dana:${BOPX.rencana.dana.map((d) => `${escapeHtml(d.label)} ${_bopRp(d.nominal)}${d.tanggal ? ` (${d.tanggal})` : ""}`).join(" · ")}</td></tr>` : ""}</table>
       <table style="width:100%;border-collapse:collapse;table-layout:fixed">
         <colgroup><col style="width:2.6%"><col style="width:12.4%"><col style="width:6.5%">${Array(12).fill('<col style="width:5.9%">').join("")}<col style="width:7.7%"></colgroup>
         <thead><tr style="background:#E3EAE6;color:#1B2A41">${["No", "Uraian / Item", "Pola", ...Array.from({ length: 12 }, (_, k) => _bopBlnPendek(k + 1)), "Jumlah (Rp)"].map((h, k) => `<th style="${td}font-weight:800;text-align:${k === 1 ? "left" : "center"}">${h}</th>`).join("")}</tr></thead>
@@ -383,6 +454,7 @@ async function bopUnduhTemplateExcel() {
     const st = !H.dana ? "Dana belum diisi" : H.selisih < 0 ? `KURANG ${_bopRp(-H.selisih)}` : H.selisih > 0 ? `LEBIH ${_bopRp(H.selisih)}` : "PAS";
     ws.getRow(7).values = ["", "Dana BOP", H.dana, "", "Total kebutuhan", "", H.kebutuhan, "", "Selisih", "", st];
     [3, 7].forEach((c) => { ws.getCell(7, c).numFmt = '"Rp "#,##0'; ws.getCell(7, c).font = { bold: true }; }); ws.getCell(7, 11).font = { bold: true };
+    if (H.rumus) { const r = BOPX.rencana.rumus; ws.mergeCells(8, 2, 8, N); Object.assign(ws.getCell(8, 2), { value: `Perhitungan dana: Paket B ${r.siswaB} santri × ${_bopRp(r.satuanB)} = ${_bopRp(H.rumus.B)} · Paket C ${r.siswaC} santri × ${_bopRp(r.satuanC)} = ${_bopRp(H.rumus.C)} · Total ${_bopRp(H.rumus.bruto)}${H.rumus.pajak ? ` − pajak ${r.pajak}%` : ""}${H.rumus.potong ? ` − potongan ${_bopRp(H.rumus.potong)}` : ""}`, font: { size: 9, color: { argb: "FF5B6470" } } }); }
     try {
       const logoUrl = p.logo_kiri_url || urlLogoSekolah();
       const buf = await (await fetch(logoUrl)).arrayBuffer();
