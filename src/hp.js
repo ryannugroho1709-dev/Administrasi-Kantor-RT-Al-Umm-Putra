@@ -230,10 +230,27 @@
     t = t.replace(/(?:[\u{10000}-\u{10FFFF}][\u{1F3FB}-\u{1F3FF}️]*‍?)+/gu, "");
     return t.replace(/^[ \t]+/gm, (m) => (m.length > 3 ? m : "")).replace(/[ \t]{2,}/g, " ").replace(/ +\n/g, "\n");
   }
+  // WhatsApp di KOMPUTER (aplikasi Windows & WhatsApp Web lewat tautan wa.me) merusak SEMUA emoji yang dibawa
+  // tautan — termasuk emoji "lama" seperti ✳️ ⏰ ▪️ ✅ → tampil "�". Karena itu untuk komputer, SEMUA emoji
+  // dibuang otomatis (berdasarkan jenis karakternya, bukan daftar), jadi emoji apa pun yang kelak dipakai di
+  // fitur baru juga aman. Penanda daftar diganti "•", peringatan jadi "(!)". Teks, *tebal*, dan tautan utuh.
+  const _EMOJI = /(?:\p{Extended_Pictographic}|\p{Regional_Indicator}|[#*0-9]️?⃣)(?:[️\u{1F3FB}-\u{1F3FF}]|‍(?:\p{Extended_Pictographic}|[♀♂])️?)*/gu;
+  const _BULLET = /^([ \t]*)(?:[▪▫◾◽▶➡✅✔☑⭐\u{1F449}\u{1F538}\u{1F539}\u{1F535}\u{1F7E2}\u{1F7E0}\u{1F534}]️?)[ \t]*/gmu;
+  function waAmanKomputer(teks) {
+    let t = String(teks || "");
+    t = t.replace(/⚠️?/gu, "(!)").replace(/[❗❕]️?/gu, "!");
+    t = t.replace(_BULLET, (m, sp) => sp + "- ");   // emoji penanda daftar di awal baris → -
+    t = t.replace(_EMOJI, "");                       // sisa emoji (judul, akhir kalimat, dll.) dibuang
+    t = t.replace(/[️‍]/g, "");            // sisa penanda emoji yang terlepas
+    // tanda baca khusus → versi papan ketik biasa (pasti tampil di WhatsApp mana pun)
+    t = t.replace(/[•▪●◦]/g, "-").replace(/[—–]/g, "-").replace(/[→⇒➜]/g, "->").replace(/…/g, "...").replace(/[“”]/g, "\"").replace(/[‘’]/g, "'");
+    return t.replace(/^[ \t]+(?=\*|\S)/gm, (m) => (m.length > 3 ? m : "")).replace(/[ \t]{2,}/g, " ").replace(/ +\n/g, "\n").replace(/\(\s*\)/g, "");
+  }
+  window.waAmanKomputer = waAmanKomputer;
   function urlWaAman(url) {
     try {
       const u = new URL(url);
-      const q = []; u.searchParams.forEach((v, k) => q.push(`${k}=${encodeURIComponent(k === "text" ? waAman(v) : v)}`));
+      const q = []; u.searchParams.forEach((v, k) => q.push(`${k}=${encodeURIComponent(k === "text" ? (diPerangkatHp() ? waAman(v) : waAmanKomputer(v)) : v)}`));
       return `${u.origin}${u.pathname}${q.length ? "?" + q.join("&") : ""}`;
     } catch (e) { return url; }
   }
