@@ -158,7 +158,7 @@ function _juHtmlAktif(j, saya, atur) {
     <div class="ju2-ringkas">
       <div style="--c:37,99,235"><b>${tugas.length}</b><span>📋 tugas mengawas saya</span></div>
       <div style="--c:124,58,237"><b>${mapel.length}</b><span>📝 mapel saya diujikan</span></div>
-      <div style="--c:${mapel.length && terkumpul === mapel.length ? "22,163,74" : "217,119,6"}"><b>${siapUA ? `${terkumpul}/${mapel.length}` : "…"}</b><span>📥 soal terkumpul</span></div>
+      <div style="--c:${mapel.length && terkumpul === mapel.length ? "22,163,74" : "217,119,6"}"><b>${siapUA ? `${terkumpul}/${mapel.length}` : "…"}</b><span>📥 soal terkumpul${siapUA && typeof _uaBatas === "function" && j.jenis !== "tahfizh" ? ` · batas <b>${_uaLabelH(_uaBatas(j))}</b>` : ""}</span></div>
     </div>
   </div>`;
   const dua = `

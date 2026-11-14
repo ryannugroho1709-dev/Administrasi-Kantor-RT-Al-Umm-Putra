@@ -140,6 +140,8 @@ function _uaGambar() {
     <div class="ju-editor-h"><button class="btn btn-ghost" onclick="_juGambarDaftar()">← Daftar</button><div class="ju-eh-judul"><b class="ju-judul">📥 Pengumpulan Soal</b><small class="ju-ket">${e(j.judul)}</small></div></div>
     <div class="card ua-ringkas"><div class="ua-angka"><b>${sudah}</b>/<span>${baris.length}</span><small>mapel-kelas sudah</small></div><div class="ju-bar" style="flex:1"><i style="width:${baris.length ? Math.round((sudah / baris.length) * 100) : 0}%"></i></div>
       ${atur ? `<button class="btn btn-wa btn-sm" onclick="uaKirimWa()">💬 WA sudah & belum</button>` : ""}</div>
+    ${_uaHtmlBatas(j, atur)}
+    ${atur ? `<div class="ua-ket-kontak">📇 Supaya tag @ di pesan WA tepat orangnya, samakan nomor WA guru dengan Kontak Google: <a href="#" onclick="event.preventDefault();guruSinkronKontak()">Sinkron Kontak Google</a></div>` : ""}
     <div class="card ua-ket">💻 <b>Ujian Online</b> otomatis tercentang bila guru sudah membuat soal ${j.jenis === "uas" ? "UAS" : j.jenis === "uts" ? "UTS" : "UTS/UAS"} di menu Ujian Online untuk mapel & kelas itu. 📄 Guru juga bisa mengunggah berkas Word/PDF. 📦 Admin/kepala sekolah menandai soal kertas yang sudah diterima.</div>
     ${tampil.map(([g, xs]) => `<div class="card ua-guru"><div class="ua-guru-h"><b>${e(g === "-" ? "Belum ada pengampu" : _juGuru(g)?.nama || "?")}</b><span class="ua-ke">${xs.filter((x) => x.st.length).length}/${xs.length}</span></div>
       ${xs.sort((a, b) => _juNamaMapel(a.mapelId).localeCompare(_juNamaMapel(b.mapelId), "id") || String(_juAngkaKelas(a.kelasId)).localeCompare(String(_juAngkaKelas(b.kelasId)), "id", { numeric: true })).map((x) => {
@@ -173,17 +175,38 @@ async function uaToggleFisik(kunci) {
     await _uaSimpan(); UA.segarkan ? UA.segarkan() : _uaGambar();
   } catch (e) { toast("Gagal: " + (e.message || e), "err"); }
 }
+// ── Batas pengumpulan soal: disimpan di data pengumpulan (kunci "_batas"); bawaan H-7 sebelum ujian dimulai ──
+function _uaBatas(j) { const b = UA.data && UA.data._batas; if (b) return b; const d = _juTgl(j.mulai); d.setDate(d.getDate() - 7); return _juIso(d); }
+function _uaSisaHari(iso) { return Math.round((_juTgl(iso) - _juTgl(tanggalISO())) / 86400000); }
+function _uaLabelH(iso) { const n = _uaSisaHari(iso); return n > 0 ? `H-${n}` : n === 0 ? "hari ini" : `lewat ${-n} hari`; }
+function _uaHtmlBatas(j, atur) {
+  const b = _uaBatas(j), n = _uaSisaHari(b);
+  return `<div class="ua-batas ${n < 0 ? "lewat" : n <= 3 ? "dekat" : ""}"><span>⏳</span><div><small>Batas pengumpulan soal${UA.data && UA.data._batas ? "" : " (otomatis H-7 sebelum ujian)"}</small><b>${_juHariPanjang(b)}</b></div><em>${_uaLabelH(b)}</em>${atur ? `<button class="btn btn-ghost btn-sm" onclick="uaAturBatas()">Ubah</button>` : ""}</div>`;
+}
+function uaAturBatas() {
+  const j = UA.jadwal; if (!j) return;
+  openModal(`<h3>⏳ Batas pengumpulan soal</h3><div class="field"><label class="form-label">${_uaEsc(j.judul)} · ujian mulai ${_juHariPanjang(j.mulai)}</label><input type="date" id="ua-batas" class="input" value="${_uaBatas(j)}" max="${j.mulai}"></div>
+    <button class="btn btn-accent" style="width:100%" onclick="uaSimpanBatas()">💾 Simpan</button>`);
+}
+async function uaSimpanBatas() {
+  const v = qs("ua-batas").value; if (!v) return;
+  try { UA.data = await _kvAmbil("ujian:soal:" + UA.jadwal.id, {}); UA.data._batas = v; await _uaSimpan(); closeModal(); toast(`⏳ Batas pengumpulan: ${_juHariPanjang(v)} (${_uaLabelH(v)})`, "ok"); UA.segarkan ? UA.segarkan() : _uaGambar(); }
+  catch (e) { toast("Gagal: " + (e.message || e), "err"); }
+}
+// Pesan WA: SATU daftar per ustadz; tiap mapel langsung bertanda ✅ sudah / ⏳ belum (tidak dipisah ke bawah).
+// Ustadz yang masih punya tanggungan ditaruh paling atas. Tanda tetap terbaca di WhatsApp komputer
+// (emoji dibuang di sana, tapi tulisan "(sudah)/(belum)" tetap ada).
 function uaKirimWa() {
   const j = UA.jadwal;
   const baris = _uaDaftarWajib(j).map((it) => ({ ...it, st: _uaStatus(j, it) }));
   const tag = (g) => { const n = typeof normalisasiNomorWa === "function" ? normalisasiNomorWa(_juGuru(g)?.no_wa) : null; return n?.valid ? ` @${n.nomor}` : ""; };
-  const kelompok = (filter) => { const per = new Map(); baris.filter(filter).forEach((x) => [...(x.guru.size ? x.guru : ["-"])].forEach((g) => { if (!per.has(g)) per.set(g, []); per.get(g).push(x); }));
-    return [...per.entries()].sort((a, b) => _juNamaGuru(a[0]).localeCompare(_juNamaGuru(b[0]), "id")); };
-  const belum = kelompok((x) => !x.st.length), sudah = kelompok((x) => x.st.length);
-  const daftarBelum = belum.map(([g, xs], i) => `${i + 1}. *${g === "-" ? "Belum ada pengampu" : _juNamaGuru(g)}*${g === "-" ? "" : tag(g)}\n${xs.map((x) => `     ▪️ ${_juNamaMapel(x.mapelId)} — Kelas ${_juAngkaKelas(x.kelasId)}`).join("\n")}`).join("\n\n");
-  const daftarSudah = sudah.map(([g, xs]) => `✅ ${g === "-" ? "-" : _juNamaGuru(g)}: ${xs.map((x) => `${_juNamaMapel(x.mapelId)} ${_juAngkaKelas(x.kelasId)}`).join(", ")}`).join("\n");
-  const total = baris.length, n = baris.filter((x) => x.st.length).length;
-  const teks = `✳️ *PENGUMPULAN SOAL ${String(j.judul).toUpperCase()}*\n\nAssalamu'alaikum warahmatullahi wabarakatuh.\nRekap pengumpulan soal: *${n}/${total}* mapel-kelas sudah terkumpul.\n\n⏰ *Belum mengumpulkan:*\n\n${daftarBelum || "Alhamdulillah, semua sudah ✅"}\n\n${daftarSudah ? `*Sudah:*\n${daftarSudah}\n\n` : ""}Soal bisa dibuat langsung di menu *Ujian Online* (otomatis tercatat), diunggah (Word/PDF) di menu *Jadwal Ujian → Pengumpulan Soal*, atau diserahkan kertasnya ke admin.\n${location.origin}${location.pathname}?buka=jadwalujian\n\nJazakumullahu khairan.`;
+  const per = new Map();
+  baris.forEach((x) => [...(x.guru.size ? x.guru : ["-"])].forEach((g) => { if (!per.has(g)) per.set(g, []); per.get(g).push(x); }));
+  const urut = [...per.entries()].map(([g, xs]) => ({ g, xs: xs.sort((a, b) => (a.st.length ? 1 : 0) - (b.st.length ? 1 : 0) || _juNamaMapel(a.mapelId).localeCompare(_juNamaMapel(b.mapelId), "id") || String(_juAngkaKelas(a.kelasId)).localeCompare(String(_juAngkaKelas(b.kelasId)), "id", { numeric: true })), sisa: xs.filter((x) => !x.st.length).length }))
+    .sort((a, b) => (b.sisa > 0) - (a.sisa > 0) || _juNamaGuru(a.g).localeCompare(_juNamaGuru(b.g), "id"));
+  const daftar = urut.map((o, i) => `${i + 1}. *${o.g === "-" ? "Belum ada pengampu" : _juNamaGuru(o.g)}*${o.g === "-" ? "" : tag(o.g)} — ${o.sisa ? `${o.xs.length - o.sisa}/${o.xs.length} terkumpul` : "✅ lengkap"}\n${o.xs.map((x) => x.st.length ? `     ✅ ${_juNamaMapel(x.mapelId)} - Kelas ${_juAngkaKelas(x.kelasId)} _(sudah)_` : `     ⏳ ${_juNamaMapel(x.mapelId)} - Kelas ${_juAngkaKelas(x.kelasId)} *(belum)*`).join("\n")}`).join("\n\n");
+  const total = baris.length, n = baris.filter((x) => x.st.length).length, b = _uaBatas(j);
+  const teks = `✳️ *PENGUMPULAN SOAL ${String(j.judul).toUpperCase()}*\n\nAssalamu'alaikum warahmatullahi wabarakatuh.\nRekap pengumpulan soal: *${n}/${total}* mapel-kelas sudah terkumpul.\n⏳ Batas pengumpulan: *${_juHariPanjang(b)}* (${_uaLabelH(b).toUpperCase()})\n\n${daftar || "Alhamdulillah, semua sudah ✅"}\n\nSoal bisa dibuat langsung di menu *Ujian Online* (otomatis tercatat), diunggah (Word/PDF) di menu *Jadwal Ujian → Pengumpulan Soal*, atau diserahkan kertasnya ke admin.\n${location.origin}${location.pathname}?buka=jadwalujian\n\nJazakumullahu khairan.`;
   window.open("https://wa.me/?text=" + encodeURIComponent(teks), "_blank", "noopener");
 }
 

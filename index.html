@@ -24,7 +24,7 @@
 <link rel="stylesheet" href="src/hp.css?v=3">
 <link rel="stylesheet" href="src/kuliah.css?v=6">
 <link rel="stylesheet" href="src/modul-baca.css?v=10">
-<link rel="stylesheet" href="src/ujian.css?v=17">
+<link rel="stylesheet" href="src/ujian.css?v=18">
 
 <script>
 // Logo gagal dimuat → coba logo bawaan; kalau bawaan pun gagal, tampilkan ikon 🎓 (bukan huruf "G").
@@ -1935,6 +1935,7 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
                 <button class="btn btn-ghost" style="width:100%;justify-content:flex-start;" onclick="closeMenuDataGuru();eksporDataGuru();">📤 <span data-i18n="eksporExcel">Ekspor Excel</span></button>
               </div>
             </div>
+            <button class="btn btn-outline admin-only" style="display:none;" onclick="guruSinkronKontak()" title="Samakan nomor WA guru dengan Kontak Google supaya tag @ tepat">📇 Kontak Google</button>
             <button class="btn btn-outline" onclick="bukaKelolaWaliKelasSemua()" title="Kelola Wali Kelas">🎓 <span data-i18n="waliKelasSingkat">Wali Kelas</span></button>
             <button class="btn btn-outline btn-toggle-guru" id="btn-toggle-guru-nonaktif" onclick="toggleModeGuruNonaktif()"><span class="btn-toggle-guru-icon" id="icon-guru-nonaktif">⏸️</span><span id="label-guru-nonaktif" data-i18n="guruNonAktif">Guru Non Aktif</span></button>
             <button class="btn btn-outline btn-toggle-guru" id="btn-toggle-guru-honda" onclick="bukaHalamanHonda()"><span class="btn-toggle-guru-icon">💰</span> <span data-i18n="guruHonda">Guru Honda</span></button>
@@ -16088,6 +16089,7 @@ async function handleImportSiswa(evt) {
 <script src="src/kas.js?v=4"></script>
 <script src="src/kas-banyak.js?v=1"></script>
 <script src="src/bop-data.js?v=2"></script>
+<script src="src/kontak-google.js?v=1"></script>
 <script src="src/kuliah.js?v=19"></script>
 <script src="src/modul-baca.js?v=11"></script>
 <script src="src/sampul.js?v=1"></script>
@@ -16105,10 +16107,10 @@ async function handleImportSiswa(evt) {
 <script src="src/ujian.js?v=12"></script>
 <script src="src/ujian-editor.js?v=8"></script>
 <script src="src/jurnal-otomatis.js?v=6"></script>
-<script src="src/hp.js?v=6"></script>
+<script src="src/hp.js?v=7"></script>
 <script src="src/leger-nilai.js?v=2"></script>
-<script src="src/jadwal-ujian.js?v=5"></script>
-<script src="src/ujian-arsip.js?v=3"></script>
+<script src="src/jadwal-ujian.js?v=6"></script>
+<script src="src/ujian-arsip.js?v=4"></script>
 <script src="src/tur.js?v=1"></script>
 <script src="src/dapodik.js?v=1"></script>
 <script src="src/modul-urut.js?v=1"></script>

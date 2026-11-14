@@ -497,3 +497,28 @@ table.pp2-kkm{border-collapse:separate;border-spacing:0;width:100%;font-size:12p
 .dpk-tanda{display:inline-block;font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px;margin-left:6px;vertical-align:1px;white-space:nowrap}
 .dpk-tanda.ok{background:rgba(22,163,74,.12);color:#15803d}.dpk-tanda.belum{background:rgba(220,38,38,.12);color:#b91c1c}
 @media (max-width:560px){.dpk-ubin{grid-template-columns:repeat(2,1fr)}.dpk-beda{grid-template-columns:20px 1fr;}.dpk-beda .dpk-a,.dpk-beda .dpk-d{grid-column:2}.dpk-panah{display:none}}
+/* ── Sinkron Kontak Google & batas pengumpulan soal ── */
+.kg-langkah{display:grid;gap:8px;margin:4px 0 12px}
+.kg-langkah>div{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.55}
+.kg-langkah b{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:#2563eb;color:#fff;font-size:12px}
+.kg-unggah{display:flex;flex-direction:column;align-items:center;gap:4px;padding:20px;border-radius:18px;border:2px dashed rgba(37,99,235,.35);background:rgba(37,99,235,.04);cursor:pointer;text-align:center}
+.kg-unggah span{font-size:28px}.kg-unggah small{color:var(--text-secondary)}
+.kg-ket{font-size:12px;color:var(--text-secondary);margin:10px 0;line-height:1.55}
+.kg-ubin{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+.kg-ubin div{text-align:center;padding:8px 4px;border-radius:12px;border:1px solid var(--border-soft,#e3e8ef)}
+.kg-ubin b{display:block;font-size:20px}.kg-ubin span{font-size:11px;color:var(--text-secondary)}
+.kg-ubin .ok b{color:#16a34a}.kg-ubin .beda b{color:#d97706}.kg-ubin .isi b{color:#2563eb}.kg-ubin .tidak b{color:#64748b}
+.kg-daftar{display:grid;gap:6px;max-height:52vh;overflow:auto}
+.kg-baris{display:grid;grid-template-columns:22px 1fr auto auto;gap:10px;align-items:center;padding:8px 10px;border-radius:12px;border:1px solid var(--border-soft,#e3e8ef);font-size:13px}
+.kg-baris.beda{border-color:rgba(217,119,6,.35);background:rgba(217,119,6,.04)}.kg-baris.isi{border-color:rgba(37,99,235,.3);background:rgba(37,99,235,.04)}
+.kg-nama small{display:block;color:var(--text-secondary);font-size:11.5px}
+.kg-nomor{font-variant-numeric:tabular-nums;white-space:nowrap}.kg-nomor s{color:#b91c1c}.kg-nomor select{padding:3px 6px;width:auto;display:inline-block}
+.kg-st{font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:99px;white-space:nowrap}
+.kg-st.ok{background:rgba(22,163,74,.12);color:#15803d}.kg-st.beda{background:rgba(217,119,6,.14);color:#b45309}.kg-st.isi{background:rgba(37,99,235,.12);color:#1d4ed8}.kg-st.tidak{background:var(--surface-2,#f1f5f9);color:var(--text-secondary)}
+@media (max-width:600px){.kg-ubin{grid-template-columns:1fr 1fr}.kg-baris{grid-template-columns:22px 1fr}.kg-nomor,.kg-st{grid-column:2}}
+.ua-batas{display:flex;align-items:center;gap:12px;padding:10px 14px;margin:0 0 12px;border-radius:14px;border:1px solid rgba(37,99,235,.25);background:rgba(37,99,235,.05)}
+.ua-batas>span{font-size:22px}.ua-batas>div{flex:1}.ua-batas small{display:block;font-size:11.5px;color:var(--text-secondary)}
+.ua-batas em{font-style:normal;font-weight:800;font-size:15px;padding:4px 12px;border-radius:99px;background:#2563eb;color:#fff;white-space:nowrap}
+.ua-batas.dekat{border-color:rgba(217,119,6,.4);background:rgba(217,119,6,.06)}.ua-batas.dekat em{background:#d97706}
+.ua-batas.lewat{border-color:rgba(220,38,38,.4);background:rgba(220,38,38,.05)}.ua-batas.lewat em{background:#dc2626}
+.ua-ket-kontak{font-size:12px;color:var(--text-secondary);margin:-4px 2px 12px}

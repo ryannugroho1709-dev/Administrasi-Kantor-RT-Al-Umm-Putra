@@ -235,7 +235,7 @@
   // dibuang otomatis (berdasarkan jenis karakternya, bukan daftar), jadi emoji apa pun yang kelak dipakai di
   // fitur baru juga aman. Penanda daftar diganti "•", peringatan jadi "(!)". Teks, *tebal*, dan tautan utuh.
   const _EMOJI = /(?:\p{Extended_Pictographic}|\p{Regional_Indicator}|[#*0-9]️?⃣)(?:[️\u{1F3FB}-\u{1F3FF}]|‍(?:\p{Extended_Pictographic}|[♀♂])️?)*/gu;
-  const _BULLET = /^([ \t]*)(?:[▪▫◾◽▶➡✅✔☑⭐\u{1F449}\u{1F538}\u{1F539}\u{1F535}\u{1F7E2}\u{1F7E0}\u{1F534}]️?)[ \t]*/gmu;
+  const _BULLET = /^([ \t]*)(?:[⏳⌛⬜▪▫◾◽▶➡✅✔☑⭐\u{1F449}\u{1F538}\u{1F539}\u{1F535}\u{1F7E2}\u{1F7E0}\u{1F534}]️?)[ \t]*/gmu;
   function waAmanKomputer(teks) {
     let t = String(teks || "");
     t = t.replace(/⚠️?/gu, "(!)").replace(/[❗❕]️?/gu, "!");
