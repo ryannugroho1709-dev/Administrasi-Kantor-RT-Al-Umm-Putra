@@ -525,3 +525,40 @@ table.pp2-kkm{border-collapse:separate;border-spacing:0;width:100%;font-size:12p
 .ju-gab-pita{display:flex;align-items:center;gap:12px;border:1px solid rgba(124,58,237,.3);background:rgba(124,58,237,.05)}
 .ju-gab-pita>span{font-size:24px}.ju-gab-pita>div{flex:1}.ju-gab-pita small{display:block;color:var(--text-secondary);font-size:12px}
 @media (max-width:600px){.ju-gab-pita{flex-wrap:wrap}.ju-gab-pita .btn{width:100%}}
+
+/* ── Soal Word berkop (tempel teks) ── */
+.sw-modal h3{margin-bottom:4px}.sw-ket,.sw-kaki{font-size:11.5px;color:var(--text-secondary);line-height:1.45}.sw-kaki{margin-top:8px;font-size:10.5px}
+.sw-pilih{display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-top:10px}.sw-pilih .field{margin:0}
+.sw-chip{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.sw-chip span{font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px;background:var(--accent-soft,#e6f2ee);color:var(--accent,#0d5c4b)}
+.sw-chip span small{font-weight:500;opacity:.8}.sw-chip .ok{background:#e7f6ec;color:#17803d}.sw-chip .awas{background:#fff4e0;color:#a15c00}.sw-chip .bahaya{background:#fdecec;color:#b42318}
+.sw-teks{width:100%;min-height:150px;font-size:14px;line-height:1.6;resize:vertical;unicode-bidi:plaintext}
+.sw-prat-h{display:flex;justify-content:space-between;align-items:baseline;margin:10px 0 4px;font-size:12px}.sw-prat-h small{color:var(--text-secondary)}
+.sw-prat{max-height:30vh;overflow:auto;border:1px solid var(--border-soft,#e3e8ef);border-radius:12px;padding:10px 12px;background:#fff;color:#111;font-family:"Times New Roman",serif;font-size:13px}
+.sw-b{display:flex;gap:6px;line-height:1.55;margin-bottom:3px;text-align:justify}.sw-b i{font-style:normal;min-width:22px;color:#0d5c4b;font-weight:700}.sw-b span{flex:1}
+.sw-b.ar{font-family:"Amiri","Traditional Arabic",serif;font-size:16px}.sw-b.judul{justify-content:center;font-weight:700;font-size:15px;text-align:center}
+.sw-b.lanjut{padding-inline-start:28px}.sw-b.butir{padding-inline-start:28px}.sw-b.lanjutButir{padding-inline-start:50px}.sw-b.paragraf{color:#333}
+.sw-kosong{color:#8a94a3;font-family:inherit;font-size:12px}.sw-awas{margin-top:6px;font-size:11.5px;color:#a15c00;font-family:var(--font,inherit)}
+.sw-aksi{display:grid;grid-template-columns:1fr 1fr 2fr;gap:8px;margin-top:12px}
+@media (max-width:560px){.sw-pilih{grid-template-columns:1fr}.sw-aksi{grid-template-columns:1fr 1fr}.sw-aksi .btn-accent{grid-column:1/-1;order:-1}}
+.ua-m-pilih .ua-m-utama{border-color:var(--accent,#0d5c4b);background:var(--accent-soft,#e6f2ee)}
+
+/* ── Tempel nilai (Input Nilai) ── */
+.nl2-tempel{border-color:var(--accent,#0d5c4b);color:var(--accent,#0d5c4b)}
+.nt-modal h3{margin-bottom:2px}.nt-ket{font-size:12px;color:var(--text-secondary);margin-bottom:10px}.nt-kaki{font-size:10.5px;color:var(--text-secondary);margin-top:6px;line-height:1.45}
+.nt-teks{width:100%;font-size:14px;line-height:1.55;font-family:inherit;resize:vertical}
+.nt-ringkas{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}.nt-ringkas span{font-size:11.5px;font-weight:700;padding:4px 9px;border-radius:999px}
+.nt-ringkas .ok{background:#e7f6ec;color:#17803d}.nt-ringkas .awas{background:#fff4e0;color:#a15c00}.nt-ringkas .bahaya{background:#fdecec;color:#b42318}
+.nt-daftar{max-height:46vh;overflow:auto;display:flex;flex-direction:column;gap:6px;padding-right:2px}
+.nt-b{border:1px solid var(--border-soft,#e3e8ef);border-left:4px solid #17803d;border-radius:12px;padding:8px 10px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:4px 10px;align-items:center;background:var(--surface,#fff)}
+.nt-b.periksa{border-left-color:#e59400;background:#fffaf0}.nt-b.tidak{border-left-color:#8a94a3;background:#f7f8fa}.nt-b.ganda,.nt-b.galat{border-left-color:#d92d20;background:#fff5f5}
+.nt-asal{display:flex;align-items:baseline;gap:6px;min-width:0}.nt-asal small{color:var(--text-secondary)}.nt-asal b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nt-asal em{margin-left:auto;font-style:normal;font-weight:800;background:var(--accent-soft,#e6f2ee);color:var(--accent,#0d5c4b);border-radius:8px;padding:1px 8px}
+.nt-pilih{font-size:13px;padding:6px 8px}.nt-pesan{grid-column:1/-1;font-size:11px;color:var(--text-secondary)}
+.nt-belum{margin-top:8px;font-size:12px}.nt-belum summary{cursor:pointer;font-weight:700}.nt-belum div{margin-top:4px;color:var(--text-secondary);line-height:1.5}
+.nt-timpa{display:flex;align-items:center;gap:6px;font-size:12px;margin-top:8px}
+.nt-aksi{display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-top:10px}
+@media (max-width:560px){.nt-b{grid-template-columns:1fr}}
+input.nt-baru{animation:ntKedip 1.2s ease 3;box-shadow:0 0 0 2px #22c55e inset}
+@keyframes ntKedip{50%{background:#dcfce7}}
+.sw-chip .sw-kat{padding:2px;background:var(--surface-alt,#eef1f4);display:inline-flex;gap:2px}.sw-kat button{border:0;background:transparent;font:inherit;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;cursor:pointer;color:var(--text-secondary)}
+.sw-kat button.on{background:var(--accent,#0d5c4b);color:#fff}.sw-awas .btn{margin-left:6px;padding:2px 8px;font-size:11px}

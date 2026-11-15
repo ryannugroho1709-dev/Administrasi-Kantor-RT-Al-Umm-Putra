@@ -24,7 +24,7 @@
 <link rel="stylesheet" href="src/hp.css?v=3">
 <link rel="stylesheet" href="src/kuliah.css?v=6">
 <link rel="stylesheet" href="src/modul-baca.css?v=10">
-<link rel="stylesheet" href="src/ujian.css?v=19">
+<link rel="stylesheet" href="src/ujian.css?v=21">
 
 <script>
 // Logo gagal dimuat → coba logo bawaan; kalau bawaan pun gagal, tampilkan ikon 🎓 (bukan huruf "G").
@@ -10421,6 +10421,7 @@ async function gambarTabelNilai() {
         ${pk.uh ? `<button class="nl2-btn" onclick="tambahKolomNilai('uh')"><span>＋</span>UH</button>` : ""}
         ${pk.tugas ? `<button class="nl2-btn" onclick="tambahKolomNilai('tugas')"><span>＋</span>Tugas</button>` : ""}
         ${pk.utsBisa && !pk.utsWajib ? `<label class="nl2-btn nl2-saklar"><input type="checkbox" id="nl-ada-uts" ${adaUTS ? "checked" : ""} onchange="toggleUTSNilai(this.checked)"/><i></i>UTS</label>` : ""}
+        <button class="nl2-btn nl2-tempel" onclick="nlTempelNilai()" title="Tempel daftar nama & nilai dari WA / catatan / Excel">📋 Tempel nilai</button>
         <details class="nl2-menu"><summary class="nl2-btn">📊 Excel ▾</summary><div><button onclick="unduhLegerNilai()">⬇️ Unduh leger (diisi di Excel)</button><label>⬆️ Unggah leger yang sudah diisi<input type="file" accept=".xlsx,.xls" hidden onchange="unggahLegerNilai(this)"/></label></div></details>
         ${bolehAtur ? `<button class="nl2-btn" onclick="bukaPengaturanPenilaian()">⚖️ Bobot & KKM</button>` : ""}<button class="tur-tanya" onclick="turUlang('input-nilai')">❓ Panduan</button>
       </div>
@@ -16110,7 +16111,9 @@ async function handleImportSiswa(evt) {
 <script src="src/hp.js?v=8"></script>
 <script src="src/leger-nilai.js?v=5"></script>
 <script src="src/jadwal-ujian.js?v=7"></script>
-<script src="src/ujian-arsip.js?v=5"></script>
+<script src="src/ujian-arsip.js?v=6"></script>
+<script src="src/soal-word.js?v=3"></script>
+<script src="src/nilai-tempel.js?v=2"></script>
 <script src="src/tur.js?v=1"></script>
 <script src="src/dapodik.js?v=1"></script>
 <script src="src/modul-urut.js?v=1"></script>
