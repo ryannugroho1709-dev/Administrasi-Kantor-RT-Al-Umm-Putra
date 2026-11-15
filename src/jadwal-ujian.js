@@ -189,7 +189,9 @@ function _juHtmlAktif(j, saya, atur) {
       return `<button class="${t === pilihHari ? "on" : ""} ${t === hariIni ? "kini" : ""}" onclick="JU.papanHari='${t}';_juGambarDaftar()">${_juHariPendek(t)}${aku ? " ⭐" : ""}<small>${n} ujian</small></button>`; }).join("")}</div>
     ${_juHtmlPapanHari(j, pilihHari, saya, atur)}
   </div>`;
-  return hariH ? atas + papan + dua : atas + dua + papan;
+  const gab = atur ? _juGabunganBelumPisah(j) : [];
+  const pita = gab.length ? `<div class="card ju-gab-pita"><span>🔀</span><div><b>${gab.length} ujian mapel gabungan masih jadi satu</b><small>${[...new Set(gab.map(([, s]) => _juNamaMapel(s.m)))].map(e).join(", ")} — pisahkan supaya Geografi, Sosiologi, Ekonomi, dll. diujikan terpisah</small></div><button class="btn btn-accent btn-sm" onclick="juPisahGabungan('${j.id}')">Pisahkan otomatis</button></div>` : "";
+  return hariH ? atas + pita + papan + dua : atas + pita + dua + papan;
 }
 const _juTerkait = (x, kelasId, saya) => (x?.p || []).includes(saya) || (x?.m && (JU.ajar || []).some((a) => a.guru_id === saya && a.mapel_id === x.m && a.kelas_id === kelasId));
 function _juHtmlPapanHari(j, t, saya, atur) {
@@ -323,7 +325,7 @@ function _juGambarEditor() {
       <div class="ju-eh-atas"><button class="btn btn-ghost btn-sm" onclick="_juTutupEditor()">← Daftar</button><span id="ju-status" class="nl-status"></span></div>
       <div class="ju-eh-judul">${atur ? `<input id="ju-judul" class="input ju-judul-in" value="${_juEsc(j.judul)}" oninput="JU.edit.judul=this.value;_juTandai()"/>` : `<b class="ju-judul">${_juEsc(j.judul)}</b>`}<small class="ju-ket">${_juHariPendek(j.mulai)}${j.selesai !== j.mulai ? " – " + _juHariPendek(j.selesai) : ""} · ${j.hari.length} hari ujian</small></div>
       <div class="ju-eh-aksi">
-        ${atur ? `<button class="btn btn-accent btn-sm" onclick="juSimpanEditor()">💾 Simpan</button><button class="btn btn-outline btn-sm" onclick="juSusunDariJadwal()" title="Susun otomatis dari jadwal pelajaran">🪄 Susun dari jadwal</button>` : ""}
+        ${atur ? `<button class="btn btn-accent btn-sm" onclick="juSimpanEditor()">💾 Simpan</button><button class="btn btn-outline btn-sm" onclick="juPisahGabungan()" title="Pisahkan ujian mapel gabungan (Geografi/Sosiologi/Ekonomi, dll.) menjadi ujian per mapel">🔀 Pisah gabungan</button><button class="btn btn-outline btn-sm" onclick="juSusunDariJadwal()" title="Susun otomatis dari jadwal pelajaran">🪄 Susun dari jadwal</button>` : ""}
         <button class="btn btn-outline btn-sm" onclick="juCetakPdf('${j.id}', true)">🖨️ PDF</button>
         ${atur ? `<button class="btn btn-ghost btn-sm" onclick="juTandaTangan()">✍️ Tanda tangan</button>` : ""}
       </div>
@@ -396,6 +398,60 @@ function _juHapusSesi(i) { const id = JU.edit.sesi[i].id; JU.edit.sesi.splice(i,
 async function _juTutupEditor() {
   if (JU.dirty && !(await konfirmasiTema("Ada perubahan yang belum disimpan. Tinggalkan tanpa menyimpan?", { ikon: "⚠️", judul: "Belum disimpan" }))) return;
   JU.edit = null; JU.dirty = false; _juGambarDaftar();
+}
+
+// ── PISAHKAN MAPEL GABUNGAN di jadwal yang sudah disusun ──
+// Slot "Geografi/Sosiologi/Ek" (belum dipisah) → mapel pertama tetap di slotnya, mapel lain ditaruh di sesi
+// kosong kelas yang sama: hari dengan ujian paling sedikit, paling dekat dengan hari aslinya. Pengawas ikut.
+function _juGabunganBelumPisah(j) {
+  return Object.entries(j.slot || {}).filter(([k, s]) => { const [t] = k.split("|"); return s?.m && !s.sub && j.hari.includes(t) && _juSubs(s.m).length; });
+}
+function _juPisahkan(j) {
+  const hasil = { dipisah: 0, sisa: [], tanpaPengawas: [] };
+  _juGabunganBelumPisah(j).forEach(([kunci, s]) => {
+    const [t0, , kelasId] = kunci.split("|"), subs = _juSubs(s.m);
+    s.sub = subs[0];
+    subs.slice(1).forEach((sub) => {
+      const jumlahHari = (t) => j.sesi.filter((x) => _juLabelSlot(j.slot[_juKunci(t, x.id, kelasId)])).length;
+      const jarak = (t) => Math.abs(_juTgl(t) - _juTgl(t0)) / 86400000 + (t < t0 ? 0.5 : 0); // seri → pilih sesudahnya
+      const hari = j.hari.slice().sort((a, b) => jumlahHari(a) - jumlahHari(b) || jarak(a) - jarak(b));
+      let taruh = null;
+      for (const t of hari) { const sesi = j.sesi.find((x) => !_juLabelSlot(j.slot[_juKunci(t, x.id, kelasId)])); if (sesi) { taruh = _juKunci(t, sesi.id, kelasId); break; } }
+      if (!taruh) { hasil.sisa.push(`Kelas ${_juAngkaKelas(kelasId)}: ${sub}`); return; }
+      // pengawas disalin, kecuali yang di sesi itu sudah mengawas kelas lain (bentrok)
+      const [tt, ss] = taruh.split("|");
+      const p = (s.p || []).filter((gid) => !_juBentrok(j, tt, ss, kelasId, gid).length);
+      if ((s.p || []).length && !p.length) hasil.tanpaPengawas.push(`Kelas ${_juAngkaKelas(kelasId)}: ${sub} (${_juHariPendek(tt)})`);
+      j.slot[taruh] = { m: s.m, sub, teks: "", p, ...(s.ruang ? { ruang: s.ruang } : {}) };
+      hasil.dipisah++;
+    });
+  });
+  return hasil;
+}
+async function juPisahGabungan(jadwalId) {
+  const diEditor = JU.edit && (!jadwalId || JU.edit.id === jadwalId);
+  const j = diEditor ? JU.edit : JU.daftar.find((x) => x.id === jadwalId); if (!j) return;
+  const daftar = _juGabunganBelumPisah(j);
+  if (!daftar.length) { toast("Semua mapel gabungan sudah dipisah ✓", "ok"); return; }
+  const contoh = [...new Set(daftar.map(([k, s]) => `${_juNamaMapel(s.m)} (Kelas ${_juAngkaKelas(k.split("|")[2])})`))];
+  if (!(await konfirmasiTema(`Pisahkan <b>${daftar.length} ujian mapel gabungan</b> menjadi ujian per mapel?<br><small>${contoh.map(_juEsc).join(", ")}</small><br><br>Mapel pertama tetap di jadwalnya; mapel lain ditaruh di sesi kosong kelas yang sama (hari yang paling longgar). Pengawas ikut disalin.`, { ikon: "🔀", judul: "Pisahkan mapel gabungan", teksYa: "Pisahkan" }))) return;
+  const salinan = JSON.parse(JSON.stringify(j));
+  const hasil = _juPisahkan(salinan);
+  if (diEditor) { JU.edit = salinan; _juTandai(); _juGambarEditor(); }
+  else {
+    try {
+      setGlobalLoading(true, "Memisahkan & menyimpan…");
+      const terbaru = await _kvAmbil(_JU_KUNCI, []);
+      JU.daftar = (Array.isArray(terbaru) ? terbaru : []).filter((x) => x.id !== salinan.id).concat([salinan]);
+      await _juSimpanSemua();
+    } catch (e) { toast("Gagal menyimpan: " + (e.message || e), "err"); return; }
+    finally { setGlobalLoading(false); }
+    JU._pribadi = null; _juGambarDaftar();
+  }
+  openModal(`<h3>🔀 Mapel gabungan dipisah</h3><p>${hasil.dipisah} ujian mapel baru ditempatkan${diEditor ? " — tekan <b>💾 Simpan</b> di editor" : " dan tersimpan"}.</p>
+    ${hasil.sisa.length ? `<div class="ju-susun-sisa"><b>⚠️ ${hasil.sisa.length} mapel belum dapat tempat</b> (sesi kelasnya penuh). Tambah sesi/hari di ⚙️ Pengaturan jadwal lalu tekan Pisahkan lagi:<ul>${hasil.sisa.map((x) => `<li>${_juEsc(x)}</li>`).join("")}</ul></div>` : `<p class="ju-ket">Semua mapel sudah dapat jadwal. Periksa lagi di papan jadwal.</p>`}
+    ${hasil.tanpaPengawas.length ? `<div class="ju-susun-sisa"><b>👤 ${hasil.tanpaPengawas.length} ujian perlu pengawas</b> (pengawas aslinya sudah bertugas di kelas lain pada sesi itu). Pilih pengawasnya di editor:<ul>${hasil.tanpaPengawas.map((x) => `<li>${_juEsc(x)}</li>`).join("")}</ul></div>` : ""}
+    <button class="btn btn-accent" style="width:100%" onclick="closeModal()">Oke</button>`);
 }
 async function juSimpanEditor() {
   const j = JU.edit; if (!j) return;

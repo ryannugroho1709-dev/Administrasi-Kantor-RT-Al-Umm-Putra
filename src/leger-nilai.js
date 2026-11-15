@@ -37,7 +37,6 @@ async function _lgDaftarKelas(p) {
 
 // ── 1. UNDUH ─────────────────────────────────────────────────
 async function unduhLegerNilai() {
-  if (typeof subMapel === "function" && subMapel(qs("nl-mapel")?.value).length) { toast("Mapel gabungan (dipisah per mapel) belum bisa lewat leger Excel — isi langsung di tabel tiap tab mapel", "info"); if (arguments[0] && arguments[0].value !== undefined) arguments[0].value = ""; return; }
   const p = _lgPilihan();
   if (!p.mapelId) { toast("Pilih mapel dulu", "err"); return; }
   if (!window.ExcelJS) { toast("Pustaka Excel belum termuat, coba muat ulang halaman", "err"); return; }
@@ -50,8 +49,12 @@ async function unduhLegerNilai() {
     const warna = typeof _warnaDok === "function" ? _warnaDok() : { tua: "#0b3b33", utama: "#0d5c4b" };
     const argb = (hex) => "FF" + String(hex || "#0d5c4b").replace("#", "").toUpperCase();
     const p2 = STATE.pengaturan || {};
-    for (const kelasId of kelasIds) {
-      const data = await apiGetNilaiRaporByKelasMapel(kelasId, p.mapelId, p.semester, p.tahun);
+    const subs = typeof subMapel === "function" ? subMapel(p.mapelId) : [];
+    const lembar = kelasIds.flatMap((k) => (subs.length ? subs.map((s) => [k, s]) : [[k, null]]));
+    for (const [kelasId, sub] of lembar) {
+      const dataAsli = await apiGetNilaiRaporByKelasMapel(kelasId, p.mapelId, p.semester, p.tahun);
+      // mapel gabungan: tiap lembar hanya berisi nilai satu mapel (sub)
+      const data = sub ? dataAsli.map((d) => ({ ...d, nilai: d.nilai ? lensaSub(d.nilai, sub) : d.nilai })) : dataAsli;
       // kolom yang sudah dipakai + kolom kosong cadangan supaya guru tinggal mengisi
       const uh = new Set(), tg = new Set(); let adaUts = false;
       data.forEach(({ nilai }) => { (nilai?.ulangan_harian || []).forEach((x) => uh.add(x.nama)); (nilai?.tugas || []).forEach((x) => tg.add(x.nama)); if (nilai?.ada_uts) adaUts = true; });
@@ -59,21 +62,22 @@ async function unduhLegerNilai() {
       for (let i = 1; tg.size < 3; i++) tg.add(`Tugas ${i}`);
       const kolomUH = [...uh], kolomTG = [...tg];
       const kolom = [["ID", 1], ["No", 5], ["NIS", 12], ["Nama Siswa", 32], ...kolomUH.map((k) => [k, 11]), ...kolomTG.map((k) => [k, 10]), ["UTS", 9], ["UAS", 9], ["Capaian Pembelajaran", 46]];
-      const ws = wb.addWorksheet(_lgAman("Kelas " + String(_lgNamaKelas(kelasId)).replace(/^\s*kelas\s+/i, "")).slice(0, 31) || "Kelas", {
+      const namaLembar = "Kelas " + String(_lgNamaKelas(kelasId)).replace(/^\s*kelas\s+/i, "") + (sub ? " - " + sub : "");
+      const ws = wb.addWorksheet(_lgAman(namaLembar).slice(0, 31) || "Kelas", {
         views: [{ state: "frozen", xSplit: 4, ySplit: 7 }], pageSetup: { paperSize: 9, orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
       });
       ws.columns = kolom.map(([, w]) => ({ width: w }));
       ws.getColumn(1).hidden = true; // ID siswa — jangan diubah
       const akhir = kolom.length;
       const judul = (r, teks, ukuran, tebal) => { ws.mergeCells(r, 2, r, akhir); const c = ws.getCell(r, 2); c.value = teks; c.font = { bold: !!tebal, size: ukuran, color: { argb: tebal ? argb(warna.tua) : "FF444444" } }; };
-      judul(1, `LEGER NILAI ${String(_lgNamaMapel(p.mapelId)).toUpperCase()}`, 14, true);
+      judul(1, `LEGER NILAI ${String(sub || _lgNamaMapel(p.mapelId)).toUpperCase()}${sub ? ` (bagian dari ${_lgNamaMapel(p.mapelId)})` : ""}`, 14, true);
       judul(2, `${p2.nama_lembaga_kop || "PKBM Al Umm Barabai"} · Kelas ${String(_lgNamaKelas(kelasId)).replace(/^\s*kelas\s+/i, "")} · Semester ${p.semester} ${p.tahun}`, 11, false);
       judul(3, `Guru: ${_lgNamaGuru(p.guruId)}`, 11, false);
       judul(4, "Petunjuk: isi angka 0–100. Kolom kosong = tidak mengubah nilai di aplikasi. Boleh menambah kolom (judul diawali \"Ulangan Harian\" atau \"Tugas\"). Jangan mengubah urutan baris nama, judul kolom, atau isi baris 5.", 9, false);
       ws.getRow(4).height = 28; ws.getCell(4, 2).alignment = { wrapText: true, vertical: "top" };
       // baris 5: penanda (tersembunyi) untuk pencocokan saat diunggah
       ws.getCell(5, 1).value = "LEGER-NILAI";
-      ws.getCell(5, 2).value = JSON.stringify({ v: 1, kelas: kelasId, mapel: p.mapelId, semester: p.semester, tahun: p.tahun });
+      ws.getCell(5, 2).value = JSON.stringify({ v: 1, kelas: kelasId, mapel: p.mapelId, semester: p.semester, tahun: p.tahun, ...(sub ? { sub } : {}) });
       ws.getRow(5).hidden = true;
       const head = ws.getRow(7);
       kolom.forEach(([k], i) => {
@@ -111,7 +115,7 @@ async function unduhLegerNilai() {
     a.download = `Leger_${_lgAman(_lgNamaMapel(p.mapelId)).replace(/ /g, "_")}_${p.semester}_${String(p.tahun).replace("/", "-")}.xlsx`;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-    toast(`⬇️ Leger diunduh (${kelasIds.length} kelas). Isi di Excel lalu tekan "Unggah Leger".`, "ok");
+    toast(`⬇️ Leger diunduh (${kelasIds.length} kelas${subs.length ? ` × ${subs.length} mapel: ${subs.join(", ")}` : ""}). Isi di Excel lalu tekan "Unggah Leger".`, "ok");
   } catch (e) { console.error(e); toast("Gagal membuat leger: " + (e.message || e), "err"); }
   finally { setGlobalLoading(false); }
 }
@@ -126,7 +130,6 @@ const _lgAngka = (v) => {
 const _lgNorm = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
 async function unggahLegerNilai(input) {
-  if (typeof subMapel === "function" && subMapel(qs("nl-mapel")?.value).length) { toast("Mapel gabungan (dipisah per mapel) belum bisa lewat leger Excel — isi langsung di tabel tiap tab mapel", "info"); if (arguments[0] && arguments[0].value !== undefined) arguments[0].value = ""; return; }
   const f = input.files && input.files[0]; input.value = "";
   if (!f) return;
   if (!window.XLSX) { toast("Pustaka Excel belum termuat", "err"); return; }
@@ -135,6 +138,8 @@ async function unggahLegerNilai(input) {
     const wb = XLSX.read(await f.arrayBuffer(), { type: "array" });
     const p = _lgPilihan();
     const rencana = [];
+    const cacheData = {}, entri = new Map(); // data per kelas dibaca sekali; satu entri simpan per siswa walau ada beberapa lembar mapel
+    const subsMapel = typeof subMapel === "function" ? subMapel(p.mapelId) : [];
     for (const nama of wb.SheetNames) {
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[nama], { header: 1, defval: "", raw: true });
       // penanda kelas/mapel (baris 5) — bila tidak ada, pakai pilihan di layar
@@ -153,7 +158,11 @@ async function unggahLegerNilai(input) {
       const mapelId = meta?.mapel || p.mapelId, semester = meta?.semester || p.semester, tahun = meta?.tahun || p.tahun;
       if (!kelasId || !mapelId) { rencana.push({ lembar: nama, galat: ["Kelas/mapel lembar ini tidak dikenali — gunakan file hasil tombol Unduh Leger"] }); continue; }
       if (meta && meta.mapel !== p.mapelId) { rencana.push({ lembar: nama, galat: [`Leger ini untuk mapel ${_lgNamaMapel(meta.mapel)}, sedangkan yang terpilih di layar ${_lgNamaMapel(p.mapelId)}. Pilih mapel yang sesuai dulu.`] }); continue; }
-      const data = await apiGetNilaiRaporByKelasMapel(kelasId, mapelId, semester, tahun);
+      // mapel gabungan: tentukan mapel (sub) lembar ini dari penanda, atau dari nama lembar
+      const sub = meta?.sub || (subsMapel.length ? subsMapel.find((s) => _lgNorm(nama).includes(_lgNorm(s))) : null) || null;
+      if (subsMapel.length && !sub) { rencana.push({ lembar: nama, galat: [`Mapel gabungan: lembar ini harus bernama/bertanda salah satu dari ${subsMapel.join(", ")} — gunakan file hasil tombol Unduh Leger`] }); continue; }
+      const kunciData = `${kelasId}|${mapelId}|${semester}|${tahun}`;
+      const data = cacheData[kunciData] || (cacheData[kunciData] = await apiGetNilaiRaporByKelasMapel(kelasId, mapelId, semester, tahun));
       const plan = { lembar: nama, kelasId, mapelId, semester, tahun, siswa: [], galat: [], baru: 0, ubah: 0, tidakCocok: 0 };
       rows.slice(iHead + 1).forEach((r, k) => {
         const id = cId >= 0 ? String(r[cId] || "").trim() : "";
@@ -161,7 +170,8 @@ async function unggahLegerNilai(input) {
         if (!id && !namaSiswa) return;
         const cocok = data.find((d) => d.siswa.id === id) || data.find((d) => _lgNorm(d.siswa.nama) === _lgNorm(namaSiswa)) || (cNis >= 0 && r[cNis] ? data.find((d) => String(d.siswa.nis || "") === String(r[cNis]).trim()) : null);
         if (!cocok) { plan.tidakCocok++; plan.galat.push(`Baris ${iHead + k + 2}: "${namaSiswa || id}" tidak ditemukan di kelas ini`); return; }
-        const lama = cocok.nilai || {};
+        const nilaiPenuh = cocok.nilai || {};
+        const lama = sub ? lensaSub(nilaiPenuh, sub) : nilaiPenuh;
         const sebelum = plan.baru + plan.ubah; // untuk tahu apakah siswa ini ada perubahan
         const gabung = (arrLama, kolom) => {
           const peta = new Map((arrLama || []).map((x) => [x.nama, Number(x.nilai)]));
@@ -180,14 +190,18 @@ async function unggahLegerNilai(input) {
         let cp = lama.capaian_pembelajaran || "";
         if (cCP >= 0 && String(r[cCP] || "").trim() && String(r[cCP]).trim() !== cp) { cp = String(r[cCP]).trim(); plan.ubah++; }
         if (plan.baru + plan.ubah === sebelum) return; // tidak ada yang berubah → tidak perlu disimpan (hemat kuota)
-        plan.siswa.push({
-          siswa_id: cocok.siswa.id, nama: cocok.siswa.nama,
-          row: {
-            siswa_id: cocok.siswa.id, mapel_id: mapelId, kelas_id: kelasId, guru_id: p.guruId || lama.guru_id || null,
-            semester, tahun_ajaran: tahun, ulangan_harian: uh, tugas, ada_uts: !!(lama.ada_uts || uts.length), uts, uas,
-            nilai_kehadiran: lama.nilai_kehadiran ?? null, capaian_pembelajaran: cp, diisi_oleh: "guru (leger Excel)",
-          },
-        });
+        // mapel gabungan: isian mapel lain di baris yang sama tetap utuh, isian mapel ini diberi penanda sub
+        const satukan = (k, arr) => (sub ? [...(nilaiPenuh[k] || []).filter((x) => x && x.sub !== sub), ...arr.map((x) => ({ ...x, sub }))] : arr);
+        const row = {
+          siswa_id: cocok.siswa.id, mapel_id: mapelId, kelas_id: kelasId, guru_id: p.guruId || nilaiPenuh.guru_id || null,
+          semester, tahun_ajaran: tahun, ulangan_harian: satukan("ulangan_harian", uh), tugas: satukan("tugas", tugas), uts: satukan("uts", uts), uas: satukan("uas", uas),
+          nilai_kehadiran: nilaiPenuh.nilai_kehadiran ?? null, capaian_pembelajaran: cp, diisi_oleh: "guru (leger Excel)",
+        };
+        row.ada_uts = !!(nilaiPenuh.ada_uts || row.uts.length);
+        cocok.nilai = { ...nilaiPenuh, ...row }; // lembar mapel berikutnya membangun dari hasil ini
+        const kunci = `${kunciData}|${cocok.siswa.id}`;
+        if (entri.has(kunci)) entri.get(kunci).row = row; // siswa sama di lembar mapel lain → satu kali simpan, isi terbaru
+        else { const e = { siswa_id: cocok.siswa.id, nama: cocok.siswa.nama, row }; entri.set(kunci, e); plan.siswa.push(e); }
       });
       rencana.push(plan);
     }
