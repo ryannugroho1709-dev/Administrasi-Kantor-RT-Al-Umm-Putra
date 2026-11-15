@@ -1,0 +1,361 @@
+// ============================================================
+//  TAMPILAN HP — fitur yang berlaku di semua halaman:
+//  1. Tombol aksi cepat (＋) → panel pintasan Absen, Jurnal, Riwayat, Monitor, Kas, Cari
+//  2. Tarik ke bawah untuk memuat ulang halaman yang sedang dibuka
+//  3. Panel bawah (bottom sheet) bisa diseret turun untuk menutup
+//  4. Badge angka di "Riwayat" navigasi bawah (sesi yang perlu ditindaklanjuti hari ini)
+//  5. Mode hemat data & offline: gambar dimuat malas, data Monitor/Riwayat terakhir disimpan dan
+//     ditampilkan saat sinyal hilang, plus banner "sedang offline"
+//  Semua dibungkus try/catch — kalau ada yang gagal, fungsi utama aplikasi tetap jalan.
+// ============================================================
+(function () {
+  const diHp = () => window.matchMedia("(max-width:860px)").matches;
+  const halamanPunyaFabSendiri = ["kas"];
+
+  // ── 1. Tombol aksi cepat ─────────────────────────────────
+  function pasangFab() {
+    if (document.getElementById("hp-fab")) return;
+    const b = document.createElement("button");
+    b.id = "hp-fab"; b.type = "button"; b.className = "hp-fab"; b.setAttribute("aria-label", "Aksi cepat");
+    b.textContent = "＋";
+    b.onclick = bukaAksiCepat;
+    document.body.appendChild(b);
+    perbaruiFab();
+  }
+  function perbaruiFab() {
+    const sembunyi = halamanPunyaFabSendiri.includes(STATE.currentPage) || !STATE.guruId;
+    document.body.classList.toggle("hp-fab-sembunyi", sembunyi);
+  }
+  window.bukaAksiCepat = function () {
+    const aksi = [
+      ["🕒", "Absen", "showPage('absensi-guru','page-absensi-guru','menuAbsensiGuru')"],
+      ["📓", "Isi Jurnal", "showPage('jurnal-guru','page-jurnal-guru','menuJurnalGuru')"],
+      ["📜", "Riwayat", "showPage('riwayat-absen','page-riwayat-absen','menuRiwayatAbsen')"],
+      ["🗓️", "Jadwal", "showPage('jadwal','page-jadwal','menuJadwal')"],
+    ];
+    if (isAdmin()) aksi.push(["📡", "Monitor", "showPage('monitor','page-monitor','menuMonitor')"]);
+    if (typeof bisaAksesKas === "function" && bisaAksesKas()) aksi.push(["💼", "Catat Kas", "showPage('kas','page-kas','menuKas');setTimeout(()=>{if(typeof bukaPilihJenisKas==='function'&&KAS.siap)bukaPilihJenisKas();},900)"]);
+    aksi.push(["🔎", "Cari", "bukaPencarianCepat()"]);
+    openModal(`<h3>⚡ Aksi Cepat</h3>
+      <div class="hp-aksi-grid">${aksi.map(([i, l, f]) => `<button type="button" onclick="closeModal();${f.replace(/"/g, "&quot;")}"><span>${i}</span>${l}</button>`).join("")}</div>`);
+  };
+
+  // ── 2. Tarik ke bawah untuk memuat ulang ─────────────────
+  function pasangTarikMuat() {
+    const sc = document.getElementById("page-container");
+    if (!sc || sc._hpTarik) return;
+    sc._hpTarik = true;
+    const ind = document.createElement("div");
+    ind.className = "hp-tarik"; ind.innerHTML = "<span>↻</span>";
+    document.body.appendChild(ind);
+    let y0 = null, dy = 0, aktif = false;
+    const AMBANG = 80;
+    sc.addEventListener("touchstart", (e) => {
+      if (!diHp() || sc.scrollTop > 0 || document.getElementById("modal-overlay")?.classList.contains("open")) { y0 = null; return; }
+      if (e.target.closest("input,textarea,select,.chip-filter,[contenteditable]")) { y0 = null; return; }
+      y0 = e.touches[0].clientY; dy = 0; aktif = false;
+    }, { passive: true });
+    sc.addEventListener("touchmove", (e) => {
+      if (y0 === null) return;
+      dy = e.touches[0].clientY - y0;
+      if (dy <= 0 || sc.scrollTop > 0) { ind.style.opacity = 0; aktif = false; return; }
+      aktif = true;
+      const tarik = Math.min(dy, 130);
+      ind.style.opacity = Math.min(1, tarik / AMBANG);
+      ind.style.transform = `translateY(${tarik * 0.6 - 50}px) rotate(${tarik * 2.4}deg)`;
+      ind.classList.toggle("siap", dy >= AMBANG);
+    }, { passive: true });
+    sc.addEventListener("touchend", async () => {
+      if (y0 === null) return;
+      y0 = null;
+      if (!aktif || dy < AMBANG) { ind.style.transition = "opacity .2s,transform .2s"; ind.style.opacity = 0; ind.style.transform = "translateY(-50px)"; setTimeout(() => { ind.style.transition = ""; }, 220); return; }
+      ind.classList.add("muat"); ind.style.transform = "translateY(10px)";
+      try { if (navigator.vibrate) navigator.vibrate(10); } catch (e) {}
+      try { await refreshCurrentPage(); } catch (e) { console.warn(e); }
+      setTimeout(() => { ind.classList.remove("muat", "siap"); ind.style.opacity = 0; ind.style.transform = "translateY(-50px)"; }, 500);
+      perbaruiBadge(true);
+    });
+    // Sentuhan dibatalkan (mis. menu samping ikut terbuka saat menggeser) → sembunyikan lagi, jangan tertinggal
+    const reset = () => { if (ind.classList.contains("muat")) return; y0 = null; aktif = false; ind.classList.remove("siap"); ind.style.transition = "opacity .15s"; ind.style.opacity = 0; ind.style.transform = "translateY(-50px)"; };
+    sc.addEventListener("touchcancel", reset, { passive: true });
+    sc.addEventListener("scroll", () => { if (sc.scrollTop > 0) reset(); }, { passive: true });
+    document.addEventListener("click", (e) => { if (e.target.closest && e.target.closest("#sidebar,.sidebar,.hamburger,#btn-menu,[onclick*='toggleSidebar']")) reset(); }, true);
+    document.addEventListener("visibilitychange", reset);
+  }
+
+  // ── 3. Seret panel bawah untuk menutup ───────────────────
+  function pasangSeretPanel() {
+    const p = document.getElementById("modal-panel");
+    if (!p || p._hpSeret) return;
+    p._hpSeret = true;
+    let y0 = null, dy = 0;
+    p.addEventListener("touchstart", (e) => {
+      if (!window.matchMedia("(max-width:620px)").matches) return;
+      const atas = p.getBoundingClientRect().top;
+      // Hanya bila disentuh di area pegangan (atas panel) & panel sedang di posisi gulir paling atas
+      if (e.touches[0].clientY - atas > 44 || p.scrollTop > 0) { y0 = null; return; }
+      y0 = e.touches[0].clientY; dy = 0; p.classList.add("hp-seret"); p.classList.remove("hp-lepas");
+    }, { passive: true });
+    p.addEventListener("touchmove", (e) => {
+      if (y0 === null) return;
+      dy = Math.max(0, e.touches[0].clientY - y0);
+      p.style.transform = `translateY(${dy}px)`;
+    }, { passive: true });
+    p.addEventListener("touchend", () => {
+      if (y0 === null) return;
+      y0 = null; p.classList.remove("hp-seret"); p.classList.add("hp-lepas");
+      if (dy > 110) { p.style.transform = "translateY(100%)"; setTimeout(() => { p.style.transform = ""; p.classList.remove("hp-lepas"); closeModal(); }, 190); }
+      else { p.style.transform = ""; setTimeout(() => p.classList.remove("hp-lepas"), 220); }
+    });
+  }
+
+  // ── 4. Badge di navigasi bawah ───────────────────────────
+  let _badgeAngka = 0, _badgeWaktu = 0;
+  async function perbaruiBadge(paksa) {
+    try {
+      if (!STATE.guruId || typeof apiGetMonitorHarian !== "function") return;
+      if (!paksa && Date.now() - _badgeWaktu < 3 * 60 * 1000) { pasangBadge(); return; }
+      _badgeWaktu = Date.now();
+      const data = await apiGetMonitorHarian(tanggalISO(), hariIniIndo());
+      const admin = isAdmin();
+      _badgeAngka = (data || []).filter((r) => {
+        if (!admin && r.jadwal?.guru_id !== STATE.guruId) return false;
+        if (r.labelKhusus || !_sesiSudahLewat(tanggalISO(), r.jadwal?.jam_selesai)) return false;
+        return (r.warna === "merah" && !r.sesi?.jam_masuk) || r.warna === "kuning";
+      }).length;
+      pasangBadge();
+    } catch (e) { /* badge bersifat tambahan — abaikan kalau gagal */ }
+  }
+  window._hpPerbaruiBadge = perbaruiBadge;
+  function pasangBadge() {
+    const tombol = [...document.querySelectorAll("#bottom-nav .bn-item")].find((b) => /riwayat-absen/.test(b.getAttribute("onclick") || ""));
+    if (!tombol) return;
+    tombol.querySelector(".bn-badge")?.remove();
+    if (_badgeAngka > 0) {
+      tombol.insertAdjacentHTML("beforeend", `<span class="bn-badge" aria-label="${_badgeAngka} sesi perlu ditindaklanjuti">${_badgeAngka > 99 ? "99+" : _badgeAngka}</span>`);
+      tombol.title = `${_badgeAngka} sesi hari ini perlu ditindaklanjuti (belum absen / lupa pulang-jurnal)`;
+    }
+  }
+
+  // ── 5. Hemat data & offline ──────────────────────────────
+  // Simpan hasil terakhir beberapa data penting supaya tetap bisa dilihat saat sinyal hilang.
+  function bungkusCache(nama, maksByte) {
+    const asli = window[nama];
+    if (typeof asli !== "function" || asli._hpCache) return;
+    const baru = async function (...args) {
+      const kunci = "hpcache:" + nama + ":" + JSON.stringify(args);
+      try {
+        const hasil = await asli.apply(this, args);
+        try { const teks = JSON.stringify(hasil); if (teks.length < maksByte) localStorage.setItem(kunci, JSON.stringify({ t: Date.now(), d: hasil })); } catch (e) {}
+        return hasil;
+      } catch (e) {
+        if (!navigator.onLine) {
+          try { const c = JSON.parse(localStorage.getItem(kunci) || "null"); if (c) { tampilOffline(true, c.t); return c.d; } } catch (e2) {}
+        }
+        throw e;
+      }
+    };
+    baru._hpCache = true;
+    window[nama] = baru;
+  }
+  function tampilOffline(on, sejak) {
+    let el = document.getElementById("hp-offline");
+    if (!el) { el = document.createElement("div"); el.id = "hp-offline"; el.className = "hp-offline"; document.body.appendChild(el); }
+    if (on) {
+      const jam = sejak ? new Date(sejak).toLocaleString("id-ID", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+      el.innerHTML = `📴 <span>Sedang offline${jam ? ` — menampilkan data tersimpan (${jam})` : " — data terakhir tetap bisa dilihat"}.</span>`;
+    }
+    el.classList.toggle("tampil", !!on);
+  }
+  function pasangGambarMalas(akar) {
+    (akar.querySelectorAll ? akar.querySelectorAll("img:not([loading])") : []).forEach((img) => { img.loading = "lazy"; img.decoding = "async"; });
+  }
+
+  // ── 6. Kirim WA tanpa "terlempar" dari aplikasi ──────────
+  // Dulu link wa.me membuka tab browser baru → di HP, aplikasi tertutup & saat kembali mulai lagi
+  // dari Beranda. Sekarang: (a) di HP langsung membuka aplikasi WhatsApp (whatsapp://), (b) posisi
+  // terakhir (halaman, filter, posisi gulir) disimpan, dan kalau aplikasi sempat dimulai ulang oleh
+  // HP, otomatis kembali ke halaman yang sama, (c) sesi yang sudah dikirimi WA ditandai.
+  const KUNCI_POSISI = "hpPosisiKembali";
+  const _asliOpen = window.open.bind(window);
+  const diPerangkatHp = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  function simpanPosisi() {
+    try {
+      const sc = document.getElementById("page-container");
+      const aktif = document.querySelector(".page.show");
+      const m = (typeof MENU !== "undefined" ? MENU.flatMap((g) => g.items) : []).find((x) => x.key === STATE.currentPage);
+      localStorage.setItem(KUNCI_POSISI, JSON.stringify({
+        t: Date.now(), guruId: STATE.guruId, page: STATE.currentPage, pageId: m?.page || aktif?.id, i18n: m?.i18n || "",
+        raFilter: typeof _RA_FILTER !== "undefined" ? _RA_FILTER : "", scroll: sc ? sc.scrollTop : 0,
+      }));
+    } catch (e) {}
+  }
+  // Kalau aplikasi TIDAK sempat ditutup HP (kembali dari WhatsApp dalam keadaan masih hidup), posisi
+  // simpanan dibuang — supaya tidak "melompat" ke halaman lama saat nanti login ulang.
+  function buangPosisiSaatKembali() {
+    const h = () => { if (document.visibilityState !== "visible") return; document.removeEventListener("visibilitychange", h); try { localStorage.removeItem(KUNCI_POSISI); } catch (e) {} };
+    setTimeout(() => document.addEventListener("visibilitychange", h), 300);
+  }
+  function pulihkanPosisi() {
+    try {
+      const p = JSON.parse(localStorage.getItem(KUNCI_POSISI) || "null");
+      if (!p || Date.now() - p.t > 30 * 60 * 1000 || p.guruId !== STATE.guruId || !p.page || p.page === "dashboard") return false;
+      if (STATE.currentPage === p.page) { localStorage.removeItem(KUNCI_POSISI); return true; }
+      if (typeof _RA_FILTER !== "undefined" && p.raFilter) _RA_FILTER = p.raFilter;
+      showPage(p.page, p.pageId, p.i18n);
+      if (STATE.currentPage !== p.page) return false; // belum boleh (mis. admin belum terverifikasi) → coba lagi nanti
+      localStorage.removeItem(KUNCI_POSISI);
+      // Kembalikan posisi gulir setelah datanya selesai dimuat
+      const sc = document.getElementById("page-container");
+      let n = 0;
+      const iv = setInterval(() => { n++; if (sc && sc.scrollHeight > p.scroll + 100) { sc.scrollTop = p.scroll; clearInterval(iv); } if (n > 25) clearInterval(iv); }, 200);
+      toast("↩️ Kembali ke halaman sebelumnya", "ok");
+      return true;
+    } catch (e) { return false; }
+  }
+  // WhatsApp di komputer (Windows) merusak emoji "baru" (kode di atas U+FFFF, mis. 📅 📚 🕒 📝) yang
+  // dikirim lewat tautan → tampil "�". Sebelum dibuka, emoji tsb diganti emoji lama yang pasti tampil
+  // (✅ ⏰ ✍️ ✏️ ⚠️ ☀️ ⭐ dst.); yang tidak punya padanan dibuang.
+  const WA_GANTI = [
+    [/[\u{1F4C5}\u{1F4C6}\u{1F5D3}]️?/gu, "▪️"], [/[\u{1F550}-\u{1F567}]️?/gu, "⏰"], [/[\u{1F4DA}\u{1F4D6}\u{1F4D7}\u{1F4D8}\u{1F4D9}\u{1F4D5}\u{1F4D3}\u{1F4D4}]/gu, "✏️"],
+    [/\u{1F4DD}/gu, "✍️"], [/[\u{1F4E2}\u{1F4E3}]/gu, "✳️"], [/[\u{1F4AC}\u{1F4E4}\u{1F4E5}\u{1F4E9}\u{1F4E8}\u{1F4E7}]/gu, "✉️"], [/[\u{1F3C5}\u{1F3C6}\u{1F947}\u{1F393}]/gu, "⭐"],
+    [/\u{1F514}/gu, "⏰"], [/\u{1F64B}[‍♀♂️]*/gu, "✋"], [/\u{1F534}/gu, "❗"], [/\u{1F7E2}/gu, "✅"], [/\u{1F7E1}/gu, "⚠️"],
+    [/[\u{1F4CC}\u{1F4CD}]/gu, "➡️"], [/\u{1F6E1}️?/gu, "✅"], [/[\u{1F3D6}\u{1F334}]️?/gu, "☀️"], [/[\u{1F389}\u{1F38A}\u{1F4A1}]/gu, "✨"],
+    [/[\u{1F91D}\u{1F465}\u{1F46A}]/gu, "✳️"], [/[\u{1F504}\u{1F501}]/gu, "♻️"], [/[\u{1F54C}\u{1F4FF}\u{1F54B}]/gu, "☪️"], [/[\u{1F4CB}\u{1F4CA}\u{1F4C8}\u{1F5C2}\u{1F4C1}]️?/gu, "▪️"],
+  ];
+  function waAman(teks) {
+    let t = String(teks || "");
+    WA_GANTI.forEach(([re, ganti]) => { t = t.replace(re, ganti); });
+    // sisa emoji baru (termasuk gabungan ZWJ & warna kulit) dibuang
+    t = t.replace(/(?:[\u{10000}-\u{10FFFF}][\u{1F3FB}-\u{1F3FF}️]*‍?)+/gu, "");
+    return t.replace(/^[ \t]+/gm, (m) => (m.length > 3 ? m : "")).replace(/[ \t]{2,}/g, " ").replace(/ +\n/g, "\n");
+  }
+  // WhatsApp di KOMPUTER (aplikasi Windows & WhatsApp Web lewat tautan wa.me) merusak SEMUA emoji yang dibawa
+  // tautan — termasuk emoji "lama" seperti ✳️ ⏰ ▪️ ✅ → tampil "�". Karena itu untuk komputer, SEMUA emoji
+  // dibuang otomatis (berdasarkan jenis karakternya, bukan daftar), jadi emoji apa pun yang kelak dipakai di
+  // fitur baru juga aman. Penanda daftar diganti "•", peringatan jadi "(!)". Teks, *tebal*, dan tautan utuh.
+  const _EMOJI = /(?:\p{Extended_Pictographic}|\p{Regional_Indicator}|[#*0-9]️?⃣)(?:[️\u{1F3FB}-\u{1F3FF}]|‍(?:\p{Extended_Pictographic}|[♀♂])️?)*/gu;
+  const _BULLET = /^([ \t]*)(?:[▪▫◾◽▶➡✅✔☑⭐\u{1F449}\u{1F538}\u{1F539}\u{1F535}\u{1F7E2}\u{1F7E0}\u{1F534}]️?)[ \t]*/gmu;
+  function waAmanKomputer(teks) {
+    let t = String(teks || "");
+    t = t.replace(/⚠️?/gu, "(!)").replace(/[❗❕]️?/gu, "!");
+    t = t.replace(_BULLET, (m, sp) => sp + "- ");   // emoji penanda daftar di awal baris → -
+    t = t.replace(_EMOJI, "");                       // sisa emoji (judul, akhir kalimat, dll.) dibuang
+    t = t.replace(/[️‍]/g, "");            // sisa penanda emoji yang terlepas
+    // tanda baca khusus → versi papan ketik biasa (pasti tampil di WhatsApp mana pun)
+    t = t.replace(/[•▪●◦]/g, "-").replace(/[—–]/g, "-").replace(/[→⇒➜]/g, "->").replace(/…/g, "...").replace(/[“”]/g, "\"").replace(/[‘’]/g, "'");
+    return t.replace(/^[ \t]+(?=\*|\S)/gm, (m) => (m.length > 3 ? m : "")).replace(/[ \t]{2,}/g, " ").replace(/ +\n/g, "\n").replace(/\(\s*\)/g, "");
+  }
+  window.waAmanKomputer = waAmanKomputer;
+  function urlWaAman(url) {
+    try {
+      const u = new URL(url);
+      const q = []; u.searchParams.forEach((v, k) => q.push(`${k}=${encodeURIComponent(k === "text" ? (diPerangkatHp() ? waAman(v) : waAmanKomputer(v)) : v)}`));
+      return `${u.origin}${u.pathname}${q.length ? "?" + q.join("&") : ""}`;
+    } catch (e) { return url; }
+  }
+  window.waAman = waAman;
+  function bukaWa(url) {
+    url = urlWaAman(url);
+    let nomor = "", teks = "";
+    try { const u = new URL(url); nomor = u.pathname.replace(/\D/g, ""); teks = u.searchParams.get("text") || ""; } catch (e) {}
+    if (diPerangkatHp() && nomor) {
+      // Langsung ke aplikasi WhatsApp; kalau WhatsApp tidak terpasang, jatuh ke wa.me
+      let pergi = false;
+      const tandai = () => { if (document.visibilityState === "hidden") pergi = true; };
+      document.addEventListener("visibilitychange", tandai);
+      location.href = `whatsapp://send?phone=${nomor}${teks ? "&text=" + encodeURIComponent(teks) : ""}`;
+      setTimeout(() => { document.removeEventListener("visibilitychange", tandai); if (!pergi && document.visibilityState === "visible") _asliOpen(url, "_blank", "noopener"); }, 1600);
+    } else {
+      _asliOpen(url, "_blank", "noopener");
+    }
+  }
+  function pasangPenangkapWa() {
+    document.addEventListener("click", (e) => {
+      const a = e.target.closest && e.target.closest('a[href^="https://wa.me/"],a[href^="https://api.whatsapp.com/"]');
+      if (!a) return;
+      e.preventDefault();
+      simpanPosisi(); buangPosisiSaatKembali();
+      if (a.dataset.waKunci && typeof _simpanKonfirmasiWa === "function") _simpanKonfirmasiWa(a.dataset.waKunci, { t: Date.now() });
+      bukaWa(a.href);
+      // Saat kembali dari WhatsApp: segarkan tampilan supaya tanda "✓ WA terkirim" muncul
+      if (a.dataset.waKunci) {
+        const balik = () => { if (document.visibilityState !== "visible") return; document.removeEventListener("visibilitychange", balik); setTimeout(() => { try { _tlSegarkan(); } catch (er) {} }, 300); };
+        document.addEventListener("visibilitychange", balik);
+        if (!diPerangkatHp()) setTimeout(() => { try { _tlSegarkan(); } catch (er) {} }, 500);
+      }
+    }, true);
+    // window.open("https://wa.me/...") yang dipanggil langsung dari kode (slip gaji, dll) ikut diarahkan
+    window.open = function (url, ...rest) {
+      if (typeof url === "string" && /^https:\/\/(wa\.me|api\.whatsapp\.com)\//.test(url)) {
+        if (diPerangkatHp()) { simpanPosisi(); buangPosisiSaatKembali(); bukaWa(url); return null; }
+        url = urlWaAman(url); // komputer: tetap tab baru, tetapi emoji diamankan
+      }
+
+      return _asliOpen(url, ...rest);
+    };
+  }
+
+  // ── Kaitkan ke alur aplikasi ─────────────────────────────
+  function mulai() {
+    try {
+      pasangFab(); pasangTarikMuat(); pasangSeretPanel(); pasangPenangkapWa();
+      bungkusCache("apiGetMonitorHarian", 1500000);
+      bungkusCache("apiGetRiwayatAbsenRange", 2500000);
+      window.addEventListener("offline", () => tampilOffline(true));
+      window.addEventListener("online", () => { tampilOffline(false); try { refreshCurrentPage(); } catch (e) {} });
+      if (!navigator.onLine) tampilOffline(true);
+      pasangGambarMalas(document);
+      new MutationObserver((ms) => ms.forEach((m) => m.addedNodes.forEach((n) => { if (n.nodeType === 1) { if (n.tagName === "IMG" && !n.hasAttribute("loading")) { n.loading = "lazy"; n.decoding = "async"; } else pasangGambarMalas(n); } })))
+        .observe(document.body, { childList: true, subtree: true });
+      // Setelah pindah halaman: perbarui tombol aksi cepat & badge
+      if (typeof showPage === "function" && !showPage._hp) {
+        const asliShow = showPage;
+        window.showPage = function (...a) { const r = asliShow.apply(this, a); try { perbaruiFab(); perbaruiBadge(); } catch (e) {} return r; };
+        window.showPage._hp = true;
+      }
+      if (typeof renderBottomNav === "function" && !renderBottomNav._hp) {
+        const asliNav = renderBottomNav;
+        window.renderBottomNav = function (...a) { const r = asliNav.apply(this, a); try { pasangBadge(); } catch (e) {} return r; };
+        window.renderBottomNav._hp = true;
+      }
+      perbaruiBadge(true);
+      setInterval(() => { if (document.visibilityState === "visible") perbaruiBadge(true); }, 5 * 60 * 1000);
+      // Guru baru login / berganti akun → segarkan badge & tombol aksi cepat
+      // (kuncinya juga memuat status admin — admin baru terverifikasi sesudah halaman termuat)
+      const kunciAkun = () => `${STATE.guruId || ""}|${isAdmin() ? 1 : 0}`;
+      let guruTerakhir = kunciAkun();
+      setInterval(() => {
+        if (kunciAkun() === guruTerakhir) return;
+        guruTerakhir = kunciAkun();
+
+        perbaruiFab(); perbaruiBadge(true);
+        if (STATE.guruId) setTimeout(pulihkanPosisi, 700);
+
+      }, 2000);
+    } catch (e) { console.warn("Fitur tampilan HP gagal dipasang:", e); }
+  }
+  // ── Tautan langsung dari WA: ?buka=perizinan → setelah admin/kepsek masuk, langsung ke halaman
+  //    Perizinan (antrian izin/sakit, tukar jam, ajukan hadir) yang punya tombol ACC / Tolak. ──
+  function pasangTautanLangsung() {
+    let tujuan = "";
+    try { tujuan = new URLSearchParams(location.search).get("buka") || sessionStorage.getItem("bukaTujuan") || ""; } catch (e) {}
+    if (!tujuan) return;
+    try { sessionStorage.setItem("bukaTujuan", tujuan); history.replaceState(null, "", location.pathname + location.hash); } catch (e) {}
+    const PETA = { perizinan: ["kepsek", "page-kepsek", "menuKepsek"], jadwalujian: ["jadwal-ujian", "page-jadwal-ujian", "menuJadwalUjian"] };
+    const t = PETA[tujuan]; if (!t) return;
+    let n = 0;
+    const iv = setInterval(() => {
+      n++;
+      if (n > 90) { clearInterval(iv); return; } // ± 3 menit menunggu login
+      if (typeof STATE === "undefined" || !STATE.guruId || typeof showPage !== "function") return;
+      const boleh = tujuan === "perizinan" ? ((typeof isAdmin === "function" && isAdmin()) || (typeof isKepsekOrTU === "function" && isKepsekOrTU())) : true;
+      if (!boleh) { if (n > 20) { clearInterval(iv); try { sessionStorage.removeItem("bukaTujuan"); } catch (e) {} } return; }
+      clearInterval(iv);
+      try { sessionStorage.removeItem("bukaTujuan"); } catch (e) {}
+      showPage(t[0], t[1], t[2]);
+      if (STATE.currentPage === t[0]) toast(tujuan === "perizinan" ? "📥 Pengajuan menunggu ACC ada di halaman ini" : "📅 Jadwal ujian", "ok");
+    }, 2000);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => { mulai(); pasangTautanLangsung(); }); else { mulai(); pasangTautanLangsung(); }
+})();
