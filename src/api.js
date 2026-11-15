@@ -984,10 +984,12 @@ async function apiSimpanNilaiRapor(row) {
     throw new Error(_pesanErrorRamah(e) || e.message);
   }
 }
+// Rata-rata komponen (UH/Tugas/UTS/UAS). Kotak yang tidak diisi tersimpan sebagai 0 → TIDAK ikut dihitung,
+// supaya angka rapor sama dengan yang tampil di Input Nilai & leger Excel (dulu UH1=80, UH2 kosong → rapor 40).
 function hitungTotalKomponen(arr) {
-  if (!arr || !arr.length) return 0;
-  const total = arr.reduce((a, b) => a + (Number(b.nilai) || 0), 0);
-  return Math.round((total / arr.length) * 10) / 10;
+  const v = (arr || []).map((b) => Number(b && b.nilai) || 0).filter((x) => x > 0);
+  if (!v.length) return 0;
+  return Math.round((v.reduce((a, b) => a + b, 0) / v.length) * 10) / 10;
 }
 // ── POLA PENILAIAN PER MAPEL (Pengaturan Penilaian) ──
 // bobot_nilai.model_mapel = { mapelId: { pola, bobot? } }
