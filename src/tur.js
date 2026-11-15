@@ -23,11 +23,12 @@ const TUR_DAFTAR = {
     { sel: ".uj-item .btn-accent", judul: "▶ Buka sesi", teks: "Pilih kelas, latihan atau ujian, lalu bagikan token ke santri. Rekap nilai muncul otomatis." },
     { sel: ".uj3-cepat, .uj3-ubin", judul: "⚡ Akses cepat", teks: "Di <b>Rekap</b> sesi ujian ada tombol baru: <b>🔁 Remedial</b> (nilai terbaik yang dipakai) dan <b>📢 Tampilkan hasil</b> (santri melihat kunci & pembahasan)." },
   ] },
-  "input-nilai": { id: "nl", versi: 2, langkah: [
+  "input-nilai": { id: "nl", versi: 3, langkah: [
     { sel: ".nl2-filter", judul: "🎯 Pilih mapel & kelas", teks: "Pilih mapel dan kelas yang mau diisi nilainya." },
     { sel: ".nl2-subtab", judul: "✨ BARU: mapel gabungan dipisah", teks: "Mapel gabungan (mis. Geografi/Sosiologi/Ekonomi) diisi <b>terpisah per mapel</b>. Nilai rapor otomatis = rata-rata ketiganya (lihat tab <b>📊 Rekap</b>)." },
     { sel: ".nl2-hero", judul: "🤖 Pola nilai otomatis", teks: "Isi saja nilai yang Antum punya. Ada UH/Tugas → bobot Standar; hanya UAS (+ kehadiran) → bobot UAS + Kehadiran. Dipilih otomatis per santri." },
-    { sel: ".nl2-menu", judul: "📊 Excel", teks: "Lebih nyaman di Excel? Unduh leger, isi, lalu unggah kembali." },
+    { sel: ".nl2-tempel", judul: "✨ BARU: 📋 Tempel nilai", teks: "Pilih kolom (UH/Tugas/UTS/UAS), lalu <b>tempel daftar nama & nilai</b> dari WA atau catatan. Nama dicocokkan otomatis — yang ragu tinggal dipilih santrinya, tidak perlu memperbaiki tulisan." },
+    { sel: ".nl2-menu", judul: "📊 Excel", teks: "Lebih nyaman di Excel? Unduh leger (mapel gabungan berdampingan + nilai akhir & nilai rapor), isi, lalu unggah kembali." },
     { sel: ".nl2-tombol-simpan", judul: "💾 Simpan", teks: "Jangan lupa simpan setelah mengisi. Nilai akhir di tabel = angka yang tercetak di rapor." },
   ] },
 };
@@ -100,7 +101,7 @@ function _turOtomatis(halaman) {
   let coba = 0;
   const cek = () => {
     if (typeof STATE !== "undefined" && STATE.currentPage !== halaman) return;
-    if (document.querySelector(".modal-overlay.show, .modal.show")) { if (coba++ < 40) setTimeout(cek, 500); return; }
+    if (document.querySelector("#modal-overlay.open, .modal-overlay.show, .modal.show")) { if (coba++ < 40) setTimeout(cek, 500); return; }
     const ada = t.langkah.filter((l) => _turCari(l.sel)).length;
     if (ada >= Math.min(2, t.langkah.length)) turMulai(halaman); else if (coba++ < 24) setTimeout(cek, 500);
   };
@@ -117,13 +118,16 @@ function _turOtomatis(halaman) {
 })();
 
 // ── Kartu "🆕 Fitur baru" di Dasbor: tiap fitur punya tombol "Lihat caranya" (buka halaman + tur) ──
-const TUR_BARU = { versi: "2026-11-13", fitur: [
+const TUR_BARU = { versi: "2026-11-16", fitur: [
+  { ikon: "📝", judul: "Buat soal Word dari teks (tempel saja)", teks: "Copas teks soal → jadi Word berkop ujian semester ini & langsung terkumpul ke admin.", halaman: ["dashboard", "page-dashboard", "menuDashboard"], tur: "sw-dasbor" },
+  { ikon: "📋", judul: "Input Nilai: tempel nama & nilai", teks: "Nama dicocokkan otomatis, salah ketik tinggal pilih santrinya.", halaman: ["input-nilai", "page-input-nilai", "menuInputNilai"] },
   { ikon: "🗓️", judul: "Jadwal Ujian: ketuk mapel untuk kumpulkan soal", teks: "Absen mengawas kini dihitung ke insentif bulanan.", halaman: ["jadwal-ujian", "page-jadwal-ujian", "menuJadwalUjian"] },
   { ikon: "🧪", judul: "Ujian Online: uji coba soal, remedial & kunci jawaban", teks: "Coba soal tanpa menyimpan nilai; santri bisa remedial, nilai terbaik dipakai.", halaman: ["ujian", "page-ujian", "menuUjian"] },
   { ikon: "🤖", judul: "Input Nilai: pola otomatis & mapel gabungan dipisah", teks: "Geografi/Sosiologi/Ekonomi diisi terpisah, rapor = rata-ratanya.", halaman: ["input-nilai", "page-input-nilai", "menuInputNilai"] },
 ] };
 function turBuka(i) {
   const f = TUR_BARU.fitur[i]; if (!f) return;
+  if (f.tur) { if (typeof STATE !== "undefined" && STATE.currentPage !== f.halaman[0]) showPage(...f.halaman); let n = 0; const c = () => (turMulai(f.tur, true) || n++ > 16 ? 0 : setTimeout(c, 500)); setTimeout(c, 600); return; }
   const t = TUR_DAFTAR[f.halaman[0]]; if (t) try { localStorage.removeItem(_turKunci(t)); } catch (e) {}
   showPage(...f.halaman);
 }

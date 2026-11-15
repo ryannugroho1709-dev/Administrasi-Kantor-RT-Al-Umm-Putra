@@ -17,10 +17,12 @@ const _swAngkaKelas = (kelasId) => parseInt(String(_juAngkaKelas(kelasId)).repla
 const _swPaket = (kelasId) => (_swAngkaKelas(kelasId) >= 10 ? "c" : "b");
 function _swKategori(mapelId) {
   const m = (LOOKUP.mapel || []).find((x) => x.id === _uaBase(mapelId));
-  return m && m.masuk_diniyyah && !m.masuk_umum ? "diniyyah" : "umum";
+  if (!m) return "umum";
+  if (m.kategori === "diniyyah" || m.kategori === "umum") return m.kategori;
+  return m.masuk_diniyyah && !m.masuk_umum ? "diniyyah" : "umum";
 }
-const _swKatAktif = (mapelId) => SW.katPilih?.[mapelId] || _swKategori(mapelId);
-function swPilihKat(kat) { const m = qs("sw-mapel")?.value; if (!m) return; SW.katPilih = { ...(SW.katPilih || {}), [m]: kat }; _swSegarkanInfo(); }
+// Kategori kop (Diniyyah / Umum) TERKUNCI mengikuti Data Mapel — guru tidak bisa mengganti.
+const _swKatAktif = (mapelId) => _swKategori(mapelId);
 const _swSemester = (j) => (_juTgl(j.mulai).getMonth() >= 6 ? "ganjil" : "genap"); // Juli–Desember = ganjil
 const _swJenisUts = (j) => j.jenis === "uts";
 
@@ -136,12 +138,29 @@ function _swSisipSetelah(xml, label, nilai, rPrAr) {
   sisa = sisa.replace(/^(<w:r(?:\s[^>]*)?>(?:<w:rPr>[\s\S]*?<\/w:rPr>)?)((?:<w:tab\/>){4,})/, (a, b, tabs) => b + tabs.slice(0, tabs.length - "<w:tab/>".length * 2));
   return xml.slice(0, pos) + `<w:r>${rPrAr}<w:t xml:space="preserve"> ${_swEsc(nilai)}</w:t></w:r>` + sisa;
 }
+// Ganti isi satu paragraf identitas: [label1 isi1] TAB [label2 isi2]; gambar (garis) di paragraf itu tetap
+function _swBarisIdentitas(xml, penanda, kanan, kiri) {
+  const i = xml.indexOf(">" + penanda); if (i < 0) return xml;
+  const a = Math.max(xml.lastIndexOf("<w:p ", i), xml.lastIndexOf("<w:p>", i)), b = xml.indexOf("</w:p>", i);
+  if (a < 0 || b < 0) return xml;
+  const p = xml.slice(a, b + 6);
+  if (/<w:txbxContent/.test(p)) return xml;
+  const buka = p.match(/^<w:p(?:\s[^>]*)?>/)[0];
+  let pPr = (p.match(/<w:pPr>[\s\S]*?<\/w:pPr>/) || ["<w:pPr><w:bidi/></w:pPr>"])[0].replace(/<w:tabs>[\s\S]*?<\/w:tabs>/, "");
+  const tabs = `<w:tabs><w:tab w:val="left" w:pos="${_SW_TAB_IDENTITAS}"/></w:tabs>`;
+  pPr = /<w:bidi[\s/>]/.test(pPr) ? pPr.replace(/<w:bidi(?=[\s/>])/, tabs + "<w:bidi") : pPr.replace("<w:pPr>", "<w:pPr>" + tabs + "<w:bidi/>");
+  const gambar = (p.match(/<w:r(?:\s[^>]*)?>(?:(?!<\/w:r>)[\s\S])*?<mc:AlternateContent[\s\S]*?<\/mc:AlternateContent>\s*<\/w:r>/g) || []).join("");
+  const rPr = (tebal, sz) => `<w:rPr><w:rFonts w:ascii="Traditional Arabic" w:hAnsi="Traditional Arabic" w:eastAsia="Traditional Arabic" w:cs="Traditional Arabic"/>${tebal ? "<w:b/><w:bCs/>" : ""}<w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/><w:rtl/></w:rPr>`;
+  const r = (t, tebal) => `<w:r>${rPr(tebal, tebal ? 40 : 36)}<w:t xml:space="preserve">${_swEsc(t)}</w:t></w:r>`;
+  const isi = (x) => r(x[0] + " ", true) + (x[1] ? r(x[1], false) : "");
+  const baru = buka + pPr + isi(kanan) + `<w:r>${rPr(false, 36)}<w:tab/></w:r>` + isi(kiri) + gambar + "</w:p>";
+  return xml.slice(0, a) + baru + xml.slice(b + 6);
+}
+const _SW_TAB_IDENTITAS = 5300; // ± setengah lebar kertas: kolom kedua (المادة / التاريخ) selalu sejajar
 function _swIsiKop(xml, info) {
   if (info.kat === "diniyyah") {
-    const rPr = `<w:rPr><w:rFonts w:ascii="Traditional Arabic" w:hAnsi="Traditional Arabic" w:cs="Traditional Arabic"/><w:sz w:val="32"/><w:szCs w:val="36"/><w:rtl/></w:rPr>`;
-    xml = _swSisipSetelah(xml, "المادة", info.mapelAr || info.mapel, rPr);
-    xml = _swSisipSetelah(xml, "الفصل", _swAngkaArab(info.kelas), rPr);
-    xml = _swSisipSetelah(xml, "التاريخ", info.tanggalAr, rPr);
+    xml = _swBarisIdentitas(xml, "المادة", ["الإسم :", ""], ["المادة :", info.mapel]);
+    xml = _swBarisIdentitas(xml, "التاريخ", ["الفصل :", _swAngkaArab(info.kelas)], ["التاريخ :", info.tanggalAr]);
     return xml;
   }
   // Umum: tabel identitas → ": " ke-2 Mapel, ke-3 Kelas, ke-4 Hari/Tanggal, ke-5 Waktu
@@ -249,7 +268,7 @@ async function _swSegarkanInfo() {
   let draf = ""; try { draf = localStorage.getItem(_swKunciDraf()) || ""; } catch (e) {}
   const ta = qs("sw-teks");
   if (ta && (!ta.value.trim() || ta.dataset.dari !== mapelId + kelasId)) { ta.value = draf || d.teks || ""; ta.dataset.dari = mapelId + kelasId; }
-  qs("sw-info").innerHTML = `<span>🏫 Paket ${paket.toUpperCase()} <small>(${paket === "b" ? "setara SMP" : "setara SMA"})</small></span><span class="sw-kat"><button class="${kat === "diniyyah" ? "on" : ""}" onclick="swPilihKat('diniyyah')">🕌 Diniyyah</button><button class="${kat === "umum" ? "on" : ""}" onclick="swPilihKat('umum')">📘 Umum</button></span><span>📋 ${uts ? "UTS" : "PAS"} · Semester ${sem === "ganjil" ? "Ganjil" : "Genap"}</span><span id="sw-kop-ket">⏳ memeriksa kop…</span>${d.file_url ? `<span class="ok">✅ sudah terkumpul${d.sumber === "tempel" ? " (bisa diperbarui)" : ""}</span>` : ""}`;
+  qs("sw-info").innerHTML = `<span>🏫 Paket ${paket.toUpperCase()} <small>(${paket === "b" ? "setara SMP" : "setara SMA"})</small></span><span class="sw-kunci" title="Mengikuti kategori di Data Mapel (tidak bisa diganti di sini)">🔒 ${kat === "diniyyah" ? "🕌 Diniyyah" : "📘 Umum"}</span><span>📋 ${uts ? "UTS" : "PAS"} · Semester ${sem === "ganjil" ? "Ganjil" : "Genap"}</span><span id="sw-kop-ket">⏳ memeriksa kop…</span>${d.file_url ? `<span class="ok">✅ sudah terkumpul${d.sumber === "tempel" ? " (bisa diperbarui)" : ""}</span>` : ""}`;
   _swPratinjau();
   const kop = await _swCariKop(kat, uts, sem, paket);
   const el = qs("sw-kop-ket"); if (!el) return;
@@ -265,7 +284,7 @@ function _swPratinjau() {
   qs("sw-prat").innerHTML = urai.length ? urai.map((x) => {
     const ar = _swArab(x.teks) ? ' dir="rtl" class="ar"' : "";
     return `<div class="sw-b ${x.jenis}"${ar}>${x.label ? `<i>${e(x.label)}</i>` : ""}<span>${e(x.teks)}</span></div>`;
-  }).join("") + (_swKatAktif(qs("sw-mapel")?.value) === "umum" && _swArab(ta.value) ? `<div class="sw-awas">💡 Teks soal berbahasa Arab, tetapi kop yang dipakai <b>Umum</b>. <button class="btn btn-sm btn-outline" onclick="swPilihKat('diniyyah')">Pakai kop Diniyyah</button></div>` : "") + (nSoal ? "" : `<div class="sw-awas">⚠️ Belum ada soal bernomor. Awali tiap soal dengan nomor, mis. "1." atau "١."</div>`) : `<div class="sw-kosong">Belum ada teks.</div>`;
+  }).join("") + (_swKatAktif(qs("sw-mapel")?.value) === "umum" && _swArab(ta.value) ? `<div class="sw-awas">💡 Teks soal berbahasa Arab, tetapi mapel ini tercatat <b>Umum</b> di Data Mapel sehingga memakai kop Umum. Bila seharusnya Diniyyah, minta admin mengubah kategorinya di menu <b>Data Mapel</b>.</div>` : "") + (nSoal ? "" : `<div class="sw-awas">⚠️ Belum ada soal bernomor. Awali tiap soal dengan nomor, mis. "1." atau "١."</div>`) : `<div class="sw-kosong">Belum ada teks.</div>`;
 }
 async function swProses(aksi) {
   const j = JU.daftar.find((x) => x.id === SW.jadwalId), kelasId = qs("sw-kelas").value, mapelId = qs("sw-mapel").value, teks = qs("sw-teks").value;
@@ -314,7 +333,7 @@ async function _swCetak(j, mapelId, kelasId, urai, info) {
   if (!kopTeks.length) kopTeks = [j.jenis === "uts" ? "UJIAN TENGAH SEMESTER" : "ASESMEN SUMATIF", p.nama_lembaga_kop || "PKBM AL UMM BARABAI"];
   const isi = urai.map((x) => { const ar = _swArab(x.teks); return `<div class="b ${x.jenis}" dir="${ar ? "rtl" : "ltr"}">${x.label ? `<i>${e(x.label)}</i>` : ""}<span>${e(x.teks)}</span></div>`; }).join("");
   const identitas = info.kat === "diniyyah"
-    ? `<div class="idn ar" dir="rtl"><span>الإسم :</span><span>المادة : ${e(info.mapelAr || info.mapel)}</span><span>الفصل : ${e(_swAngkaArab(info.kelas))}</span><span>التاريخ : ${e(info.tanggalAr)}</span></div>`
+    ? `<div class="idn ar" dir="rtl"><span>الإسم :</span><span>المادة : ${e(info.mapel)}</span><span>الفصل : ${e(_swAngkaArab(info.kelas))}</span><span>التاريخ : ${e(info.tanggalAr)}</span></div>`
     : `<table class="idn"><tr><td>Nama</td><td>:</td><td></td><td>Hari/Tanggal</td><td>: ${e(info.hariTanggal)}</td></tr><tr><td>Mata Pelajaran</td><td>:</td><td>${e(info.mapel)}</td><td>Waktu</td><td>: ${e(info.waktu)}</td></tr><tr><td>Kelas</td><td>:</td><td>${e(info.kelasTeks)}</td><td></td><td></td></tr></table>`;
   w.document.write(`<!doctype html><html lang="id"><head><meta charset="utf-8"><title>${e(_juNamaMapel(mapelId))} Kelas ${e(_juAngkaKelas(kelasId))}</title><style>
     @page{size:215mm 330mm;margin:12mm 15mm 15mm 20mm}body{font-family:"Times New Roman",serif;font-size:12pt;color:#000;margin:0}
@@ -329,3 +348,106 @@ async function _swCetak(j, mapelId, kelasId, urai, info) {
   <script>window.onload=function(){setTimeout(function(){window.print()},400)}<\/script></body></html>`);
   w.document.close();
 }
+
+// ── KARTU DASBOR: "Kumpulkan soal ujian" untuk semua guru, tampil sampai batas pengumpulan berakhir ──
+// Guru melihat mapel-kelas miliknya yang belum/sudah terkumpul + tombol cepat Buat soal Word.
+// Data dibaca sekali per 10 menit (hemat kuota).
+const _SW_DASBOR = { t: 0, isi: null };
+async function _swDataDasbor() {
+  if (_SW_DASBOR.isi && Date.now() - _SW_DASBOR.t < 600000) return _SW_DASBOR.isi;
+  if (!JU.ajar || !JU.ajar.length || !JU.daftar.length) await _juMuat();
+  const hariIni = tanggalISO();
+  const aktif = (JU.daftar || []).filter((j) => j.selesai >= hariIni && Object.keys(j.slot || {}).length);
+  const hasil = [];
+  if (aktif.length && !UA.bank) await _uaMuatBank();
+  for (const j of aktif) {
+    const data = (await _kvAmbil("ujian:soal:" + j.id, {}).catch(() => ({}))) || {};
+    const batas = data._batas || (() => { const d = _juTgl(j.mulai); d.setDate(d.getDate() - 7); return _juIso(d); })();
+    if (batas < hariIni) continue; // batas lewat → kartu hilang
+    const simpan = UA.data, simpanJ = UA.jadwal; UA.data = data; UA.jadwal = j;
+    const semua = _uaDaftarWajib(j).map((it) => ({ ...it, sudah: _uaStatus(j, it).length > 0 }));
+    UA.data = simpan; UA.jadwal = simpanJ;
+    hasil.push({ j, batas, semua });
+  }
+  _SW_DASBOR.isi = hasil; _SW_DASBOR.t = Date.now();
+  return hasil;
+}
+async function _swKartuDasbor() {
+  try {
+    const page = qs("page-dashboard"); if (!page || !STATE.guruId || STATE.currentPage !== "dashboard") return;
+    const daftar = await _swDataDasbor();
+    page.querySelector("#sw-dasbor")?.remove();
+    const saya = STATE.guruId, atur = _uaBolehAtur(), e = _uaEsc;
+    const kartu = daftar.map(({ j, batas, semua }) => {
+      const milik = semua.filter((x) => x.guru.has(saya));
+      if (!milik.length && !atur) return "";
+      const belum = milik.filter((x) => !x.sudah), sisa = _uaSisaHari(batas);
+      const totSudah = semua.filter((x) => x.sudah).length;
+      const persen = milik.length ? Math.round(((milik.length - belum.length) / milik.length) * 100) : 0;
+      const chip = (x) => `<button class="sw-d-chip ${x.sudah ? "ok" : ""}" style="--kw:${_juWarnaKelas(x.kelasId)}" onclick="${x.sudah ? `uaKumpulkan('${j.id}','${x.mapelId}','${x.kelasId}')` : `uaBuatWord('${j.id}','${x.mapelId}','${x.kelasId}')`}">${x.sudah ? "✅" : "⏳"} ${e(_juNamaMapel(x.mapelId))} <small>${e(_juAngkaKelas(x.kelasId))}</small></button>`;
+      return `<div class="sw-d-blok">
+        <div class="sw-d-h"><span class="sw-d-ikon">📝</span><div><b>Kumpulkan soal: ${e(j.judul)}</b>
+          <small>Batas ${e(_juHariPanjang(batas))} · <em class="${sisa <= 2 ? "mepet" : ""}">${e(_uaLabelH(batas))}</em>${atur ? ` · terkumpul ${totSudah}/${semua.length} (semua guru)` : ""}</small></div></div>
+        ${milik.length ? `<div class="sw-d-bar"><i style="width:${persen}%"></i></div>
+        <div class="sw-d-ket">${belum.length ? `Soal antum: <b>${milik.length - belum.length}/${milik.length}</b> terkumpul — ketuk mapel yang ⏳ untuk langsung membuat soal.` : `<b>Alhamdulillah, semua soal antum sudah terkumpul ✓</b>`}</div>
+        <div class="sw-d-chips">${belum.concat(milik.filter((x) => x.sudah)).map(chip).join("")}</div>` : `<div class="sw-d-ket">Antum tidak punya mapel yang diujikan; pantau pengumpulan semua guru lewat tombol di bawah.</div>`}
+        <div class="sw-d-aksi">${milik.length ? `<button class="btn btn-accent btn-sm" data-tur="sw-buat" onclick="uaBuatWord('${j.id}')">📝 Buat soal Word</button>` : ""}
+          <button class="btn btn-outline btn-sm" onclick="swBukaPengumpulan('${j.id}')">📥 Lihat pengumpulan</button>
+          <button class="tur-tanya" onclick="swTurDasbor(true)">❓ Caranya</button></div>
+      </div>`;
+    }).filter(Boolean);
+    if (!kartu.length) return;
+    const div = document.createElement("div");
+    div.id = "sw-dasbor"; div.className = "card sw-dasbor";
+    div.innerHTML = kartu.join("");
+    const sesudah = page.querySelector(".dash-hero");
+    if (sesudah) sesudah.after(div); else page.prepend(div);
+    swTurDasbor(false);
+  } catch (err) { console.warn("Kartu kumpulkan soal gagal:", err); }
+}
+async function swBukaPengumpulan(id) {
+  showPage("jadwal-ujian", "page-jadwal-ujian", "menuJadwalUjian");
+  for (let i = 0; i < 40 && !(JU.daftar.length && qs("ju-wadah")); i++) await new Promise((r) => setTimeout(r, 150));
+  juPengumpulanSoal(id);
+}
+(function pasangKartuSoal() {
+  const coba = () => {
+    if (typeof window.renderDashboard !== "function" || window.renderDashboard._sw) return;
+    const asli = window.renderDashboard;
+    window.renderDashboard = async function (...a) { const r = await asli.apply(this, a); setTimeout(_swKartuDasbor, 600); return r; };
+    window.renderDashboard._sw = true; window.renderDashboard._ju = asli._ju;
+  };
+  setTimeout(coba, 1600); setTimeout(coba, 3000);
+  window.addEventListener("load", () => setTimeout(() => { if (typeof STATE !== "undefined" && STATE.currentPage === "dashboard") _swKartuDasbor(); }, 2500));
+})();
+
+// ── Panduan bersorot ──
+TUR_DAFTAR["sw-dasbor"] = { id: "swd", versi: 1, langkah: [
+  { sel: "#sw-dasbor", judul: "📝 Kumpulkan soal ujian", teks: "Kartu ini muncul untuk semua guru <b>sampai batas pengumpulan soal</b>. Terlihat sisa hari (H-) dan berapa soal antum yang sudah terkumpul." },
+  { sel: "#sw-dasbor .sw-d-chip:not(.ok)", judul: "⏳ Mapel yang belum", teks: "Ketuk mapel yang bertanda ⏳ — jendela pembuat soal langsung terbuka dengan kelas & mapel itu." },
+  { sel: "[data-tur=sw-buat]", judul: "📝 Buat soal Word", teks: "Cukup <b>tempel (copas) teks soal</b>. Aplikasi membuat file Word dengan kop ujian semester ini, rapi seperti karya ilmiah, lalu <b>langsung terkumpul</b> di arsip admin." },
+] };
+TUR_DAFTAR["sw-modal"] = { id: "swm", versi: 1, langkah: [
+  { sel: ".sw-pilih", judul: "1️⃣ Pilih kelas & mapel", teks: "Hanya mapel yang antum ajar. <b>Paket B/C</b> mengikuti kelas (7–9 = B, 10–12 = C)." },
+  { sel: "#sw-info", judul: "2️⃣ Kop terpilih otomatis", teks: "Jenis ujian, semester, dan kategori <b>🔒 Diniyyah/Umum terkunci</b> sesuai Data Mapel — tidak perlu diatur." },
+  { sel: "#sw-teks", judul: "3️⃣ Tempel teks soal", teks: "Copas dari WA / catatan / Word. Baris pertama = judul (mis. nama kitab). Awali soal dengan nomor <b>1.</b> atau <b>١.</b>; pilihan dengan <b>a.</b> atau <b>-</b>. Teks Arab otomatis kanan-ke-kiri." },
+  { sel: "#sw-prat", judul: "4️⃣ Periksa susunan", teks: "Pratinjau menunjukkan judul, nomor soal, dan pilihan yang terbaca. Bila ada yang salah, perbaiki teksnya di atas." },
+  { sel: ".sw-aksi .btn-accent", judul: "5️⃣ Buat & kumpulkan", teks: "File Word terunduh ke perangkat antum <b>dan</b> otomatis tercatat terkumpul. Admin bisa mengunduh & mencetaknya. Bisa diubah lagi kapan saja lewat ✏️." },
+] };
+function swTurDasbor(paksa) {
+  if (paksa) { turMulai("sw-dasbor", true); return; }
+  const t = TUR_DAFTAR["sw-dasbor"]; if (_turSudah(t) || TUR.aktif) return;
+  let n = 0; // tunggu sampai tidak ada jendela lain (mis. PIN admin) yang terbuka
+  const cek = () => { if (STATE.currentPage !== "dashboard" || !qs("sw-dasbor") || TUR.aktif) return; if (document.querySelector("#modal-overlay.open, .modal-overlay.show, .modal.show")) { if (n++ < 120) setTimeout(cek, 1000); return; } turMulai("sw-dasbor"); };
+  setTimeout(cek, 1200);
+}
+// tur jendela pembuat soal: sekali saat pertama kali dibuka
+(function () {
+  const asli = uaBuatWord;
+  uaBuatWord = async function (...a) {
+    const r = await asli.apply(this, a);
+    const t = TUR_DAFTAR["sw-modal"];
+    if (qs("sw-teks") && !_turSudah(t) && !TUR.aktif) setTimeout(() => turMulai("sw-modal"), 500);
+    return r;
+  };
+})();
