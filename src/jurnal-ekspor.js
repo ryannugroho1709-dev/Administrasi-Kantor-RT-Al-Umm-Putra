@@ -204,6 +204,9 @@ async function eksporJurnalGabungan() {
     for (const b of daftar) {
       tb.textContent = `⏳ Mengambil jurnal ${namaBulanIndo(b)}…`;
       let data = await apiGetJurnalBulanan(guruId, b);
+      // jurnal mengawas ujian ikut masuk (guru yang hanya mengawas pun punya jurnal bulan itu)
+      if (typeof _jmJurnalUntukEkspor === "function") { try { data = data.concat(await _jmJurnalUntukEkspor(guruId, b)); } catch (e) { console.warn(e); } }
+      data.sort((a, x) => String(a.tanggal).localeCompare(String(x.tanggal)) || String(a.jadwal_pelajaran?.jam_mulai || "").localeCompare(String(x.jadwal_pelajaran?.jam_mulai || "")));
       if (mapelId) data = data.filter((j) => j.mapel_id === mapelId);
       if (data.length) bulanAda.push([b, data]);
     }

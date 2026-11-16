@@ -720,11 +720,11 @@ async function juRekapHadir(id) {
   const per = {};
   Object.entries(j.slot).forEach(([k, s]) => {
     const [t] = k.split("|"); if (!j.hari.includes(t) || !_juLabelSlot(s)) return;
-    (s.p || []).forEach((g) => { const x = (per[g] = per[g] || { tugas: 0, lewat: 0, hadir: 0 }); x.tugas++; if (t <= hariIni) x.lewat++; if (hadir[`${k}|${g}`]) x.hadir++; });
+    (s.p || []).forEach((g) => { const x = (per[g] = per[g] || { tugas: 0, lewat: 0, hadir: 0 }); x.tugas++; if (t <= hariIni) x.lewat++; if (typeof _jmLengkap === "function" ? _jmLengkap(id, k, g) : hadir[`${k}|${g}`]) x.hadir++; });
   });
   const baris = Object.entries(per).sort((a, b) => _juNamaGuru(a[0]).localeCompare(_juNamaGuru(b[0]), "id"));
-  openModal(`<h3>✅ Kehadiran Pengawas</h3><div style="font-size:11.5px;color:var(--text-secondary);margin:-8px 0 10px;">${_juEsc(j.judul)} · dihitung dari tugas yang tanggalnya sudah tiba</div>
-    <table class="simple-table" style="width:100%;font-size:12px;"><thead><tr><th>Guru</th><th>Tugas</th><th>Sudah tiba</th><th>Hadir</th><th>%</th></tr></thead><tbody>
+  openModal(`<h3>✅ Kehadiran Pengawas</h3><div style="font-size:11.5px;color:var(--text-secondary);margin:-8px 0 10px;">${_juEsc(j.judul)} · dihitung dari tugas yang tanggalnya sudah tiba · lengkap = absen masuk + jurnal + absen pulang (yang dihitung insentif)</div>
+    <table class="simple-table" style="width:100%;font-size:12px;"><thead><tr><th>Guru</th><th>Tugas</th><th>Sudah tiba</th><th title="Absen masuk + jurnal + absen pulang">Lengkap</th><th>%</th></tr></thead><tbody>
     ${baris.map(([g, x]) => `<tr><td>${_juEsc(_juNamaGuru(g))}</td><td>${x.tugas}</td><td>${x.lewat}</td><td>${x.hadir}</td><td><b>${x.lewat ? Math.round((x.hadir / x.lewat) * 100) : "-"}${x.lewat ? "%" : ""}</b></td></tr>`).join("") || `<tr><td colspan="5">Belum ada pengawas.</td></tr>`}
     </tbody></table>`, { lebar: true });
 }

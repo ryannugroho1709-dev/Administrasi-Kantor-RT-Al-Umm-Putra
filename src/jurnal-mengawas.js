@@ -3,7 +3,7 @@
 //  bedanya METODE otomatis "Ujian" (terkunci). Alurnya sama dengan mengajar: setelah ✋ Absen Mengawas,
 //  formulir jurnal langsung terbuka; bisa juga diisi/diubah lewat tombol 📝 Jurnal di daftar tugas mengawas.
 //  Data: kuliah_pengaturan "ujian:jurnal:<idJadwal>" → { "<tgl|sesi|kelas>|<guruId>": {...} } (tanpa tabel baru,
-//  tidak mengubah hitungan JP / insentif yang sudah ada).
+//  Sesi mengawas LENGKAP (masuk + jurnal + pulang) yang dihitung JP/insentif. Absensi santri → absensi_siswa_ujian).
 // ============================================================
 const _JM_METODE = "Ujian";
 const _jmKunciKv = (jadwalId) => "ujian:jurnal:" + jadwalId;
@@ -61,8 +61,9 @@ async function juJurnalMengawas(jadwalId, kunciSlot) {
       data[`${m.kunciSlot}|${STATE.guruId}`] = { materi, metode: [_JM_METODE], absensi, jumlah, mapel: m.mapel, kelasId: m.kelasId, guru: STATE.guruNama || "", t: new Date().toISOString() };
       await _kvSimpan(_jmKunciKv(m.jadwalId), data);
       (JU._jurnal = JU._jurnal || {})[m.jadwalId] = data;
+      const masukRekap = await _jmSimpanAbsensiSantri(m, absensi);
       closeModal();
-      toast("📋 Jurnal mengawas tersimpan. Barakallahu fiik", "ok");
+      toast(`📋 Jurnal mengawas tersimpan${masukRekap ? " · absensi santri masuk rekap kehadiran" : " (absensi santri belum masuk rekap — admin perlu menjalankan SQL_JURNAL_MENGAWAS)"}. Jangan lupa 🏁 Absen Pulang setelah sesi selesai.`, masukRekap ? "ok" : "info");
       if (STATE.currentPage === "dashboard" && typeof _juSisipkanKartuDasbor === "function") _juSisipkanKartuDasbor();
       else if (qs("ju-wadah") && typeof _juGambarDaftar === "function" && !JU.edit) _juGambarDaftar();
     } catch (e) { toast("Gagal menyimpan: " + (e.message || e), "err"); }
@@ -97,8 +98,13 @@ async function juJurnalMengawas(jadwalId, kunciSlot) {
     tugas.forEach((x, i) => {
       const el = baris[i]; if (!el) return;
       const hadir = JU._hadir?.[x.j.id]?.[`${x.kunci}|${STATE.guruId}`]; if (!hadir) return;
-      const jr = _jmData(x.j.id, x.kunci);
-      el.insertAdjacentHTML("beforeend", `<button class="btn btn-sm ${jr ? "btn-ghost" : "btn-accent"} jm-tombol" onclick="juJurnalMengawas('${x.j.id}','${x.kunci}')" title="${jr ? "Ubah jurnal mengawas" : "Isi jurnal mengawas"}">${jr ? "✓ Jurnal" : "📝 Isi Jurnal"}</button>`);
+      const jr = _jmData(x.j.id, x.kunci), jam = (iso) => new Date(iso).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+      const jendela = _jmJendelaPulang(x);
+      let tombol = `<button class="btn btn-sm ${jr ? "btn-ghost" : "btn-accent"} jm-tombol" onclick="juJurnalMengawas('${x.j.id}','${x.kunci}')" title="${jr ? "Ubah jurnal mengawas" : "Isi jurnal mengawas"}">${jr ? "✓ Jurnal" : "📝 Isi Jurnal"}</button>`;
+      if (hadir.pulang) tombol += `<span class="badge badge-green jm-tombol">🏁 Pulang ${jam(hadir.pulang)} · Lengkap</span>`;
+      else if (jendela === "lewat") tombol += `<span class="badge badge-red jm-tombol" title="Sesi tanpa absen pulang tidak dihitung insentif">Belum Absen Pulang · Tidak Dihitung</span>`;
+      else tombol += `<button class="btn btn-sm ${jr && jendela === "buka" ? "btn-accent" : "btn-outline"} jm-tombol" onclick="juPulangMengawas('${x.j.id}','${x.kunci}')" title="${jr ? "Buka 10 menit sebelum sesi selesai" : "Isi jurnal dulu"}">🏁 Absen Pulang</button>`;
+      el.insertAdjacentHTML("beforeend", `<div class="jm-aksi">${tombol}</div>`);
     });
     return wadah.innerHTML;
   };
@@ -121,7 +127,7 @@ async function _jmBagianJurnalGuru() {
   if (!JU.daftar.length) JU.daftar = (await _kvAmbil(_JU_KUNCI, []).catch(() => [])) || [];
   const jadwal = JU.daftar.filter((j) => (j.hari || []).some((t) => t.startsWith(bulan)));
   if (!jadwal.length) return;
-  await _jmMuat(jadwal.map((j) => j.id));
+  await _juMuatHadir(jadwal.map((j) => j.id));
   const baris = [];
   jadwal.forEach((j) => Object.entries(JU._jurnal[j.id] || {}).forEach(([k, d]) => {
     const [t, sid, kelasId, gId] = k.split("|");
@@ -135,13 +141,82 @@ async function _jmBagianJurnalGuru() {
   const div = document.createElement("div");
   div.className = "card jm-bagian";
   div.innerHTML = `<div class="jm-h"><span>📋</span><div><b>Jurnal Mengawas Ujian</b><small>${baris.length} jurnal · metode otomatis Ujian</small></div></div>
-    <div style="overflow-x:auto"><table class="simple-table jm-tabel"><thead><tr><th>No</th>${guruId ? "" : "<th>Guru</th>"}<th>Hari, Tanggal</th><th>Sesi</th><th>Mapel Diujikan</th><th>Kelas</th><th>Materi</th><th>Metode</th><th>Kehadiran</th></tr></thead>
+    <div style="overflow-x:auto"><table class="simple-table jm-tabel"><thead><tr><th>No</th>${guruId ? "" : "<th>Guru</th>"}<th>Hari, Tanggal</th><th>Sesi</th><th>Mapel Diujikan</th><th>Kelas</th><th>Materi</th><th>Metode</th><th>Kehadiran</th><th>Status</th></tr></thead>
     <tbody>${baris.map((b, i) => `<tr ${bolehUbah(b) ? `style="cursor:pointer" title="Klik untuk mengubah" onclick="juJurnalMengawas('${b.j.id}','${b.kunci}')"` : ""}>
       <td>${i + 1}</td>${guruId ? "" : `<td><b>${e(_juNamaGuru(b.gId))}</b></td>`}<td>${e(_juHariPanjang(b.t))}</td><td>Sesi ${b.ke}<br><small>${e(b.s?.mulai || "")}–${e(b.s?.selesai || "")}</small></td>
       <td>${e(b.d.mapel || "-")}</td><td>${e(_juAngkaKelas(b.kelasId))}</td><td>✏️ ${e(b.d.materi)}</td><td><span class="chip">${_JM_METODE}</span></td>
-      <td><small>H ${b.d.jumlah?.hadir || 0} · I ${b.d.jumlah?.izin || 0} · S ${b.d.jumlah?.sakit || 0} · A ${b.d.jumlah?.alpha || 0}</small></td></tr>`).join("")}</tbody></table></div>`;
+      <td><small>H ${b.d.jumlah?.hadir || 0} · I ${b.d.jumlah?.izin || 0} · S ${b.d.jumlah?.sakit || 0} · A ${b.d.jumlah?.alpha || 0}</small></td>
+      <td>${JU._hadir?.[b.j.id]?.[`${b.kunci}|${b.gId}`]?.pulang ? '<span class="badge badge-green">Lengkap</span>' : '<span class="badge badge-red" title="Belum absen pulang — tidak dihitung insentif">Belum Pulang</span>'}</td></tr>`).join("")}</tbody></table></div>`;
   target.querySelector(".jm-bagian")?.remove();
   const kosong = target.querySelector(".empty-state");
   if (kosong && /Belum ada jurnal/.test(kosong.textContent)) kosong.textContent = "Belum ada jurnal mengajar pada bulan ini.";
   target.appendChild(div);
+}
+
+// ── LENGKAP = Absen Mengawas (masuk) + Jurnal + Absen Pulang — sama dengan hari biasa. Hanya yang lengkap
+//    dihitung JP/insentif (Edge Function recompute-slip-gaji) dan dihitung hadir di Rekap Kehadiran Pengawas.
+function _jmLengkap(jadwalId, kunciSlot, guruId) {
+  const g = guruId || STATE.guruId, h = JU._hadir?.[jadwalId]?.[`${kunciSlot}|${g}`];
+  return !!(h && h.t && h.pulang && JU._jurnal?.[jadwalId]?.[`${kunciSlot}|${g}`]);
+}
+const _jmBatasPulang = () => Number((STATE.pengaturan || {}).batas_pulang_menit ?? 100) || 100;
+function _jmJendelaPulang(x) {
+  const hariIni = tanggalISO(), jam = _juMenit(_juJamWita());
+  if (x.t !== hariIni) return x.t < hariIni ? "lewat" : "belum";
+  if (jam < _juMenit(x.sesi.selesai) - 10) return "belum";
+  if (jam > _juMenit(x.sesi.selesai) + _jmBatasPulang()) return "lewat";
+  return "buka";
+}
+async function juPulangMengawas(jadwalId, kunci) {
+  const j = JU.daftar.find((y) => y.id === jadwalId); if (!j) return;
+  if (!JU._jurnal?.[jadwalId]) await _jmMuat([jadwalId]);
+  if (!_jmData(jadwalId, kunci)) { toast("Isi jurnal mengawas dulu, baru absen pulang", "info"); juJurnalMengawas(jadwalId, kunci); return; }
+  const [t, sid] = kunci.split("|"), sesi = _juSesiPada(j, t, j.sesi.find((y) => y.id === sid));
+  const jendela = _jmJendelaPulang({ t, sesi });
+  if (jendela === "belum") { toast(`Absen pulang dibuka 10 menit sebelum sesi selesai (${sesi.selesai})`, "info"); return; }
+  if (jendela === "lewat") { toast("Batas absen pulang sesi ini sudah lewat", "err"); return; }
+  try {
+    setGlobalLoading(true, "Mencatat absen pulang…");
+    const k = `${kunci}|${STATE.guruId}`, data = await _kvAmbil("ujian:hadir:" + jadwalId, {});
+    if (!data[k]) { toast("Belum absen mengawas (masuk) di sesi ini", "err"); return; }
+    if (!data[k].pulang) { data[k].pulang = new Date().toISOString(); await _kvSimpan("ujian:hadir:" + jadwalId, data); }
+    (JU._hadir = JU._hadir || {})[jadwalId] = data;
+    toast("🏁 Absen pulang mengawas tercatat — sesi ini lengkap & dihitung insentif", "ok");
+    if (STATE.currentPage === "dashboard") _juSisipkanKartuDasbor(); else if (qs("ju-wadah") && !JU.edit) _juGambarDaftar();
+  } catch (e) { toast("Gagal: " + (e.message || e), "err"); }
+  finally { setGlobalLoading(false); }
+}
+
+// ── Absensi santri saat diawasi → tabel absensi_siswa_ujian (ikut Rekap Kehadiran Siswa, rapor & nilai kehadiran) ──
+async function _jmSimpanAbsensiSantri(m, absensi) {
+  const [t] = m.kunciSlot.split("|");
+  const rows = absensi.map((a) => ({ jadwal_ujian_id: m.jadwalId, slot: m.kunciSlot, guru_id: STATE.guruId, siswa_id: a.siswa_id, tanggal: t, status: a.status }));
+  if (!rows.length) return true;
+  const { error } = await supa.from("absensi_siswa_ujian").upsert(rows, { onConflict: "jadwal_ujian_id,slot,siswa_id" });
+  if (error) { console.warn("absensi_siswa_ujian:", error.message); return false; }
+  return true;
+}
+
+// ── Baris "seperti jurnal_kelas" untuk Ekspor Word Jurnal Guru ──
+async function _jmJurnalUntukEkspor(guruId, bulan) {
+  if (!JU.daftar.length) JU.daftar = (await _kvAmbil(_JU_KUNCI, []).catch(() => [])) || [];
+  const jadwal = JU.daftar.filter((j) => (j.hari || []).some((t) => t.startsWith(bulan)));
+  if (!jadwal.length) return [];
+  await _jmMuat(jadwal.map((j) => j.id));
+  const out = [];
+  jadwal.forEach((j) => Object.entries(JU._jurnal[j.id] || {}).forEach(([k, d]) => {
+    const [t, sid, kelasId, gId] = k.split("|");
+    if (!t.startsWith(bulan) || (guruId && gId !== guruId)) return;
+    const s = _juSesiPada(j, t, j.sesi.find((x) => x.id === sid)) || {};
+    const kelas = (LOOKUP.kelas || []).find((x) => x.id === kelasId);
+    const n = d.jumlah || {}, total = (n.hadir || 0) + (n.izin || 0) + (n.sakit || 0) + (n.alpha || 0);
+    out.push({
+      _mengawas: true, tanggal: t, guru_id: gId, guru: { nama: _juNamaGuru(gId) }, kelas_id: kelasId, kelas: { nama_kelas: kelas?.nama_kelas || `Kelas ${_juAngkaKelas(kelasId)}`, program: kelas?.program },
+      mapel_id: (j.slot?.[`${t}|${sid}|${kelasId}`] || {}).m || null, mapel: { nama_mapel: `${d.mapel || "-"} (Mengawas Ujian)` },
+      jadwal_pelajaran: { jam_mulai: (s.mulai || "") + ":00", jam_selesai: (s.selesai || "") + ":00" },
+      materi_pokok: d.materi, deskripsi_otomatis: `Mengawas ${j.judul}: santri mengerjakan soal ujian ${d.mapel || ""} secara tertib (metode: Ujian).`, catatan: "",
+      jumlah_siswa: total, jumlah_hadir: n.hadir || 0, jumlah_izin: n.izin || 0, jumlah_sakit: n.sakit || 0, jumlah_alpha: n.alpha || 0,
+    });
+  }));
+  return out;
 }
