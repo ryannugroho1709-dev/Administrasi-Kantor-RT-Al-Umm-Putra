@@ -814,7 +814,51 @@ async function apiUploadFoto(file, folder) {
   const { error } = await supa.storage.from("foto").upload(path, file, { upsert: true });
   if (error) throw new Error(error.message);
   const { data } = supa.storage.from("foto").getPublicUrl(path);
+  // foto santri/guru: sekalian buat versi kecil (dipakai di daftar) — tidak menunggu, gagal pun tidak apa-apa
+  if ((folder === "siswa" || folder === "guru") && /^image\//.test(file.type || "image/")) _buatFotoKecil(data.publicUrl, file).catch(() => {});
   return data.publicUrl;
+}
+
+// ── FOTO KECIL: foto asli santri/guru ±1500×2100 px (400 KB) terlihat "pecah" saat diperkecil jadi 48 px oleh
+// peramban & boros kuota. Versi kecil 240 px (±12 KB) disimpan di foto/kecil/<folder>/<nama>.jpg (alamat
+// diturunkan dari alamat asli → tidak perlu kolom baru). Belum ada versi kecil → tampil foto asli & versi
+// kecilnya dibuat otomatis sekali (di latar belakang).
+const _RE_FOTO_PUBLIK = /\/storage\/v1\/object\/public\/foto\/(siswa|guru)\/([^/?#]+?)(\.[a-z0-9]+)?(\?.*)?$/i;
+function fotoKecilUrl(url) {
+  const m = String(url || "").match(_RE_FOTO_PUBLIK);
+  return m ? String(url).replace(_RE_FOTO_PUBLIK, `/storage/v1/object/public/foto/kecil/${m[1]}/${m[2]}.jpg`) : url;
+}
+function imgFotoKecil(url, attr) {
+  const k = fotoKecilUrl(url);
+  return k === url ? `<img src="${url}" ${attr || ""} alt="" loading="lazy"/>` : `<img src="${k}" data-asli="${url}" onerror="_fotoKecilGagal(this)" ${attr || ""} alt="" loading="lazy" decoding="async"/>`;
+}
+const _FOTO_KECIL_ANTRI = new Set();
+function _fotoKecilGagal(img) {
+  img.onerror = null;
+  const asli = img.dataset.asli; if (!asli) return;
+  img.src = asli;
+  if (_FOTO_KECIL_ANTRI.has(asli)) return;
+  _FOTO_KECIL_ANTRI.add(asli);
+  setTimeout(() => _buatFotoKecil(asli).catch((e) => console.warn("Foto kecil gagal:", e.message)), 1500 + _FOTO_KECIL_ANTRI.size * 400);
+}
+async function _buatFotoKecil(urlAsli, sumber) {
+  const m = String(urlAsli).match(_RE_FOTO_PUBLIK); if (!m) return;
+  const blob = sumber || (await (await fetch(urlAsli)).blob());
+  const bmp = await createImageBitmap(blob);
+  const LEBAR = 240, skala = Math.min(1, LEBAR / bmp.width);
+  // perkecil bertahap (setengah-setengah) supaya halus, tidak bergerigi
+  let w = bmp.width, hgt = bmp.height, src = bmp;
+  while (w * 0.5 > bmp.width * skala) {
+    const c = document.createElement("canvas"); c.width = Math.round(w * 0.5); c.height = Math.round(hgt * 0.5);
+    const x = c.getContext("2d"); x.imageSmoothingQuality = "high"; x.drawImage(src, 0, 0, c.width, c.height);
+    src = c; w = c.width; hgt = c.height;
+  }
+  const akhir = document.createElement("canvas"); akhir.width = Math.round(bmp.width * skala); akhir.height = Math.round(bmp.height * skala);
+  const ctx = akhir.getContext("2d"); ctx.imageSmoothingQuality = "high"; ctx.drawImage(src, 0, 0, akhir.width, akhir.height);
+  const kecil = await new Promise((ok) => akhir.toBlob(ok, "image/jpeg", 0.86));
+  if (!kecil) return;
+  const { error } = await supa.storage.from("foto").upload(`kecil/${m[1]}/${m[2]}.jpg`, kecil, { upsert: true, contentType: "image/jpeg", cacheControl: "31536000" });
+  if (error) throw new Error(error.message);
 }
 
 // ── DATA GURU ──

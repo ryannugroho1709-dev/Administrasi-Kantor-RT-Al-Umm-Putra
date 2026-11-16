@@ -139,7 +139,7 @@ function _uaGambar() {
   qs("ju-wadah").innerHTML = `
     <div class="ju-editor-h"><button class="btn btn-ghost" onclick="_juGambarDaftar()">← Daftar</button><div class="ju-eh-judul"><b class="ju-judul">📥 Pengumpulan Soal</b><small class="ju-ket">${e(j.judul)}</small></div></div>
     <div class="card ua-ringkas"><div class="ua-angka"><b>${sudah}</b>/<span>${baris.length}</span><small>mapel-kelas sudah</small></div><div class="ju-bar" style="flex:1"><i style="width:${baris.length ? Math.round((sudah / baris.length) * 100) : 0}%"></i></div>
-      <button class="btn btn-accent btn-sm" onclick="uaBuatWord('${j.id}')" title="Tempel teks soal, otomatis jadi Word berkop & terkumpul">📝 Buat soal Word</button>${atur ? `<button class="btn btn-wa btn-sm" onclick="uaKirimWa()">💬 WA sudah & belum</button>` : ""}</div>
+      <button class="btn btn-accent btn-sm" onclick="uaBuatWord('${j.id}')" title="Tempel teks soal, otomatis jadi Word berkop & terkumpul">📝 Buat Soal Word</button>${atur ? `<button class="btn btn-wa btn-sm" onclick="uaKirimWa()">💬 WA Sudah & Belum</button>` : ""}</div>
     ${_uaHtmlBatas(j, atur)}
     ${atur ? `<div class="ua-ket-kontak">📇 Supaya tag @ di pesan WA tepat orangnya, samakan nomor WA guru dengan Kontak Google: <a href="#" onclick="event.preventDefault();guruSinkronKontak()">Sinkron Kontak Google</a></div>` : ""}
     <div class="card ua-ket">💻 <b>Ujian Online</b> otomatis tercentang bila guru sudah membuat soal ${j.jenis === "uas" ? "UAS" : j.jenis === "uts" ? "UTS" : "UTS/UAS"} di menu Ujian Online untuk mapel & kelas itu. 📄 Guru juga bisa mengunggah berkas Word/PDF. 📦 Admin/kepala sekolah menandai soal kertas yang sudah diterima.</div>
@@ -185,7 +185,7 @@ function _uaHtmlBatas(j, atur) {
 }
 function uaAturBatas() {
   const j = UA.jadwal; if (!j) return;
-  openModal(`<h3>⏳ Batas pengumpulan soal</h3><div class="field"><label class="form-label">${_uaEsc(j.judul)} · ujian mulai ${_juHariPanjang(j.mulai)}</label><input type="date" id="ua-batas" class="input" value="${_uaBatas(j)}" max="${j.mulai}"></div>
+  openModal(`<h3>⏳ Batas Pengumpulan Soal</h3><div class="field"><label class="form-label">${_uaEsc(j.judul)} · ujian mulai ${_juHariPanjang(j.mulai)}</label><input type="date" id="ua-batas" class="input" value="${_uaBatas(j)}" max="${j.mulai}"></div>
     <button class="btn btn-accent" style="width:100%" onclick="uaSimpanBatas()">💾 Simpan</button>`);
 }
 async function uaSimpanBatas() {
@@ -235,16 +235,16 @@ async function uaKumpulkan(jadwalId, mapelId, kelasId) {
   const kapan = Object.entries(j.slot || {}).filter(([k, s]) => (_juKode(s) === mapelId || (!_uaSub(mapelId) && s?.m === mapelId)) && k.split("|")[2] === kelasId && j.hari.includes(k.split("|")[0]))
     .map(([k]) => { const [t, sid] = k.split("|"), i = j.sesi.findIndex((x) => x.id === sid); return `${_juHariPendek(t)} · Sesi ${i + 1} (${j.sesi[i] ? _juJamTeks(j, t, j.sesi[i]) : ""})`; });
   const jenisSoal = j.jenis === "uts" ? "UTS" : "UAS";
-  openModal(`<h3>📤 Kumpulkan soal</h3>
+  openModal(`<h3>📤 Kumpulkan Soal</h3>
     <div class="ua-m-info" style="--kw:${_juWarnaKelas(kelasId)}"><span class="ju-kls">${e(_juAngkaKelas(kelasId))}</span><div><b>${e(_juNamaMapel(mapelId))} · Kelas ${e(_juAngkaKelas(kelasId))}</b><small>${e(j.judul)}${kapan.length ? "<br>📅 " + kapan.map(e).join("<br>📅 ") : ""}</small></div></div>
     <div class="ua-m-status">${st.length ? st.map((s) => s.k === "online" ? `<button class="ua-chip on" onclick="ujCetakSoal('${s.bank[0].id}')" title="Lihat / cetak naskah">${s.label} · ${e(s.bank[0].judul)}</button>`
-      : s.k === "file" ? `<a class="ua-chip on" href="${e(s.url)}" target="_blank" rel="noopener">${s.label} · ${e(s.nama || "berkas")}</a>` : `<span class="ua-chip on">${s.label} ${s.oleh ? "· " + e(s.oleh) : ""}</span>`).join("") : `<span class="ua-chip belum">⏳ Belum ada soal yang terkumpul</span>`}</div>
+      : s.k === "file" ? `<a class="ua-chip on" href="${e(s.url)}" target="_blank" rel="noopener">${s.label} · ${e(s.nama || "berkas")}</a>` : `<span class="ua-chip on">${s.label} ${s.oleh ? "· " + e(s.oleh) : ""}</span>`).join("") : `<span class="ua-chip belum">⏳ Belum Ada Soal yang Terkumpul</span>`}</div>
     <div class="ua-m-pilih">
-      <button class="ua-m-utama" onclick="closeModal();uaBuatWord('${j.id}','${mapelId}','${kelasId}')"><span>📝</span><b>Tempel teks → Word berkop</b><small>Copas teks soal, otomatis jadi Word dengan kop ${j.jenis === "uts" ? "UTS" : "PAS"} semester ini & langsung terkumpul di arsip.</small></button>
+      <button class="ua-m-utama" onclick="closeModal();uaBuatWord('${j.id}','${mapelId}','${kelasId}')"><span>📝</span><b>Tempel Teks → Word Berkop</b><small>Copas teks soal, otomatis jadi Word dengan kop ${j.jenis === "uts" ? "UTS" : "PAS"} semester ini & langsung terkumpul di arsip.</small></button>
       <button onclick="uaBuatOnline('${mapelId}','${kelasId}','${j.jenis}')"><span>💻</span><b>Buat di Ujian Online</b><small>Ketik / tempel / unggah Word·PDF. Otomatis tercatat terkumpul & bisa dikerjakan santri di HP.</small></button>
-      <label><span>📄</span><b>${d.file_url ? "Ganti berkas" : "Unggah berkas soal"}</b><small>Word / PDF / foto (maks 10 MB) — untuk dicetak admin.</small><input type="file" hidden accept=".doc,.docx,.pdf,image/*" onchange="uaUnggah('${kunci}',this)"></label>
-      <button onclick="uaKabariAdmin('${mapelId}','${kelasId}')"><span>💬</span><b>Kabari admin lewat WA</b><small>Kirim pemberitahuan${d.file_url ? " beserta tautan berkas" : ""} ke admin / grup.</small></button>
-      ${atur ? `<button onclick="uaToggleFisik('${kunci}')"><span>📦</span><b>${d.fisik ? "Batalkan tanda kertas" : "Tandai soal kertas diterima"}</b><small>Untuk soal yang diserahkan dalam bentuk kertas.</small></button>` : ""}
+      <label><span>📄</span><b>${d.file_url ? "Ganti Berkas" : "Unggah Berkas Soal"}</b><small>Word / PDF / foto (maks 10 MB) — untuk dicetak admin.</small><input type="file" hidden accept=".doc,.docx,.pdf,image/*" onchange="uaUnggah('${kunci}',this)"></label>
+      <button onclick="uaKabariAdmin('${mapelId}','${kelasId}')"><span>💬</span><b>Kabari Admin Lewat WA</b><small>Kirim pemberitahuan${d.file_url ? " beserta tautan berkas" : ""} ke admin / grup.</small></button>
+      ${atur ? `<button onclick="uaToggleFisik('${kunci}')"><span>📦</span><b>${d.fisik ? "Batalkan Tanda Kertas" : "Tandai Soal Kertas Diterima"}</b><small>Untuk soal yang diserahkan dalam bentuk kertas.</small></button>` : ""}
     </div>
     <div class="uj-sub" style="margin-top:8px">Soal ${jenisSoal} yang dibuat di <b>Ujian Online</b> untuk mapel & kelas ini otomatis dianggap sudah terkumpul.</div>`);
 }

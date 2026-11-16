@@ -233,7 +233,7 @@ async function uaBuatWord(jadwalId, mapelId, kelasId) {
   SW.jadwalId = j.id;
   kelasId = kelasBoleh.includes(kelasId) ? kelasId : kelasBoleh[0];
   const e = _uaEsc;
-  openModal(`<div class="sw-modal"><h3>📝 Tempel teks soal → Word berkop</h3>
+  openModal(`<div class="sw-modal"><h3>📝 Tempel Teks Soal → Word Berkop</h3>
     <div class="sw-ket">Pilih kelas & mapel, lalu tempel (copas) teks soalnya. Kop soal ${e(j.jenis === "uts" ? "UTS" : "PAS")} semester ini, paket, dan kategori mapel terpilih otomatis.</div>
     <div class="sw-pilih">
       <label class="field"><span class="form-label">Kelas</span><select id="sw-kelas" class="input" onchange="_swGantiKelas()">${kelasBoleh.map((k) => `<option value="${k}" ${k === kelasId ? "selected" : ""}>Kelas ${e(_juAngkaKelas(k))}</option>`).join("")}</select></label>
@@ -241,12 +241,12 @@ async function uaBuatWord(jadwalId, mapelId, kelasId) {
     </div>
     <div class="sw-chip" id="sw-info"></div>
     <textarea id="sw-teks" class="input sw-teks" dir="auto" rows="9" placeholder="Tempel teks soal di sini, contoh:&#10;Judul / nama kitab&#10;1. Soal pertama …&#10;2. Soal kedua …&#10;   a. pilihan …&#10;- butir …" oninput="_swPratinjau()"></textarea>
-    <div class="sw-prat-h"><b>Pratinjau susunan</b><small id="sw-hitung"></small></div>
+    <div class="sw-prat-h"><b>Pratinjau Susunan</b><small id="sw-hitung"></small></div>
     <div class="sw-prat" id="sw-prat"><div class="sw-kosong">Belum ada teks.</div></div>
     <div class="sw-aksi">
       <button class="btn btn-outline" onclick="swProses('unduh')" title="Hanya mengunduh file Word">⬇️ Unduh Word</button>
       <button class="btn btn-outline" onclick="swProses('cetak')" title="Buka tampilan cetak">🖨️ Cetak</button>
-      <button class="btn btn-accent" onclick="swProses('kumpul')">📤 Buat Word & kumpulkan</button>
+      <button class="btn btn-accent" onclick="swProses('kumpul')">📤 Buat Word & Kumpulkan</button>
     </div>
     <div class="sw-kaki">Tulisan: Times New Roman 12 pt, spasi 1,5, rata kiri-kanan · Arab: Traditional Arabic 16 pt, kanan ke kiri · nomor soal menggantung.</div></div>`);
   _swGantiKelas(mapelId);
@@ -268,7 +268,7 @@ async function _swSegarkanInfo() {
   let draf = ""; try { draf = localStorage.getItem(_swKunciDraf()) || ""; } catch (e) {}
   const ta = qs("sw-teks");
   if (ta && (!ta.value.trim() || ta.dataset.dari !== mapelId + kelasId)) { ta.value = draf || d.teks || ""; ta.dataset.dari = mapelId + kelasId; }
-  qs("sw-info").innerHTML = `<span>🏫 Paket ${paket.toUpperCase()} <small>(${paket === "b" ? "setara SMP" : "setara SMA"})</small></span><span class="sw-kunci" title="Mengikuti kategori di Data Mapel (tidak bisa diganti di sini)">🔒 ${kat === "diniyyah" ? "🕌 Diniyyah" : "📘 Umum"}</span><span>📋 ${uts ? "UTS" : "PAS"} · Semester ${sem === "ganjil" ? "Ganjil" : "Genap"}</span><span id="sw-kop-ket">⏳ memeriksa kop…</span>${d.file_url ? `<span class="ok">✅ sudah terkumpul${d.sumber === "tempel" ? " (bisa diperbarui)" : ""}</span>` : ""}`;
+  qs("sw-info").innerHTML = `<span>🏫 Paket ${paket.toUpperCase()} <small>(${paket === "b" ? "setara SMP" : "setara SMA"})</small></span><span class="sw-kunci" title="Mengikuti kategori di Data Mapel (tidak bisa diganti di sini)">🔒 ${kat === "diniyyah" ? "🕌 Diniyyah" : "📘 Umum"}</span><span>📋 ${uts ? "UTS" : "PAS"} · Semester ${sem === "ganjil" ? "Ganjil" : "Genap"}</span><span id="sw-kop-ket">⏳ Memeriksa Kop…</span>${d.file_url ? `<span class="ok">✅ Sudah Terkumpul${d.sumber === "tempel" ? " (Bisa Diperbarui)" : ""}</span>` : ""}`;
   _swPratinjau();
   const kop = await _swCariKop(kat, uts, sem, paket);
   const el = qs("sw-kop-ket"); if (!el) return;
@@ -386,13 +386,13 @@ async function _swKartuDasbor() {
       const persen = milik.length ? Math.round(((milik.length - belum.length) / milik.length) * 100) : 0;
       const chip = (x) => `<button class="sw-d-chip ${x.sudah ? "ok" : ""}" style="--kw:${_juWarnaKelas(x.kelasId)}" onclick="${x.sudah ? `uaKumpulkan('${j.id}','${x.mapelId}','${x.kelasId}')` : `uaBuatWord('${j.id}','${x.mapelId}','${x.kelasId}')`}">${x.sudah ? "✅" : "⏳"} ${e(_juNamaMapel(x.mapelId))} <small>${e(_juAngkaKelas(x.kelasId))}</small></button>`;
       return `<div class="sw-d-blok">
-        <div class="sw-d-h"><span class="sw-d-ikon">📝</span><div><b>Kumpulkan soal: ${e(j.judul)}</b>
+        <div class="sw-d-h"><span class="sw-d-ikon">📝</span><div><b>Kumpulkan Soal: ${e(j.judul)}</b>
           <small>Batas ${e(_juHariPanjang(batas))} · <em class="${sisa <= 2 ? "mepet" : ""}">${e(_uaLabelH(batas))}</em>${atur ? ` · terkumpul ${totSudah}/${semua.length} (semua guru)` : ""}</small></div></div>
         ${milik.length ? `<div class="sw-d-bar"><i style="width:${persen}%"></i></div>
         <div class="sw-d-ket">${belum.length ? `Soal antum: <b>${milik.length - belum.length}/${milik.length}</b> terkumpul — ketuk mapel yang ⏳ untuk langsung membuat soal.` : `<b>Alhamdulillah, semua soal antum sudah terkumpul ✓</b>`}</div>
         <div class="sw-d-chips">${belum.concat(milik.filter((x) => x.sudah)).map(chip).join("")}</div>` : `<div class="sw-d-ket">Antum tidak punya mapel yang diujikan; pantau pengumpulan semua guru lewat tombol di bawah.</div>`}
-        <div class="sw-d-aksi">${milik.length ? `<button class="btn btn-accent btn-sm" data-tur="sw-buat" onclick="uaBuatWord('${j.id}')">📝 Buat soal Word</button>` : ""}
-          <button class="btn btn-outline btn-sm" onclick="swBukaPengumpulan('${j.id}')">📥 Lihat pengumpulan</button>
+        <div class="sw-d-aksi">${milik.length ? `<button class="btn btn-accent btn-sm" data-tur="sw-buat" onclick="uaBuatWord('${j.id}')">📝 Buat Soal Word</button>` : ""}
+          <button class="btn btn-outline btn-sm" onclick="swBukaPengumpulan('${j.id}')">📥 Lihat Pengumpulan</button>
           <button class="tur-tanya" onclick="swTurDasbor(true)">❓ Caranya</button></div>
       </div>`;
     }).filter(Boolean);

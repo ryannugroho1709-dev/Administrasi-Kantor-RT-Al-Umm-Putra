@@ -24,7 +24,7 @@
 <link rel="stylesheet" href="src/hp.css?v=3">
 <link rel="stylesheet" href="src/kuliah.css?v=6">
 <link rel="stylesheet" href="src/modul-baca.css?v=10">
-<link rel="stylesheet" href="src/ujian.css?v=23">
+<link rel="stylesheet" href="src/ujian.css?v=24">
 
 <script>
 // Logo gagal dimuat → coba logo bawaan; kalau bawaan pun gagal, tampilkan ikon 🎓 (bukan huruf "G").
@@ -46,7 +46,7 @@ function _logoAwal(){try{return localStorage.getItem("logoSekolahUrl")||"assets/
 <!-- pdf.js — hanya dipakai fitur "Ambil sampul dari halaman pertama PDF" di Modul Ajar (render page 1 ke canvas) -->
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script>if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";</script>
-<script src="src/api.js?v=21"></script>
+<script src="src/api.js?v=22"></script>
 <script>
 // ── Override apiPerbaikanAbsenAdmin: pakai RPC SECURITY DEFINER (bypass RLS) ──
 // Blok ini di index.html mengoverride versi dari api.js agar pasti termuat,
@@ -7302,7 +7302,7 @@ async function renderMonitorHarian() {
           const warnIcon = warna === "kuning" ? `<span title="${t('isiJurnalDulu')}" style="margin-left:6px;">❗</span>` : "";
           const tukarBadge = jadwal._tukarLabel ? `<div style="font-size:10px;color:#8B5CF6;font-weight:700;margin-top:1px;">${jadwal._tukarLabel}</div>` : "";
           const fotoHtml = jadwal.guru?.foto_url
-            ? `<img src="${jadwal.guru.foto_url}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:3px solid ${warnaBorder};flex-shrink:0;"/>`
+            ? `<img src="${fotoKecilUrl(jadwal.guru.foto_url)}" data-asli="${jadwal.guru.foto_url}" onerror="_fotoKecilGagal(this)" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:3px solid ${warnaBorder};flex-shrink:0;"/>`
             : `<div style="width:36px;height:36px;border-radius:50%;background:var(--accent-dim);border:3px solid ${warnaBorder};flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--accent);">${(jadwal.guru?.nama || "?").charAt(0).toUpperCase()}</div>`;
           // Tombol WA (admin): merah tanpa absen masuk = konfirmasi alpha; kuning = ingatkan lupa
           // pulang/jurnal. Hanya muncul setelah jam pelajarannya selesai (yang masih berjalan tidak diganggu).
@@ -10455,7 +10455,7 @@ async function gambarTabelNilai() {
         ${pk.uh ? `<button class="nl2-btn" onclick="tambahKolomNilai('uh')"><span>＋</span>UH</button>` : ""}
         ${pk.tugas ? `<button class="nl2-btn" onclick="tambahKolomNilai('tugas')"><span>＋</span>Tugas</button>` : ""}
         ${pk.utsBisa && !pk.utsWajib ? `<label class="nl2-btn nl2-saklar"><input type="checkbox" id="nl-ada-uts" ${adaUTS ? "checked" : ""} onchange="toggleUTSNilai(this.checked)"/><i></i>UTS</label>` : ""}
-        <button class="nl2-btn nl2-tempel" onclick="nlTempelNilai()" title="Tempel daftar nama & nilai dari WA / catatan / Excel">📋 Tempel nilai</button>
+        <button class="nl2-btn nl2-tempel" onclick="nlTempelNilai()" title="Tempel daftar nama & nilai dari WA / catatan / Excel">📋 Tempel Nilai</button>
         <details class="nl2-menu"><summary class="nl2-btn">📊 Excel ▾</summary><div><button onclick="unduhLegerNilai()">⬇️ Unduh leger (diisi di Excel)</button><label>⬆️ Unggah leger yang sudah diisi<input type="file" accept=".xlsx,.xls" hidden onchange="unggahLegerNilai(this)"/></label></div></details>
         ${bolehAtur ? `<button class="nl2-btn" onclick="bukaPengaturanPenilaian()">⚖️ Bobot & KKM</button>` : ""}<button class="tur-tanya" onclick="turUlang('input-nilai')">❓ Panduan</button>
       </div>
@@ -14977,7 +14977,7 @@ async function renderDataGuru() {
         <colgroup><col style="width:45px;"/><col style="width:130px;"/><col style="width:90px;"/><col style="width:70px;"/><col style="width:95px;"/></colgroup>
         <thead><tr><th class="sticky-col-1"></th><th class="sticky-col-2" style="left:45px;">Nama</th><th>Jabatan</th><th>Jenis</th><th></th></tr></thead>
         <tbody>${daftar.length ? daftar.map((g) => `<tr>
-          <td class="sticky-col-1">${g.foto_url ? `<img src="${g.foto_url}" style="width:32px;height:32px;border-radius:8px;object-fit:cover;opacity:.6;"/>` : `<div style="width:32px;height:32px;border-radius:8px;background:var(--accent-dim);opacity:.6;"></div>`}</td>
+          <td class="sticky-col-1">${g.foto_url ? imgFotoKecil(g.foto_url, 'style="width:32px;height:32px;border-radius:8px;object-fit:cover;opacity:.6;"') : `<div style="width:32px;height:32px;border-radius:8px;background:var(--accent-dim);opacity:.6;"></div>`}</td>
           <td class="sticky-col-2" style="left:45px;font-weight:700;color:var(--text-secondary);cursor:pointer;" title="Klik untuk edit" onclick='openFormGuru(${JSON.stringify(g).replace(/'/g,"&#39;")})'>${escapeHtml(g.nama)}</td>
           <td style="color:var(--text-secondary);">${g.jabatan || "-"}</td>
           <td style="white-space:nowrap;color:var(--text-secondary);">${labelJenisGuru(g.jenis_guru)}</td>
@@ -15003,7 +15003,7 @@ async function renderDataGuru() {
           <colgroup><col style="width:35px;"/><col style="width:110px;"/><col style="width:80px;"/><col style="width:90px;"/><col style="width:40px;"/></colgroup>
           <thead><tr><th></th><th>Nama</th><th>Jabatan</th><th>No. WA</th><th></th></tr></thead>
           <tbody>${daftar.length ? daftar.map((g) => `<tr>
-            <td>${g.foto_url ? `<img src="${g.foto_url}" style="width:28px;height:28px;border-radius:7px;object-fit:cover;"/>` : `<div style="width:28px;height:28px;border-radius:7px;background:var(--accent-dim);"></div>`}</td>
+            <td>${g.foto_url ? imgFotoKecil(g.foto_url, 'style="width:28px;height:28px;border-radius:7px;object-fit:cover;"') : `<div style="width:28px;height:28px;border-radius:7px;background:var(--accent-dim);"></div>`}</td>
             <td style="font-weight:700;">${escapeHtml(g.nama)}</td>
             <td>${g.jabatan || "-"}</td>
             <td style="white-space:nowrap;">${g.no_wa || "-"}</td>
@@ -15030,7 +15030,7 @@ async function renderDataGuru() {
       const data = JSON.stringify(g).replace(/'/g, "&#39;");
       return `<div class="card data-kartu">
         <div class="data-kartu-kepala" onclick='openFormGuru(${data})'>
-          ${g.foto_url ? `<img src="${g.foto_url}" class="data-foto" alt=""/>` : `<span class="tj-avatar data-foto">${_inisial(g.nama)}</span>`}
+          ${g.foto_url ? imgFotoKecil(g.foto_url, 'class="data-foto"') : `<span class="tj-avatar data-foto">${_inisial(g.nama)}</span>`}
           <div style="min-width:0;flex:1;">
             <b class="tj-nama">${escapeHtml(g.nama)}</b>
             <div class="tj-jenis">${escapeHtml(g.jabatan || "-")} · ${labelJenisGuru(g.jenis_guru)}</div>
@@ -15052,7 +15052,7 @@ async function renderDataGuru() {
         const pendidikan = (g.guru_pendidikan || []).slice().sort((a,b)=>(a.urutan||0)-(b.urutan||0));
         const pendidikanTeks = pendidikan.length ? pendidikan.map(p => `${p.jenjang} \u2014 ${p.nama_institusi}`).join("<br/>") : "-";
         return `<tr>
-        <td class="sticky-col-1">${g.foto_url ? `<img src="${g.foto_url}" style="width:32px;height:32px;border-radius:8px;object-fit:cover;"/>` : `<div style="width:32px;height:32px;border-radius:8px;background:var(--accent-dim);"></div>`}</td>
+        <td class="sticky-col-1">${g.foto_url ? imgFotoKecil(g.foto_url, 'style="width:32px;height:32px;border-radius:8px;object-fit:cover;"') : `<div style="width:32px;height:32px;border-radius:8px;background:var(--accent-dim);"></div>`}</td>
         <td class="sticky-col-2" style="left:40px;font-weight:700;cursor:pointer;" title="Klik untuk edit" onclick='openFormGuru(${JSON.stringify(g).replace(/'/g,"&#39;")})'>${escapeHtml(g.nama)}${g.wali_kelas_id ? (() => { const kk = (LOOKUP.kelas || []).find((k) => k.id === g.wali_kelas_id); return kk ? `<br/><span class="badge badge-green" style="font-size:9.5px;margin-top:2px;">🎓 ${t("waliKelasDariLabel")} ${formatKelasLabel(kk.nama_kelas)}</span>` : ""; })() : ""}${g.penerima_honda ? `<br/><span class="badge badge-blue" style="font-size:9.5px;margin-top:2px;">💰 ${t("guruHonda")}</span>` : ""}</td><td>${g.jabatan || "-"}</td>
         <td>${labelJenisGuru(g.jenis_guru)}</td>
         <td>${ttl}</td>
@@ -15720,7 +15720,7 @@ async function renderDataSiswa() {
     }
     const rows = await apiGetAllSiswa(kelasId || null);
     const kolomCek = DATA_SISWA_MODE_PILIH ? ["<input type=\"checkbox\" id=\"ds-check-all\" onchange=\"toggleSemuaCekSiswa(this)\"/>"] : [];
-    const kolom = [...kolomCek, "", "Angkatan", "Nama", t("kelas"), "TTL", "Tanggal Lahir", "NIS", "NISN", "NIK", "No KK", "No BPJS", "No KIP",
+    const kolom = [...kolomCek, "", "Angkatan", "Nama", "Dapodik", t("kelas"), "TTL", "Tanggal Lahir", "NIS", "NISN", "NIK", "No KK", "No BPJS", "No KIP",
       "Sekolah Asal", "Alamat Asal", "Nama Ayah", "Pekerjaan Ayah", "No. WA Ayah", "Nama Ibu", "Pekerjaan Ibu", "No. WA Ibu", ""];
     // Tabel ini sengaja punya banyak sekali kolom (data lengkap santri untuk ekspor/arsip) — wajar
     // dan tetap perlu digeser di layar manapun, tapi minimal lebar tiap kolom dikunci (colgroup)
@@ -15728,7 +15728,7 @@ async function renderDataSiswa() {
     // Lebar kolom disesuaikan dengan isi yang umum (nama panjang, "Hulu Sungai Tengah", alamat lengkap);
     // teks yang tetap lebih panjang dibungkus ke baris berikutnya (kelas ds-tabel) — tidak lagi
     // meluber menimpa kolom sebelahnya.
-    const dsColsPx = [...(DATA_SISWA_MODE_PILIH ? [30] : []), 62, 78, 200, 80, 150, 130, 70, 110, 150, 150, 95, 85, 170, 260, 160, 120, 120, 160, 120, 120, 55];
+    const dsColsPx = [...(DATA_SISWA_MODE_PILIH ? [30] : []), 62, 78, 200, 120, 80, 150, 130, 70, 110, 150, 150, 95, 85, 170, 260, 160, 120, 120, 160, 120, 120, 55];
     const dsTableWidth = dsColsPx.reduce((a, w) => a + w, 0);
     const dsColGroup = `<colgroup>${dsColsPx.map((w) => `<col style="width:${w}px;"/>`).join("")}</colgroup>`;
     // Kartu khusus HP — TIDAK dipakai saat mode pilih (centang massal), supaya checkbox .ds-check
@@ -15738,7 +15738,7 @@ async function renderDataSiswa() {
       const waOrtu = normalisasiNomorWa(s.no_wa_ayah).valid ? normalisasiNomorWa(s.no_wa_ayah) : normalisasiNomorWa(s.no_wa_ibu);
       return `<div class="card data-kartu">
         <div class="data-kartu-kepala" onclick='openFormSiswa(${data})'>
-          ${s.foto_url ? `<img src="${s.foto_url}" class="data-foto" style="object-position:center 15%;" alt=""/>` : `<span class="tj-avatar data-foto">${_inisial(s.nama)}</span>`}
+          ${s.foto_url ? imgFotoKecil(s.foto_url, 'class="data-foto" style="object-position:center 15%;"') : `<span class="tj-avatar data-foto">${_inisial(s.nama)}</span>`}
           <div style="min-width:0;flex:1;">
             <b class="tj-nama">${escapeHtml(s.nama)}</b>${typeof dpkTanda === "function" ? dpkTanda(s) : ""}
             <div class="tj-jenis">${badgeKelas(s.kelas?.nama_kelas)} · Angkatan ${escapeHtml(s.angkatan || "-")}</div>
@@ -15757,9 +15757,10 @@ async function renderDataSiswa() {
       <thead><tr>${kolom.map((k) => `<th style="white-space:nowrap;">${k}</th>`).join("")}</tr></thead>
       <tbody>${rows.map((s) => `<tr>
         ${DATA_SISWA_MODE_PILIH ? `<td style="white-space:nowrap;"><input type="checkbox" class="ds-check" value="${s.id}" onchange="perbaruiBarBulkSiswa()"/></td>` : ""}
-        <td style="white-space:nowrap;">${s.foto_url ? `<img src="${s.foto_url}" style="width:48px;height:48px;border-radius:8px;object-fit:cover;object-position:center 15%;"/>` : `<div style="width:48px;height:48px;border-radius:8px;background:var(--accent-dim);"></div>`}</td>
+        <td style="white-space:nowrap;">${s.foto_url ? imgFotoKecil(s.foto_url, 'style="width:48px;height:48px;border-radius:8px;object-fit:cover;object-position:center 15%;"') : `<div style="width:48px;height:48px;border-radius:8px;background:var(--accent-dim);"></div>`}</td>
         <td style="white-space:nowrap;">${s.angkatan || "-"}</td>
-        <td style="font-weight:700;white-space:nowrap;cursor:pointer;" title="Klik untuk edit" onclick='openFormSiswa(${JSON.stringify(s).replace(/'/g,"&#39;")})'>${escapeHtml(s.nama)}${typeof dpkTanda === "function" ? " " + dpkTanda(s) : ""}</td>
+        <td style="font-weight:700;white-space:nowrap;cursor:pointer;" title="Klik untuk edit" onclick='openFormSiswa(${JSON.stringify(s).replace(/'/g,"&#39;")})'>${escapeHtml(s.nama)}</td>
+        <td class="ds-dpk" style="white-space:nowrap;">${typeof dpkTanda === "function" ? dpkTanda(s) || '<span class="ju-ket">–</span>' : "–"}</td>
         <td style="white-space:nowrap;">${badgeKelas(s.kelas?.nama_kelas)}</td>
         <td style="white-space:nowrap;">${s.tempat_lahir || "-"}</td>
         <td style="white-space:nowrap;">${s.tanggal_lahir ? new Date(s.tanggal_lahir).toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"}) : "-"}</td>
@@ -15904,6 +15905,9 @@ async function renderRingkasanKelasSiswa() {
     const total = rows.reduce((s, r) => s + r.jumlah, 0);
     target.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
       ${rows.map((r) => `<span class="badge badge-green" style="font-size:11.5px;padding:5px 12px;">${formatKelasLabel(r.nama_kelas)}: <b>${r.jumlah}</b></span>`).join("")}
+      <span class="ds-pemisah"></span>
+      ${(() => { const no = (r) => parseInt(String(r.nama_kelas || "").match(/(\d+)/)?.[1] || "0", 10); const b = rows.filter((r) => no(r) >= 7 && no(r) <= 9).reduce((s, r) => s + r.jumlah, 0), c = rows.filter((r) => no(r) >= 10 && no(r) <= 12).reduce((s, r) => s + r.jumlah, 0);
+        return `<span class="badge ds-paket b" title="Kelas 7–9">Paket B: <b>${b}</b></span><span class="badge ds-paket c" title="Kelas 10–12">Paket C: <b>${c}</b></span>`; })()}
       <span class="badge" style="font-size:11.5px;padding:5px 12px;background:var(--accent);color:#fff;">Total: <b>${total}</b></span>
     </div>`;
   } catch (e) { console.error(e); }
@@ -16145,12 +16149,12 @@ async function handleImportSiswa(evt) {
 <script src="src/jurnal-otomatis.js?v=6"></script>
 <script src="src/hp.js?v=8"></script>
 <script src="src/leger-nilai.js?v=5"></script>
-<script src="src/jadwal-ujian.js?v=8"></script>
-<script src="src/ujian-arsip.js?v=7"></script>
+<script src="src/jadwal-ujian.js?v=9"></script>
+<script src="src/ujian-arsip.js?v=8"></script>
 <script src="src/tur.js?v=3"></script>
-<script src="src/soal-word.js?v=6"></script>
-<script src="src/nilai-tempel.js?v=2"></script>
-<script src="src/dapodik.js?v=1"></script>
+<script src="src/soal-word.js?v=7"></script>
+<script src="src/nilai-tempel.js?v=3"></script>
+<script src="src/dapodik.js?v=2"></script>
 <script src="src/modul-urut.js?v=1"></script>
 </body>
 </html>

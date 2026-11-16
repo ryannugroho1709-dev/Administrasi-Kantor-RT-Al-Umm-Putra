@@ -220,7 +220,7 @@ async function dpkMuatSnap() {
 }
 function dpkTanda(s) {
   const sn = DPK.snap; if (!sn || !s) return "";
-  if ((sn.belum || []).includes(s.id)) return `<span class="dpk-tanda belum" title="Tidak ditemukan di Dapodik (cek ${escapeHtml(sn.unduh || "")})">⚠ belum Dapodik</span>`;
+  if ((sn.belum || []).includes(s.id)) return `<span class="dpk-tanda belum" title="Tidak ditemukan di Dapodik (cek ${escapeHtml(sn.unduh || "")})">⚠ Belum Dapodik</span>`;
   if ((sn.cocok || []).includes(s.id)) return `<span class="dpk-tanda ok" title="Terdaftar di Dapodik">✓ Dapodik</span>`;
   return "";
 }
@@ -228,5 +228,5 @@ function dpkRingkasHTML() {
   const sn = DPK.snap; if (!_dpkBoleh()) return "";
   if (!sn) return `<div class="card dpk-pita"><span>🛡️</span><div><b>Cocokkan dengan Dapodik</b><small>Unggah file Peserta Didik dari Dapodik untuk mendeteksi santri yang belum terdaftar atau datanya berbeda.</small></div><button class="btn btn-accent btn-sm" onclick="dpkBuka()">Mulai</button></div>`;
   const b = (sn.belum || []).length;
-  return `<div class="card dpk-pita ${b ? "ada" : "ok"}"><span>🛡️</span><div><b>Dapodik: ${(sn.cocok || []).length} santri terdaftar${b ? ` · <span class="dpk-merah">${b} belum terdaftar</span>` : " · semua terdaftar ✓"}</b><small>Pencocokan ${new Date(sn.t).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })} · data Dapodik ${escapeHtml(sn.unduh || "-")}</small></div><button class="btn btn-outline btn-sm" onclick="dpkBuka()">🔄 Cocokkan lagi</button></div>`;
+  return `<div class="card dpk-pita ${b ? "ada" : "ok"}"><span>🛡️</span><div><b>Dapodik: ${(sn.cocok || []).length} santri terdaftar${b ? ` · <span class="dpk-merah">${b} belum terdaftar</span>` : " · semua terdaftar ✓"}</b><small>Pencocokan ${new Date(sn.t).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })} · data Dapodik ${escapeHtml(sn.unduh || "-")}</small></div><button class="btn btn-outline btn-sm" onclick="dpkBuka()">🔄 Cocokkan Lagi</button></div>`;
 }

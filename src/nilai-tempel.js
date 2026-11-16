@@ -118,13 +118,13 @@ function nlTempelNilai() {
   // bawaan: kolom UH/Tugas pertama yang masih kosong, selain itu yang terakhir dipilih
   const kosong = (cls, k) => qsa(`#input-nilai-table .${cls}[data-kolom="${CSS.escape(k)}"]`).every((i) => i.value === "");
   const bawaan = NT.target && opsi.some((o) => o[0] === NT.target) ? NT.target : (opsi.find(([v]) => { const [j, k] = v.split("|"); return (j === "uh" || j === "tugas") && k !== "+" && kosong(j === "uh" ? "nilai-uh" : "nilai-tugas", k); }) || opsi[0])[0];
-  openModal(`<div class="nt-modal"><h3>📋 Tempel nilai</h3>
+  openModal(`<div class="nt-modal"><h3>📋 Tempel Nilai</h3>
     <div class="nt-ket">${e(NILAI_STATE.sub || (LOOKUP.mapel || []).find((m) => m.id === qs("nl-mapel").value)?.nama_mapel || "")} · ${e((LOOKUP.kelas || []).find((k) => k.id === qs("nl-kelas").value)?.nama_kelas || "")}</div>
     <label class="field"><span class="form-label">1. Nilai ini untuk kolom</span><select id="nt-target" class="input">${opsi.map(([v, l]) => `<option value="${e(v)}" ${v === bawaan ? "selected" : ""}>${e(l)}</option>`).join("")}</select></label>
     <label class="field"><span class="form-label">2. Tempel nama & nilai (satu santri per baris)</span>
       <textarea id="nt-teks" class="input nt-teks" rows="10" placeholder="1. M Fadhil 65&#10;2. M Dafa 90&#10;3. Rayhan 50&#10;…">${e(NT.teksTerakhir || "")}</textarea></label>
     <div class="nt-kaki">Boleh dari WA, catatan HP, atau salin dari Excel (kolom nama & nilai). Nomor urut di depan diabaikan · "M" dibaca Muhammad · salah ketik nama dikenali.</div>
-    <button class="btn btn-accent" style="width:100%;margin-top:10px" onclick="_ntLanjut()">🔎 Cocokkan nama →</button></div>`);
+    <button class="btn btn-accent" style="width:100%;margin-top:10px" onclick="_ntLanjut()">🔎 Cocokkan Nama →</button></div>`);
   setTimeout(() => qs("nt-teks")?.focus(), 60);
 }
 function _ntLanjut() {
@@ -154,9 +154,9 @@ function _ntGambar() {
   const urutNama = NT.santri.slice().sort((a, b) => a.nama.localeCompare(b.nama, "id"));
   const belum = NT.santri.filter((s) => !dipakai.has(s.id));
   const label = NT.target.split("|")[1] === "+" ? `${NT.target.startsWith("uh") ? "Ulangan Harian" : "Tugas"} baru` : NT.target.split("|")[1] || NT.target.split("|")[0].toUpperCase();
-  openModal(`<div class="nt-modal nt-lebar"><h3>🔎 Cocokkan nama</h3>
+  openModal(`<div class="nt-modal nt-lebar"><h3>🔎 Cocokkan Nama</h3>
     <div class="nt-ket">Kolom: <b>${e(label)}</b> · ${B.length} baris ditempel</div>
-    <div class="nt-ringkas"><span class="ok">✅ ${n.pasti} cocok</span><span class="awas">⚠️ ${n.periksa} periksa</span><span class="bahaya">❓ ${n.tidak} belum ketemu</span>${ganda.size ? `<span class="bahaya">⛔ ${ganda.size} baris memilih santri yang sama</span>` : ""}</div>
+    <div class="nt-ringkas"><span class="ok">✅ ${n.pasti} Cocok</span><span class="awas">⚠️ ${n.periksa} Periksa</span><span class="bahaya">❓ ${n.tidak} Belum Ketemu</span>${ganda.size ? `<span class="bahaya">⛔ ${ganda.size} baris memilih santri yang sama</span>` : ""}</div>
     <div class="nt-daftar">${B.map((b, i) => {
       const st = b.galat ? "galat" : ganda.has(i) ? "ganda" : !b.siswaId ? "tidak" : b.status;
       const lama = b.siswaId ? _ntNilaiLama(b.siswaId) : "";
@@ -165,16 +165,16 @@ function _ntGambar() {
         <div class="nt-asal"><small>${b.no}.</small><b>${e(b.nama || "(tanpa nama)")}</b><em>${b.nilai ?? "–"}</em></div>
         ${b.galat ? `<div class="nt-pesan">⛔ ${e(b.galat)} — baris ini dilewati</div>` : `
         <select class="input nt-pilih" onchange="_ntPilih(${i},this.value)">
-          <option value="">— Lewati baris ini —</option>
-          ${b.saran.length ? `<optgroup label="Paling mirip">${b.saran.map(([v, si]) => `<option value="${NT.santri[si].id}" ${NT.santri[si].id === b.siswaId ? "selected" : ""}>${e(NT.santri[si].nama)} · ${Math.round(v * 100)}%</option>`).join("")}</optgroup>` : ""}
-          <optgroup label="Semua santri">${urutNama.filter((s) => !saranId.has(s.id)).map((s) => `<option value="${s.id}" ${s.id === b.siswaId ? "selected" : ""}>${e(s.nama)}</option>`).join("")}</optgroup>
+          <option value="">— Lewati Baris Ini —</option>
+          ${b.saran.length ? `<optgroup label="Paling Mirip">${b.saran.map(([v, si]) => `<option value="${NT.santri[si].id}" ${NT.santri[si].id === b.siswaId ? "selected" : ""}>${e(NT.santri[si].nama)} · ${Math.round(v * 100)}%</option>`).join("")}</optgroup>` : ""}
+          <optgroup label="Semua Santri">${urutNama.filter((s) => !saranId.has(s.id)).map((s) => `<option value="${s.id}" ${s.id === b.siswaId ? "selected" : ""}>${e(s.nama)}</option>`).join("")}</optgroup>
         </select>
         <div class="nt-pesan">${st === "pasti" ? "✅ cocok" : st === "ganda" ? "⛔ santri ini sudah dipilih di baris lain — pilih yang benar" : st === "periksa" ? "⚠️ nama mirip — pastikan santrinya benar" : "❓ nama tidak ditemukan — pilih santrinya atau lewati"}${lama !== "" && b.siswaId ? ` · nilai lama <b>${e(lama)}</b> → <b>${b.nilai}</b>` : ""}</div>`}
       </div>`; }).join("")}</div>
-    ${belum.length ? `<details class="nt-belum"><summary>👥 ${belum.length} santri tidak ada di tempelan</summary><div>${belum.map((s) => e(s.nama)).join(" · ")}</div></details>` : ""}
+    ${belum.length ? `<details class="nt-belum"><summary>👥 ${belum.length} Santri Tidak Ada di Tempelan</summary><div>${belum.map((s) => e(s.nama)).join(" · ")}</div></details>` : ""}
     <label class="nt-timpa"><input type="checkbox" id="nt-timpa" checked> Timpa nilai yang sudah ada di kolom ini</label>
-    <div class="nt-aksi"><button class="btn btn-outline" onclick="nlTempelNilai()">← Ubah tempelan</button>
-      <button class="btn btn-accent" ${ganda.size ? "disabled" : ""} onclick="_ntTerapkan()">✍️ Isi ${n.pasti + n.periksa} nilai ke tabel</button></div>
+    <div class="nt-aksi"><button class="btn btn-outline" onclick="nlTempelNilai()">← Ubah Tempelan</button>
+      <button class="btn btn-accent" ${ganda.size ? "disabled" : ""} onclick="_ntTerapkan()">✍️ Isi ${n.pasti + n.periksa} Nilai ke Tabel</button></div>
     <div class="nt-kaki">Nilai belum tersimpan sampai antum menekan 💾 Simpan di atas tabel.</div></div>`);
 }
 function _ntPilih(i, id) {
