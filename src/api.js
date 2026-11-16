@@ -808,7 +808,23 @@ function _tolakAdminKeduaInsentif() {
   if (typeof isAdminKedua === "function" && isAdminKedua()) throw new Error("Admin Kedua hanya bisa melihat, mencetak & mengekspor data insentif.");
 }
 // ── UPLOAD FOTO (Supabase Storage, bucket "foto") ──
+// STANDAR FOTO SANTRI & GURU — dipatenkan untuk semua unggahan:
+//   • daftar/kartu: lebar 360 px, JPEG mutu 0,88 (±17 KB) — mata & wajah tetap tajam di layar HP
+//   • foto disimpan: lebar maks 800 px, mutu 0,88 (±70 KB, dulu ±440 KB) — cukup untuk cetak pas foto 3×4
+const _FOTO_STANDAR = { daftar: 360, simpan: 800, mutu: 0.88 };
+async function _perkecilGambar(file, lebarMaks, mutu) {
+  const bmp = await createImageBitmap(file);
+  if (bmp.width <= lebarMaks) return null;
+  const skala = lebarMaks / bmp.width;
+  let w = bmp.width, h = bmp.height, src = bmp;
+  while (w * 0.5 > lebarMaks) { const c = document.createElement("canvas"); c.width = Math.round(w * 0.5); c.height = Math.round(h * 0.5); const x = c.getContext("2d"); x.imageSmoothingQuality = "high"; x.drawImage(src, 0, 0, c.width, c.height); src = c; w = c.width; h = c.height; }
+  const a = document.createElement("canvas"); a.width = lebarMaks; a.height = Math.round(bmp.height * skala);
+  const x = a.getContext("2d"); x.imageSmoothingQuality = "high"; x.drawImage(src, 0, 0, a.width, a.height);
+  const b = await new Promise((ok) => a.toBlob(ok, "image/jpeg", mutu));
+  return b ? new File([b], String(file.name || "foto").replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" }) : null;
+}
 async function apiUploadFoto(file, folder) {
+  if ((folder === "siswa" || folder === "guru") && /^image\//.test(file.type || "")) { try { file = (await _perkecilGambar(file, _FOTO_STANDAR.simpan, _FOTO_STANDAR.mutu)) || file; } catch (e) { console.warn("Perkecil foto gagal, unggah apa adanya:", e); } }
   const ext = file.name.split(".").pop();
   const path = `${folder}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
   const { error } = await supa.storage.from("foto").upload(path, file, { upsert: true });
@@ -826,7 +842,7 @@ async function apiUploadFoto(file, folder) {
 const _RE_FOTO_PUBLIK = /\/storage\/v1\/object\/public\/foto\/(siswa|guru)\/([^/?#]+?)(\.[a-z0-9]+)?(\?.*)?$/i;
 function fotoKecilUrl(url) {
   const m = String(url || "").match(_RE_FOTO_PUBLIK);
-  return m ? String(url).replace(_RE_FOTO_PUBLIK, `/storage/v1/object/public/foto/kecil/${m[1]}/${m[2]}.jpg`) : url;
+  return m ? String(url).replace(_RE_FOTO_PUBLIK, `/storage/v1/object/public/foto/kecil360/${m[1]}/${m[2]}.jpg`) : url;
 }
 function imgFotoKecil(url, attr) {
   const k = fotoKecilUrl(url);
@@ -845,7 +861,7 @@ async function _buatFotoKecil(urlAsli, sumber) {
   const m = String(urlAsli).match(_RE_FOTO_PUBLIK); if (!m) return;
   const blob = sumber || (await (await fetch(urlAsli)).blob());
   const bmp = await createImageBitmap(blob);
-  const LEBAR = 240, skala = Math.min(1, LEBAR / bmp.width);
+  const LEBAR = _FOTO_STANDAR.daftar, skala = Math.min(1, LEBAR / bmp.width);
   // perkecil bertahap (setengah-setengah) supaya halus, tidak bergerigi
   let w = bmp.width, hgt = bmp.height, src = bmp;
   while (w * 0.5 > bmp.width * skala) {
@@ -855,9 +871,9 @@ async function _buatFotoKecil(urlAsli, sumber) {
   }
   const akhir = document.createElement("canvas"); akhir.width = Math.round(bmp.width * skala); akhir.height = Math.round(bmp.height * skala);
   const ctx = akhir.getContext("2d"); ctx.imageSmoothingQuality = "high"; ctx.drawImage(src, 0, 0, akhir.width, akhir.height);
-  const kecil = await new Promise((ok) => akhir.toBlob(ok, "image/jpeg", 0.86));
+  const kecil = await new Promise((ok) => akhir.toBlob(ok, "image/jpeg", _FOTO_STANDAR.mutu));
   if (!kecil) return;
-  const { error } = await supa.storage.from("foto").upload(`kecil/${m[1]}/${m[2]}.jpg`, kecil, { upsert: true, contentType: "image/jpeg", cacheControl: "31536000" });
+  const { error } = await supa.storage.from("foto").upload(`kecil360/${m[1]}/${m[2]}.jpg`, kecil, { upsert: true, contentType: "image/jpeg", cacheControl: "31536000" });
   if (error) throw new Error(error.message);
 }
 
