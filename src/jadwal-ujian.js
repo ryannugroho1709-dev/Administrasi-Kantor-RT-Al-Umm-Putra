@@ -24,6 +24,22 @@ function _kaldikTanpaKbm(items) {
 }
 window._kaldikTanpaKbm = _kaldikTanpaKbm;
 
+// ── Jam sesi per hari: hari biasa = jam di Pengaturan sesi; Jumat & Sabtu boleh punya jam sendiri (j.jamHari) ──
+const _JU_HARI_KHUSUS = { 5: "jumat", 6: "sabtu" };
+function _juSesiPada(j, t, s) {
+  if (!s) return s;
+  const kat = t ? _JU_HARI_KHUSUS[new Date(t + "T00:00:00").getDay()] : null;
+  const o = kat ? j.jamHari?.[kat]?.[s.id] : null;
+  return o && (o.mulai || o.selesai) ? { ...s, mulai: o.mulai || s.mulai, selesai: o.selesai || s.selesai } : s;
+}
+const _juJamTeks = (j, t, s) => { const x = _juSesiPada(j, t, s); return `${x.mulai}–${x.selesai}`; };
+function _juAturJamHari(hari, sesiId, k, v) {
+  const jh = (JU.edit.jamHari = JU.edit.jamHari || {}), d = (jh[hari] = jh[hari] || {}), o = (d[sesiId] = d[sesiId] || {});
+  if (v) o[k] = v; else delete o[k];
+  if (!o.mulai && !o.selesai) delete d[sesiId];
+  _juTandai();
+}
+
 // ── util ──
 const _juIso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const _juTgl = (iso) => new Date(iso + "T00:00:00");
@@ -90,7 +106,7 @@ function _juMapelSaya(j, guruId) {
   Object.entries(j.slot || {}).forEach(([k, s]) => {
     const [t, sesiId, kelasId] = k.split("|"); if (!s?.m || !j.hari.includes(t)) return;
     const x = per.get(`${_juKode(s)}|${kelasId}`) || per.get(`${s.m}|${kelasId}`); if (!x) return;
-    const sesi = j.sesi.find((y) => y.id === sesiId); if (sesi) x.kapan.push({ t, sesi, ke: j.sesi.indexOf(sesi) + 1 });
+    const sesi = j.sesi.find((y) => y.id === sesiId); if (sesi) x.kapan.push({ t, sesi: _juSesiPada(j, t, sesi), ke: j.sesi.indexOf(sesi) + 1 });
   });
   // mapel yang belum masuk jadwal tetap tampil (soalnya tetap perlu dikumpulkan), kecuali kegiatan non-ujian
   return [...per.values()].filter((x) => x.kapan.length || !_JU_LEWATI_MAPEL.test(_juNamaMapel(x.mapelId)))
@@ -186,12 +202,22 @@ function _juHtmlAktif(j, saya, atur) {
     <div class="ju2-kolom-h"><span class="ju2-ikon" style="--c:13,148,136">🗓️</span><div><b>${hariH ? "📍 Jadwal ujian hari ini" : "Jadwal lengkap"}</b><small>Ketuk mapel untuk mengumpulkan soalnya. <span class="ju2-tanda saya-awas">📋 saya mengawas</span> <span class="ju2-tanda saya-mapel">📝 mapel saya</span></small></div>
       <label class="ju2-saring"><input type="checkbox" ${JU.papanSaya ? "checked" : ""} onchange="JU.papanSaya=this.checked;_juGambarDaftar()"> Hanya yang terkait saya</label></div>
     <div class="ju-tab ju2-tab">${j.hari.map((t) => { const n = (j.kelas || []).reduce((a, k) => a + j.sesi.filter((s) => { const x = j.slot?.[_juKunci(t, s.id, k)]; return _juLabelSlot(x) && (!JU.papanSaya || _juTerkait(x, k, saya)); }).length, 0); const aku = tugas.some((x) => x.t === t) || mapel.some((m) => m.kapan.some((k) => k.t === t));
-      return `<button class="${t === pilihHari ? "on" : ""} ${t === hariIni ? "kini" : ""}" onclick="JU.papanHari='${t}';_juGambarDaftar()">${_juHariPendek(t)}${aku ? " ⭐" : ""}<small>${n} ujian</small></button>`; }).join("")}</div>
+      return `<button class="${t === pilihHari ? "on" : ""} ${t === hariIni ? "kini" : ""}" onclick="juPilihHariPapan('${t}')">${_juHariPendek(t)}${aku ? " ⭐" : ""}<small>${n} ujian</small></button>`; }).join("")}</div>
     ${_juHtmlPapanHari(j, pilihHari, saya, atur)}
   </div>`;
   const gab = atur ? _juGabunganBelumPisah(j) : [];
   const pita = gab.length ? `<div class="card ju-gab-pita"><span>🔀</span><div><b>${gab.length} ujian mapel gabungan masih jadi satu</b><small>${[...new Set(gab.map(([, s]) => _juNamaMapel(s.m)))].map(e).join(", ")} — pisahkan supaya Geografi, Sosiologi, Ekonomi, dll. diujikan terpisah</small></div><button class="btn btn-accent btn-sm" onclick="juPisahGabungan('${j.id}')">Pisahkan otomatis</button></div>` : "";
   return hariH ? atas + pita + papan + dua : atas + pita + dua + papan;
+}
+function juPilihHariPapan(t) {
+  JU.papanHari = t; _juGambarDaftar();
+  requestAnimationFrame(() => setTimeout(() => {
+    const p = document.querySelector("[data-tur=ju-papan]"); if (!p) return;
+    const r = p.getBoundingClientRect(), vh = window.innerHeight;
+    // papan muat di layar → tampilkan utuh sampai bawah; kalau lebih tinggi dari layar → mulai dari atas papan
+    if (r.height <= vh - 80) p.scrollIntoView({ behavior: "smooth", block: "end" });
+    else p.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 60));
 }
 const _juTerkait = (x, kelasId, saya) => (x?.p || []).includes(saya) || (x?.m && (JU.ajar || []).some((a) => a.guru_id === saya && a.mapel_id === x.m && a.kelas_id === kelasId));
 function _juHtmlPapanHari(j, t, saya, atur) {
@@ -209,7 +235,7 @@ function _juHtmlPapanHari(j, t, saya, atur) {
         <small>📋 ${(x.p || []).map(_juNamaGuru).map(e).join(", ") || "pengawas belum ada"}</small>
         ${awas || milik ? `<span class="ju2-sel-tanda">${awas ? "📋 Saya mengawas" : ""}${awas && milik ? " · " : ""}${milik ? "📝 Mapel saya" : ""}</span>` : ""}</button>`;
     }).join("");
-    return sel ? `<div class="ju2-sesi"><div class="ju2-sesi-h"><b>Sesi ${i + 1}</b><span>${s.mulai}–${s.selesai}</span></div><div class="ju2-sel-grid">${sel}</div></div>` : "";
+    return sel ? `<div class="ju2-sesi"><div class="ju2-sesi-h"><b>Sesi ${i + 1}</b><span>${_juJamTeks(j, t, s)}</span></div><div class="ju2-sel-grid">${sel}</div></div>` : "";
   }).join("");
   return blok || `<div class="ju2-kosong">${JU.papanSaya ? "Tidak ada ujian yang terkait Antum di hari ini." : "Belum ada mapel di hari ini."}</div>`;
 }
@@ -260,7 +286,12 @@ function _juJadwalBaru(o) {
     mulai: o.mulai, selesai: o.selesai || o.mulai, hari: _juHariDalamRentang(o.mulai, o.selesai || o.mulai),
     sesi: o.jenis === "tahfizh" ? [{ id: "s1", mulai: "07:30", selesai: "11:30" }] : [{ id: "s1", mulai: "07:30", selesai: "09:00" }, { id: "s2", mulai: "09:30", selesai: "11:00" }],
     kelas: _juKelasBawaan(), slot: {}, ruang: {}, catatan: "", dibuat: new Date().toISOString(),
+    ..._juPolaJamTerakhir(o.jenis || "uas"),
   };
+}
+function _juPolaJamTerakhir(jenis) {
+  const lama = (JU.daftar || []).filter((x) => x.jenis === jenis && x.sesi?.length).sort((a, b) => String(b.dibuat || b.mulai).localeCompare(String(a.dibuat || a.mulai)))[0];
+  return lama ? { sesi: lama.sesi.map((s) => ({ ...s })), ...(lama.jamHari ? { jamHari: JSON.parse(JSON.stringify(lama.jamHari)) } : {}) } : {};
 }
 async function juBuatBaru() {
   const hariIni = tanggalISO();
@@ -334,7 +365,10 @@ function _juGambarEditor() {
       <div class="ju-atur-isi">
         <div><label class="form-label">Jenis</label><select class="input" onchange="JU.edit.jenis=this.value;_juTandai()">${Object.entries(_JU_JENIS).map(([k, v]) => `<option value="${k}" ${k === j.jenis ? "selected" : ""}>${v}</option>`).join("")}</select></div>
         <div><label class="form-label">Hari ujian</label><div class="ju-cek">${semuaHari.map((t) => `<label><input type="checkbox" ${j.hari.includes(t) ? "checked" : ""} onchange="_juToggleHari('${t}',this.checked)"/> ${_juHariPendek(t)}</label>`).join("")}</div></div>
-        <div><label class="form-label">Sesi & jam</label>${j.sesi.map((s, i) => `<div class="ju-sesi-in"><b>Sesi ${i + 1}</b><input type="time" class="input" value="${s.mulai}" onchange="JU.edit.sesi[${i}].mulai=this.value;_juTandai()"/>–<input type="time" class="input" value="${s.selesai}" onchange="JU.edit.sesi[${i}].selesai=this.value;_juTandai()"/>${j.sesi.length > 1 ? `<button class="btn btn-ghost btn-sm" onclick="_juHapusSesi(${i})">✕</button>` : ""}</div>`).join("")}<button class="btn btn-ghost btn-sm" onclick="_juTambahSesi()">＋ Sesi</button></div>
+        <div><label class="form-label">Sesi & jam</label>${j.sesi.map((s, i) => `<div class="ju-sesi-in"><b>Sesi ${i + 1}</b><input type="time" class="input" value="${s.mulai}" onchange="JU.edit.sesi[${i}].mulai=this.value;_juTandai()"/>–<input type="time" class="input" value="${s.selesai}" onchange="JU.edit.sesi[${i}].selesai=this.value;_juTandai()"/>${j.sesi.length > 1 ? `<button class="btn btn-ghost btn-sm" onclick="_juHapusSesi(${i})">✕</button>` : ""}</div>`).join("")}<button class="btn btn-ghost btn-sm" onclick="_juTambahSesi()">＋ Sesi</button><small class="ju-ket">Jam ini berlaku untuk hari biasa (Senin–Kamis, Ahad).</small></div>
+        <div class="ju-jamhari"><label class="form-label">Jam khusus Jumat & Sabtu <small>(kosongkan = sama dengan hari biasa)</small></label>
+          ${["jumat", "sabtu"].map((hr) => `<div class="ju-jamhari-blok"><b>${hr === "jumat" ? "🕌 Jumat" : "📅 Sabtu"}</b>${j.sesi.map((s, i) => { const o = j.jamHari?.[hr]?.[s.id] || {}; return `<div class="ju-sesi-in"><span>Sesi ${i + 1}</span><input type="time" class="input" value="${o.mulai || ""}" title="hari biasa ${s.mulai}" onchange="_juAturJamHari('${hr}','${s.id}','mulai',this.value)"/>–<input type="time" class="input" value="${o.selesai || ""}" title="hari biasa ${s.selesai}" onchange="_juAturJamHari('${hr}','${s.id}','selesai',this.value)"/><small class="ju-ket">biasa ${s.mulai}–${s.selesai}</small></div>`; }).join("")}</div>`).join("")}
+        </div>
         <div><label class="form-label">Kelas peserta</label><div class="ju-cek">${_juKelasBawaan().map((k) => `<label><input type="checkbox" ${j.kelas.includes(k) ? "checked" : ""} onchange="_juToggleKelas('${k}',this.checked)"/> <span class="ju-dot" style="background:${_juWarnaKelas(k)}"></span>Kelas ${_juEsc(_juAngkaKelas(k))}</label>`).join("")}</div></div>
       </div></details>` : ""}
     <div class="ju-tab">${j.hari.map((t) => `<button class="${t === tgl ? "on" : ""}" onclick="JU.hari='${t}';_juGambarEditor()">${_juHariPendek(t)}<small>${Object.keys(j.slot || {}).filter((k) => k.startsWith(t + "|") && _juLabelSlot(j.slot[k])).length} mapel</small></button>`).join("")}</div>
@@ -342,11 +376,11 @@ function _juGambarEditor() {
       <div class="ju-papan-h"><b>${_juHariPanjang(tgl)}</b>${atur ? `<span class="ju-papan-aksi"><button class="btn btn-ghost btn-sm" onclick="_juSalinHari()">📋 Salin hari</button><button class="btn btn-outline btn-sm" onclick="juIsiPengawasOtomatis()">⚡ Pengawas otomatis</button></span>` : ""}</div>
       ${hp
         // HP: satu kartu per sesi, kelas berbaris ke bawah (tidak perlu geser ke samping)
-        ? j.sesi.map((s, i) => `<div class="ju-hp-sesi"><div class="ju-hp-sesi-h"><b>Sesi ${i + 1}</b><span>${s.mulai}–${s.selesai}</span></div>
+        ? j.sesi.map((s, i) => `<div class="ju-hp-sesi"><div class="ju-hp-sesi-h"><b>Sesi ${i + 1}</b><span>${_juJamTeks(j, tgl, s)}</span></div>
             ${j.kelas.map((k) => `<div class="ju-hp-sel ${_juLabelSlot(j.slot?.[_juKunci(tgl, s.id, k)]) ? "" : "kosong"}" style="--kw:${_juWarnaKelas(k)}"><div class="ju-hp-kls">Kelas ${_juEsc(_juAngkaKelas(k))}</div><div class="ju-hp-isi">${_juIsiSel(j, tgl, s, k, atur)}</div></div>`).join("")}</div>`).join("")
         : `<div class="ju-tabel-wadah"><table class="ju-tabel">
         <thead><tr><th class="ju-th-sesi">Sesi</th>${j.kelas.map((k) => `<th class="ju-th-kls" style="--kw:${_juWarnaKelas(k)}">Kelas ${_juEsc(_juAngkaKelas(k))}</th>`).join("")}</tr></thead>
-        <tbody>${j.sesi.map((s, i) => `<tr><th class="ju-th-sesi"><b>Sesi ${i + 1}</b><small>${s.mulai}–${s.selesai}</small></th>${j.kelas.map((k) => _juHtmlSel(j, tgl, s, k, atur)).join("")}</tr>`).join("")}</tbody>
+        <tbody>${j.sesi.map((s, i) => `<tr><th class="ju-th-sesi"><b>Sesi ${i + 1}</b><small>${_juJamTeks(j, tgl, s)}</small></th>${j.kelas.map((k) => _juHtmlSel(j, tgl, s, k, atur)).join("")}</tr>`).join("")}</tbody>
       </table></div>`}
     </div>` : `<div class="card empty-state">Belum ada hari ujian. Centang hari di ⚙️ Pengaturan.</div>`}
     <div class="card"><div class="ju-sub">👥 Beban mengawas (seluruh hari)</div><div class="ju-beban">${Object.entries(beban).sort((a, b) => b[1] - a[1]).map(([g, n]) => `<span>${_juEsc(_juNamaGuru(g))} <b>${n}</b></span>`).join("") || `<span class="ju-ket">Belum ada pengawas.</span>`}</div></div>`;
@@ -541,7 +575,7 @@ function _juTugasGuru(guruId, dari, sampai) {
     if (!(s.p || []).includes(guruId) || !j.hari.includes(t) || !_juLabelSlot(s)) return;
     if ((dari && t < dari) || (sampai && t > sampai)) return;
     const sesi = j.sesi.find((x) => x.id === sesiId); if (!sesi) return;
-    out.push({ j, t, sesi, ke: j.sesi.indexOf(sesi) + 1, kelasId, s, kunci: k });
+    out.push({ j, t, sesi: _juSesiPada(j, t, sesi), ke: j.sesi.indexOf(sesi) + 1, kelasId, s, kunci: k });
   }));
   return out.sort((a, b) => a.t.localeCompare(b.t) || a.sesi.mulai.localeCompare(b.sesi.mulai));
 }
@@ -626,7 +660,7 @@ async function juRekapHadir(id) {
 function juBagikanWa(id) {
   const j = JU.daftar.find((x) => x.id === id); if (!j) return;
   const per = {};
-  Object.entries(j.slot).forEach(([k, s]) => { const [t, sesiId, kelasId] = k.split("|"); if (!j.hari.includes(t) || !_juLabelSlot(s)) return; (s.p || []).forEach((g) => (per[g] = per[g] || []).push({ t, sesi: j.sesi.find((x) => x.id === sesiId), ke: j.sesi.findIndex((x) => x.id === sesiId) + 1, kelasId, s })); });
+  Object.entries(j.slot).forEach(([k, s]) => { const [t, sesiId, kelasId] = k.split("|"); if (!j.hari.includes(t) || !_juLabelSlot(s)) return; (s.p || []).forEach((g) => (per[g] = per[g] || []).push({ t, sesi: _juSesiPada(j, t, j.sesi.find((x) => x.id === sesiId)), ke: j.sesi.findIndex((x) => x.id === sesiId) + 1, kelasId, s })); });
   const tag = (g) => { const n = typeof normalisasiNomorWa === "function" ? normalisasiNomorWa(_juGuru(g)?.no_wa) : null; return n?.valid ? ` @${n.nomor}` : ""; };
   const daftar = Object.entries(per).sort((a, b) => _juNamaGuru(a[0]).localeCompare(_juNamaGuru(b[0]), "id")).map(([g, xs], i) =>
     `${i + 1}. *${_juNamaGuru(g)}*${tag(g)}\n` + xs.sort((a, b) => a.t.localeCompare(b.t) || a.ke - b.ke).map((x) => `     ▪️ ${_juHariPendek(x.t)}, sesi ${x.ke} (${x.sesi?.mulai}–${x.sesi?.selesai}) — Kelas ${_juAngkaKelas(x.kelasId)}, ${_juLabelSlot(x.s)}`).join("\n")).join("\n\n");
@@ -651,7 +685,7 @@ async function juCetakPdf(id, dariEditor) {
   const blokHari = (hariTerisi.length ? hariTerisi : j.hari).map((t) => `<section class="hari">
       <h3><span class="garis"></span>${e(_juHariPanjang(t))}${hijri(t) ? `<small> · ${e(hijri(t))}</small>` : ""}</h3>
       <table><thead><tr><th class="sesi">Sesi / Waktu</th>${j.kelas.map((k) => `<th class="thk" style="background:${_juWarnaKelas(k)}">Kelas ${e(_juAngkaKelas(k))}</th>`).join("")}</tr></thead>
-      <tbody>${j.sesi.map((s, i) => (j.kelas.some((k) => _juLabelSlot(j.slot[_juKunci(t, s.id, k)])) || !hariTerisi.length) ? `<tr><td class="sesi"><b>Sesi ${i + 1}</b><br/>${s.mulai}–${s.selesai}</td>${j.kelas.map((k) => { const x = j.slot[_juKunci(t, s.id, k)]; const l = _juLabelSlot(x); return `<td style="background:${_juWarnaKelas(k)}12">${l ? `<div class="mp">${e(l)}</div>${x.ruang ? `<div class="kc">Ruang ${e(x.ruang)}</div>` : ""}<div class="pw">${(x.p || []).map((g) => e(_juNamaGuru(g))).join(", ") || "—"}</div>` : "–"}</td>`; }).join("")}</tr>` : "").join("")}</tbody></table>
+      <tbody>${j.sesi.map((s, i) => (j.kelas.some((k) => _juLabelSlot(j.slot[_juKunci(t, s.id, k)])) || !hariTerisi.length) ? `<tr><td class="sesi"><b>Sesi ${i + 1}</b><br/>${_juJamTeks(j, t, s)}</td>${j.kelas.map((k) => { const x = j.slot[_juKunci(t, s.id, k)]; const l = _juLabelSlot(x); return `<td style="background:${_juWarnaKelas(k)}12">${l ? `<div class="mp">${e(l)}</div>${x.ruang ? `<div class="kc">Ruang ${e(x.ruang)}</div>` : ""}<div class="pw">${(x.p || []).map((g) => e(_juNamaGuru(g))).join(", ") || "—"}</div>` : "–"}</td>`; }).join("")}</tr>` : "").join("")}</tbody></table>
     </section>`).join("");
   const per = {};
   Object.entries(j.slot).forEach(([k, s]) => { const [t, sesiId, kelasId] = k.split("|"); if (!j.hari.includes(t) || !_juLabelSlot(s)) return; (s.p || []).forEach((g) => (per[g] = per[g] || []).push(`${_juHariPendek(t)} S${j.sesi.findIndex((x) => x.id === sesiId) + 1} K${_juAngkaKelas(kelasId)}`)); });

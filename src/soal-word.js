@@ -203,7 +203,7 @@ function _swInfoUjian(j, mapelId, kelasId, urai) {
   const slot = Object.entries(j.slot || {}).filter(([k, s]) => (_juKode(s) === mapelId || (!_uaSub(mapelId) && s?.m === mapelId)) && k.split("|")[2] === kelasId && j.hari.includes(k.split("|")[0])).sort((a, b) => a[0].localeCompare(b[0]))[0];
   let hariTanggal = "", waktu = "", tanggalAr = "";
   if (slot) {
-    const [t, sid] = slot[0].split("|"), s = j.sesi.find((x) => x.id === sid);
+    const [t, sid] = slot[0].split("|"), s = _juSesiPada(j, t, j.sesi.find((x) => x.id === sid));
     const HR = ["Ahad", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"], dd = _juTgl(t); hariTanggal = `${HR[dd.getDay()]}, ${String(dd.getDate()).padStart(2, "0")}/${String(dd.getMonth() + 1).padStart(2, "0")}/${dd.getFullYear()}`;
     const d = _juTgl(t); tanggalAr = _swAngkaArab(`${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`);
     if (s) { const mnt = (x) => { const [h, m] = String(x).split(/[.:]/).map(Number); return h * 60 + (m || 0); }; const dur = mnt(s.selesai) - mnt(s.mulai); waktu = dur > 0 ? `${dur} menit` : `${s.mulai}–${s.selesai}`; }

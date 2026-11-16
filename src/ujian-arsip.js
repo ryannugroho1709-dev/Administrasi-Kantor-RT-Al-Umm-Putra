@@ -233,7 +233,7 @@ async function uaKumpulkan(jadwalId, mapelId, kelasId) {
   UA.jadwal = j;
   const st = _uaStatus(j, { mapelId, kelasId }), d = UA.data[kunci] || {};
   const kapan = Object.entries(j.slot || {}).filter(([k, s]) => (_juKode(s) === mapelId || (!_uaSub(mapelId) && s?.m === mapelId)) && k.split("|")[2] === kelasId && j.hari.includes(k.split("|")[0]))
-    .map(([k]) => { const [t, sid] = k.split("|"), i = j.sesi.findIndex((x) => x.id === sid); return `${_juHariPendek(t)} · Sesi ${i + 1} (${j.sesi[i]?.mulai}–${j.sesi[i]?.selesai})`; });
+    .map(([k]) => { const [t, sid] = k.split("|"), i = j.sesi.findIndex((x) => x.id === sid); return `${_juHariPendek(t)} · Sesi ${i + 1} (${j.sesi[i] ? _juJamTeks(j, t, j.sesi[i]) : ""})`; });
   const jenisSoal = j.jenis === "uts" ? "UTS" : "UAS";
   openModal(`<h3>📤 Kumpulkan soal</h3>
     <div class="ua-m-info" style="--kw:${_juWarnaKelas(kelasId)}"><span class="ju-kls">${e(_juAngkaKelas(kelasId))}</span><div><b>${e(_juNamaMapel(mapelId))} · Kelas ${e(_juAngkaKelas(kelasId))}</b><small>${e(j.judul)}${kapan.length ? "<br>📅 " + kapan.map(e).join("<br>📅 ") : ""}</small></div></div>

@@ -24,7 +24,7 @@
 <link rel="stylesheet" href="src/hp.css?v=3">
 <link rel="stylesheet" href="src/kuliah.css?v=6">
 <link rel="stylesheet" href="src/modul-baca.css?v=10">
-<link rel="stylesheet" href="src/ujian.css?v=22">
+<link rel="stylesheet" href="src/ujian.css?v=23">
 
 <script>
 // Logo gagal dimuat → coba logo bawaan; kalau bawaan pun gagal, tampilkan ikon 🎓 (bukan huruf "G").
@@ -3645,6 +3645,7 @@ async function _refreshJadwalHariIniDiamDiam() {
     const { jadwal, sesi } = await _muatJadwalDanSesiHariIni(STATE.guruId, tanggalISO(), hariIniIndo());
     STATE.jadwalHariIni = jadwal;
     STATE.sesiHariIni = sesi;
+    _saringJadwalLiburKbm();
     if (STATE.currentPage === "absensi-guru" || STATE.currentPage === "dashboard") refreshCurrentPage();
     _cekPengingatJurnal();
   } catch (e) { console.warn("Gagal refresh jadwal berkala:", e); }
@@ -3861,7 +3862,8 @@ async function bootDataGuru() {
     STATE.jadwalHariIni = jadwal;
     STATE.sesiHariIni = sesi;
   } catch (e) { console.error(e); toast("Gagal memuat jadwal hari ini", "err"); }
-  try { STATE.hariIniLiburKaldik = await apiCekTanggalLiburKaldik(tgl); } catch (e) { console.warn("Gagal cek kaldik:", e); }
+  try { STATE.hariIniLiburKaldik = await apiCekTanggalLiburKaldik(tgl); if (STATE.hariIniLiburKaldik) STATE.hariIniLiburKaldik.tgl = tgl; } catch (e) { console.warn("Gagal cek kaldik:", e); }
+  _saringJadwalLiburKbm();
   terapkanVisibilitasAdmin();
   initNotifikasi(); // mulai monitor absen + listen izin (jika notif sudah diizinkan)
   _mulaiAutoRefreshJadwalHariIni(); // jaga jadwal tetap segar selama app terbuka (lihat komentar di atas)
@@ -3989,7 +3991,7 @@ async function renderDashboard() {
     const berikutnya = STATE.jadwalHariIni
       .filter((j) => j.jam_mulai && j.jam_mulai > jamSekarang)
       .sort((a, b) => a.jam_mulai.localeCompare(b.jam_mulai))[0];
-    qs("dash-kelas-berikutnya").textContent = berikutnya
+    qs("dash-kelas-berikutnya").textContent = _liburKbmHariIni() ? `KBM libur · ${String(_liburKbmHariIni().judul || "").split(" — ")[0]}` : berikutnya
       ? `${berikutnya.mapel?.nama_mapel || "-"} · ${berikutnya.kelas?.nama_kelas || "-"} (${berikutnya.jam_mulai.slice(0, 5)})`
       : t("tidakAdaKelasLagi");
   }
@@ -4039,6 +4041,7 @@ async function renderDashboard() {
   await renderAgendaDashboard();
 
   const list = qs("dash-jadwal-list");
+  if (!STATE.jadwalHariIni.length && _liburKbmHariIni()) { list.innerHTML = _htmlLiburKbm(); _updateNotifDot(); return; }
   if (!STATE.jadwalHariIni.length) {
     list.innerHTML = `<div class="empty-state">
       <div>${t("tidakAdaJadwal")} (${hariIniIndo()})</div>
@@ -4733,6 +4736,10 @@ function renderAbsensiGuru() {
   }
   // Mulai live GPS monitor setiap kali halaman absensi dirender
   startGPSMonitor();
+  if (!STATE.jadwalHariIni.length && _liburKbmHariIni()) {
+    wrap.innerHTML = `<div class="card">${_htmlLiburKbm()}</div><div style="margin-top:14px;">${renderAksiIzinSakitHariIni()}</div>`;
+    return;
+  }
   if (!STATE.jadwalHariIni.length) {
     wrap.innerHTML = gpsLiveCardHtml() + `<div class="card empty-state">
         <div>${t("tidakAdaJadwal")} — <b>${STATE.guruNama}</b> tidak memiliki jadwal mengajar hari <b>${hariIniIndo()}</b>.</div>
@@ -5008,6 +5015,24 @@ async function submitAjukanTukarJadwal() {
   finally { _SEDANG_KIRIM_PENGAJUAN = false; setGlobalLoading(false); }
 }
 
+// KBM libur hari ini (libur kaldik / hari ujian tahfizh, UTS, UAS): jadwal mengajar tidak ditagih absen,
+// tidak ada pengingat absen/jurnal, dan dasbor menampilkan keterangan libur. Jadwal asli disimpan di
+// STATE.jadwalLiburKbm hanya untuk ditampilkan sebagai keterangan.
+function _liburKbmHariIni() {
+  const l = STATE.hariIniLiburKaldik;
+  return l && l.libur && (!l.tgl || l.tgl === tanggalISO()) ? l : null;
+}
+function _saringJadwalLiburKbm() {
+  if (!_liburKbmHariIni()) { STATE.jadwalLiburKbm = []; return; }
+  if ((STATE.jadwalHariIni || []).length) STATE.jadwalLiburKbm = STATE.jadwalHariIni;
+  STATE.jadwalHariIni = [];
+}
+function _htmlLiburKbm() {
+  const l = _liburKbmHariIni(); if (!l) return "";
+  const judul = String(l.judul || "").split(" — ")[0];
+  const n = (STATE.jadwalLiburKbm || []).length;
+  return `<div class="libur-kbm"><span>${l.ujian ? "📝" : "🏖️"}</span><div><b>KBM libur hari ini</b><small>${escapeHtml(judul)}${n ? ` · ${n} jadwal mengajar antum hari ini <b>tidak perlu diabsen</b>` : ""}.${l.ujian ? " Bila bertugas mengawas, gunakan <b>✋ Absen Mengawas</b> di menu Jadwal Ujian." : ""}</small></div>${l.ujian ? `<button class="btn btn-sm btn-accent" onclick="showPage('jadwal-ujian','page-jadwal-ujian','menuJadwalUjian')">Jadwal Ujian</button>` : ""}</div>`;
+}
 function absenDiblokirHariIni() {
   const p = STATE.pengaturan || {};
   if (p.blokir_hari_minggu !== false && hariIniIndo() === "Minggu") return true; // pakai zona Asia/Makassar (WITA), bukan zona perangkat
@@ -11624,7 +11649,8 @@ async function renderKurikulum() {
               <td style="text-align:center;"><input type="checkbox" id="${id}-umum" ${m.dbRow?.masuk_umum ? "checked" : ""}/></td>
               <td style="text-align:center;"><input type="checkbox" id="${id}-diniyyah" ${m.dbRow?.masuk_diniyyah ? "checked" : ""}/></td>
               <td><select class="input" id="${id}-sub" style="padding:4px 6px;font-size:10.5px;width:100%;">
-                <option value="umum" ${m.dbRow?.kategori !== "pemberdayaan" ? "selected" : ""}>${t("kelompokMapelUmumSingkat")}</option>
+                <option value="umum" ${m.dbRow?.kategori !== "pemberdayaan" && m.dbRow?.kategori !== "diniyyah" ? "selected" : ""}>${t("kelompokMapelUmumSingkat")}</option>
+                <option value="diniyyah" ${m.dbRow?.kategori === "diniyyah" && m.dbRow?.masuk_umum ? "selected" : ""} title="Tetap masuk rapor umum, tetapi soal ujiannya memakai kop Diniyyah (mis. Fiqih, Nahwu)">Umum · kop soal Diniyyah</option>
                 <option value="pemberdayaan" ${m.dbRow?.kategori === "pemberdayaan" ? "selected" : ""}>${t("muatanPemberdayaanKeterampilanSingkat")}</option>
               </select></td>
               <td><input class="input" id="${id}-alias" style="padding:4px 6px;font-size:10.5px;width:100%;" data-i18n-placeholder="aliasRaporUmumPlaceholder" placeholder="${t("aliasRaporUmumPlaceholder")}" value="${m.dbRow?.alias_rapor_umum || ""}" title="${t("aliasRaporUmumKeterangan")}"/></td>
@@ -16110,10 +16136,10 @@ async function handleImportSiswa(evt) {
 <script src="src/jurnal-otomatis.js?v=6"></script>
 <script src="src/hp.js?v=8"></script>
 <script src="src/leger-nilai.js?v=5"></script>
-<script src="src/jadwal-ujian.js?v=7"></script>
-<script src="src/ujian-arsip.js?v=6"></script>
+<script src="src/jadwal-ujian.js?v=8"></script>
+<script src="src/ujian-arsip.js?v=7"></script>
 <script src="src/tur.js?v=3"></script>
-<script src="src/soal-word.js?v=5"></script>
+<script src="src/soal-word.js?v=6"></script>
 <script src="src/nilai-tempel.js?v=2"></script>
 <script src="src/dapodik.js?v=1"></script>
 <script src="src/modul-urut.js?v=1"></script>

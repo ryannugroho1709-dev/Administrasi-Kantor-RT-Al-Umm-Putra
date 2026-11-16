@@ -578,3 +578,11 @@ input.nt-baru{animation:ntKedip 1.2s ease 3;box-shadow:0 0 0 2px #22c55e inset}
 .sw-d-chip{border:1px solid #f2c97d;background:#fff8ea;color:#7a4b00;border-radius:999px;padding:5px 10px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;border-left:4px solid var(--kw,#f2c97d)}
 .sw-d-chip small{opacity:.75;font-weight:600}.sw-d-chip.ok{background:#ecf8f0;border-color:#bfe3cb;color:#17653a}.sw-d-chip:hover{transform:translateY(-1px)}
 .sw-d-aksi{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+
+/* Jam khusus Jumat & Sabtu (pengaturan jadwal ujian) */
+.ju-jamhari{grid-column:1/-1}.ju-jamhari .form-label small{font-weight:500;color:var(--text-secondary)}
+.ju-jamhari-blok{border:1px dashed var(--border-soft,#e3e8ef);border-radius:12px;padding:8px 10px;margin-top:6px}.ju-jamhari-blok>b{display:block;font-size:12.5px;margin-bottom:4px}
+.ju-jamhari .ju-sesi-in span{font-size:12px;font-weight:700;min-width:46px}.ju-jamhari .ju-sesi-in small{margin-left:6px}
+/* KBM libur (dasbor & absensi) */
+.libur-kbm{display:flex;gap:12px;align-items:center;padding:12px;border-radius:14px;background:linear-gradient(135deg,#fff7e6,#fff);border:1px solid #f5d79e}
+.libur-kbm>span{font-size:26px}.libur-kbm>div{flex:1}.libur-kbm>div>b{display:block;font-size:14px}.libur-kbm small{font-size:12px;color:var(--text-secondary);line-height:1.45}
