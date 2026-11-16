@@ -7235,6 +7235,15 @@ async function renderMonitorHarian() {
   try { data = await apiGetMonitorHarian(tanggalISO(), hariIniIndo()); }
   catch (e) { wrap.innerHTML = `<div class="empty-state">Gagal memuat monitor harian.</div>`; console.error(e); return; }
 
+  // KBM libur (libur kaldik / hari ujian tahfizh, UTS, UAS): jadwal mengajar tidak dipantau
+  let libur = _liburKbmHariIni();
+  if (!libur) { try { const l = await apiCekTanggalLiburKaldik(tanggalISO()); if (l && l.libur) { STATE.hariIniLiburKaldik = { ...l, tgl: tanggalISO() }; libur = _liburKbmHariIni(); } } catch (e) { console.warn(e); } }
+  if (libur) {
+    const snack = qs("monitor-snack-box"); if (snack) snack.style.display = "none";
+    const judul = String(libur.judul || "").split(" — ")[0];
+    wrap.innerHTML = `<div class="card"><div class="libur-kbm"><span>${libur.ujian ? "📝" : "🏖️"}</span><div><b>KBM libur hari ini</b><small>${escapeHtml(judul)} · ${data.length} jadwal mengajar hari ini <b>tidak dipantau</b> dan tidak dihitung Alpha.${libur.ujian ? " Kehadiran guru saat ujian dicatat lewat <b>Absen Mengawas</b> (Jadwal Ujian → ✅ Kehadiran Pengawas)." : ""}</small></div>${libur.ujian ? `<button class="btn btn-sm btn-accent" onclick="showPage('jadwal-ujian','page-jadwal-ujian','menuJadwalUjian')">Jadwal Ujian</button>` : ""}</div></div>`;
+    return;
+  }
   if (!data.length) { wrap.innerHTML = `<div class="card empty-state">${t("tidakAdaJadwal")}</div>`; return; }
 
   // ── Snack planning box (admin penuh + guru yang diberi akses lihat-saja lewat SNACK_VIEWER_NAMES) ──
