@@ -246,6 +246,8 @@
   .h4-ubin div{border-radius:14px;padding:10px 4px;text-align:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(6px)}
   .h4-ubin b{display:block;font-size:22px;font-variant-numeric:tabular-nums}.h4-ubin span{font-size:10.5px;opacity:.75}
   .h4-ubin .b b{color:#6ee7b7;text-shadow:0 0 12px rgba(110,231,183,.5)}.h4-ubin .s b{color:#fde68a}.h4-ubin .x b{color:#fda4af}.h4-ubin .k b{color:#cbd5e1}
+  .rem-petunjuk{display:flex;flex-direction:column;gap:3px;background:linear-gradient(135deg,#fff7ed,#fef3c7);border:1px solid #fcd9a4;border-radius:14px;padding:10px 12px;margin:6px 0 10px;font-size:13px;line-height:1.45}
+  .rem-petunjuk b:first-child{font-size:14px;color:#9a3412}
   .h4-remedial{display:flex;gap:14px;align-items:flex-start;background:linear-gradient(135deg,#fff7ed,#fef3c7);border:1px solid #fcd9a4}
   .h4-remedial.selesai{background:linear-gradient(135deg,#f0fdf4,#ecfeff);border-color:#bbf7d0}
   .h4-rem-ikon{width:48px;height:48px;border-radius:16px;display:grid;place-items:center;font-size:24px;background:linear-gradient(135deg,#f59e0b,#ea580c);box-shadow:0 8px 18px rgba(234,88,12,.3);flex:none}
@@ -360,7 +362,7 @@ function audioHTML(url) { return url ? `<div class="audio-soal"><span>🔊 Denga
 async function ambilSesi() {
   const kolom = "id,mode,durasi_menit,acak,kelas_id,bank_id,created_at,dibuka,kelas:kelas(nama_kelas),bank:ujian_bank(judul,bab,tingkat,mapel:mapel(nama_mapel))";
   // sesi dibuka + sesi tertutup yang punya peserta susulan / hasilnya sudah dibuka guru
-  let r = await supa.from("ujian_sesi").select(kolom + ",susulan,tampil_hasil,remedial").or("dibuka.eq.true,susulan.neq.{},tampil_hasil.eq.true,remedial.eq.true").order("created_at", { ascending: false }).limit(40);
+  let r = await supa.from("ujian_sesi").select(kolom + ",susulan,tampil_hasil,remedial,remedial_batas").or("dibuka.eq.true,susulan.neq.{},tampil_hasil.eq.true,remedial.eq.true").order("created_at", { ascending: false }).limit(40);
   if (r.error && /remedial/.test(r.error.message || "")) r = await supa.from("ujian_sesi").select(kolom + ",susulan,tampil_hasil").or("dibuka.eq.true,susulan.neq.{},tampil_hasil.eq.true").order("created_at", { ascending: false }).limit(40);
   if (r.error && /susulan|tampil_hasil/.test(r.error.message || "")) r = await supa.from("ujian_sesi").select(kolom).eq("dibuka", true).order("created_at", { ascending: false });
   if (r.error) throw r.error;
@@ -395,7 +397,7 @@ function pilihKelas(kelasId) {
     <p class="judul-langkah">📚 Langkah ${adaPilihanKelas ? 2 : 1}</p><h2>Pilih yang mau dikerjakan</h2>
     <div class="daftar">${list.map((s, i) => {
       const ujian = s.mode === "ujian", tutup = s.dibuka === false;
-      const lab = s.remedial ? ["l-remedial", tutup ? "REMEDIAL" : "UJIAN · REMEDIAL"] : tutup ? ((s.susulan || []).length ? ["l-susulan", s.tampil_hasil ? "SUSULAN · HASIL" : "SUSULAN"] : ["l-selesai", "LIHAT HASIL"]) : ujian ? ["l-ujian", "UJIAN"] : ["l-latihan", "LATIHAN"];
+      const lab = s.remedial ? ["l-remedial", "🔁 REMEDIAL DIBUKA"] : tutup ? ((s.susulan || []).length ? ["l-susulan", s.tampil_hasil ? "SUSULAN · HASIL" : "SUSULAN"] : ["l-selesai", "LIHAT HASIL"]) : ujian ? ["l-ujian", "UJIAN"] : ["l-latihan", "LATIHAN"];
       return `<button class="pilihan anim" style="animation-delay:${i * 50}ms" onclick="pilihSesi('${s.id}')">
       <span class="badge" style="background:${ujian ? "linear-gradient(135deg,#fde2e2,#fbd0c2)" : "linear-gradient(135deg,#dbe8ff,#e7dcff)"}">${ujian ? "📝" : "🎯"}</span>
       <span class="isi"><b>${esc(s.bank?.judul || "Soal")}</b>
@@ -422,6 +424,7 @@ async function pilihSesi(sesiId) {
   render(kepala(S.sesi.bank?.judul) + `<div class="wadah"><div class="kartu">
     <button class="kembali" onclick="pilihKelas('${S.kelasId}')">‹ Kembali</button>
     <p class="judul-langkah">👤 Pilih namamu</p><h2>Siapa namamu?</h2>
+    ${S.sesi.remedial && S.sesi.mode === "ujian" ? `<div class="rem-petunjuk"><b>🔁 Remedial dibuka ustadz</b><span>${S.sesi.remedial_batas != null ? `Untuk nilai di bawah <b>${Math.round(S.sesi.remedial_batas)}</b>. ` : ""}Caranya: ketuk <b>namamu</b> di bawah → di halaman nilai tekan tombol kuning <b>🔁 Mulai Remedial</b>.</span></div>` : ""}
     <input class="cari" id="cari" placeholder="🔍 Ketik namamu…" oninput="saringNama()">
     <div class="daftar" id="daftar-nama"></div>
   </div></div>`);
@@ -429,7 +432,8 @@ async function pilihSesi(sesiId) {
 }
 function saringNama() {
   const k = ($("cari")?.value || "").toLowerCase().trim();
-  const lab = { mengerjakan: ["l-proses", "⏳ Sedang dikerjakan"], dikirim: ["l-selesai", "📨 Terkirim"], dinilai: ["l-selesai", "✅ Selesai"] };
+  const rem = S.sesi.remedial && S.sesi.mode === "ujian";
+  const lab = { mengerjakan: ["l-proses", "⏳ Sedang dikerjakan"], dikirim: ["l-selesai", "📨 Terkirim"], dinilai: rem ? ["l-remedial", "✅ Selesai · 🔁 Cek Remedial"] : ["l-selesai", "✅ Selesai"] };
   const susulan = S.sesi.susulan || [];
   const html = S.siswa.filter((s) => !k || s.nama.toLowerCase().includes(k)).map((s) => {
     const st = lab[S.status[s.id]] || (susulan.includes(s.id) ? ["l-susulan", "🩺 Susulan"] : null);
@@ -884,7 +888,7 @@ async function tampilHasil(r) {
     isi = `<div class="kartu kosong"><div class="besar">⏳</div>Kamu belum selesai mengerjakan.${tombol}</div>`;
   } else {
     isi = `<div class="kartu" style="text-align:center"><div style="font-size:52px">✅</div><h2 style="margin:6px 0">Jawaban terkirim</h2>
-      <div class="ket">Nilai akhir keluar setelah ustadz menilai soal uraian.<br>Cek lagi nanti: buka halaman ini, pilih ujian yang sama, lalu pilih namamu.</div><div style="margin-top:16px">${tombol}</div></div>`;
+      <div class="ket">Nilai akhir keluar setelah ustadz menilai soal uraian.<br>Cek lagi nanti: buka halaman ini, pilih ujian yang sama, lalu pilih namamu.${S.sesi.remedial ? "<br><br>🔁 <b>Remedial</b> bisa dikerjakan setelah nilai uraianmu keluar dan nilainya di bawah batas tuntas." : ""}</div><div style="margin-top:16px">${tombol}</div></div>`;
   }
   render(kepala(S.sesi.bank?.judul, "📊 Hasil") + `<div class="wadah">${isi}</div>`);
   requestAnimationFrame(() => setTimeout(() => {
@@ -907,6 +911,11 @@ function remedialHTML(rem, n) {
         <div class="ket">Kamu boleh mengerjakan ulang ${rem.sisa > 1 ? `(sisa <b>${rem.sisa}×</b>)` : "<b>1 kali lagi</b>"}. Tenang, <b>nilai terbaikmu</b> yang dipakai — nilai tidak akan turun.${rem.batas != null ? ` Batas tuntas: <b>${Math.round(rem.batas)}</b>.` : ""}</div>
         ${jejak}
         <button class="tombol emas" style="margin-top:10px" onclick="mulaiRemedial()">🔁 Mulai remedial</button></div></div>`;
+  if (!riw.length) {
+    const tuntas = rem.batas != null && Number(n) >= Number(rem.batas);
+    return `<div class="kartu h4-remedial selesai"><div class="h4-rem-ikon">${tuntas ? "🏆" : "ℹ️"}</div><div style="flex:1;min-width:0"><b>${tuntas ? "Kamu tidak perlu remedial" : "Remedial belum bisa dikerjakan"}</b>
+      <div class="ket">${tuntas ? `Nilaimu <b>${Math.round(n)}</b> sudah mencapai batas tuntas <b>${Math.round(rem.batas)}</b>. Barakallahu fiik!` : rem.sisa <= 0 ? "Jatah remedialmu sudah habis. Nilai terbaikmu yang dipakai untuk rapor." : "Tanyakan ke ustadz bila kamu merasa seharusnya bisa remedial."}</div></div></div>`;
+  }
   return riw.length ? `<div class="kartu h4-remedial selesai"><div class="h4-rem-ikon">🏁</div><div style="flex:1;min-width:0"><b>Riwayat remedial</b><div class="ket">Nilai terbaik yang dipakai untuk rapor.</div>${jejak}</div></div>` : "";
 }
 function mulaiRemedial() {

@@ -537,7 +537,7 @@ function _ujGambarRekap() {
       <div><b>${selesai.filter((r) => Number(r.nilai_akhir) >= kkm).length}</b><span>tuntas (≥${kkm})</span></div>
       ${ujian && (s.remedial || remidi) ? `<div><b>${remidi}</b><span>sudah remedial</span></div>` : ""}
     </div>
-    ${ujian && s.remedial ? `<div class="uj-rem-pita">🔁 <b>Remedial dibuka</b> · ${s.remedial_batas != null ? `untuk santri dengan nilai di bawah <b>${Math.round(s.remedial_batas)}</b>` : "untuk semua santri"} · boleh mengulang <b>${s.remedial_kali || 1}×</b> · nilai terbaik yang dipakai. Kunci jawaban disembunyikan dari santri selama remedial dibuka.</div>` : ""}
+    ${ujian && s.remedial ? `<div class="uj-rem-pita"><button class="btn btn-sm btn-wa" style="float:right;margin-left:8px" onclick="ujKabariRemedial()">💬 Kabari Santri</button>🔁 <b>Remedial dibuka</b> · ${s.remedial_batas != null ? `untuk santri dengan nilai di bawah <b>${Math.round(s.remedial_batas)}</b>` : "untuk semua santri"} · boleh mengulang <b>${s.remedial_kali || 1}×</b> · nilai terbaik yang dipakai. Kunci jawaban disembunyikan dari santri selama remedial dibuka.</div>` : ""}
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">
       <button class="btn btn-outline btn-sm" onclick="_ujMuatRekap(UJ.rekap.pin)">↻ Muat ulang</button>
       ${ujian ? `<button class="btn btn-accent btn-sm" onclick="ujPilihKirimRapor()">📤 Kirim ke rapor (UH / UTS / UAS)</button>` : ""}
@@ -813,3 +813,17 @@ async function ujBukaDariDasbor(sesiId) {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", coba); else coba();
   setTimeout(coba, 1600);
 })();
+
+// ── Kabari santri/wali bahwa remedial dibuka: daftar nama yang berhak + cara membukanya ──
+function ujKabariRemedial() {
+  if (!UJ.rekap) return;
+  const { s, b, siswa, rows } = UJ.rekap;
+  const batas = s.remedial_batas != null ? Number(s.remedial_batas) : null, kali = Number(s.remedial_kali || 1);
+  const nama = (id) => (siswa.find((x) => x.id === id) || {}).nama || "-";
+  const berhak = rows.filter((r) => r.status === "dinilai" && (r.percobaan || 1) <= kali && (batas == null || (_ujNilaiResmi(r) ?? 0) < batas))
+    .map((r) => ({ n: nama(r.siswa_id), v: Math.round(_ujNilaiResmi(r) ?? 0) })).sort((a, x) => a.n.localeCompare(x.n, "id"));
+  const belum = siswa.filter((x) => !rows.some((r) => r.siswa_id === x.id)).map((x) => x.nama);
+  const link = location.origin + location.pathname.replace(/[^/]*$/, "") + "santri.html";
+  const teks = `*REMEDIAL DIBUKA* 🔁\n*${b.judul || "Ujian"}* · ${_ujNamaKelas(s.kelas_id)}\n\nAssalamu'alaikum. Remedial dibuka${batas != null ? ` untuk nilai di bawah *${Math.round(batas)}*` : ""}. Nilai terbaik yang dipakai, jadi nilai tidak akan turun.\n\n*Yang remedial (${berhak.length} santri):*\n${berhak.map((x, i) => `${i + 1}. ${x.n} (${x.v})`).join("\n") || "-"}\n\n*Caranya:*\n1. Buka ${link}\n2. Pilih kelas → pilih ujian bertanda *🔁 REMEDIAL DIBUKA*\n3. Ketuk namamu\n4. Tekan tombol *🔁 Mulai Remedial*${s.token ? `\n5. Bila diminta token: *${s.token}*` : ""}${belum.length ? `\n\nBelum ikut ujian (perlu *susulan*, bukan remedial): ${belum.join(", ")}` : ""}\n\nJazakumullahu khairan.`;
+  window.open("https://wa.me/?text=" + encodeURIComponent(teks), "_blank", "noopener");
+}
