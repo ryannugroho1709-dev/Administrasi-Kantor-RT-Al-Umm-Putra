@@ -38,6 +38,7 @@ async function juJurnalMengawas(jadwalId, kunciSlot) {
   qs("metode-panel")?.remove();
   const ta = qs("jurnal-materi");
   if (ta) { ta.placeholder = `Mis. Ujian ${_juLabelSlot(slot)}: Bab 1–4 (pilihan ganda & uraian), santri tertib`; if (lama) ta.value = lama.materi || ""; }
+  ta?.closest(".field")?.insertAdjacentHTML("afterend", `<div class="field"><label class="form-label">Catatan Kejadian <small>(opsional, masuk Berita Acara)</small></label><textarea id="jm-catatan" class="input" rows="2" placeholder="Mis. ujian berjalan tertib · 1 santri izin ke UKS 10 menit · soal no. 5 kurang jelas">${_juEsc(lama?.catatan || "")}</textarea></div>`);
   if (lama) (lama.absensi || []).forEach((a) => { const r = document.querySelector(`input[name="st-${a.siswa_id}"][value="${a.status}"]`); if (r) r.checked = true; });
   const tombol = qs("modal-panel")?.querySelector('button[onclick="submitJurnal()"]');
   if (tombol && /Simpan/.test(tombol.textContent)) tombol.textContent = "💾 Simpan Jurnal Mengawas";
@@ -58,11 +59,12 @@ async function juJurnalMengawas(jadwalId, kunciSlot) {
     try {
       setGlobalLoading(true, "Menyimpan jurnal mengawas…");
       const data = (await _kvAmbil(_jmKunciKv(m.jadwalId), {})) || {}; // ambil terbaru (pengawas lain bisa menyimpan bersamaan)
-      data[`${m.kunciSlot}|${STATE.guruId}`] = { materi, metode: [_JM_METODE], absensi, jumlah, mapel: m.mapel, kelasId: m.kelasId, guru: STATE.guruNama || "", t: new Date().toISOString() };
+      data[`${m.kunciSlot}|${STATE.guruId}`] = { materi, catatan: (qs("jm-catatan")?.value || "").trim(), metode: [_JM_METODE], absensi, jumlah, mapel: m.mapel, kelasId: m.kelasId, guru: STATE.guruNama || "", t: new Date().toISOString() };
       await _kvSimpan(_jmKunciKv(m.jadwalId), data);
       (JU._jurnal = JU._jurnal || {})[m.jadwalId] = data;
       const masukRekap = await _jmSimpanAbsensiSantri(m, absensi);
       closeModal();
+      if (m.lanjutAjukan && typeof _mpFormAjukan === "function") { setTimeout(() => _mpFormAjukan(m.jadwalId, m.kunciSlot), 300); }
       toast(`📋 Jurnal mengawas tersimpan${masukRekap ? " · absensi santri masuk rekap kehadiran" : " (absensi santri belum masuk rekap — admin perlu menjalankan SQL_JURNAL_MENGAWAS)"}. Jangan lupa 🏁 Absen Pulang setelah sesi selesai.`, masukRekap ? "ok" : "info");
       if (STATE.currentPage === "dashboard" && typeof _juSisipkanKartuDasbor === "function") _juSisipkanKartuDasbor();
       else if (qs("ju-wadah") && typeof _juGambarDaftar === "function" && !JU.edit) _juGambarDaftar();

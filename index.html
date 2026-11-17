@@ -24,7 +24,7 @@
 <link rel="stylesheet" href="src/hp.css?v=3">
 <link rel="stylesheet" href="src/kuliah.css?v=6">
 <link rel="stylesheet" href="src/modul-baca.css?v=10">
-<link rel="stylesheet" href="src/ujian.css?v=26">
+<link rel="stylesheet" href="src/ujian.css?v=27">
 
 <script>
 // Logo gagal dimuat → coba logo bawaan; kalau bawaan pun gagal, tampilkan ikon 🎓 (bukan huruf "G").
@@ -7242,6 +7242,7 @@ async function renderMonitorHarian() {
     const snack = qs("monitor-snack-box"); if (snack) snack.style.display = "none";
     const judul = String(libur.judul || "").split(" — ")[0];
     wrap.innerHTML = `<div class="card"><div class="libur-kbm"><span>${libur.ujian ? "📝" : "🏖️"}</span><div><b>KBM libur hari ini</b><small>${escapeHtml(judul)} · ${data.length} jadwal mengajar hari ini <b>tidak dipantau</b> dan tidak dihitung Alpha.${libur.ujian ? " Kehadiran guru saat ujian dicatat lewat <b>Absen Mengawas</b> (Jadwal Ujian → ✅ Kehadiran Pengawas)." : ""}</small></div>${libur.ujian ? `<button class="btn btn-sm btn-accent" onclick="showPage('jadwal-ujian','page-jadwal-ujian','menuJadwalUjian')">Jadwal Ujian</button>` : ""}</div></div>`;
+    if (libur.ujian && typeof mpPapanMonitor === "function") await mpPapanMonitor(wrap);
     return;
   }
   if (!data.length) { wrap.innerHTML = `<div class="card empty-state">${t("tidakAdaJadwal")}</div>`; return; }
@@ -16149,11 +16150,12 @@ async function handleImportSiswa(evt) {
 <script src="src/jurnal-otomatis.js?v=6"></script>
 <script src="src/hp.js?v=8"></script>
 <script src="src/leger-nilai.js?v=5"></script>
-<script src="src/jadwal-ujian.js?v=10"></script>
+<script src="src/jadwal-ujian.js?v=11"></script>
 <script src="src/ujian-arsip.js?v=8"></script>
 <script src="src/tur.js?v=3"></script>
 <script src="src/soal-word.js?v=7"></script>
-<script src="src/jurnal-mengawas.js?v=3"></script>
+<script src="src/jurnal-mengawas.js?v=4"></script>
+<script src="src/mengawas-plus.js?v=3"></script>
 <script src="src/nilai-tempel.js?v=3"></script>
 <script src="src/dapodik.js?v=2"></script>
 <script src="src/modul-urut.js?v=1"></script>

@@ -226,16 +226,18 @@ function _juHtmlPapanHari(j, t, saya, atur) {
   const blok = j.sesi.map((s, i) => {
     const sel = (j.kelas || []).map((k) => {
       const x = j.slot?.[_juKunci(t, s.id, k)], label = _juLabelSlot(x);
-      if (!label) return "";
+      const kosong = `<div class="ju2-sel ju2-kosong-sel" style="--kw:${_juWarnaKelas(k)}"><span class="ju2-sel-kls">Kelas ${e(_juAngkaKelas(k))}</span><small>—</small></div>`;
+      if (!label) return kosong;
       const awas = (x.p || []).includes(saya), milik = x.m && (JU.ajar || []).some((a) => a.guru_id === saya && a.mapel_id === x.m && a.kelas_id === k);
-      if (JU.papanSaya && !awas && !milik) return "";
+      if (JU.papanSaya && !awas && !milik) return kosong;
       const bisa = x.m && j.jenis !== "tahfizh" && (milik || atur);
       return `<button class="ju2-sel ${awas ? "awas" : ""} ${milik ? "milik" : ""}" style="--kw:${_juWarnaKelas(k)}" ${bisa ? `onclick="uaKumpulkan('${j.id}','${_juKode(x)}','${k}')"` : "disabled"}>
         <span class="ju2-sel-kls">Kelas ${e(_juAngkaKelas(k))}</span><b>${e(label)}</b>
         <small>📋 ${(x.p || []).map(_juNamaGuru).map(e).join(", ") || "Pengawas Belum Ada"}</small>
         ${awas || milik ? `<span class="ju2-sel-tanda">${awas ? "📋 Saya mengawas" : ""}${awas && milik ? " · " : ""}${milik ? "📝 Mapel saya" : ""}</span>` : ""}</button>`;
     }).join("");
-    return sel ? `<div class="ju2-sesi"><div class="ju2-sesi-h"><b>Sesi ${i + 1}</b><span>${_juJamTeks(j, t, s)}</span></div><div class="ju2-sel-grid">${sel}</div></div>` : "";
+    const adaIsi = (j.kelas || []).some((k) => { const x = j.slot?.[_juKunci(t, s.id, k)]; return _juLabelSlot(x) && (!JU.papanSaya || _juTerkait(x, k, saya)); });
+    return adaIsi ? `<div class="ju2-sesi"><div class="ju2-sesi-h"><b>Sesi ${i + 1}</b><span class="ju2-jam">🕒 ${_juJamTeks(j, t, s)}</span></div><div class="ju2-gulir"><div class="ju2-sel-grid ju2-kolom-kelas" style="grid-template-columns:repeat(${(j.kelas || []).length},minmax(140px,1fr))">${sel}</div></div></div>` : "";
   }).join("");
   return blok || `<div class="ju2-kosong">${JU.papanSaya ? "Tidak ada ujian yang terkait Antum di hari ini." : "Belum ada mapel di hari ini."}</div>`;
 }
