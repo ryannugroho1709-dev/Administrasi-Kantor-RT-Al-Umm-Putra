@@ -84,6 +84,31 @@ html.tema-elegan.dark[data-palet="ungu"]{
   --bg:#100c1c;--surface:#19132b;--nl:#201936;--nd:#0d0a17;--border-soft:#2f2650;--glass-border:#2f2650;
   --p-deep:#2c1b52;--p-deeper:#140c26;--text-primary:#efeaf9;--text-secondary:#b2a8cc;--sidebar-text-dim:#9d8fc4;
 }
+/* ── Palet: GRADASI PINK (Paket B & C Putri) ── */
+html.tema-elegan[data-palet="pink"]{
+  --accent:#c0306f;--accent2:#d6407f;--accent-soft:#fce7f1;--accent-dim:#f6c9dc;--accent-rgb:192,48,111;
+  --p-deep:#a3245f;--p-deeper:#4a0b2c;
+  --bg:#fdf8fa;--nl:#fbf0f5;--nd:#f1dde6;--border-soft:#f0dbe4;--glass-border:#f0dbe4;
+  --text-primary:#2b1320;--text-secondary:#74566a;--sidebar-text-dim:#f0b4cf;
+}
+html.tema-elegan.dark[data-palet="pink"]{
+  --accent:#f07aae;--accent2:#f59cc3;--accent-soft:#3d1529;--accent-dim:#521c37;--accent-rgb:240,122,174;
+  --bg:#170a11;--surface:#22101a;--nl:#2b1521;--nd:#12070d;--border-soft:#3e1f2f;--glass-border:#3e1f2f;
+  --p-deep:#5e1238;--p-deeper:#2a0619;--text-primary:#f7e9f0;--text-secondary:#c9a6b8;--sidebar-text-dim:#c98aa8;
+}
+/* ── Palet: GRADASI KUNING (Pengelola PKBM) ── */
+html.tema-elegan[data-palet="kuning"]{
+  --accent:#b45309;--accent2:#c96a10;--accent-soft:#fef3c7;--accent-dim:#fde3a0;--accent-rgb:180,83,9;
+  --p-deep:#b06d07;--p-deeper:#4a2604;
+  --bg:#fdfaf3;--nl:#faf3e3;--nd:#efe2c4;--border-soft:#efe2c4;--glass-border:#efe2c4;
+  --text-primary:#2a1d08;--text-secondary:#76643f;--sidebar-text-dim:#f3d18c;
+  --sidebar-active-bg:linear-gradient(135deg,#fff3c4,#f5c24a);
+}
+html.tema-elegan.dark[data-palet="kuning"]{
+  --accent:#f5b544;--accent2:#f8c96d;--accent-soft:#3a2a0c;--accent-dim:#4d3810;--accent-rgb:245,181,68;
+  --bg:#130e05;--surface:#1f170a;--nl:#281e0d;--nd:#0f0b04;--border-soft:#3d2f14;--glass-border:#3d2f14;
+  --p-deep:#6b4206;--p-deeper:#2e1b02;--text-primary:#f7efdd;--text-secondary:#cbb88f;--sidebar-text-dim:#c9a861;
+}
 html.tema-elegan{--sidebar-bg:linear-gradient(180deg,var(--p-deep) 0%,var(--p-deeper) 100%);}
 
 /* ── Tipografi ── */
@@ -238,3 +263,46 @@ html.tema-elegan #app-splash .splash-orb{background:radial-gradient(circle,rgba(
 html.tema-elegan .splash-title{color:#fff;}
 html.tema-elegan .splash-sub{color:color-mix(in srgb,#fff 70%,var(--accent));}
 html.tema-elegan .splash-dots span{background:#d4a64a;}
+
+/* ============================================================
+   RUANG PKBM (src/ruang.js): layar pilih ruang, pita Mode Lihat, menu bergembok, Pengelola
+   ============================================================ */
+#rg-pilih{position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px;
+  background:linear-gradient(160deg,var(--p-deep,#0b2a6b),var(--p-deeper,#06173f));overflow:auto}
+#rg-pilih .rg-panel{background:var(--surface,#fff);color:var(--text-primary,#141f3a);border-radius:22px;padding:22px 20px;width:100%;max-width:420px;box-shadow:0 24px 60px rgba(0,0,0,.35)}
+#rg-pilih .rg-kepala{display:flex;gap:12px;align-items:center;margin-bottom:6px}
+#rg-pilih .rg-kepala b{display:block;font-size:16px}#rg-pilih .rg-kepala small{color:var(--text-secondary,#5a6683)}
+#rg-pilih .rg-judul{font-weight:800;margin:14px 0 8px}
+#rg-pilih .rg-daftar{display:grid;gap:10px}
+#rg-pilih .rg-kartu{display:flex;gap:12px;align-items:center;width:100%;border:0;border-radius:16px;padding:14px;color:#fff;text-align:left;cursor:pointer;
+  background:linear-gradient(135deg,var(--rw),color-mix(in srgb,var(--rw) 70%,#000));box-shadow:0 8px 18px -8px var(--rw);font:inherit;transition:transform .15s}
+#rg-pilih .rg-kartu:hover{transform:translateY(-2px)}
+#rg-pilih .rg-ikon{font-size:24px}#rg-pilih .rg-teks{flex:1;min-width:0}
+#rg-pilih .rg-teks b{display:block;font-size:15px}#rg-pilih .rg-teks small{opacity:.9}
+#rg-pilih .rg-tanda{font-size:11px;background:rgba(255,255,255,.22);border-radius:99px;padding:3px 9px;white-space:nowrap}
+#rg-pilih .rg-lain{margin-top:14px}#rg-pilih .rg-lain summary{cursor:pointer;color:var(--text-secondary,#5a6683);font-size:12.5px;margin-bottom:8px}
+#rg-pita{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#eff6ff;border-bottom:1px solid #bfdbfe;color:#1e40af;padding:8px 16px;font-size:12.5px}
+#rg-pita span{flex:1;min-width:200px}
+.nav-item.rg-terkunci{opacity:.6}.nav-item .nav-kunci{margin-left:auto;font-size:11px}
+.nav-item.rg-balik{margin-top:6px;border-top:1px solid rgba(255,255,255,.14);border-radius:0 0 12px 12px;opacity:.9}
+.nav-ikon-emoji{width:22px;text-align:center;flex-shrink:0}
+.rg-terkunci-kartu{text-align:center;padding:48px 20px}.rg-terkunci-kartu .rg-gembok{font-size:44px}
+.rg-terkunci-kartu p{color:var(--text-secondary)}
+.rg-hero{background:linear-gradient(135deg,var(--p-deep),var(--accent));color:#fff;border-radius:18px;padding:18px;margin-bottom:14px}
+.rg-hero b{display:block;font-size:19px}.rg-hero span{opacity:.9;font-size:13px}
+.rg-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));margin-bottom:14px}
+.rg-angka{border-top:4px solid var(--rw)!important;margin:0!important}.rg-angka span{font-weight:700;font-size:13px}
+.rg-angka b{display:block;font-size:26px;margin:4px 0}.rg-angka small{color:var(--text-secondary)}
+.rg-modul{display:flex;flex-wrap:wrap;gap:8px}.rg-modul span{background:var(--accent-soft);border-radius:99px;padding:5px 11px;font-size:12.5px;font-weight:600}
+.rg-ket{color:var(--text-secondary);font-size:12.5px;margin:4px 0 12px}
+.rg-memuat{color:var(--text-secondary);padding:20px;text-align:center}
+.rg-tab{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.rg-tab button{border:1px solid var(--border-soft);background:var(--surface);border-radius:99px;padding:7px 13px;font:inherit;font-weight:700;font-size:12.5px;cursor:pointer;color:var(--text-primary)}
+.rg-tab button.aktif{background:var(--accent);border-color:var(--accent);color:#fff}
+.rg-grup{font-weight:800;background:var(--accent-soft)}
+.rg-saklar{width:42px;height:24px;border-radius:99px;border:0;background:#cfd5de;position:relative;cursor:pointer;padding:0}
+.rg-saklar::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.2s}
+.rg-saklar.on{background:var(--accent)}.rg-saklar.on::after{left:21px}
+.rg-cek{font-size:11.5px;display:inline-flex;gap:4px;align-items:center;cursor:pointer}.rg-cek-p{color:var(--text-secondary)}
+.rg-alamat{display:flex;gap:10px;align-items:center;flex-wrap:wrap;border:1px solid var(--border-soft);border-left:5px solid var(--rw);border-radius:12px;padding:10px 12px;margin-bottom:8px}
+.rg-alamat code{flex:1;min-width:200px;font-size:12px;word-break:break-all}.rg-alamat span{display:flex;gap:6px}

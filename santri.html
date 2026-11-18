@@ -320,6 +320,16 @@
 //  & pembahasan (latihan langsung; ujian setelah dibuka guru & remedial ditutup).
 // =====================================================================
 const supa = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+// Ruang PKBM: setiap jenjang punya halaman santri sendiri → santri.html?ruang=A | Pa | Pi
+const RUANG_SANTRI = (() => {
+  const daftar = { A: "Paket A", Pa: "Paket B & C Putra", Pi: "Paket B & C Putri" };
+  let r = new URLSearchParams(location.search).get("ruang");
+  try { if (daftar[r]) localStorage.setItem("ruangSantri", r); else r = localStorage.getItem("ruangSantri"); } catch (e) {}
+  r = daftar[r] ? r : "Pa";
+  return { id: r, nama: daftar[r] };
+})();
+(function () { const f0 = supa.rest.fetch; supa.rest.fetch = (u, o = {}) => { const h = new Headers(o.headers); h.set("x-ruang", RUANG_SANTRI.id); return f0(u, { ...o, headers: h }); }; })();
+document.documentElement.dataset.ruang = RUANG_SANTRI.id;
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const HURUF = "ABCDEFGHIJ";
@@ -341,7 +351,7 @@ function pesanGalat(e) {
   return m;
 }
 function render(html) { $("akar").innerHTML = html; window.scrollTo(0, 0); try { kbTampil(); } catch (e) {} }
-function kepala(sub, judul) { return `<div class="atas"><h1>${judul || "📝 Ruang Santri"}</h1><p>${esc(sub || "PKBM Al-Umm Barabai · Latihan & Ujian")}</p></div>`; }
+function kepala(sub, judul) { return `<div class="atas"><h1>${judul || "📝 Ruang Santri"}</h1><p>${esc(sub || "PKBM Al-Umm Barabai · " + RUANG_SANTRI.nama)}</p></div>`; }
 function dialog(html) { $("dialog").innerHTML = html; $("lapis").classList.add("buka"); }
 function tutupDialog() { $("lapis").classList.remove("buka"); }
 function rpc(nama, arg) { return supa.rpc(nama, arg).then(({ data, error }) => { if (error) throw error; return data; }); }

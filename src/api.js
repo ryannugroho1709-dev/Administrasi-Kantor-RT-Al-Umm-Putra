@@ -6,6 +6,9 @@
 // ============================================================
 
 const supa = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+// Ruang PKBM (src/ruang.js): setelah SQL Tahap 1 dijalankan, beberapa aturan unik berlaku per ruang.
+const _konflikRuang = (k) => (window.RUANG_SIAP ? "ruang_id," + k : k);
+const _denganRuang = (row) => (window.RUANG_SIAP ? { ...row, ruang_id: STATE.ruang } : row);
 
 function unwrap({ data, error }) {
   if (error) {
@@ -1314,7 +1317,7 @@ async function apiSimpanInsentifRate(row) {
   _tolakAdminKeduaInsentif();
   try {
     // row: { jenis_guru, paket, rate_per_jp } — upsert berdasar kombinasi jenis_guru+paket
-    return unwrap(await supa.from("insentif_rate").upsert(row, { onConflict: "jenis_guru,paket" }).select());
+    return unwrap(await supa.from("insentif_rate").upsert(_denganRuang(row), { onConflict: _konflikRuang("jenis_guru,paket") }).select());
   } catch (e) {
     throw new Error(_pesanErrorRamah(e) || e.message);
   }
@@ -2101,7 +2104,7 @@ async function apiSimpanKopSoal(row) {
   // Kolom id di server baru tidak punya nilai otomatis → pakai id baris lama (kalau ada) atau buat id baru.
   const lama = unwrap(await supa.from("kop_soal").select("id").eq("kategori", row.kategori).limit(1));
   const id = (lama && lama[0] && lama[0].id) || (crypto.randomUUID ? crypto.randomUUID() : "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) => (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16)));
-  return unwrap(await supa.from("kop_soal").upsert({ id, ...row }, { onConflict: "kategori" }).select());
+  return unwrap(await supa.from("kop_soal").upsert(_denganRuang({ id, ...row }), { onConflict: _konflikRuang("kategori") }).select());
 }
 
 // ── MODUL AJAR (perpustakaan buku/modul, gaya rak e-reader) ──
@@ -2450,7 +2453,7 @@ async function apiSimpanGuruAdminIzin(guruId, menuKeys) {
   try {
     return unwrap(
       await supa.from("guru_admin_izin")
-        .upsert({ guru_id: guruId, menu_keys: menuKeys, updated_at: new Date().toISOString() }, { onConflict: "guru_id" })
+        .upsert(_denganRuang({ guru_id: guruId, menu_keys: menuKeys, updated_at: new Date().toISOString() }), { onConflict: _konflikRuang("guru_id") })
         .select()
     );
   } catch (e) { throw new Error(_pesanErrorRamah(e) || e.message); }
