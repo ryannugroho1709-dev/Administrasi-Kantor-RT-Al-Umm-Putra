@@ -138,17 +138,35 @@ async function rgPindah(id) {
 }
 
 // ── 5. Layar pilih ruang (hanya di depan) ──
+// Keterangan singkat & ikon garis tiap ruang (kartu bergaya pita bernomor)
+const RG_INFO = {
+  A: { label: "Jenjang", setara: "Setara SD · Kelas 1–6", ket: "Pendidikan dasar kesetaraan: membaca, menulis, berhitung, dan dasar-dasar agama.",
+    svg: '<path d="M4 19.5V5a2 2 0 0 1 2-2h12v14H6a2 2 0 0 0-2 2.5z"/><path d="M6 17h12v4H6a2 2 0 0 1 0-4z"/><path d="M9 7h6M9 10.5h4"/>' },
+  Pa: { label: "Jenjang", setara: "Setara SMP & SMA · Kelas 7–12", ket: "Rumah Tahfizh Putra: pendidikan kesetaraan berpadu program tahfizh Al-Qur'an.",
+    svg: '<path d="M12 6.5C10 5 7 4.5 3 5v13c4-.5 7 0 9 1.5 2-1.5 5-2 9-1.5V5c-4-.5-7 0-9 1.5z"/><path d="M12 6.5V19"/>' },
+  Pi: { label: "Jenjang", setara: "Setara SMP & SMA · Kelas 7–12", ket: "Rumah Tahfizh Putri: pendidikan kesetaraan berpadu program tahfizh Al-Qur'an.",
+    svg: '<path d="M12 21s-7-4.4-7-10.2A4.3 4.3 0 0 1 12 8a4.3 4.3 0 0 1 7 2.8C19 16.6 12 21 12 21z"/><path d="M12 8V4M10 5.5h4"/>' },
+  Pg: { label: "Kantor", setara: "Pengelola · Seluruh Jenjang", ket: "Data peserta didik & PTK, BOSP/ARKAS, surat, sarpras, TKA, ijazah, dan akreditasi.",
+    svg: '<path d="M3 21h18"/><path d="M5 21V8l7-5 7 5v13"/><path d="M9 21v-5h6v5"/><path d="M9 11h.01M15 11h.01"/>' },
+};
 function rgTampilPilih() {
   qs("rg-pilih")?.remove();
   const ubah = RG.daftar.filter((r) => rgAkses(r.id) === "U"), lihat = RG.daftar.filter((r) => rgAkses(r.id) === "L");
-  const tombol = (r) => `<button class="rg-kartu" style="--rw:${r.warna}" onclick="rgPindah('${r.id}')">
-      <span class="rg-ikon">${r.ikon || "🏫"}</span><span class="rg-teks"><b>${escapeHtml(r.nama)}</b><small>${escapeHtml(r.sub || "")}</small></span>
-      <span class="rg-tanda">${r.id === STATE.ruang ? "● Sedang Dibuka" : rgAkses(r.id) === "U" ? "✏️ Ruang Saya" : "👁️ Lihat Saja"}</span></button>`;
+  const tombol = (r) => {
+    const info = RG_INFO[r.id] || { label: "Ruang", setara: r.sub || "", ket: "", svg: "" };
+    const no = String(RG.daftar.indexOf(r) + 1).padStart(2, "0");
+    const status = r.id === STATE.ruang ? ["sedang", "Sedang Dibuka"] : rgAkses(r.id) === "U" ? ["saya", "Ruang Saya"] : ["lihat", "Lihat Saja"];
+    return `<button class="rg-kartu" style="--rw:${r.warna}" onclick="rgPindah('${r.id}')">
+      <span class="rg-tab"><b>${no}</b><small>${info.label}</small></span>
+      <span class="rg-isi"><span class="rg-baris"><b>${escapeHtml(r.nama)}</b><em class="rg-st rg-st-${status[0]}">${status[1]}</em></span>
+        <small class="rg-setara">${escapeHtml(info.setara)}</small><span class="rg-ket2">${escapeHtml(info.ket)}</span></span>
+      <span class="rg-svg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${info.svg}</svg></span></button>`;
+  };
   const el = document.createElement("div");
   el.id = "rg-pilih";
-  el.innerHTML = `<div class="rg-panel">
-    <div class="rg-kepala">${htmlLogoSekolah(46)}<div><b>PKBM Al-Umm Barabai</b><small>Assalamu'alaikum, ${escapeHtml(_namaSingkatTopbar(STATE.guruNama))} 👋</small></div></div>
-    <div class="rg-judul">Masuk Ke Ruang</div>
+  el.innerHTML = `<div class="rg-cahaya"></div><div class="rg-panel">
+    <div class="rg-kepala"><div class="rg-logo">${htmlLogoSekolah(54)}</div><small>PKBM AL-UMM BARABAI</small>
+      <b>Masuk Ke Ruang</b><span>Assalamu'alaikum, ${escapeHtml(_namaSingkatTopbar(STATE.guruNama))}. Pilih ruang yang ingin dibuka.</span></div>
     <div class="rg-daftar">${ubah.map(tombol).join("")}</div>
     ${lihat.length ? `<details class="rg-lain"><summary>Ruang Lain (Hanya Lihat) · ${lihat.length}</summary><div class="rg-daftar">${lihat.map(tombol).join("")}</div></details>` : ""}
   </div>`;

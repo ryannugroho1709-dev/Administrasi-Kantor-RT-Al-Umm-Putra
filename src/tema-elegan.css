@@ -267,20 +267,52 @@ html.tema-elegan .splash-dots span{background:#d4a64a;}
 /* ============================================================
    RUANG PKBM (src/ruang.js): layar pilih ruang, pita Mode Lihat, menu bergembok, Pengelola
    ============================================================ */
-#rg-pilih{position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px;
-  background:linear-gradient(160deg,var(--p-deep,#0b2a6b),var(--p-deeper,#06173f));overflow:auto}
-#rg-pilih .rg-panel{background:var(--surface,#fff);color:var(--text-primary,#141f3a);border-radius:22px;padding:22px 20px;width:100%;max-width:420px;box-shadow:0 24px 60px rgba(0,0,0,.35)}
-#rg-pilih .rg-kepala{display:flex;gap:12px;align-items:center;margin-bottom:6px}
-#rg-pilih .rg-kepala b{display:block;font-size:16px}#rg-pilih .rg-kepala small{color:var(--text-secondary,#5a6683)}
-#rg-pilih .rg-judul{font-weight:800;margin:14px 0 8px}
-#rg-pilih .rg-daftar{display:grid;gap:10px}
-#rg-pilih .rg-kartu{display:flex;gap:12px;align-items:center;width:100%;border:0;border-radius:16px;padding:14px;color:#fff;text-align:left;cursor:pointer;
-  background:linear-gradient(135deg,var(--rw),color-mix(in srgb,var(--rw) 70%,#000));box-shadow:0 8px 18px -8px var(--rw);font:inherit;transition:transform .15s}
-#rg-pilih .rg-kartu:hover{transform:translateY(-2px)}
-#rg-pilih .rg-ikon{font-size:24px}#rg-pilih .rg-teks{flex:1;min-width:0}
-#rg-pilih .rg-teks b{display:block;font-size:15px}#rg-pilih .rg-teks small{opacity:.9}
-#rg-pilih .rg-tanda{font-size:11px;background:rgba(255,255,255,.22);border-radius:99px;padding:3px 9px;white-space:nowrap}
-#rg-pilih .rg-lain{margin-top:14px}#rg-pilih .rg-lain summary{cursor:pointer;color:var(--text-secondary,#5a6683);font-size:12.5px;margin-bottom:8px}
+#rg-pilih{position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;padding:24px 16px;overflow:auto;
+  background:radial-gradient(1200px 600px at 10% -10%,#123a5a 0%,transparent 60%),radial-gradient(900px 600px at 110% 110%,#3a1640 0%,transparent 55%),linear-gradient(160deg,#071a2b,#050d1a 60%,#0a0716);font-family:inherit}
+#rg-pilih .rg-cahaya{position:fixed;inset:0;pointer-events:none;background:
+  radial-gradient(260px 260px at 18% 30%,rgba(15,107,85,.35),transparent 70%),radial-gradient(260px 260px at 82% 22%,rgba(21,70,168,.35),transparent 70%),
+  radial-gradient(280px 280px at 80% 80%,rgba(192,48,111,.28),transparent 70%),radial-gradient(240px 240px at 22% 85%,rgba(180,83,9,.25),transparent 70%);filter:blur(10px)}
+#rg-pilih .rg-panel{position:relative;width:100%;max-width:560px;border-radius:26px;padding:26px 22px 22px;color:#eef3f8;
+  background:linear-gradient(160deg,rgba(255,255,255,.12),rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.16);
+  box-shadow:0 30px 80px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.18);backdrop-filter:blur(22px) saturate(140%);-webkit-backdrop-filter:blur(22px) saturate(140%)}
+#rg-pilih .rg-kepala{text-align:center;margin-bottom:18px}
+#rg-pilih .rg-logo{width:84px;height:84px;margin:0 auto 10px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.95),rgba(255,255,255,.75));box-shadow:0 0 0 6px rgba(255,255,255,.08),0 0 40px rgba(94,234,212,.25)}
+#rg-pilih .rg-kepala small{display:block;font-size:11px;font-weight:800;letter-spacing:.14em;color:#5eead4}
+#rg-pilih .rg-kepala b{display:block;font-size:21px;margin:2px 0 4px;letter-spacing:-.01em}
+#rg-pilih .rg-kepala span{font-size:12.5px;color:rgba(238,243,248,.7)}
+#rg-pilih .rg-daftar{display:grid;gap:12px}
+#rg-pilih .rg-kartu{position:relative;display:flex;align-items:stretch;width:100%;min-height:86px;padding:0;border:0;border-radius:14px;background:#fff;color:#1f2937;
+  text-align:left;cursor:pointer;font:inherit;box-shadow:0 10px 22px -10px rgba(0,0,0,.6);transition:transform .18s,box-shadow .18s;overflow:visible}
+#rg-pilih .rg-kartu:hover,#rg-pilih .rg-kartu:focus-visible{transform:translateY(-2px);box-shadow:0 16px 30px -12px rgba(0,0,0,.7),0 0 0 2px var(--rw);outline:none}
+#rg-pilih .rg-tab{position:relative;flex:0 0 78px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;
+  background:linear-gradient(160deg,color-mix(in srgb,var(--rw) 82%,#fff),var(--rw));border-radius:14px 0 0 14px;margin:-6px 0 6px -6px;
+  box-shadow:4px 0 10px -4px rgba(0,0,0,.35)}
+#rg-pilih .rg-tab::after{content:"";position:absolute;left:0;bottom:-6px;border-top:6px solid color-mix(in srgb,var(--rw) 55%,#000);border-left:6px solid transparent}
+#rg-pilih .rg-tab b{font-size:28px;font-weight:900;line-height:1;letter-spacing:-.02em}
+#rg-pilih .rg-tab small{font-size:9.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-top:3px;opacity:.95}
+#rg-pilih .rg-isi{flex:1;min-width:0;padding:11px 12px 11px 16px;display:flex;flex-direction:column;justify-content:center;gap:2px}
+#rg-pilih .rg-baris{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#rg-pilih .rg-baris b{font-size:14.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:#111827}
+#rg-pilih .rg-st{font-style:normal;font-size:10.5px;font-weight:800;border-radius:99px;padding:2px 8px;white-space:nowrap}
+#rg-pilih .rg-st-saya{background:color-mix(in srgb,var(--rw) 14%,#fff);color:var(--rw)}
+#rg-pilih .rg-st-sedang{background:var(--rw);color:#fff}
+#rg-pilih .rg-st-lihat{background:#eef1f4;color:#6b7280}
+#rg-pilih .rg-setara{font-size:11.5px;font-weight:700;color:var(--rw)}
+#rg-pilih .rg-ket2{font-size:11.5px;line-height:1.4;color:#6b7280}
+#rg-pilih .rg-svg{flex:0 0 58px;display:flex;align-items:center;justify-content:center;color:var(--rw);border-left:1px dashed #e5e7eb;margin:12px 0}
+#rg-pilih .rg-svg svg{width:30px;height:30px}
+#rg-pilih .rg-lain{margin-top:16px}
+#rg-pilih .rg-lain summary{cursor:pointer;color:rgba(238,243,248,.65);font-size:12.5px;margin-bottom:12px;text-align:center;list-style:none}
+#rg-pilih .rg-lain summary::-webkit-details-marker{display:none}
+#rg-pilih .rg-lain summary::before{content:"▸ ";}#rg-pilih .rg-lain[open] summary::before{content:"▾ ";}
+#rg-pilih .rg-lain .rg-kartu{opacity:.88}
+@media (max-width:480px){
+  #rg-pilih .rg-panel{padding:22px 14px 16px}
+  #rg-pilih .rg-tab{flex-basis:64px}#rg-pilih .rg-tab b{font-size:23px}
+  #rg-pilih .rg-svg{flex-basis:44px}#rg-pilih .rg-svg svg{width:24px;height:24px}
+  #rg-pilih .rg-isi{padding-left:13px}
+}
 #rg-pita{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#eff6ff;border-bottom:1px solid #bfdbfe;color:#1e40af;padding:8px 16px;font-size:12.5px}
 #rg-pita span{flex:1;min-width:200px}
 .nav-item.rg-terkunci{opacity:.6}.nav-item .nav-kunci{margin-left:auto;font-size:11px}
