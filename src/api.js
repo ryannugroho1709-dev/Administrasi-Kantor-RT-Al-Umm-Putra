@@ -50,6 +50,8 @@ function _pesanErrorRamah(error) {
 // menyeragamkan cara baca pesan error, baik dari Edge Function yang balas status non-200 maupun
 // body `{error:"..."}`.
 async function _invokeFn(name, body) {
+  // ruang PKBM aktif ikut dikirim supaya server menghitung & menyimpan di ruang yang benar
+  if (body && typeof STATE !== "undefined" && STATE.ruang && !body.ruang) body = { ...body, ruang: STATE.ruang };
   const { data, error } = await supa.functions.invoke(name, { body });
   if (error) {
     let msg = error.message || "Gagal memanggil server";
@@ -1340,6 +1342,8 @@ function paketDariNamaKelas(namaKelas) {
   if (n >= 10 && n <= 12) return "C";
   return null;
 }
+// Nama lajur paket di insentif/slip — di ruang Paket A, lajur "B" dipakai untuk kelas 1–6 (lihat src/ruang.js)
+function labelPaket(p) { return (typeof STATE !== "undefined" && STATE.ruang === "A" && p === "B") ? "Paket A" : "Paket " + p; }
 // Hitung jumlah JP (sesi selesai: masuk+pulang+jurnal terisi) per guru per bulan, dipecah Paket B / Paket C
 async function apiHitungJPPaketGuruBulan(guruId, bulan, tahun) {
   try {

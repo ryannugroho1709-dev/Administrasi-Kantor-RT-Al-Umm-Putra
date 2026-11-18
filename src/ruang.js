@@ -492,3 +492,10 @@ showPage = function (key, ...sisa) {
   }
   return _rgShowAsli(key, ...sisa);
 };
+
+// ── 12. Insentif & slip per ruang: di Paket A lajur pertama bernama "JP Paket A" ──
+const _rgTAsli = t;
+t = function (k, ...a) {
+  if (STATE.ruang === "A" && k === "jpPaketB") return "JP Paket A";
+  return _rgTAsli(k, ...a);
+};
