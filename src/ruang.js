@@ -140,37 +140,69 @@ async function rgPindah(id) {
 // ── 5. Layar pilih ruang (hanya di depan) ──
 // Keterangan singkat & ikon garis tiap ruang (kartu bergaya pita bernomor)
 const RG_INFO = {
-  A: { label: "Jenjang", setara: "Setara SD · Kelas 1–6", ket: "Pendidikan dasar kesetaraan: membaca, menulis, berhitung, dan dasar-dasar agama.",
+  A: { label: "Jenjang", guru: "Guru Kelas Paket A", setara: "Setara SD · Kelas 1–6", ket: "Pendidikan dasar kesetaraan: membaca, menulis, berhitung, dan dasar-dasar agama.",
     svg: '<path d="M4 19.5V5a2 2 0 0 1 2-2h12v14H6a2 2 0 0 0-2 2.5z"/><path d="M6 17h12v4H6a2 2 0 0 1 0-4z"/><path d="M9 7h6M9 10.5h4"/>' },
-  Pa: { label: "Jenjang", setara: "Setara SMP & SMA · Kelas 7–12", ket: "Rumah Tahfizh Putra: pendidikan kesetaraan berpadu program tahfizh Al-Qur'an.",
+  Pa: { label: "Jenjang", guru: "Guru Kelas Rumah Tahfizh Putra", setara: "Setara SMP & SMA · Kelas 7–12", ket: "Rumah Tahfizh Putra: pendidikan kesetaraan berpadu program tahfizh Al-Qur'an.",
     svg: '<path d="M12 6.5C10 5 7 4.5 3 5v13c4-.5 7 0 9 1.5 2-1.5 5-2 9-1.5V5c-4-.5-7 0-9 1.5z"/><path d="M12 6.5V19"/>' },
-  Pi: { label: "Jenjang", setara: "Setara SMP & SMA · Kelas 7–12", ket: "Rumah Tahfizh Putri: pendidikan kesetaraan berpadu program tahfizh Al-Qur'an.",
+  Pi: { label: "Jenjang", guru: "Guru Kelas Rumah Tahfizh Putri", setara: "Setara SMP & SMA · Kelas 7–12", ket: "Rumah Tahfizh Putri: pendidikan kesetaraan berpadu program tahfizh Al-Qur'an.",
     svg: '<path d="M12 21s-7-4.4-7-10.2A4.3 4.3 0 0 1 12 8a4.3 4.3 0 0 1 7 2.8C19 16.6 12 21 12 21z"/><path d="M12 8V4M10 5.5h4"/>' },
-  Pg: { label: "Kantor", setara: "Pengelola · Seluruh Jenjang", ket: "Data peserta didik & PTK, BOSP/ARKAS, surat, sarpras, TKA, ijazah, dan akreditasi.",
+  Pg: { label: "Kantor", guru: "Kantor Pengelola PKBM", setara: "Pengelola · Seluruh Jenjang", ket: "Data peserta didik & PTK, BOSP/ARKAS, surat, sarpras, TKA, ijazah, dan akreditasi.",
     svg: '<path d="M3 21h18"/><path d="M5 21V8l7-5 7 5v13"/><path d="M9 21v-5h6v5"/><path d="M9 11h.01M15 11h.01"/>' },
 };
 function rgTampilPilih() {
   qs("rg-pilih")?.remove();
-  const ubah = RG.daftar.filter((r) => rgAkses(r.id) === "U"), lihat = RG.daftar.filter((r) => rgAkses(r.id) === "L");
-  const tombol = (r) => {
+  _rgSuaraSiapkan();
+  const urut = ["A", "Pa", "Pi", "Pg"];
+  const daftar = urut.map((id) => RG.daftar.find((r) => r.id === id)).filter(Boolean)
+    .concat(RG.daftar.filter((r) => !urut.includes(r.id)));
+  const kartu = (r, i) => {
     const info = RG_INFO[r.id] || { label: "Ruang", setara: r.sub || "", ket: "", svg: "" };
-    const no = String(RG.daftar.indexOf(r) + 1).padStart(2, "0");
-    const status = r.id === STATE.ruang ? ["sedang", "Sedang Dibuka"] : rgAkses(r.id) === "U" ? ["saya", "Ruang Saya"] : ["lihat", "Lihat Saja"];
-    return `<button class="rg-kartu" style="--rw:${r.warna}" onclick="rgPindah('${r.id}')">
-      <span class="rg-tab"><b>${no}</b><small>${info.label}</small></span>
-      <span class="rg-isi"><span class="rg-baris"><b>${escapeHtml(r.nama)}</b><em class="rg-st rg-st-${status[0]}">${status[1]}</em></span>
-        <small class="rg-setara">${escapeHtml(info.setara)}</small><span class="rg-ket2">${escapeHtml(info.ket)}</span></span>
-      <span class="rg-svg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${info.svg}</svg></span></button>`;
+    const akses = rgAkses(r.id);
+    const status = akses === "-" ? ["tutup", "Terkunci"] : r.id === STATE.ruang ? ["sedang", "Sedang Dibuka"] : akses === "U" ? ["saya", "Ruang Saya"] : ["lihat", "Lihat Saja"];
+    return `<button type="button" class="rg-kartu${akses === "-" ? " rg-tutup" : ""}" style="--rw:${r.warna}" ${akses === "-" ? "disabled" : `onclick="rgMasuk('${r.id}',this)"`}>
+      <span class="rg-atas">
+        <small class="rg-no">${info.label} ${String(i + 1).padStart(2, "0")}</small>
+        <b class="rg-nama">${escapeHtml(r.nama)}</b>
+        <em class="rg-st rg-st-${status[0]}">${status[1]}</em>
+        <small class="rg-setara">${escapeHtml(info.setara)}</small>
+        <span class="rg-ket2">${escapeHtml(info.ket)}</span>
+      </span>
+      <span class="rg-alas"><span class="rg-lidah"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${akses === "-" ? '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>' : info.svg}</svg></span></span>
+    </button>`;
   };
   const el = document.createElement("div");
   el.id = "rg-pilih";
   el.innerHTML = `<div class="rg-cahaya"></div><div class="rg-panel">
     <div class="rg-kepala"><div class="rg-logo">${htmlLogoSekolah(54)}</div><small>PKBM AL-UMM BARABAI</small>
       <b>Masuk Ke Ruang</b><span>Assalamu'alaikum, ${escapeHtml(_namaSingkatTopbar(STATE.guruNama))}. Pilih ruang yang ingin dibuka.</span></div>
-    <div class="rg-daftar">${ubah.map(tombol).join("")}</div>
-    ${lihat.length ? `<details class="rg-lain"><summary>Ruang Lain (Hanya Lihat) · ${lihat.length}</summary><div class="rg-daftar">${lihat.map(tombol).join("")}</div></details>` : ""}
+    <div class="rg-daftar">${daftar.map(kartu).join("")}</div>
   </div>`;
   document.body.appendChild(el);
+}
+// Efek suara pintu dibuka saat masuk ruang
+let _rgSuara = null;
+function _rgSuaraSiapkan() {
+  if (_rgSuara) return;
+  try { _rgSuara = new Audio("assets/suara/masuk-ruang.ogg"); _rgSuara.preload = "auto"; _rgSuara.volume = 0.8; } catch (e) { _rgSuara = null; }
+}
+async function rgMasuk(id, tombol) {
+  const pilih = qs("rg-pilih");
+  if (!pilih || pilih.dataset.masuk) return;
+  pilih.dataset.masuk = "1";
+  tombol?.classList.add("rg-dibuka");
+  pilih.classList.add("rg-keluar");
+  let lama = 900;
+  try {
+    _rgSuaraSiapkan();
+    if (_rgSuara) {
+      _rgSuara.currentTime = 0;
+      await _rgSuara.play();
+      const d = _rgSuara.duration;
+      lama = isFinite(d) && d > 0 ? Math.min(d * 1000, 2600) : 1600;
+    }
+  } catch (e) { /* suara diblokir peramban — tetap lanjut */ }
+  await new Promise((r) => setTimeout(r, id === STATE.ruang ? Math.min(lama, 700) : lama));
+  rgPindah(id);
 }
 
 // ── 6. Tampilan per ruang: warna, nama di samping logo, pita Mode Lihat ──
@@ -210,12 +242,19 @@ function _rgTerapkanTampilan() {
     pita.innerHTML = `👁️ <b>Mode Lihat · ${escapeHtml(r.nama)}</b><span>Kamu tidak mengajar di ruang ini — isinya bisa dilihat, tetapi tidak bisa diubah.</span><button class="btn btn-sm" onclick="rgTampilPilih()">↩️ Pilihan Ruang</button>`;
     qs("main").insertBefore(pita, qs("main").firstChild);
   }
+  // Dasbor: sembunyikan pintasan ke fitur yang tidak ada di ruang ini
+  qsa('#page-dashboard [onclick*="showPage("]').forEach((el) => {
+    const k = (el.getAttribute("onclick").match(/showPage\(['"]([\w-]+)/) || [])[1];
+    if (k) el.style.display = rgAdaFitur(k) ? "" : "none";
+  });
   renderSidebar();
 }
 function _rgNamaRuang() {
   if (!RG.siap) return;
   const r = rgRuang();
-  qsa('[data-i18n="appNameLine2"]').forEach((el) => { el.textContent = r.nama; });
+  const teks = (RG_INFO[r.id] || {}).guru || r.nama;
+  qsa('[data-i18n="appNameLine2"]').forEach((el) => { el.textContent = teks; });
+  document.title = "PKBM Al-Umm Barabai - " + teks;
 }
 const _rgBahasaAsli = applyLanguage;
 applyLanguage = function (...a) { const h = _rgBahasaAsli(...a); _rgNamaRuang(); return h; };
@@ -250,16 +289,17 @@ renderSidebar = function () {
       if (g.kuliahOnly && !(typeof kulBolehAkses === "function" && kulBolehAkses())) return;
       const isi = g.items.map((item) => {
         if (fitur && !fitur.has(item.key) && !item.kuliahOnly) return null;
+        if (rgKhususPengisi(item.key)) return { item, kunci: true, pesan: "Hanya Admin dan Admin Pendamping yang mengisi ini." };
         const boleh = !item.adminOnly || adaAksesModul(item.key) || (item.kepsekAllowed && isKepsekOrTU()) || (item.bendaharaAllowed && typeof isBendahara === "function" && isBendahara());
         if (boleh) return { item, kunci: false };
         return g.group === "Kepegawaian" ? { item, kunci: true } : null; // Kepegawaian tetap tampil, bergembok
       }).filter(Boolean);
       if (!isi.length) return;
       tambahLabel(g.group);
-      isi.forEach(({ item, kunci }) => {
+      isi.forEach(({ item, kunci, pesan }) => {
         const badge = item.key === "kepsek" && STATE.kepsekAntrianCount > 0 ? `<span class="nav-badge-count">${STATE.kepsekAntrianCount > 99 ? "99+" : STATE.kepsekAntrianCount}</span>` : "";
         tambahItem(item.key, `${ikonMenu(item)}<span>${t(item.i18n)}</span>${kunci ? '<span class="nav-kunci">🔒</span>' : badge}`,
-          kunci ? () => rgHalTerkunci(item) : () => showPage(item.key, item.page, item.i18n), kunci ? "rg-terkunci" : "");
+          kunci ? () => rgHalTerkunci(item, pesan) : () => showPage(item.key, item.page, item.i18n), kunci ? "rg-terkunci" : "");
       });
     });
   }
@@ -286,8 +326,21 @@ function _rgBukaHal(key, judul, html) {
   window.scrollTo(0, 0);
   return sec;
 }
-function rgHalTerkunci(item) {
-  _rgBukaHal(item.key, t(item.i18n), `<div class="card rg-terkunci-kartu"><div class="rg-gembok">🔒</div><h3>${escapeHtml(t(item.i18n))}</h3><p>Hanya Admin yang bisa mengakses ini.</p></div>`);
+function rgHalTerkunci(item, pesan) {
+  _rgBukaHal(item.key, t(item.i18n), `<div class="card rg-terkunci-kartu"><div class="rg-gembok">🔒</div><h3>${escapeHtml(t(item.i18n))}</h3><p>${escapeHtml(pesan || "Hanya Admin yang bisa mengakses ini.")}</p></div>`);
+}
+// Fitur yang tersedia di ruang aktif (dipakai dasbor & kartu Fitur Baru)
+function rgAdaFitur(key) {
+  if (!RG.siap) return true;
+  if (STATE.ruang === "Pg") return false;
+  const f = rgRuang().fitur;
+  return !f || f.includes(key);
+}
+// Di Paket A & Putri, Nilai & Rapor diisi Admin utama dan Admin Pendamping saja
+const RG_NILAI_RAPOR = ["input-nilai", "rapor-umum", "rapor-diniyyah", "rapor"];
+function rgKhususPengisi(key) {
+  if (!RG.siap || STATE.ruang === "Pa" || !RG_NILAI_RAPOR.includes(key)) return false;
+  return !(isAdmin() || rgPendamping());
 }
 
 // ── 8. Ruang Pengelola (Tahap 1: rangkuman; modul lain menyusul) ──
@@ -397,4 +450,15 @@ _menuDiizinkanAdminKedua = function (k) {
     return ["data-guru", "data-siswa", "kepsek", "insentif-musyrif", "laporan-kinerja", "riwayat-terhapus"].includes(k);
   }
   return _rgIzinAsli(k);
+};
+
+// ── 11. Penjaga halaman: fitur yang tidak ada di ruang ini / Nilai & Rapor khusus pengisi ──
+const _rgShowAsli = showPage;
+showPage = function (key, ...sisa) {
+  if (RG.siap && STATE.ruang !== "Pg") {
+    const item = MENU.flatMap((g) => g.items).find((x) => x.key === key);
+    if (item && rgKhususPengisi(key)) return rgHalTerkunci(item, "Hanya Admin dan Admin Pendamping yang mengisi ini.");
+    if (item && key !== "dashboard" && !item.kuliahOnly && !rgAdaFitur(key)) { toast(`Fitur ini tidak tersedia di ${rgRuang().nama}`, "warn"); return; }
+  }
+  return _rgShowAsli(key, ...sisa);
 };

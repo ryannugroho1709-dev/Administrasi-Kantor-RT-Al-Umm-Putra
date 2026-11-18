@@ -19,7 +19,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Amiri:wght@400;700&family=Playfair+Display:wght@600;700;800&display=swap&family=Anton&family=Great+Vibes" rel="stylesheet">
 <!-- Tema elegan + pilihan palet (menu ✨ di topbar). "klasik" = tampilan hijau lama. Dipasang
      sedini mungkin supaya tidak sempat "berkedip" tampilan lain dulu. Disimpan per perangkat. -->
-<link rel="stylesheet" href="src/tema-elegan.css?v=7">
+<link rel="stylesheet" href="src/tema-elegan.css?v=8">
 <link rel="stylesheet" href="src/kas.css?v=6">
 <link rel="stylesheet" href="src/hp.css?v=3">
 <link rel="stylesheet" href="src/kuliah.css?v=6">
@@ -1133,7 +1133,8 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
     </div>
     <div class="splash-text">
       <b class="splash-title">PKBM Al-Umm Barabai</b>
-      <span class="splash-sub">Guru Kelas Rumah Tahfizh Putra</span>
+      <span class="splash-sub" id="splash-sub">Guru Kelas Rumah Tahfizh Putra</span>
+      <script>try{var _sr={A:"Guru Kelas Paket A",Pi:"Guru Kelas Rumah Tahfizh Putri",Pg:"Kantor Pengelola PKBM"}[localStorage.getItem("ruangAktif")];if(_sr){document.getElementById("splash-sub").textContent=_sr;document.title="PKBM Al-Umm Barabai - "+_sr;}}catch(e){}</script>
     </div>
     <div class="splash-dots"><span></span><span></span><span></span></div>
   </div>
@@ -4077,8 +4078,10 @@ async function renderDashPeran() {
   const wadah = qs("dash-peran");
   if (!wadah) return;
   await ensureLookups();
-  const pengelola = isAdmin() || isKepsekOrTU();
-  const bendahara = isAdmin() || (typeof _jabatanGuru === "function" && _jabatanGuru(STATE.guruId).some((j) => j.kode === "bendahara"));
+  // Ruang PKBM: hanya fitur yang tersedia di ruang ini; Admin Pendamping ikut menyetujui izin/tukar jam
+  const ada = (k) => typeof rgAdaFitur !== "function" || rgAdaFitur(k);
+  const pengelola = (isAdmin() || isKepsekOrTU() || adaAksesModul("kepsek")) && (ada("kepsek") || ada("monitor") || ada("jurnal-guru"));
+  const bendahara = (isAdmin() || (typeof _jabatanGuru === "function" && _jabatanGuru(STATE.guruId).some((j) => j.kode === "bendahara"))) && ["kas", "insentif", "laporan-kinerja", "bop-data"].some(ada);
   if (!pengelola && !bendahara) { wadah.innerHTML = ""; return; }
   const tile = (ikon, label, nilai, aksi, warna) => `<button type="button" class="peran-tile${typeof nilai === "number" && nilai > 0 ? " ada" : typeof nilai === "number" ? " nol" : ""}" onclick="${aksi}" style="--tile:${warna};">
       <span class="peran-ikon">${ikon}</span><span class="peran-nilai">${nilai}</span><span class="peran-label">${label}</span></button>`;
@@ -4105,21 +4108,21 @@ async function renderDashPeran() {
     } catch (e) { console.warn("Gagal memuat ringkasan peran:", e); }
     const totalAksi = [izin, tukar, ajuan, lupa, ubahProfil].reduce((t, v) => t + (typeof v === "number" ? v : 0), 0);
     isi += `<div class="peran-judul">📌 Perlu ditindaklanjuti${totalAksi ? ` <span class="peran-total">${totalAksi}</span>` : " · semua beres ✓"}</div><div class="peran-grid">
-      ${tile("✉️", "Izin/Sakit menunggu", izin, "showPage('kepsek','page-kepsek','menuKepsek')", "var(--warn)")}
-      ${tile("🔀", "Tukar/Pindah jam menunggu", tukar, "showPage('kepsek','page-kepsek','menuKepsek')", "var(--accent)")}
-      ${tile("🙋", "Ajukan hadir / jurnal terlambat menunggu", ajuan, "showPage('kepsek','page-kepsek','menuKepsek')", "#7c3aed")}
-      ${tile("🛠️", "Masuk tapi lupa pulang/jurnal (14 hari)", lupa, "_keLupaJurnalKepsek()", "#ea580c")}
-      ${tile("📝", "Sudah masuk, belum isi jurnal hari ini", belumJurnal, "showPage('monitor','page-monitor','menuMonitor')", "var(--bad)")}
-      ${tile("⏳", "Jurnal tertunda (menunggu guru)", tertunda, "bukaKedisiplinan('bulan')", "#64748b")}
+      ${ada("kepsek") ? tile("✉️", "Izin/Sakit menunggu", izin, "showPage('kepsek','page-kepsek','menuKepsek')", "var(--warn)") : ""}
+      ${ada("kepsek") ? tile("🔀", "Tukar/Pindah jam menunggu", tukar, "showPage('kepsek','page-kepsek','menuKepsek')", "var(--accent)") : ""}
+      ${ada("kepsek") ? tile("🙋", "Ajukan hadir / jurnal terlambat menunggu", ajuan, "showPage('kepsek','page-kepsek','menuKepsek')", "#7c3aed") : ""}
+      ${ada("kepsek") ? tile("🛠️", "Masuk tapi lupa pulang/jurnal (14 hari)", lupa, "_keLupaJurnalKepsek()", "#ea580c") : ""}
+      ${ada("monitor") ? tile("📝", "Sudah masuk, belum isi jurnal hari ini", belumJurnal, "showPage('monitor','page-monitor','menuMonitor')", "var(--bad)") : ""}
+      ${ada("jurnal-guru") ? tile("⏳", "Jurnal tertunda (menunggu guru)", tertunda, "bukaKedisiplinan('bulan')", "#64748b") : ""}
       ${isAdmin() ? tile("✏️", "Perubahan data guru/siswa (belum dilihat)", ubahProfil, "bukaPerubahanProfil()", "#0891b2") : ""}
     </div>`;
   }
   if (bendahara) {
     isi += `<div class="peran-judul" style="margin-top:12px;">💰 Keuangan</div><div class="peran-grid">
-      ${tile("💼", "Kas Bendahara", "→", "showPage('kas','page-kas','menuKas')", "var(--accent)")}
-      ${tile("💵", "Insentif & JP", "→", "showPage('insentif','page-insentif','menuInsentif')", "var(--ok)")}
-      ${tile("🧾", "Slip Gaji & Rekap", "→", "showPage('laporan-kinerja','page-laporan-kinerja','menuLaporanKinerja')", "var(--accent)")}
-      ${adaAksesModul("bop-data") ? tile("📊", "Data BOP", "→", "showPage('bop-data','page-bop-data','menuBopData')", "var(--warn)") : ""}
+      ${ada("kas") ? tile("💼", "Kas Bendahara", "→", "showPage('kas','page-kas','menuKas')", "var(--accent)") : ""}
+      ${ada("insentif") ? tile("💵", "Insentif & JP", "→", "showPage('insentif','page-insentif','menuInsentif')", "var(--ok)") : ""}
+      ${ada("laporan-kinerja") ? tile("🧾", "Slip Gaji & Rekap", "→", "showPage('laporan-kinerja','page-laporan-kinerja','menuLaporanKinerja')", "var(--accent)") : ""}
+      ${adaAksesModul("bop-data") && ada("bop-data") ? tile("📊", "Data BOP", "→", "showPage('bop-data','page-bop-data','menuBopData')", "var(--warn)") : ""}
     </div>`;
   }
   if (isAdmin()) isi += await htmlCatatanPerbaikanAdmin();
@@ -16152,13 +16155,13 @@ async function handleImportSiswa(evt) {
 <script src="src/leger-nilai.js?v=5"></script>
 <script src="src/jadwal-ujian.js?v=11"></script>
 <script src="src/ujian-arsip.js?v=8"></script>
-<script src="src/tur.js?v=3"></script>
+<script src="src/tur.js?v=4"></script>
 <script src="src/soal-word.js?v=7"></script>
 <script src="src/jurnal-mengawas.js?v=4"></script>
 <script src="src/mengawas-plus.js?v=3"></script>
 <script src="src/nilai-tempel.js?v=3"></script>
 <script src="src/dapodik.js?v=2"></script>
 <script src="src/modul-urut.js?v=1"></script>
-<script src="src/ruang.js?v=2"></script>
+<script src="src/ruang.js?v=3"></script>
 </body>
 </html>

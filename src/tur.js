@@ -9,6 +9,17 @@ const TUR = { aktif: null, i: 0, langkah: [], el: {} };
 
 // Daftar tur per halaman. sel = CSS selector; boleh fungsi (return elemen). Versi dinaikkan bila ada fitur baru.
 const TUR_DAFTAR = {
+  "absensi-guru": { id: "ag", versi: 1, ruang: ["A", "Pi"], langkah: [
+    { sel: "#absensi-guru-list", judul: "🕒 Absen mengajar hari ini", teks: "Jam mengajar Antum hari ini tampil di sini. Urutannya: <b>Absen Masuk</b> saat kelas dimulai → <b>isi jurnal</b> → <b>Absen Pulang</b>. Ketiganya lengkap = sesi dihitung ke insentif." },
+  ] },
+  "jurnal-guru": { id: "jg", versi: 1, ruang: ["A", "Pi"], langkah: [
+    { sel: "#jg-bulan", judul: "📅 Pilih bulan", teks: "Pilih bulan (dan mapel) untuk melihat jurnal mengajar yang sudah Antum isi." },
+    { sel: "#jurnal-guru-table", judul: "📓 Daftar jurnal", teks: "Setiap jurnal berisi materi dan kehadiran santri. Jurnal yang lengkap dipakai untuk rekap kehadiran dan insentif." },
+  ] },
+  "jadwal": { id: "jd", versi: 1, ruang: ["A", "Pi"], langkah: [
+    { sel: "#jd-view-daftar", judul: "🗓️ Jadwal pelajaran", teks: "Jadwal mengajar jenjang ini. Pilih tampilan <b>Daftar</b> atau <b>Tabel</b> sesuai kenyamanan." },
+    { sel: "#jadwal-grid, #jadwal-tabel-besar", judul: "📌 Jam mengajar Antum", teks: "Jam yang tercantum di sini menjadi dasar Absen Masuk, jurnal, dan pengingat kelas berikutnya di Dasbor." },
+  ] },
   "jadwal-ujian": { id: "ju", versi: 2, langkah: [
     { sel: ".ju2-aktif", judul: "🗓️ Jadwal ujian aktif", teks: "Jadwal ujian yang sedang/akan berlangsung langsung tampil di sini, lengkap dengan hitungan hari dan ringkasan tugas Antum." },
     { sel: "[data-tur=ju-papan] .ju2-sel:not([disabled])", judul: "✨ BARU: ketuk mapel di jadwal", teks: "Ketuk nama mapel di jadwal untuk <b>langsung mengumpulkan soalnya</b> — buat di Ujian Online, unggah Word/PDF, atau kabari admin lewat WA." },
@@ -96,8 +107,9 @@ window.addEventListener("scroll", () => TUR.aktif && _turPosisi(), true);
 document.addEventListener("keydown", (e) => { if (!TUR.aktif) return; if (e.key === "Escape") turTutup(); else if (e.key === "ArrowRight" || e.key === "Enter") { e.preventDefault(); turLanjut(); } else if (e.key === "ArrowLeft") turKembali(); });
 
 // Otomatis: saat halaman dibuka, tunggu isinya muncul lalu jalankan tur yang belum pernah dilihat
+const _turRuangCocok = (x) => !x.ruang || x.ruang.includes(typeof STATE !== "undefined" && STATE.ruang);
 function _turOtomatis(halaman) {
-  const t = TUR_DAFTAR[halaman]; if (!t || _turSudah(t) || TUR.aktif) return;
+  const t = TUR_DAFTAR[halaman]; if (!t || _turSudah(t) || TUR.aktif || !_turRuangCocok(t)) return;
   let coba = 0;
   const cek = () => {
     if (typeof STATE !== "undefined" && STATE.currentPage !== halaman) return;
@@ -119,25 +131,45 @@ function _turOtomatis(halaman) {
 
 // ── Kartu "🆕 Fitur baru" di Dasbor: tiap fitur punya tombol "Lihat caranya" (buka halaman + tur) ──
 const TUR_BARU = { versi: "2026-11-16", fitur: [
-  { ikon: "📝", judul: "Buat soal Word dari teks (tempel saja)", teks: "Copas teks soal → jadi Word berkop ujian semester ini & langsung terkumpul ke admin.", halaman: ["dashboard", "page-dashboard", "menuDashboard"], tur: "sw-dasbor" },
+  { ikon: "🧭", judul: "Panduan awal: Absensi Guru", teks: "Absen Masuk → isi jurnal → Absen Pulang, langkah demi langkah.", halaman: ["absensi-guru", "page-absensi-guru", "menuAbsensiGuru"], ruang: ["A", "Pi"] },
+  { ikon: "🧭", judul: "Panduan awal: Jadwal Pelajaran", teks: "Melihat jam mengajar Antum di jenjang ini.", halaman: ["jadwal", "page-jadwal", "menuJadwal"], ruang: ["A", "Pi"] },
+  { ikon: "🧭", judul: "Panduan awal: Jurnal Guru", teks: "Melihat dan memeriksa jurnal mengajar per bulan.", halaman: ["jurnal-guru", "page-jurnal-guru", "menuJurnalGuru"], ruang: ["A", "Pi"] },
+  { ikon: "📝", judul: "Buat soal Word dari teks (tempel saja)", teks: "Copas teks soal → jadi Word berkop ujian semester ini & langsung terkumpul ke admin.", halaman: ["dashboard", "page-dashboard", "menuDashboard"], tur: "sw-dasbor", fitur: "jadwal-ujian" },
   { ikon: "📋", judul: "Input Nilai: tempel nama & nilai", teks: "Nama dicocokkan otomatis, salah ketik tinggal pilih santrinya.", halaman: ["input-nilai", "page-input-nilai", "menuInputNilai"] },
   { ikon: "🗓️", judul: "Jadwal Ujian: ketuk mapel untuk kumpulkan soal", teks: "Absen mengawas kini dihitung ke insentif bulanan.", halaman: ["jadwal-ujian", "page-jadwal-ujian", "menuJadwalUjian"] },
   { ikon: "🧪", judul: "Ujian Online: uji coba soal, remedial & kunci jawaban", teks: "Coba soal tanpa menyimpan nilai; santri bisa remedial, nilai terbaik dipakai.", halaman: ["ujian", "page-ujian", "menuUjian"] },
   { ikon: "🤖", judul: "Input Nilai: pola otomatis & mapel gabungan dipisah", teks: "Geografi/Sosiologi/Ekonomi diisi terpisah, rapor = rata-ratanya.", halaman: ["input-nilai", "page-input-nilai", "menuInputNilai"] },
 ] };
+// Fitur yang tampil di kartu: hanya yang tersedia di ruang ini dan belum dilihat
+const _turKunciLihat = () => "tur:baruDilihat:" + TUR_BARU.versi;
+function _turSudahLihat() { try { return JSON.parse(localStorage.getItem(_turKunciLihat()) || "[]"); } catch (e) { return []; } }
+function _turTandaiLihat(f) { try { const s = new Set(_turSudahLihat()); s.add(f.judul); localStorage.setItem(_turKunciLihat(), JSON.stringify([...s])); } catch (e) {} }
+function _turFiturTampil(f) {
+  if (!_turRuangCocok(f)) return false;
+  const k = f.fitur || f.halaman[0];
+  if (typeof rgAdaFitur === "function" && k !== "dashboard" && !rgAdaFitur(k)) return false;
+  if (typeof rgKhususPengisi === "function" && rgKhususPengisi(k)) return false;
+  return !_turSudahLihat().includes(f.judul);
+}
 function turBuka(i) {
   const f = TUR_BARU.fitur[i]; if (!f) return;
+  _turTandaiLihat(f);
+  document.getElementById("tur-baru")?.remove();
   if (f.tur) { if (typeof STATE !== "undefined" && STATE.currentPage !== f.halaman[0]) showPage(...f.halaman); let n = 0; const c = () => (turMulai(f.tur, true) || n++ > 16 ? 0 : setTimeout(c, 500)); setTimeout(c, 600); return; }
   const t = TUR_DAFTAR[f.halaman[0]]; if (t) try { localStorage.removeItem(_turKunci(t)); } catch (e) {}
   showPage(...f.halaman);
 }
-function turTutupBaru() { try { localStorage.setItem("tur:baru", TUR_BARU.versi); } catch (e) {} document.getElementById("tur-baru")?.remove(); }
+const _turKunciTutup = () => "tur:baru" + (typeof STATE !== "undefined" && STATE.ruang && STATE.ruang !== "Pa" ? ":" + STATE.ruang : "");
+function turTutupBaru() { try { localStorage.setItem(_turKunciTutup(), TUR_BARU.versi); } catch (e) {} document.getElementById("tur-baru")?.remove(); }
 function _turKartuBaru() {
-  try { if (localStorage.getItem("tur:baru") === TUR_BARU.versi) return; } catch (e) { return; }
+  try { if (localStorage.getItem(_turKunciTutup()) === TUR_BARU.versi) return; } catch (e) { return; }
   const page = document.getElementById("page-dashboard"); if (!page || document.getElementById("tur-baru")) return;
+  if (typeof RG !== "undefined" && !RG.siap && (STATE._turTunggu || 0) < 3) { STATE._turTunggu = (STATE._turTunggu || 0) + 1; setTimeout(_turKartuBaru, 2000); return; }
+  const tampil = TUR_BARU.fitur.map((f, i) => [f, i]).filter(([f]) => _turFiturTampil(f));
+  if (!tampil.length) return;
   const d = document.createElement("div"); d.id = "tur-baru"; d.className = "card tur-baru";
   d.innerHTML = `<div class="tur-baru-h"><span class="tur-baru-ikon">🆕</span><div><b>Fitur baru di aplikasi</b><small>Ketuk "Lihat caranya" — aplikasi akan menunjukkan langkahnya satu per satu.</small></div><button class="tur-baru-x" onclick="turTutupBaru()" title="Sembunyikan">✕</button></div>
-    <div class="tur-baru-daftar">${TUR_BARU.fitur.map((f, i) => `<div class="tur-baru-item"><span>${f.ikon}</span><div><b>${f.judul}</b><small>${f.teks}</small></div><button class="btn btn-sm btn-accent" onclick="turBuka(${i})">Lihat caranya ›</button></div>`).join("")}</div>`;
+    <div class="tur-baru-daftar">${tampil.map(([f, i]) => `<div class="tur-baru-item"><span>${f.ikon}</span><div><b>${f.judul}</b><small>${f.teks}</small></div><button class="btn btn-sm btn-accent" onclick="turBuka(${i})">Lihat caranya ›</button></div>`).join("")}</div>`;
   const hero = page.querySelector(".dash-hero");
   hero ? hero.insertAdjacentElement("afterend", d) : page.prepend(d);
 }
