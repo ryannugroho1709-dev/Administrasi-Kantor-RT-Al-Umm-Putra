@@ -349,3 +349,34 @@ html.tema-elegan .splash-dots span{background:#d4a64a;}
 .rg-cek{font-size:11.5px;display:inline-flex;gap:4px;align-items:center;cursor:pointer}.rg-cek-p{color:var(--text-secondary)}
 .rg-alamat{display:flex;gap:10px;align-items:center;flex-wrap:wrap;border:1px solid var(--border-soft);border-left:5px solid var(--rw);border-radius:12px;padding:10px 12px;margin-bottom:8px}
 .rg-alamat code{flex:1;min-width:200px;font-size:12px;word-break:break-all}.rg-alamat span{display:flex;gap:6px}
+/* Pilih ruang: animasi muncul */
+#rg-pilih{animation:rgMunculLatar .45s ease both}
+#rg-pilih .rg-panel{animation:rgMunculPanel .6s cubic-bezier(.2,.9,.3,1.15) .05s both}
+#rg-pilih .rg-kepala{animation:rgMunculNaik .5s ease .2s both}
+#rg-pilih .rg-kartu{animation:rgMunculKartu .55s cubic-bezier(.2,.9,.3,1.25) both}
+#rg-pilih .rg-kartu:nth-child(1){animation-delay:.3s}#rg-pilih .rg-kartu:nth-child(2){animation-delay:.4s}
+#rg-pilih .rg-kartu:nth-child(3){animation-delay:.5s}#rg-pilih .rg-kartu:nth-child(4){animation-delay:.6s}
+#rg-pilih.rg-keluar .rg-kartu.rg-dibuka{animation:rgBuka 1.1s ease forwards}
+@keyframes rgMunculLatar{from{opacity:0}to{opacity:1}}
+@keyframes rgMunculPanel{from{opacity:0;transform:translateY(24px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes rgMunculNaik{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes rgMunculKartu{from{opacity:0;transform:translateY(28px) scale(.9)}to{opacity:1;transform:none}}
+/* Terkunci tetap cerah (warna ruang tidak digelapkan) */
+#rg-pilih .rg-tutup{filter:none;opacity:1}
+#rg-pilih .rg-tutup .rg-ket2,#rg-pilih .rg-tutup .rg-nama{opacity:.85}
+/* Transisi masuk ruang: satu layar berlogo */
+#rg-transisi{position:fixed;inset:0;z-index:99998;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#fff;
+  background:radial-gradient(120% 120% at 50% 20%,color-mix(in srgb,var(--rw) 70%,#000) 0%,color-mix(in srgb,var(--rw) 35%,#000) 60%,color-mix(in srgb,var(--rw) 18%,#000) 100%);
+  animation:rgMunculLatar .4s ease both}
+#rg-transisi .rg-tr-cincin{position:relative;width:132px;height:132px;display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+#rg-transisi .rg-tr-cincin i{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(255,255,255,.35);animation:splashRing 2.4s cubic-bezier(.4,0,.2,1) infinite}
+#rg-transisi .rg-tr-cincin i+i{animation-delay:1.2s}
+#rg-transisi .rg-tr-logo{width:92px;height:92px;border-radius:24px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+#rg-transisi b{font-size:19px}
+#rg-transisi span{font-size:13px;opacity:.85}
+/* Beranda Pengelola: jumlah tutor */
+.rg-angka .rg-tutor{margin-top:8px;padding-top:8px;border-top:1px dashed var(--border-soft,#e5e7eb);font-size:12.5px;color:var(--text-secondary)}
+.rg-angka .rg-tutor b{font-size:16px;color:var(--rw)}
+.rg-angka .rg-tutor em{font-style:normal;font-size:11.5px}
+.rg-cek-u{color:#b45309}
+#rg-pilih.rg-keluar .rg-kartu:not(.rg-dibuka){animation:none;opacity:.35;transition:opacity .4s}
