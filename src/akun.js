@@ -66,7 +66,7 @@ function akTampilMasuk(mode = "masuk") {
       <label class="ak-isian"><span>Sandi</span><span class="ak-sandi"><input id="ak-sandi" type="password" autocomplete="current-password" placeholder="Sandi"><button type="button" class="ak-lihat" onclick="akLihatSandi(this)" aria-label="Lihat sandi">Lihat</button></span></label>
       <div id="ak-pesan" class="ak-pesan"></div>
       <button class="ak-tombol" id="ak-tombol" onclick="akMasuk()">Masuk</button>
-      <button class="ak-tautan" onclick="akTampilMasuk('lupa')">Lupa Sandi?</button>
+      <div class="ak-tautan-baris"><button class="ak-tautan" onclick="akTampilMasuk('lupa')">Lupa Sandi?</button><span>·</span><button class="ak-tautan" onclick="akTampilDaftar()">Belum Punya Akun? Daftar</button></div>
       <div class="ak-atau"><i></i>atau<i></i></div>
       <button class="ak-tombol ak-garis" onclick="location.href='santri.html?ruang='+(STATE.ruang||'Pa')">Masuk Sebagai Santri</button></div>`;
   }
@@ -124,14 +124,15 @@ async function akCekPulih() {
   try { isi = sessionStorage.getItem("pulihSandi"); sessionStorage.removeItem("pulihSandi"); } catch (e) {}
   if (!isi) return false;
   AK.pulih = true;
-  akTampilSandiBaru("memuat");
   const p = new URLSearchParams(isi.replace(/^[#?]/, "").replace(/#/g, "&"));
+  AK.undangan = /invite|signup/.test(p.get("type") || "");
+  akTampilSandiBaru("memuat");
   try {
     if (p.get("error") || p.get("error_code")) throw new Error("kedaluwarsa");
     let r;
     if (p.get("access_token")) r = await AK.klien.auth.setSession({ access_token: p.get("access_token"), refresh_token: p.get("refresh_token") || "" });
     else if (p.get("code")) r = await AK.klien.auth.exchangeCodeForSession(p.get("code"));
-    else if (p.get("token_hash")) r = await AK.klien.auth.verifyOtp({ token_hash: p.get("token_hash"), type: "recovery" });
+    else if (p.get("token_hash")) r = await AK.klien.auth.verifyOtp({ token_hash: p.get("token_hash"), type: AK.undangan ? "invite" : "recovery" });
     else throw new Error("kedaluwarsa");
     if (r.error) throw r.error;
     const u = (await AK.klien.auth.getUser()).data.user;
@@ -150,7 +151,7 @@ function akTampilSandiBaru(tahap, pesan) {
   if (tahap === "memuat") el.innerHTML = `<div class="ak-cahaya"></div><div class="ak-panel">${kepala}<b>Memeriksa Tautan…</b><span>Sebentar, tautan dari email sedang diperiksa.</span></div></div>`;
   else if (tahap === "gagal") el.innerHTML = `<div class="ak-cahaya"></div><div class="ak-panel">${kepala}<b>Tautan Tidak Berlaku</b><span>${escapeHtml(pesan || "")}</span></div>
     <button class="ak-tombol" onclick="AK.pulih=false;akTampilMasuk('lupa')">Minta Tautan Baru</button><button class="ak-tautan" onclick="AK.pulih=false;akTampilMasuk()">Ke Halaman Masuk</button></div>`;
-  else el.innerHTML = `<div class="ak-cahaya"></div><div class="ak-panel">${kepala}<b>Buat Sandi Baru</b><span>${AK.emailPulih ? `Untuk akun <strong class="ak-email">${escapeHtml(AK.emailPulih)}</strong>. ` : ""}Minimal 8 karakter, huruf besar/kecil dibedakan.</span></div>
+  else el.innerHTML = `<div class="ak-cahaya"></div><div class="ak-panel">${kepala}<b>${AK.undangan ? "Selamat Datang — Buat Sandi Akun" : "Buat Sandi Baru"}</b><span>${AK.emailPulih ? `Untuk akun <strong class="ak-email">${escapeHtml(AK.emailPulih)}</strong>. ` : ""}Minimal 8 karakter, huruf besar/kecil dibedakan.</span></div>
     <label class="ak-isian"><span>Sandi Baru</span><span class="ak-sandi"><input id="ak-baru1" type="password" autocomplete="new-password" placeholder="Sandi baru"><button type="button" class="ak-lihat" onclick="akLihatSandi(this)">Lihat</button></span></label>
     <label class="ak-isian"><span>Ulangi Sandi Baru</span><span class="ak-sandi"><input id="ak-baru2" type="password" autocomplete="new-password" placeholder="Ketik sekali lagi"><button type="button" class="ak-lihat" onclick="akLihatSandi(this)">Lihat</button></span></label>
     <div id="ak-pesan" class="ak-pesan"></div>
@@ -337,7 +338,7 @@ async function akIsiTabAkun() {
       <button class="btn btn-accent" onclick="akPakaiPin()">Lanjut</button></div>`;
   }
   const tambahan = typeof _rgIdTetapMasuk === "function" ? (await _rgIdTetapMasuk()).filter((x) => /^[0-9a-f-]{36}$/i.test(x)) : [];
-  let q0 = supaSemua.from("guru").select("id,nama,username,email,auth_user_id,no_wa,status_aktif").order("nama");
+  let q0 = supaSemua.from("guru").select("*").order("nama");
   q0 = tambahan.length ? q0.or(`status_aktif.eq.true,id.in.(${tambahan.join(",")})`) : q0.eq("status_aktif", true);
   const r = await q0;
   if (r.error) {
@@ -352,18 +353,24 @@ async function akIsiTabAkun() {
   }
   const jmlAlat = AK_ATUR.alat.reduce((a, p) => { a[p.guru_id] = (a[p.guru_id] || 0) + 1; return a; }, {});
   const punya = AK_ATUR.guru.filter((g) => g.auth_user_id).length;
-  return `<div class="ak-wajib ${AK.wajib ? "on" : ""}">
+  const menunggu = AK_ATUR.guru.filter((g) => g.auth_user_id && g.akun_menunggu);
+  const bisaUndang = AK_ATUR.guru.filter((g) => !g.auth_user_id && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(g.email || "").trim()));
+  return `${menunggu.length ? `<div class="ak-menunggu"><b>Menunggu Persetujuan · ${menunggu.length}</b><small>Guru ini mendaftar sendiri dengan email yang belum cocok dengan Data Guru. Pastikan benar orangnya, lalu setujui.</small>
+      ${menunggu.map((g) => `<div class="ak-alat-baris"><div><b>${escapeHtml(g.nama)}</b><small>${escapeHtml(g.email || "-")}</small></div><span><button class="btn btn-sm btn-accent" onclick="akSetujui('${g.id}')">Setujui</button> <button class="btn btn-sm btn-ghost" onclick="akHapusAkun('${g.id}')">Tolak</button></span></div>`).join("")}</div>` : ""}
+    <div class="ak-undang"><div><b>Undang Lewat Email</b><small>${bisaUndang.length} guru belum punya akun tetapi emailnya sudah ada di Data Guru. Mereka menerima email undangan dan membuat sandinya sendiri. Guru tanpa email bisa memakai tombol <b>Daftar</b> di layar masuk.</small></div>
+      ${bisaUndang.length ? `<button class="btn btn-accent" id="ak-undang-btn" onclick="akUndangSemua()">Undang ${bisaUndang.length} Guru</button>` : ""}</div>
+    <div class="ak-wajib ${AK.wajib ? "on" : ""}">
       <div><b>Wajib Masuk Dengan Akun</b><small>${AK.wajib ? "Menyala — semua guru masuk dengan email & sandi. Pilihan nama guru hanya untuk admin." : "Mati — guru masih memilih nama seperti biasa. Nyalakan setelah semua guru punya akun."}</small>
       <small>${punya} dari ${AK_ATUR.guru.length} guru sudah punya akun.</small></div>
       <button class="rg-saklar ${AK.wajib ? "on" : ""}" onclick="akUbahWajib(${!AK.wajib})" aria-label="Nyalakan/matikan"></button></div>
     <p class="rg-ket">Akun memakai nama guru di Data Guru; guru masuk dengan <b>email + sandi</b>. ${_AK_ATURAN_SANDI}. Sandi awal dibagikan ke guru lewat WA; guru bisa menggantinya sendiri di menu akun. Lupa sandi dikirim ke email yang terdaftar. Maksimal ${AK.BATAS} perangkat per guru.</p>
     <div class="table-wrap"><table class="table"><thead><tr><th>Guru</th><th>Email</th><th style="text-align:center">Perangkat</th><th>Aksi</th></tr></thead><tbody>
     ${AK_ATUR.guru.map((g) => `<tr><td>${escapeHtml(g.nama)}</td>
-      <td style="font-size:12px">${g.auth_user_id ? escapeHtml(g.email || "-") : '<span class="ak-belum">Belum Punya Akun</span>'}</td>
+      <td style="font-size:12px">${g.auth_user_id ? escapeHtml(g.email || "-") + (g.akun_menunggu ? ' <em class="ak-tunggu">Menunggu</em>' : "") : `<span class="ak-belum">Belum Punya Akun${g.email ? " · " + escapeHtml(g.email) : ""}</span>`}</td>
       <td style="text-align:center">${g.auth_user_id ? `<button class="btn btn-sm btn-ghost" onclick="akPerangkatGuru('${g.id}')">${jmlAlat[g.id] || 0}/${AK.BATAS}</button>` : "-"}</td>
       <td style="white-space:nowrap">${g.auth_user_id
         ? `<button class="btn btn-sm btn-outline" onclick="akFormAkun('${g.id}','ubah')">Ubah Email</button> <button class="btn btn-sm btn-outline" onclick="akResetSandi('${g.id}')">Reset Sandi</button> <button class="btn btn-sm btn-ghost" onclick="akHapusAkun('${g.id}')">Hapus</button>`
-        : `<button class="btn btn-sm btn-accent" onclick="akFormAkun('${g.id}','buat')">Buat Akun</button>`}</td></tr>`).join("")}
+        : `${/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(g.email || "").trim()) ? `<button class="btn btn-sm btn-outline" onclick="akUndang('${g.id}')">Undang</button> ` : ""}<button class="btn btn-sm btn-accent" onclick="akFormAkun('${g.id}','buat')">Buat Akun</button>`}</td></tr>`).join("")}
     </tbody></table></div>`;
 }
 function akPakaiPin() { AK.pinAdmin = (qs("ak-pin")?.value || "").trim(); if (AK.pinAdmin) rgBukaPengaturan("akun"); }
@@ -454,4 +461,77 @@ async function akPerangkatGuru(guruId) {
     qs("ak-alat").innerHTML = d.map((p) => `<div class="ak-alat-baris"><div><b>${escapeHtml(p.nama || "Perangkat")}</b><small>Terakhir dipakai ${new Date(p.terakhir).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}</small></div>
       <button class="btn btn-sm btn-outline" onclick="akHapusPerangkat('${p.id}','${guruId}')">Keluarkan</button></div>`).join("") || "<p>Belum ada perangkat.</p>";
   } catch (e) { qs("ak-alat").innerHTML = `<p>${escapeHtml(e.message)}</p>`; }
+}
+
+
+// ── Daftar mandiri oleh guru ──
+async function akTampilDaftar() {
+  qs("ak-masuk")?.remove();
+  const el = document.createElement("div");
+  el.id = "ak-masuk";
+  el.innerHTML = `<div class="ak-cahaya"></div><div class="ak-panel"><div class="ak-kepala"><div class="ak-logo">${htmlLogoSekolah(56)}</div><small>PKBM AL-UMM BARABAI</small><b>Daftar Akun Guru</b>
+      <span>Pilih nama Antum, lalu isi email dan sandi. Bila email sama dengan Data Guru, akun langsung aktif; bila belum, menunggu persetujuan Admin.</span></div>
+    <label class="ak-isian"><span>Nama</span><select id="ak-d-nama" class="ak-pilih"><option value="">Memuat nama…</option></select></label>
+    <label class="ak-isian"><span>Email</span><input id="ak-d-email" type="email" inputmode="email" autocapitalize="none" placeholder="nama@gmail.com"></label>
+    <label class="ak-isian"><span>Sandi</span><span class="ak-sandi"><input id="ak-d-sandi" type="password" autocomplete="new-password" placeholder="Minimal 8 karakter"><button type="button" class="ak-lihat" onclick="akLihatSandi(this)">Lihat</button></span></label>
+    <label class="ak-isian"><span>Ulangi Sandi</span><span class="ak-sandi"><input id="ak-d-sandi2" type="password" autocomplete="new-password" placeholder="Ketik sekali lagi"><button type="button" class="ak-lihat" onclick="akLihatSandi(this)">Lihat</button></span></label>
+    <div id="ak-pesan" class="ak-pesan"></div>
+    <button class="ak-tombol" id="ak-d-btn" onclick="akKirimDaftar()">Daftar</button>
+    <button class="ak-tautan" onclick="akTampilMasuk()">‹ Sudah Punya Akun? Masuk</button></div>`;
+  document.body.appendChild(el);
+  try {
+    const r = await supaSemua.from("guru").select("id,nama,auth_user_id,ruang,status_aktif").is("auth_user_id", null).order("nama");
+    const X = STATE.ruang;
+    const daftar = (r.data || []).filter((g) => g.status_aktif !== false && (X === "Pg" || (g.ruang || []).includes(X)));
+    qs("ak-d-nama").innerHTML = `<option value="">— pilih nama Antum —</option>` + daftar.map((g) => `<option value="${g.id}">${escapeHtml(g.nama)}</option>`).join("");
+  } catch (e) { qs("ak-d-nama").innerHTML = `<option value="">Gagal memuat nama</option>`; }
+}
+async function akKirimDaftar() {
+  const guruId = qs("ak-d-nama").value, email = qs("ak-d-email").value.trim().toLowerCase(), a = qs("ak-d-sandi").value, b = qs("ak-d-sandi2").value;
+  if (!guruId) return _akPesan("Pilih nama Antum dulu");
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return _akPesan("Tulis email dengan benar");
+  if (a.length < 8) return _akPesan("Sandi minimal 8 karakter");
+  if (a !== b) return _akPesan("Kedua sandi belum sama");
+  const t = qs("ak-d-btn"); t.disabled = true; t.textContent = "Mendaftarkan…"; _akPesan("");
+  try {
+    const r = await akPanggil("daftar", { guruId, email, sandi: a });
+    if (!r.langsung) {
+      t.textContent = "Terkirim";
+      _akPesan("Pendaftaran terkirim. Akun Antum menunggu persetujuan Admin; setelah disetujui, masuk dengan email dan sandi tadi.", "ok");
+      return;
+    }
+    const m = await akPanggil("masuk", { login: email, sandi: a, perangkat: akPerangkat() });
+    const s = await AK.klien.auth.setSession(m.sesi); if (s.error) throw s.error;
+    _akSimpanGuru(m.guru); _akLS.set("akunCek", String(Date.now()));
+    qs("ak-masuk")?.remove();
+    _akMasukkanGuru(m.guru);
+    toast("Akun berhasil dibuat. Selamat datang!", "ok");
+  } catch (e) { t.disabled = false; t.textContent = "Daftar"; _akPesan(e.message || "Gagal mendaftar"); }
+}
+
+// ── Admin: setujui pendaftaran & undangan email ──
+async function akSetujui(guruId) {
+  const g = AK_ATUR.guru.find((x) => x.id === guruId);
+  try { await akPanggilAdmin("setujui", { guruId }); _rgLog?.("setujui-akun", { guru: g?.nama }); toast("Akun disetujui", "ok"); rgBukaPengaturan("akun"); }
+  catch (e) { toast(e.message, "err"); }
+}
+const _akAlamatApp = () => location.origin + location.pathname;
+async function akUndang(guruId) {
+  const g = AK_ATUR.guru.find((x) => x.id === guruId); if (!g) return;
+  try { await akPanggilAdmin("undang", { guruId, redirectTo: _akAlamatApp() }); _rgLog?.("undang-akun", { guru: g.nama }); toast(`Undangan terkirim ke ${g.email}`, "ok"); rgBukaPengaturan("akun"); }
+  catch (e) { toast(e.message, "err"); }
+}
+async function akUndangSemua() {
+  const daftar = AK_ATUR.guru.filter((g) => !g.auth_user_id && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(g.email || "").trim()));
+  if (!daftar.length) return;
+  if (!(await konfirmasiTema(`Kirim email undangan ke ${daftar.length} guru? Setiap guru menerima tautan untuk membuat sandinya sendiri.`, { judul: "Undang Lewat Email", ikon: "✉️", teksYa: "Ya, Kirim" }))) return;
+  const btn = qs("ak-undang-btn"); let ok = 0; const gagal = [];
+  for (const g of daftar) {
+    if (btn) btn.textContent = `Mengirim ${ok + gagal.length + 1}/${daftar.length}…`;
+    try { await akPanggilAdmin("undang", { guruId: g.id, redirectTo: _akAlamatApp() }); ok++; }
+    catch (e) { gagal.push(`${g.nama}: ${e.message}`); }
+    await new Promise((r) => setTimeout(r, 1200)); // jeda supaya pengirim email tidak menolak
+  }
+  _rgLog?.("undang-akun", { jumlah: ok });
+  openModal(`<h3>Undangan Terkirim</h3><p class="ds-catatan">${ok} dari ${daftar.length} guru menerima email undangan.</p>${gagal.length ? `<p class="ds-catatan"><b>Gagal:</b></p><ul class="ds-hasil">${gagal.map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>` : ""}<button class="btn btn-accent" style="width:100%" onclick="closeModal();rgBukaPengaturan('akun')">Selesai</button>`);
 }
