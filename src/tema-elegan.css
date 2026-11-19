@@ -434,3 +434,6 @@ html.tema-elegan .splash-dots span{background:#d4a64a;}
 .ua-saring{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
 .ua-saring-b{border:1px solid var(--border-soft);background:var(--card,#fff);color:var(--text-secondary);border-radius:99px;padding:6px 14px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
 .ua-saring-b.aktif{background:var(--accent);border-color:var(--accent);color:#fff}
+
+.ak-nama-guru{background:var(--accent-soft);border-radius:12px;padding:10px 12px;margin:-2px 0 12px}.ak-nama-guru small{display:block;font-size:11px;color:var(--text-secondary)}.ak-nama-guru b{font-size:14px}
+.ak-aturan{display:block;font-size:11px;color:var(--text-secondary);margin-top:5px}
