@@ -19,7 +19,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Amiri:wght@400;700&family=Playfair+Display:wght@600;700;800&display=swap&family=Anton&family=Great+Vibes" rel="stylesheet">
 <!-- Tema elegan + pilihan palet (menu ✨ di topbar). "klasik" = tampilan hijau lama. Dipasang
      sedini mungkin supaya tidak sempat "berkedip" tampilan lain dulu. Disimpan per perangkat. -->
-<link rel="stylesheet" href="src/tema-elegan.css?v=16">
+<link rel="stylesheet" href="src/tema-elegan.css?v=17">
 <link rel="stylesheet" href="src/kas.css?v=6">
 <link rel="stylesheet" href="src/hp.css?v=3">
 <link rel="stylesheet" href="src/kuliah.css?v=6">
@@ -10245,7 +10245,7 @@ function kopSoalKartu(labelMapel, kategori) {
   // Berkas yang masih menunjuk ke server Supabase LAMA (sudah dihapus) tidak bisa dibuka lagi
   let hilang =!!row?.file_url && !String(row.file_url).startsWith(window.SUPABASE_URL || "https://izvsypocfpaerahfpgrk.supabase.co") && /supabase\.co/.test(row.file_url);
   // … pakai kop bawaan yang ikut terpasang di situs (folder kop-soal/) bila belum ada unggahan baru
-  if ((!row?.file_url || hilang) && KOP_SOAL_BAWAAN[kategori]) { row = { file_url: "kop-soal/" + kategori + ".docx", nama_file: KOP_SOAL_BAWAAN[kategori] }; hilang = false; }
+  if ((!row?.file_url || hilang) && KOP_SOAL_BAWAAN[kategori] && (STATE.ruang || "Pa") === "Pa") { row = { file_url: "kop-soal/" + kategori + ".docx", nama_file: KOP_SOAL_BAWAAN[kategori] }; hilang = false; }
   return `<div style="border:1px solid ${hilang ? "var(--bad)" : "var(--border-soft)"};border-radius:12px;padding:10px;">
     <div style="font-weight:700;font-size:11.5px;">${labelMapel}</div>
     <div style="font-size:10px;color:${hilang ? "var(--bad)" : "var(--text-secondary)"};margin:5px 0 8px;">${hilang ? `⚠️ Berkas "${escapeHtml(row.nama_file || "kop")}" tersimpan di server lama yang sudah tidak aktif.${isAdmin() ? " Unggah ulang berkasnya." : " Admin perlu mengunggah ulang."}` : row?.file_url ? escapeHtml(row.nama_file || "file") : `<span data-i18n="belumAdaFile">${t("belumAdaFile")}</span>`}</div>
@@ -16156,13 +16156,13 @@ async function handleImportSiswa(evt) {
 <script src="src/jadwal-ujian.js?v=11"></script>
 <script src="src/ujian-arsip.js?v=10"></script>
 <script src="src/tur.js?v=4"></script>
-<script src="src/soal-word.js?v=8"></script>
+<script src="src/soal-word.js?v=9"></script>
 <script src="src/jurnal-mengawas.js?v=4"></script>
 <script src="src/mengawas-plus.js?v=3"></script>
 <script src="src/nilai-tempel.js?v=3"></script>
 <script src="src/dapodik.js?v=2"></script>
 <script src="src/modul-urut.js?v=1"></script>
-<script src="src/ruang.js?v=11"></script>
+<script src="src/ruang.js?v=12"></script>
 <script src="src/akun.js?v=3"></script>
 <script src="src/siswa-tampil.js?v=3"></script>
 </body>

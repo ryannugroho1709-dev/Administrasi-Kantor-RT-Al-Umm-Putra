@@ -599,7 +599,9 @@ t = function (k, ...a) {
 
 // ── 13. Pengaturan per jenjang = bagian ABSEN saja; pengaturan utama (kop, logo, nama lembaga, tahun ajaran,
 //        penilaian, dsb.) tetap dari Paket B & C Putra ──
-const RG_KOLOM_ABSEN = ["lokasi_lat", "lokasi_lng", "radius_meter", "blokir_hari_minggu", "toleransi_masuk_menit", "batas_pulang_menit", "minggu_ganjil_genap_acuan"];
+// Milik masing-masing ruang: absen (lokasi bisa beda per jenjang), nama lembaga di kop, desain Kalender Akademik
+const RG_KOLOM_ABSEN = ["lokasi_lat", "lokasi_lng", "radius_meter", "blokir_hari_minggu", "toleransi_masuk_menit", "batas_pulang_menit", "minggu_ganjil_genap_acuan",
+  "nama_lembaga_kop", "kaldik_latar_url", "kaldik_latar_pos_x", "kaldik_latar_pos_y", "kaldik_latar_zoom", "kaldik_latar_opacity", "kaldik_warna_judul", "kaldik_warna_teks", "kaldik_teks_panel", "kaldik_logo_ukuran", "kaldik_ukuran_judul"];
 const rgPengaturanIkutPutra = () => STATE.ruang === "A" || STATE.ruang === "Pi";
 const _rgPengAmbilAsli = apiGetPengaturanSekolah;
 apiGetPengaturanSekolah = async function () {
@@ -610,7 +612,7 @@ apiGetPengaturanSekolah = async function () {
     const pa = r.data && r.data[0];
     if (!pa) return sendiri;
     const hasil = { ...pa };
-    RG_KOLOM_ABSEN.forEach((k) => { if (sendiri && sendiri[k] !== undefined && sendiri[k] !== null) hasil[k] = sendiri[k]; });
+    RG_KOLOM_ABSEN.forEach((k) => { if (sendiri && k in sendiri) hasil[k] = sendiri[k]; });
     return hasil;
   } catch (e) { return sendiri; }
 };
@@ -621,10 +623,16 @@ async function _rgSamakanKepala(nama) {
 }
 apiSimpanPengaturanSekolah = async function (data) {
   if (!rgPengaturanIkutPutra()) { const h = await _rgPengSimpanAsli(data); if (data && data.kepala_pkbm && RG.siap) await _rgSamakanKepala(data.kepala_pkbm); return h; }
-  const isi = {};
-  RG_KOLOM_ABSEN.forEach((k) => { if (data && k in data) isi[k] = data[k]; });
-  if (data && data.kepala_pkbm) await _rgSamakanKepala(data.kepala_pkbm);
-  await _rgPengSimpanAsli(isi);
+  // milik ruang ini → baris ruang ini; pengaturan bersama → baris Putra (pengaturan utama)
+  const isi = {}, bersama = {};
+  Object.entries(data || {}).forEach(([k, v]) => { (RG_KOLOM_ABSEN.includes(k) ? isi : bersama)[k] = v; });
+  delete bersama.admin_pin; delete bersama.id;
+  if (data && data.kepala_pkbm) { await _rgSamakanKepala(data.kepala_pkbm); delete bersama.kepala_pkbm; }
+  if (Object.keys(isi).length) await _rgPengSimpanAsli(isi);
+  if (Object.keys(bersama).length) {
+    const { error } = await supaSemua.from("pengaturan_sekolah").update({ ...bersama, updated_at: new Date().toISOString() }).eq("ruang_id", "Pa").eq("id", 1);
+    if (error) throw new Error(error.message);
+  }
   return apiGetPengaturanSekolah();
 };
 const _rgTabPengAsli = pilihTabPengaturan;
@@ -735,3 +743,17 @@ function rgGantiRuangMasuk(id) {
   _rgTransisi(id);
   setTimeout(() => location.reload(), 350);
 }
+
+// ── 17. Builder jadwal: beri tahu bila ruang ini belum punya daftar mata pelajaran ──
+const _rgBuilderAsli = renderJadwalBuilder;
+renderJadwalBuilder = async function () {
+  await ensureLookups();
+  const wrap = qs("jadwal-builder");
+  if (wrap && !(LOOKUP.mapel || []).length) {
+    wrap.innerHTML = `<div class="card rg-kosong-mapel"><b>Belum ada mata pelajaran di ${escapeHtml(rgRuang().nama)}</b>
+      <p>Builder menyusun jadwal dari daftar mata pelajaran ruang ini. Tambahkan mapel dulu di menu <b>Kurikulum</b>, lalu kembali ke Builder.</p>
+      <button class="btn btn-accent" onclick="showPage('kurikulum','page-kurikulum','menuKurikulum')">Buka Kurikulum</button></div>`;
+    return;
+  }
+  return _rgBuilderAsli();
+};

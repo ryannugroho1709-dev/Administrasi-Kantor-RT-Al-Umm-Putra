@@ -46,7 +46,8 @@ async function _swCariKop(kat, uts, sem, paket) {
     const r = rows.find((x) => x.kategori === k);
     const lama = r?.file_url && /supabase\.co/.test(r.file_url) && !String(r.file_url).startsWith(window.SUPABASE_URL || "https://izvsypocfpaerahfpgrk.supabase.co");
     if (r?.file_url && !lama && /\.docx(\?|$)/i.test(r.file_url)) return r.file_url;
-    return typeof KOP_SOAL_BAWAAN !== "undefined" && KOP_SOAL_BAWAAN[k] ? `kop-soal/${k}.docx` : null;
+    // berkas kop bawaan adalah milik Putra — ruang lain wajib mengunggah kopnya sendiri di menu Kop Soal
+    return typeof KOP_SOAL_BAWAAN !== "undefined" && KOP_SOAL_BAWAAN[k] && (STATE.ruang || "Pa") === "Pa" ? `kop-soal/${k}.docx` : null;
   };
   const kode = `${kat}_${uts ? "uts_" : ""}${sem}_${paket}`, kodePas = `${kat}_${sem}_${paket}`;
   const u = url(kode); if (u) return { url: u, kode, cadangan: false };
