@@ -66,6 +66,7 @@ function rgAkses(id) {
   if (!r || r.id !== id) return "-";
   if (typeof isAdmin === "function" && isAdmin()) return "U";
   const s = RG.saya || {};
+  if (s.status_aktif === false) return r.jenjang ? "L" : "-"; // guru nonaktif: hanya melihat
   if ((s.ruang || []).includes(id) || (s.ruang_pendamping || []).includes(id)) return "U";
   return r.jenjang ? "L" : "-";
 }
@@ -77,9 +78,23 @@ async function _rgLog(aksi, rincian) {
 }
 
 // Daftar nama untuk MASUK selalu dari semua ruang (guru Paket A bisa masuk dari perangkat mana pun)
+// + guru NONAKTIF yang tetap boleh masuk: punya akses Fitur Kuliah, atau dicentang admin di
+//   Pengaturan Ruang → Guru Per Ruang → "Tetap Bisa Masuk" (kunci "masuk_akses").
+const RG_MASUK = { ids: [] };
+async function _rgIdTetapMasuk() {
+  try {
+    const r = await supaSemua.from("kuliah_pengaturan").select("kunci,nilai").in("kunci", ["akses", "masuk_akses"]);
+    const peta = Object.fromEntries((r.data || []).map((x) => [x.kunci, x.nilai || {}]));
+    RG_MASUK.ids = (peta.masuk_akses && peta.masuk_akses.ids) || [];
+    return [...new Set([...RG_MASUK.ids, ...Object.keys((peta.akses && peta.akses.guru) || {})])];
+  } catch (e) { return []; }
+}
 apiGetDaftarGuru = async function () {
   try {
-    const r = await supaSemua.from("guru").select("id,nama,jenis_guru,jabatan,foto_url").eq("status_aktif", true).order("nama");
+    const tambahan = (await _rgIdTetapMasuk()).filter((x) => /^[0-9a-f-]{36}$/i.test(x));
+    let q = supaSemua.from("guru").select("id,nama,jenis_guru,jabatan,foto_url,status_aktif").order("nama");
+    q = tambahan.length ? q.or(`status_aktif.eq.true,id.in.(${tambahan.join(",")})`) : q.eq("status_aktif", true);
+    const r = await q;
     if (r.error) throw r.error;
     return r.data || [];
   } catch (e) { throw new Error(_pesanErrorRamah(e) || e.message); }
@@ -101,7 +116,7 @@ async function _rgMuat() {
   try {
     const [a, b] = await Promise.all([
       supaSemua.from("ruang").select("*").order("urutan"),
-      supaSemua.from("guru").select("id,ruang,ruang_pendamping").eq("id", STATE.guruId).maybeSingle(),
+      supaSemua.from("guru").select("id,ruang,ruang_pendamping,status_aktif").eq("id", STATE.guruId).maybeSingle(),
     ]);
     if (a.error) throw a.error;
     if (b.error) throw b.error;
@@ -439,6 +454,12 @@ async function rgBukaPengaturan(tab) {
           const anggota = (g.ruang || []).includes(x.id), pend = (g.ruang_pendamping || []).includes(x.id);
           return `<td style="text-align:center;white-space:nowrap"><label class="rg-cek"><input type="checkbox" ${anggota ? "checked" : ""} onchange="rgUbahAnggota('${g.id}','${x.id}','ruang',this.checked)"> Mengajar</label>${x.jenjang ? `<br><label class="rg-cek rg-cek-p"><input type="checkbox" ${pend ? "checked" : ""} onchange="rgUbahAnggota('${g.id}','${x.id}','ruang_pendamping',this.checked)"> Pendamping</label><br><label class="rg-cek rg-cek-u"><input type="radio" name="utama-${g.id}" ${rgRuangUtama(g) === x.id ? "checked" : ""} ${anggota ? "" : "disabled"} onchange="rgUbahUtama('${g.id}','${x.id}')"> Utama</label>` : ""}</td>`;
         }).join("")}</tr>`).join("")}</tbody></table></div>`;
+      // Guru nonaktif (tidak mengajar / tidak ada di jadwal) yang tetap boleh masuk aplikasi
+      const [na] = await Promise.all([supaSemua.from("guru").select("id,nama").eq("status_aktif", false).order("nama"), _rgIdTetapMasuk()]);
+      const nonaktif = na.data || [];
+      isi += `<h4 style="margin:18px 0 4px">Guru Nonaktif Yang Tetap Bisa Masuk</h4>
+        <p class="rg-ket">Untuk guru yang namanya ada di Data Guru tetapi tidak ada di jadwal (mis. hanya memakai Fitur Kuliah). Mereka muncul di daftar masuk dan pojok kanan atas, tetapi data jenjang hanya bisa <b>dilihat</b>. Guru yang punya akses Fitur Kuliah otomatis termasuk.</p>
+        <div class="rg-nonaktif">${nonaktif.map((g) => `<label class="rg-cek"><input type="checkbox" ${RG_MASUK.ids.includes(g.id) ? "checked" : ""} onchange="rgUbahTetapMasuk('${g.id}',this.checked)"> ${escapeHtml(g.nama)}</label>`).join("") || "<small>Tidak ada guru nonaktif.</small>"}</div>`;
     } else if (RG_ATUR.tab === "santri") {
       isi = `<p class="rg-ket">Setiap jenjang punya halaman ujian santri sendiri (tanpa akun guru). Bagikan alamat ini ke santri.</p>
         ${RG.daftar.filter((r) => r.jenjang).map((r) => `<div class="rg-alamat" style="--rw:${r.warna}"><b>${r.ikon} ${escapeHtml(r.nama)}</b><code>${escapeHtml(_rgAlamatSantri(r.id))}</code>
@@ -467,6 +488,17 @@ async function rgUbahFitur(ruangId, key) {
   r.fitur = fitur;
   _rgLog("ubah-fitur-ruang", { ruang: ruangId, fitur: key, aktif: set.has(key) });
   rgBukaPengaturan("fitur");
+}
+async function rgUbahTetapMasuk(guruId, centang) {
+  await _rgIdTetapMasuk();
+  const ids = new Set(RG_MASUK.ids);
+  centang ? ids.add(guruId) : ids.delete(guruId);
+  const { error } = await supaSemua.from("kuliah_pengaturan").upsert({ ruang_id: "*", kunci: "masuk_akses", nilai: { ids: [...ids], diubah: new Date().toISOString() } });
+  if (error) { toast("Gagal menyimpan: " + error.message, "err"); rgBukaPengaturan("anggota"); return; }
+  RG_MASUK.ids = [...ids];
+  _rgLog("tetap-bisa-masuk", { guru: guruId, aktif: centang });
+  try { STATE.daftarGuru = await apiGetDaftarGuru(); } catch (e) {}
+  toast(centang ? "Guru ini sekarang bisa masuk aplikasi" : "Guru ini tidak lagi muncul di daftar masuk", "ok");
 }
 async function rgUbahUtama(guruId, ruangId) {
   const g = (RG_ATUR.guru || []).find((x) => x.id === guruId);

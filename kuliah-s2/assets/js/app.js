@@ -169,6 +169,7 @@
       else if (a === "jadwal") jadwal();
       else if (a === "cari") cari(r.q.get("q") || "");
       else if (a === "profil") profil();
+      else if (a === "peringkat") peringkat(b);
       else if (a === "tentang") tentang();
       else if (a === "sertifikat" && b) sertifikat(b);
       else notFound();
@@ -234,7 +235,7 @@
       '<div class="mk-row">' + all.map(mkCard).join("") + "</div>" +
 
       '<div class="sec-h"><h2>' + lab("Jelajahi", "استكشف") + "</h2></div>" +
-      '<div class="quick">' + [["#/peta", "map", "Peta Kitab", "خريطة الكتاب"], ["#/istilah", "language", "Kamus Istilah", "معجم المصطلحات"], ["#/jadwal", "calendar", "Jadwal Kuliah", "الجدول"], ["#/arena", "trophy", "Arena Ujian", "الاختبارات"], ["#/cari", "search", "Pencarian", "البحث"], ["#/tentang", "info", "Tentang", "عن التطبيق"]]
+      '<div class="quick">' + [["#/peringkat", "medal", "Peringkat Kelas", "ترتيب الفصل"], ["#/peta", "map", "Peta Kitab", "خريطة الكتاب"], ["#/istilah", "language", "Kamus Istilah", "معجم المصطلحات"], ["#/jadwal", "calendar", "Jadwal Kuliah", "الجدول"], ["#/arena", "trophy", "Arena Ujian", "الاختبارات"], ["#/cari", "search", "Pencarian", "البحث"], ["#/tentang", "info", "Tentang", "عن التطبيق"]]
         .map(q => '<a class="qk" href="' + q[0] + '">' + Icon(q[1]) + "<span>" + lab(q[2], q[3]) + "</span></a>").join("") + "</div>" +
       footer() + "</div>";
 
@@ -934,6 +935,44 @@
       '<div class="wk-chart">' + W.map((w, i) => '<div class="wk-col' + (i === 7 ? " now" : "") + '" title="' + esc("Pekan " + w.a.toLocaleDateString("id-ID", { day: "numeric", month: "short" }) + ": " + w.modul + " modul, " + Math.round(w.menit) + " menit, " + w.xp + " XP") + '"><b>' + n(w.modul) + '</b><i style="height:' + Math.round(w.modul / maxM * 100) + '%"></i><small>' + w.a.getDate() + "/" + (w.a.getMonth() + 1) + "</small><em>" + n(Math.round(w.menit)) + "′</em></div>").join("") + "</div>" +
       '<p class="muted sm">' + lab("Batang = modul selesai dibaca per pekan (Senin–Ahad); angka bawah = menit belajar.", "الأعمدة = الوحدات المنجزة أسبوعيًا") + "</p>";
   }
+  /* ===================== PERINGKAT KELAS ===================== */
+  function peringkat(semId) {
+    const P = window.PERINGKAT || { semester: [] };
+    const daftarSem = P.semester || [];
+    const sem = daftarSem.find((s) => s.id === semId) || daftarSem[daftarSem.length - 1];
+    if (!sem) { view.innerHTML = '<div class="wrap empty">' + Icon("medal") + "<h2>" + lab("Belum ada nilai", "لا توجد درجات بعد") + "</h2></div>"; return; }
+    const inti = (s) => String(s || "").split(",")[0].toLowerCase().replace(/[^a-z\s]/g, "").trim().split(/\s+/).slice(0, 2).join(" ");
+    const saya = inti((S().profil || {}).nama);
+    const jmlMk = Math.max(...sem.mahasiswa.map((m) => m.nilai.length));
+    const maks = (sem.maks || 100) * jmlMk;
+    const baris = sem.mahasiswa.map((m) => {
+      const jumlah = m.nilai.reduce((a, b) => a + (+b || 0), 0);
+      return Object.assign({}, m, { jumlah, rata: jumlah / m.nilai.length, persen: Math.round((jumlah / maks) * 100), saya: !!saya && inti(m.nama).startsWith(saya.split(" ")[0]) && inti(m.nama).includes(saya.split(" ")[1] || "") });
+    }).sort((a, b) => b.jumlah - a.jumlah || b.rata - a.rata);
+    let no = 0, sebelum = null;
+    baris.forEach((x, i) => { if (x.jumlah !== sebelum) no = i + 1; x.no = no; sebelum = x.jumlah; });
+    const tertinggi = baris[0].jumlah, rataKelas = baris.reduce((a, x) => a + x.jumlah, 0) / baris.length;
+    const nama = (x) => esc(x.nama) + (x.saya ? ' <em class="rk-saya">' + lab("Antum", "أنت") + "</em>" : "");
+    const podium = [baris[1], baris[0], baris[2]].filter(Boolean).map((x) =>
+      '<div class="rk-pod p' + x.no + (x.saya ? " saya" : "") + '"><span class="rk-mahkota">' + Icon(x.no === 1 ? "trophy" : "medal") + '</span><b class="rk-pn">' + n(x.no) + "</b>" +
+      '<div class="rk-pnama">' + nama(x) + "</div><div class=\"rk-pskor\"><b>" + n(x.jumlah) + "</b><small>" + n(x.persen) + "%</small></div><i class=\"rk-tiang\"></i></div>").join("");
+    const nmMk = (i) => (sem.mapel && sem.mapel[i]) ? one(sem.mapel[i]) : "MK " + n(i + 1);
+    const daftar = baris.map((x, i) =>
+      '<div class="rk-baris st' + (x.saya ? " saya" : "") + '" style="--i:' + i + '"><span class="rk-no n' + x.no + '">' + n(x.no) + "</span>" +
+      '<div class="rk-isi"><div class="rk-atas"><b>' + nama(x) + '</b><span class="rk-total">' + n(x.jumlah) + "<small>/" + n(maks) + "</small></span></div>" +
+      '<div class="bar"><i style="width:' + x.persen + '%"></i></div>' +
+      '<div class="rk-mk">' + x.nilai.map((v, k) => '<span title="' + esc(String(nmMk(k)).replace(/<[^>]+>/g, "")) + '"><small>' + nmMk(k) + "</small>" + n(v) + "</span>").join("") + "</div></div>" +
+      '<span class="rk-persen">' + n(x.persen) + "%</span></div>").join("");
+    view.innerHTML = '<div class="wrap">' +
+      '<div class="page-h">' + Icon("medal", "ph-ic") + "<div><h1>" + lab("Peringkat Kelas", "ترتيب الفصل") + '</h1><p class="muted">' + one(sem.judul) + " · " + lab(n(baris.length) + " mahasiswa · nilai ujian akhir", arNum(baris.length) + " طلاب") + "</p></div></div>" +
+      (daftarSem.length > 1 ? '<div class="rk-sem">' + daftarSem.map((s) => '<a class="' + (s === sem ? "on" : "") + '" href="#/peringkat/' + s.id + '">' + one(s.judul) + "</a>").join("") + "</div>" : "") +
+      '<div class="rk-podium">' + podium + "</div>" +
+      '<div class="stats rk-ringkas">' + stat("skor", Icon("trophy", "big"), n(tertinggi), lab("Jumlah tertinggi", "أعلى مجموع"), "#/peringkat") + stat("baca", Icon("target", "big"), n(Math.round(rataKelas)), lab("Rata-rata kelas", "متوسط الفصل"), "#/peringkat") + "</div>" +
+      '<div class="card rk-daftar">' + daftar + "</div>" +
+      '<p class="muted rk-ket">' + lab("Peringkat diurutkan dari jumlah nilai semua mata kuliah. Persentase = jumlah ÷ " + n(maks) + ".", "الترتيب حسب مجموع الدرجات") + "</p>" +
+      footer() + "</div>";
+  }
+
   function profil() {
     const pr = S().profil || {}, lv = Store.level(), st = Store.streak();
     const days = []; for (let i = 13; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); const k = U.todayKey(d); days.push({ d, v: S().hari[k] || {} }); }

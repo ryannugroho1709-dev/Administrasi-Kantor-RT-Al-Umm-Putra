@@ -14,7 +14,7 @@ const KUL_PROGRAM = {
   s1: { jenjang: "S1", kampus: "International Open University (IOU)", jurusan: "Psikologi Islam", arab: "علم النفس الإسلامي", semester: 8, aktif: "1 & 5",
         matkul: "ENES101 Bahasa Inggris · PPAB301 Psikologi Perilaku Adiktif · PMAD301 Model & Pendekatan Disabilitas", src: "kuliah-s1/?v=17", lokal: "fk-s1.v1", ikon: "📘" },
   s2: { jenjang: "S2", kampus: "Shofwa", jurusan: "Ulumul Qur'an", arab: "علوم القرآن", semester: 4, aktif: "1",
-        matkul: "Ushul Tafsir · Ulumul Qur'an · Nasikh Mansukh · Aqidah · Nahwu · Tajwid", src: "kuliah-s2/?v=12", lokal: "fk-uq.v1", ikon: "🌙" },
+        matkul: "Ushul Tafsir · Ulumul Qur'an · Nasikh Mansukh · Aqidah · Nahwu · Tajwid", src: "kuliah-s2/?v=13", lokal: "fk-uq.v1", ikon: "🌙" },
 };
 const KUL = { set: {}, lama: [], siap: false, galat: "", sinkron: "" };
 let KUL_AKSES = (() => { try { return JSON.parse(localStorage.getItem("kulAkses") || "null") || {}; } catch (e) { return {}; } })();
@@ -216,13 +216,14 @@ function renderAksesKuliahUI() {
   if (!root) return;
   if (!isAdmin()) { root.innerHTML = `<div style="font-size:11px;color:var(--text-secondary);">🔒 Khusus admin utama.</div>`; return; }
   const peta = KUL_AKSES.guru || {};
-  const guru = (LOOKUP.guruAll || []).filter((g) => g.status_aktif !== false).sort((a, b) => a.nama.localeCompare(b.nama));
+  // guru nonaktif tetap ditampilkan (di bawah) — mis. teman kuliah yang tidak ada di jadwal mengajar
+  const guru = (LOOKUP.guruAll || []).slice().sort((a, b) => (a.status_aktif === false) - (b.status_aktif === false) || a.nama.localeCompare(b.nama));
   root.innerHTML = `<input id="aku-cari" class="input" placeholder="Cari nama guru..." style="margin-bottom:8px;" oninput="qsa('.aku-baris').forEach(b=>b.hidden=!b.dataset.nama.includes(this.value.toLowerCase()))"/>
     <div style="max-height:320px;overflow-y:auto;border:1px solid var(--border-soft);border-radius:10px;">
     ${guru.map((g) => {
       const ryan = /^ryan nugroho/i.test(g.nama), punya = ryan ? ["s1", "s2"] : (peta[g.id] || []);
       return `<div class="aku-baris" data-nama="${escapeHtml(g.nama.toLowerCase())}" style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-bottom:1px solid var(--border-soft);font-size:12px;">
-        <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(g.nama)}${ryan ? ` <small style="color:var(--text-secondary);">(admin utama, selalu)</small>` : ""}</span>
+        <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(g.nama)}${g.status_aktif === false ? ` <small style="color:var(--text-secondary);">(nonaktif)</small>` : ""}${ryan ? ` <small style="color:var(--text-secondary);">(admin utama, selalu)</small>` : ""}</span>
         ${Object.keys(KUL_PROGRAM).map((p) => `<label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" class="aku-chk" data-guru="${g.id}" data-prog="${p}" ${punya.includes(p) ? "checked" : ""} ${ryan ? "disabled" : ""}/> ${KUL_PROGRAM[p].jenjang}</label>`).join("")}
       </div>`;
     }).join("")}

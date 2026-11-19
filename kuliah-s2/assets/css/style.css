@@ -1281,3 +1281,31 @@ body.focus .reader { grid-template-columns: 1fr !important; max-width: 860px; ma
 .judul-blk.tts-now { outline: 2px solid var(--c2); outline-offset: 6px; border-radius: 10px; }
 .tts-now { outline: 2px solid var(--c2); outline-offset: 6px; border-radius: 12px; background-color: color-mix(in srgb, var(--c2) 7%, transparent); transition: background-color .3s; }
 .tts-bar .tts-info { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+
+/* ---------- Peringkat kelas ---------- */
+.rk-sem{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}.rk-sem a{padding:6px 14px;border-radius:99px;border:1px solid var(--line2);color:var(--ink2);text-decoration:none;font-weight:700;font-size:.8em}.rk-sem a.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.rk-podium{display:grid;grid-template-columns:1fr 1.15fr 1fr;align-items:end;gap:10px;margin:8px 0 18px}
+.rk-pod{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;padding:14px 8px 0;border-radius:var(--r) var(--r) 0 0;background:linear-gradient(180deg,var(--sf),var(--sf2));box-shadow:var(--sh1);overflow:hidden}
+.rk-pod .rk-mahkota{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:#fff;background:var(--mut)}
+.rk-pod.p1 .rk-mahkota{background:linear-gradient(135deg,var(--c2),var(--c2d));width:48px;height:48px;box-shadow:0 0 0 6px var(--gold-bg)}
+.rk-pod.p2 .rk-mahkota{background:linear-gradient(135deg,#a9b4bd,#6f7b85)}.rk-pod.p3 .rk-mahkota{background:linear-gradient(135deg,#c98a5a,#8e5a35)}
+.rk-pod .rk-mahkota svg{width:22px;height:22px}
+.rk-pn{font-size:1.5em;line-height:1;margin:8px 0 2px;color:var(--acc)}.rk-pod.p1 .rk-pn{font-size:1.9em;color:var(--c2d)}
+.rk-pnama{font-weight:700;font-size:.82em;line-height:1.3;min-height:2.6em;padding:0 4px}
+.rk-pskor{margin:4px 0 8px}.rk-pskor b{display:block;font-size:1.15em}.rk-pskor small{color:var(--mut);font-weight:700}
+.rk-tiang{display:block;width:100%;height:18px;background:var(--acc-bg)}.rk-pod.p1 .rk-tiang{height:34px;background:var(--gold-bg)}.rk-pod.p2 .rk-tiang{height:24px}
+.rk-pod.saya{outline:2px solid var(--acc)}
+.rk-ringkas{margin-bottom:14px}
+.rk-daftar{padding:6px 14px}
+.rk-baris{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}.rk-baris:last-child{border-bottom:0}
+.rk-baris.saya{background:var(--acc-bg);margin:0 -14px;padding:12px 14px;border-radius:12px}
+.rk-no{flex:0 0 36px;height:36px;border-radius:12px;display:grid;place-items:center;font-weight:800;background:var(--sf3);color:var(--ink2)}
+.rk-no.n1{background:linear-gradient(135deg,var(--c2),var(--c2d));color:#fff}.rk-no.n2{background:linear-gradient(135deg,#a9b4bd,#6f7b85);color:#fff}.rk-no.n3{background:linear-gradient(135deg,#c98a5a,#8e5a35);color:#fff}
+.rk-isi{flex:1;min-width:0}.rk-atas{display:flex;justify-content:space-between;gap:8px;align-items:baseline}.rk-atas b{font-size:.92em}
+.rk-total{font-weight:800;white-space:nowrap}.rk-total small{color:var(--mut);font-weight:600;font-size:.75em}
+.rk-isi .bar{margin:6px 0}
+.rk-mk{display:flex;flex-wrap:wrap;gap:5px}.rk-mk span{display:inline-flex;align-items:baseline;gap:4px;font-size:.75em;font-weight:800;background:var(--sf2);border:1px solid var(--line);border-radius:8px;padding:2px 7px}.rk-mk small{font-weight:600;color:var(--mut);font-size:.9em}
+.rk-persen{flex:0 0 auto;font-weight:800;color:var(--acc);font-size:1.05em}
+.rk-saya{font-style:normal;font-size:.7em;background:var(--acc);color:#fff;border-radius:99px;padding:1px 8px;margin-left:4px;vertical-align:middle}
+.rk-ket{font-size:.78em;margin:10px 2px 18px}
+@media (max-width:520px){.rk-podium{gap:6px}.rk-pnama{font-size:.72em}.rk-persen{font-size:.9em}}

@@ -278,7 +278,10 @@ async function akIsiTabAkun() {
       <div style="display:flex;gap:8px;max-width:360px"><input id="ak-pin" type="password" inputmode="numeric" class="input" placeholder="PIN admin">
       <button class="btn btn-accent" onclick="akPakaiPin()">Lanjut</button></div>`;
   }
-  const r = await supaSemua.from("guru").select("id,nama,username,email,auth_user_id,no_wa,status_aktif").eq("status_aktif", true).order("nama");
+  const tambahan = typeof _rgIdTetapMasuk === "function" ? (await _rgIdTetapMasuk()).filter((x) => /^[0-9a-f-]{36}$/i.test(x)) : [];
+  let q0 = supaSemua.from("guru").select("id,nama,username,email,auth_user_id,no_wa,status_aktif").order("nama");
+  q0 = tambahan.length ? q0.or(`status_aktif.eq.true,id.in.(${tambahan.join(",")})`) : q0.eq("status_aktif", true);
+  const r = await q0;
   if (r.error) {
     if (/username|auth_user_id/.test(r.error.message)) return `<p class="rg-ket">Jalankan <b>SQL_PKBM_5_AKUN.sql</b> dulu di Supabase, lalu buka lagi tab ini.</p>`;
     throw r.error;
