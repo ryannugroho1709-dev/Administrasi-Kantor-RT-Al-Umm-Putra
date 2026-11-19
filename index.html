@@ -19,7 +19,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Amiri:wght@400;700&family=Playfair+Display:wght@600;700;800&display=swap&family=Anton&family=Great+Vibes" rel="stylesheet">
 <!-- Tema elegan + pilihan palet (menu ✨ di topbar). "klasik" = tampilan hijau lama. Dipasang
      sedini mungkin supaya tidak sempat "berkedip" tampilan lain dulu. Disimpan per perangkat. -->
-<link rel="stylesheet" href="src/tema-elegan.css?v=9">
+<link rel="stylesheet" href="src/tema-elegan.css?v=10">
 <link rel="stylesheet" href="src/kas.css?v=6">
 <link rel="stylesheet" href="src/hp.css?v=3">
 <link rel="stylesheet" href="src/kuliah.css?v=6">
@@ -31,6 +31,7 @@
 function _logoGagal(img){var d="assets/logo-pkbm-default.png";img.onerror=null;if(img.getAttribute("src")!==d){img.onerror=function(){_logoGagal(img);};img.src=d;}else if(img.parentElement){img.parentElement.textContent="🎓";}}
 function _logoAwal(){try{return localStorage.getItem("logoSekolahUrl")||"assets/logo-pkbm-default.png";}catch(e){return "assets/logo-pkbm-default.png";}}
 </script>
+<script>/* tautan Lupa Sandi dari email: simpan dulu, jangan sampai dibaca klien data */try{if(/type=recovery|error_code=/.test(location.hash)){sessionStorage.setItem("pulihSandi",location.hash.slice(1));history.replaceState(null,"",location.pathname+location.search);}}catch(e){}</script>
 <script>try{var _rg=localStorage.getItem("ruangAktif")||"Pa";var _pw=localStorage.getItem(_rg==="Pa"?"paletWarna":"paletWarna:"+_rg)||{A:"hijau",Pa:"biru",Pi:"pink",Pg:"kuning"}[_rg]||"biru";if(_pw!=="klasik"){document.documentElement.classList.add("tema-elegan");document.documentElement.setAttribute("data-palet",_pw);}var _tc=document.querySelector('meta[name="theme-color"]');if(_tc)_tc.setAttribute("content",{klasik:"#1F8A5F",hijau:"#0b4a3c",biru:"#0b2a6b",maroon:"#5c1222",ungu:"#3b2566",pink:"#8f1f55",kuning:"#8a4b06"}[_pw]||"#0b2a6b");}catch(e){}</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2"></script>
 <script src="src/config.js?v=5"></script>
@@ -16162,6 +16163,7 @@ async function handleImportSiswa(evt) {
 <script src="src/nilai-tempel.js?v=3"></script>
 <script src="src/dapodik.js?v=2"></script>
 <script src="src/modul-urut.js?v=1"></script>
-<script src="src/ruang.js?v=5"></script>
+<script src="src/ruang.js?v=6"></script>
+<script src="src/akun.js?v=1"></script>
 </body>
 </html>

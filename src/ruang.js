@@ -268,12 +268,33 @@ const _rgBahasaAsli = applyLanguage;
 applyLanguage = function (...a) { const h = _rgBahasaAsli(...a); _rgNamaRuang(); return h; };
 
 // ── 7. Menu samping per ruang ──
+// Ikon garis (tanpa bentuk tanda tambah/silang) untuk ruang Pengelola & menu bawah
+const RG_IKON = {
+  "pg-beranda": '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/>',
+  "pg-pd": '<path d="M2 9.5 12 4.5l10 5-10 5z"/><path d="M6 11.5v4.8c3.4 2.4 8.6 2.4 12 0v-4.8"/>',
+  "pg-ptk": '<circle cx="9" cy="8" r="3.4"/><path d="M2.8 20c.8-3.5 3.3-5.4 6.2-5.4s5.4 1.9 6.2 5.4"/><path d="M15.5 4.8a3.4 3.4 0 0 1 0 6.4M17.6 14.9c1.8.8 3 2.4 3.4 5.1"/>',
+  "pg-bosp": '<path d="M3 20.5h18"/><rect x="5" y="11" width="3" height="7" rx="1"/><rect x="10.5" y="5" width="3" height="13" rx="1"/><rect x="16" y="13.5" width="3" height="4.5" rx="1"/>',
+  "pg-real": '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h4"/>',
+  "pg-surat": '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/>',
+  "pg-sarpras": '<rect x="3" y="4" width="18" height="5" rx="1.2"/><path d="M5 9v11h14V9"/><path d="M10 13h4"/>',
+  "pg-tka": '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M5.8 16.2c.6-1.6 1.8-2.4 3.2-2.4s2.6.8 3.2 2.4"/><path d="M15 10h3.5M15 13.5h3.5"/>',
+  "pg-ijazah": '<path d="M5 3h11l3 3v9"/><path d="M5 3v14h7"/><path d="M8 8h7M8 11.5h5"/><circle cx="16.5" cy="17" r="2.8"/><path d="m15 19.4-.6 2.6 2.1-1 2.1 1-.6-2.6"/>',
+  "pg-kegiatan": '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M7.5 14.5h3"/>',
+  "pg-rapat": '<path d="M4 5h16v10H10l-4.5 4V15H4z"/><path d="M8 9h8M8 11.8h5"/>',
+  "pg-akreditasi": '<circle cx="12" cy="9" r="5.5"/><path d="m9 13.8-1.2 7.2 4.2-2 4.2 2-1.2-7.2"/>',
+  "pg-total": '<path d="M12 3 21 8l-9 5-9-5z"/><path d="m3 12.5 9 5 9-5"/><path d="m3 16.5 9 5 9-5"/>',
+  "rg-santri": '<path d="M4 19.5V5a2 2 0 0 1 2-2h12v14H6a2 2 0 0 0-2 2.5z"/><path d="M6 17h12v4H6a2 2 0 0 1 0-4z"/><path d="M9 7h6"/>',
+  "rg-atur": '<path d="M4 6h10M18 6h2M4 12h3M11 12h9M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
+  "rg-balik": '<path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>',
+  "rg-akun": '<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.4"/>',
+};
+const rgSvg = (k, kelas = "ikon-garis") => `<svg class="${kelas}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${RG_IKON[k] || ""}</svg>`;
 const RG_MENU_PENGELOLA = [
-  { group: "Pengelola", items: [["pg-beranda", "🏠", "Beranda Pengelola"]] },
-  { group: "Data", items: [["pg-pd", "🎓", "Peserta Didik"], ["pg-ptk", "👥", "Guru & PTK"]] },
-  { group: "Keuangan", items: [["pg-bosp", "📊", "Rancangan BOSP (ARKAS)"], ["pg-real", "🧾", "Realisasi BOSP"]] },
-  { group: "Administrasi", items: [["pg-surat", "✉️", "Surat Menyurat"], ["pg-sarpras", "🪑", "Sarpras"], ["pg-tka", "🪪", "TKA"], ["pg-ijazah", "📜", "Ijazah"]] },
-  { group: "Pengelolaan", items: [["pg-kegiatan", "📅", "Kegiatan Pengelola"], ["pg-rapat", "🗣️", "Rapat & Notulen"], ["pg-akreditasi", "🏅", "Akreditasi & Program"]] },
+  { group: "Pengelola", items: [["pg-beranda", "", "Beranda Pengelola"]] },
+  { group: "Data", items: [["pg-pd", "", "Peserta Didik"], ["pg-ptk", "", "Guru & PTK"]] },
+  { group: "Keuangan", items: [["pg-bosp", "", "Rancangan BOSP (ARKAS)"], ["pg-real", "", "Realisasi BOSP"]] },
+  { group: "Administrasi", items: [["pg-surat", "", "Surat Menyurat"], ["pg-sarpras", "", "Sarpras"], ["pg-tka", "", "TKA"], ["pg-ijazah", "", "Ijazah"]] },
+  { group: "Pengelolaan", items: [["pg-kegiatan", "", "Kegiatan Pengelola"], ["pg-rapat", "", "Rapat & Notulen"], ["pg-akreditasi", "", "Akreditasi & Program"]] },
 ];
 const _rgSidebarAsli = renderSidebar;
 renderSidebar = function () {
@@ -289,7 +310,7 @@ renderSidebar = function () {
   if (STATE.ruang === "Pg") {
     RG_MENU_PENGELOLA.forEach((g) => {
       tambahLabel(g.group);
-      g.items.forEach(([key, ikon, nama]) => tambahItem(key, `<span class="nav-ikon-emoji">${ikon}</span><span>${nama}</span>${key === "pg-beranda" ? "" : '<span class="nav-badge">Segera</span>'}`, () => rgBukaPengelola(key)));
+      g.items.forEach(([key, ikon, nama]) => tambahItem(key, `${rgSvg(key)}<span>${nama}</span>${key === "pg-beranda" ? "" : '<span class="nav-badge">Segera</span>'}`, () => rgBukaPengelola(key)));
     });
   } else {
     const r = rgRuang(), fitur = r.fitur ? new Set(r.fitur) : null;
@@ -313,9 +334,9 @@ renderSidebar = function () {
   }
   // bagian bawah: pengaturan ruang (admin), halaman santri, kembali ke pilihan ruang
   tambahLabel(STATE.ruang === "Pg" ? "Lainnya" : "Santri & Ruang");
-  if (rgRuang().jenjang) tambahItem("rg-santri", `<span class="nav-ikon-emoji">🎒</span><span>Halaman Ujian Santri</span>`, () => window.open(_rgAlamatSantri(STATE.ruang), "_blank", "noopener"));
-  if (rgBisaPengaturan()) tambahItem("rg-atur", `<span class="nav-ikon-emoji">🏫</span><span>Pengaturan Ruang</span>`, () => rgBukaPengaturan());
-  if (RG.daftar.filter((x) => rgAkses(x.id) !== "-").length > 1) tambahItem("rg-balik", `<span class="nav-ikon-emoji">↩️</span><span>Kembali Ke Pilihan Ruang</span>`, () => rgTampilPilih(), "rg-balik");
+  if (rgRuang().jenjang) tambahItem("rg-santri", `${rgSvg("rg-santri")}<span>Halaman Ujian Santri</span>`, () => window.open(_rgAlamatSantri(STATE.ruang), "_blank", "noopener"));
+  if (rgBisaPengaturan()) tambahItem("rg-atur", `${rgSvg("rg-atur")}<span>Pengaturan Ruang</span>`, () => rgBukaPengaturan());
+  if (RG.daftar.filter((x) => rgAkses(x.id) !== "-").length > 1) tambahItem("rg-balik", `${rgSvg("rg-balik")}<span>Kembali Ke Pilihan Ruang</span>`, () => rgTampilPilih(), "rg-balik");
   renderBottomNav();
 };
 const _rgAlamatSantri = (id) => location.origin + location.pathname.replace(/[^/]*$/, "") + "santri.html?ruang=" + id;
@@ -354,8 +375,8 @@ function rgKhususPengisi(key) {
 // ── 8. Ruang Pengelola (Tahap 1: rangkuman; modul lain menyusul) ──
 async function rgBukaPengelola(key = "pg-beranda") {
   if (key !== "pg-beranda") {
-    const nama = RG_MENU_PENGELOLA.flatMap((g) => g.items).find((x) => x[0] === key) || [key, "🧩", key];
-    _rgBukaHal(key, nama[2], `<div class="card rg-terkunci-kartu"><div class="rg-gembok">${nama[1]}</div><h3>${nama[2]}</h3><p>Sedang dibangun. Untuk BOSP, rinciannya menunggu juknis & kode rekening ARKAS.</p></div>`);
+    const nama = RG_MENU_PENGELOLA.flatMap((g) => g.items).find((x) => x[0] === key) || [key, "", key];
+    _rgBukaHal(key, nama[2], `<div class="card rg-terkunci-kartu"><div class="rg-gembok rg-gembok-svg">${rgSvg(key, "")}</div><h3>${nama[2]}</h3><p>Sedang dibangun. Untuk BOSP, rinciannya menunggu juknis & kode rekening ARKAS.</p></div>`);
     return;
   }
   const sec = _rgBukaHal(key, "Beranda Pengelola", `<div class="card"><div class="rg-memuat">Memuat rangkuman 3 jenjang…</div></div>`);
@@ -372,12 +393,12 @@ async function rgBukaPengelola(key = "pg-beranda") {
     const belum = (g.data || []).filter((x) => !rgRuangUtama(x)).length;
     const jenjang = RG.daftar.filter((r) => r.jenjang);
     sec.innerHTML = `<div class="rg-hero"><b>Ruang Pengelola PKBM</b><span>Rangkuman seluruh jenjang · ${escapeHtml(_namaSingkatTopbar(STATE.guruNama))}</span></div>
-      <div class="rg-grid">${jenjang.map((r) => `<div class="card rg-angka" style="--rw:${r.warna}"><span>${r.ikon} ${escapeHtml(r.nama)}</span>
+      <div class="rg-grid">${jenjang.map((r) => `<div class="card rg-angka" style="--rw:${r.warna}"><span class="rg-judul-angka"><i class="rg-ikon-bulat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${(RG_INFO[r.id] || {}).svg || ""}</svg></i>${escapeHtml(r.nama)}</span>
         <b>${S[r.id] || 0}</b><small>peserta didik aktif · ${K[r.id] || 0} kelas</small>
-        <div class="rg-tutor"><b>${G[r.id] || 0}</b> tutor${Gjuga[r.id] ? ` <em>+${Gjuga[r.id]} juga mengajar di sini</em>` : ""}</div></div>`).join("")}
-        <div class="card rg-angka" style="--rw:#b45309"><span>🎓 Jumlah Seluruhnya</span><b>${jenjang.reduce((a, r) => a + (S[r.id] || 0), 0)}</b><small>peserta didik aktif PKBM</small>
+        <div class="rg-tutor"><b>${G[r.id] || 0}</b> tutor${Gjuga[r.id] ? ` <em>· ${Gjuga[r.id]} guru jenjang lain juga mengajar di sini</em>` : ""}</div></div>`).join("")}
+        <div class="card rg-angka" style="--rw:#b45309"><span class="rg-judul-angka"><i class="rg-ikon-bulat">${rgSvg("pg-total", "")}</i>Jumlah Seluruhnya</span><b>${jenjang.reduce((a, r) => a + (S[r.id] || 0), 0)}</b><small>peserta didik aktif PKBM</small>
           <div class="rg-tutor"><b>${jenjang.reduce((a, r) => a + (G[r.id] || 0), 0)}</b> tutor${belum ? ` <em>· ${belum} guru belum ditentukan ruang utamanya</em>` : ""}</div></div></div>
-      <div class="card"><h3 style="margin-top:0">🧩 Modul Pengelola</h3><div class="rg-modul">${RG_MENU_PENGELOLA.slice(1).flatMap((g) => g.items).map(([, i, n]) => `<span>${i} ${n}</span>`).join("")}</div>
+      <div class="card"><h3 style="margin-top:0">Modul Pengelola</h3><div class="rg-modul">${RG_MENU_PENGELOLA.slice(1).flatMap((g) => g.items).map(([k, , n]) => `<span>${rgSvg(k, "")}${n}</span>`).join("")}</div>
       <p class="rg-ket">Modul di atas dibangun bertahap. Rancangan BOSP menunggu juknis dan kode rekening ARKAS.</p></div>`;
   } catch (e) { sec.innerHTML = `<div class="card">Gagal memuat rangkuman: ${escapeHtml(e.message)}</div>`; }
 }
@@ -395,7 +416,7 @@ async function rgBukaPengaturan(tab) {
   if (!rgBisaPengaturan()) { toast("Hanya Admin yang bisa mengakses ini", "err"); return; }
   if (tab) RG_ATUR.tab = tab;
   const sec = _rgBukaHal("rg-atur", "Pengaturan Ruang", `<div class="card"><div class="rg-memuat">Memuat…</div></div>`);
-  const tabs = [["fitur", "🧩 Fitur Per Ruang"], ["anggota", "👥 Guru Per Ruang"], ["santri", "🎒 Halaman Santri"], ["log", "📜 Catatan Aktivitas"]];
+  const tabs = [["fitur", "🧩 Fitur Per Ruang"], ["anggota", "👥 Guru Per Ruang"], ["santri", "🎒 Halaman Santri"], ["akun", "🔐 Akun Guru"], ["log", "📜 Catatan Aktivitas"]];
   const kepala = `<div class="rg-tab">${tabs.map(([k, n]) => `<button class="${RG_ATUR.tab === k ? "aktif" : ""}" onclick="rgBukaPengaturan('${k}')">${n}</button>`).join("")}</div>`;
   try {
     let isi = "";
@@ -423,6 +444,8 @@ async function rgBukaPengaturan(tab) {
         ${RG.daftar.filter((r) => r.jenjang).map((r) => `<div class="rg-alamat" style="--rw:${r.warna}"><b>${r.ikon} ${escapeHtml(r.nama)}</b><code>${escapeHtml(_rgAlamatSantri(r.id))}</code>
           <span><button class="btn btn-sm" onclick="navigator.clipboard.writeText('${_rgAlamatSantri(r.id)}').then(()=>toast('Alamat disalin','ok'))">📋 Salin</button>
           <button class="btn btn-sm btn-outline" onclick="window.open('${_rgAlamatSantri(r.id)}','_blank','noopener')">↗ Buka</button></span></div>`).join("")}`;
+    } else if (RG_ATUR.tab === "akun") {
+      isi = typeof akIsiTabAkun === "function" ? await akIsiTabAkun() : "<p>Fitur akun belum dimuat.</p>";
     } else {
       const r = await supaSemua.from("log_aktivitas").select("waktu,ruang_id,nama,aksi,rincian").order("waktu", { ascending: false }).limit(80);
       if (r.error) throw r.error;
