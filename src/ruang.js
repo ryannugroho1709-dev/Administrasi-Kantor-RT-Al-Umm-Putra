@@ -172,6 +172,9 @@ const RG_INFO = {
   Pg: { label: "Kantor", guru: "Kantor Pengelola PKBM", setara: "Pengelola · Seluruh Jenjang", ket: "Data peserta didik & PTK, BOSP/ARKAS, surat, sarpras, TKA, ijazah, dan akreditasi.",
     svg: '<path d="M3 21h18"/><path d="M5 21V8l7-5 7 5v13"/><path d="M9 21v-5h6v5"/><path d="M9 11h.01M15 11h.01"/>' },
 };
+// Ikon garis ruang (sama dengan kartu layar pilih ruang) dan nama pendeknya
+function rgIkonRuang(id) { return `<svg class="rg-ikon-ruang" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${(RG_INFO[id] || {}).svg || ""}</svg>`; }
+function rgNamaPendek(id) { return { A: "Paket A", Pa: "Putra", Pi: "Putri", Pg: "Pengelola" }[id] || rgRuang(id).nama; }
 function rgTampilPilih() {
   qs("rg-pilih")?.remove();
   _rgSuaraSiapkan();
@@ -204,9 +207,18 @@ function rgTampilPilih() {
 }
 // Efek suara pintu dibuka saat masuk ruang
 let _rgSuara = null;
+// Suara disimpan sebagai data di src/suara-masuk.js (dimuat saat layar pilih ruang tampil) —
+// bukan berkas .ogg, supaya tidak ditangkap pengelola unduhan seperti IDM.
 function _rgSuaraSiapkan() {
   if (_rgSuara) return;
-  try { _rgSuara = new Audio("assets/suara/masuk-ruang.ogg"); _rgSuara.preload = "auto"; _rgSuara.volume = 0.8; } catch (e) { _rgSuara = null; }
+  if (!window.RG_SUARA_MASUK) {
+    if (!document.getElementById("rg-suara-js")) {
+      const s = document.createElement("script"); s.id = "rg-suara-js"; s.src = "src/suara-masuk.js?v=1";
+      s.onload = () => _rgSuaraSiapkan(); document.head.appendChild(s);
+    }
+    return;
+  }
+  try { _rgSuara = new Audio(window.RG_SUARA_MASUK); _rgSuara.preload = "auto"; _rgSuara.volume = 0.8; } catch (e) { _rgSuara = null; }
 }
 async function rgMasuk(id, tombol) {
   const pilih = qs("rg-pilih");
@@ -437,12 +449,11 @@ async function rgBukaPengaturan(tab) {
     let isi = "";
     if (RG_ATUR.tab === "fitur") {
       const atur = RG.daftar.filter((r) => r.jenjang && r.id !== "Pa");
-      isi = `<p class="rg-ket">Paket B & C Putra selalu lengkap. Nyalakan fitur yang dipakai ruang lain — perubahan berlaku saat guru membuka aplikasi berikutnya.</p>
-        <div class="table-wrap"><table class="table"><thead><tr><th>Fitur</th>${atur.map((r) => `<th style="text-align:center">${r.ikon} ${escapeHtml(r.nama)}</th>`).join("")}</tr></thead><tbody>
-        ${MENU.filter((g) => !g.kuliahOnly).map((g) => `<tr><td colspan="${atur.length + 1}" class="rg-grup">${g.group}</td></tr>` + g.items.map((it) => `<tr><td>${it.icon} ${escapeHtml(t(it.i18n))}</td>${atur.map((r) => {
-          const on = !r.fitur || r.fitur.includes(it.key);
-          return `<td style="text-align:center"><button class="rg-saklar ${on ? "on" : ""}" onclick="rgUbahFitur('${r.id}','${it.key}')" aria-label="Nyalakan/matikan"></button></td>`;
-        }).join("")}</tr>`).join("")).join("")}</tbody></table></div>`;
+      const kepalaKol = atur.map((r) => `<span class="rg-ft-kol" style="--rw:${r.warna}">${rgIkonRuang(r.id)}${escapeHtml(rgNamaPendek(r.id))}</span>`).join("");
+      isi = `<p class="rg-ket">Paket B & C Putra selalu lengkap. Ketuk sakelar untuk menyalakan/mematikan menu di ruang lain — berlaku saat guru membuka aplikasi berikutnya. Data tiap ruang tetap terpisah.</p>
+        <div class="rg-ft-grid">${MENU.filter((grp) => !grp.kuliahOnly).map((grp) => `<div class="rg-ft-kartu"><div class="rg-ft-h"><b>${escapeHtml(grp.group)}</b><span class="rg-ft-kols">${kepalaKol}</span></div>
+          ${grp.items.map((it) => `<div class="rg-ft-baris"><span class="rg-ft-ikon">${typeof svgIkon === "function" && IKON_GARIS[it.key] ? svgIkon(it.key) : `<span>${it.icon}</span>`}</span><span class="rg-ft-nama">${escapeHtml(t(it.i18n))}</span>
+            <span class="rg-ft-kols">${atur.map((r) => { const on = !r.fitur || r.fitur.includes(it.key); return `<button class="rg-ft-sakelar ${on ? "on" : ""}" style="--rw:${r.warna}" onclick="rgUbahFitur('${r.id}','${it.key}')" aria-label="${escapeHtml(rgNamaPendek(r.id))}: ${on ? "matikan" : "nyalakan"}"><i></i></button>`; }).join("")}</span></div>`).join("")}</div>`).join("")}</div>`;
     } else if (RG_ATUR.tab === "anggota") {
       const r = await supaSemua.from("guru").select("*").eq("status_aktif", true).order("nama");
       if (r.error) throw r.error;
@@ -456,7 +467,7 @@ async function rgBukaPengaturan(tab) {
         <div class="rg-nonaktif">${nonaktif.map((g) => `<label class="rg-cek"><input type="checkbox" ${RG_MASUK.ids.includes(g.id) ? "checked" : ""} onchange="rgUbahTetapMasuk('${g.id}',this.checked)"> ${escapeHtml(g.nama)}</label>`).join("") || "<small>Tidak ada guru nonaktif.</small>"}</div>`;
     } else if (RG_ATUR.tab === "santri") {
       isi = `<p class="rg-ket">Setiap jenjang punya halaman ujian santri sendiri (tanpa akun guru). Bagikan alamat ini ke santri.</p>
-        ${RG.daftar.filter((r) => r.jenjang).map((r) => `<div class="rg-alamat" style="--rw:${r.warna}"><b>${r.ikon} ${escapeHtml(r.nama)}</b><code>${escapeHtml(_rgAlamatSantri(r.id))}</code>
+        ${RG.daftar.filter((r) => r.jenjang).map((r) => `<div class="rg-alamat" style="--rw:${r.warna}"><b class="rg-judul-ruang"><i class="rg-ikon-bulat">${rgIkonRuang(r.id)}</i>${escapeHtml(r.nama)}</b><code>${escapeHtml(_rgAlamatSantri(r.id))}</code>
           <span><button class="btn btn-sm" onclick="navigator.clipboard.writeText('${_rgAlamatSantri(r.id)}').then(()=>toast('Alamat disalin','ok'))">📋 Salin</button>
           <button class="btn btn-sm btn-outline" onclick="window.open('${_rgAlamatSantri(r.id)}','_blank','noopener')">↗ Buka</button></span></div>`).join("")}`;
     } else if (RG_ATUR.tab === "akun") {
@@ -579,4 +590,38 @@ const _rgTAsli = t;
 t = function (k, ...a) {
   if (STATE.ruang === "A" && k === "jpPaketB") return "JP Paket A";
   return _rgTAsli(k, ...a);
+};
+
+
+// ── 13. Pengaturan per jenjang = bagian ABSEN saja; pengaturan utama (kop, logo, nama lembaga, tahun ajaran,
+//        penilaian, dsb.) tetap dari Paket B & C Putra ──
+const RG_KOLOM_ABSEN = ["lokasi_lat", "lokasi_lng", "radius_meter", "blokir_hari_minggu", "toleransi_masuk_menit", "batas_pulang_menit", "minggu_ganjil_genap_acuan"];
+const rgPengaturanIkutPutra = () => STATE.ruang === "A" || STATE.ruang === "Pi";
+const _rgPengAmbilAsli = apiGetPengaturanSekolah;
+apiGetPengaturanSekolah = async function () {
+  const sendiri = await _rgPengAmbilAsli();
+  if (!rgPengaturanIkutPutra()) return sendiri;
+  try {
+    const r = await supaSemua.from("pengaturan_sekolah").select(KOLOM_PENGATURAN_SEKOLAH_PUBLIK).eq("ruang_id", "Pa").eq("id", 1).limit(1);
+    const pa = r.data && r.data[0];
+    if (!pa) return sendiri;
+    const hasil = { ...pa };
+    RG_KOLOM_ABSEN.forEach((k) => { if (sendiri && sendiri[k] !== undefined && sendiri[k] !== null) hasil[k] = sendiri[k]; });
+    return hasil;
+  } catch (e) { return sendiri; }
+};
+const _rgPengSimpanAsli = apiSimpanPengaturanSekolah;
+apiSimpanPengaturanSekolah = async function (data) {
+  if (!rgPengaturanIkutPutra()) return _rgPengSimpanAsli(data);
+  const isi = {};
+  RG_KOLOM_ABSEN.forEach((k) => { if (data && k in data) isi[k] = data[k]; });
+  await _rgPengSimpanAsli(isi);
+  return apiGetPengaturanSekolah();
+};
+const _rgTabPengAsli = pilihTabPengaturan;
+pilihTabPengaturan = function (kode) {
+  if (!rgPengaturanIkutPutra()) return _rgTabPengAsli(kode);
+  _rgTabPengAsli("absensi");
+  qsa("#pg-tab-bar button").forEach((b) => { b.hidden = b.dataset.tab !== "absensi"; });
+  if (!qs("rg-peng-ket")) qs("pg-tab-bar")?.insertAdjacentHTML("afterend", `<div id="rg-peng-ket" class="rg-ket" style="margin:0 0 10px">Di ${escapeHtml(rgRuang().nama)}, pengaturan yang terpisah hanya bagian <b>Absensi</b> (lokasi, radius, jam masuk/pulang, hari libur). Pengaturan lain mengikuti Paket B & C Putra.</div>`);
 };

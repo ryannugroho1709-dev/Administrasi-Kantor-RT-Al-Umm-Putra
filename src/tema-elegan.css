@@ -459,3 +459,23 @@ html.tema-elegan .splash-dots span{background:#d4a64a;}
 .rg-pil-k{border:0;border-left:1px solid color-mix(in srgb,var(--rw) 25%,transparent);background:none;padding:6px 10px;font:inherit;font-size:11px;font-weight:700;color:color-mix(in srgb,var(--rw) 55%,#9ca3af);cursor:pointer}
 .rg-pil-k.aktif{background:var(--rw);color:#fff}
 @media (max-width:640px){.rg-ang-baris{flex-direction:column;align-items:stretch;gap:8px}.rg-ang-nama{flex-basis:auto}}
+
+/* Ikon ruang seragam */
+.rg-ikon-ruang{width:16px;height:16px;flex:0 0 16px}
+.rg-judul-ruang{display:flex;align-items:center;gap:8px}.rg-judul-ruang .rg-ikon-ruang{width:18px;height:18px}
+/* Pengaturan Ruang → Fitur Per Ruang */
+.rg-ft-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.rg-ft-kartu{border:1px solid var(--border-soft);border-radius:14px;overflow:hidden;background:var(--card,#fff)}
+.rg-ft-h{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;background:color-mix(in srgb,var(--accent) 6%,transparent);border-bottom:1px solid var(--border-soft)}
+.rg-ft-h b{font-size:13px;letter-spacing:.02em}
+.rg-ft-kols{display:flex;gap:8px;flex:0 0 auto}
+.rg-ft-kol{width:74px;display:inline-flex;align-items:center;justify-content:center;gap:4px;font-size:11px;font-weight:800;color:var(--rw)}
+.rg-ft-baris{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--border-soft)}
+.rg-ft-baris:last-child{border-bottom:0}
+.rg-ft-ikon{width:20px;display:inline-flex;justify-content:center;color:var(--accent)}.rg-ft-ikon svg{width:18px;height:18px}
+.rg-ft-nama{flex:1;min-width:0;font-size:13px}
+.rg-ft-sakelar{width:74px;display:inline-flex;justify-content:center;background:none;border:0;padding:0;cursor:pointer}
+.rg-ft-sakelar i{position:relative;width:38px;height:22px;border-radius:99px;background:#d6dbe1;transition:background .2s}
+.rg-ft-sakelar i::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
+.rg-ft-sakelar.on i{background:var(--rw)}.rg-ft-sakelar.on i::after{transform:translateX(16px)}
+@media (max-width:480px){.rg-ft-grid{grid-template-columns:1fr}.rg-ft-kol,.rg-ft-sakelar{width:58px}}
