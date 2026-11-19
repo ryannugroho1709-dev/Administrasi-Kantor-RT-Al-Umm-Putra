@@ -116,16 +116,72 @@ async function akKirimLupa() {
 }
 
 // ── Tautan dari email "Lupa Sandi" → buat sandi baru ──
+// Tautan bisa berbentuk #access_token=…&type=recovery, ?code=… atau ?token_hash=…&type=recovery.
+// Halaman "Buat Sandi Baru" tampil penuh di atas segalanya (tidak didahului PIN admin); setelah disimpan
+// pengguna langsung masuk dengan sandi barunya.
 async function akCekPulih() {
-  let hash = null;
-  try { hash = sessionStorage.getItem("pulihSandi"); sessionStorage.removeItem("pulihSandi"); } catch (e) {}
-  if (!hash) return false;
-  const p = new URLSearchParams(hash);
-  if (p.get("error")) { setTimeout(() => toast("Tautan atur ulang sandi sudah kedaluwarsa. Minta tautan baru.", "err"), 800); return false; }
-  const { error } = await AK.klien.auth.setSession({ access_token: p.get("access_token") || "", refresh_token: p.get("refresh_token") || "" });
-  if (error) { setTimeout(() => toast("Tautan tidak berlaku: " + error.message, "err"), 800); return false; }
-  setTimeout(() => akFormSandi(true), 600);
+  let isi = null;
+  try { isi = sessionStorage.getItem("pulihSandi"); sessionStorage.removeItem("pulihSandi"); } catch (e) {}
+  if (!isi) return false;
+  AK.pulih = true;
+  akTampilSandiBaru("memuat");
+  const p = new URLSearchParams(isi.replace(/^[#?]/, "").replace(/#/g, "&"));
+  try {
+    if (p.get("error") || p.get("error_code")) throw new Error("kedaluwarsa");
+    let r;
+    if (p.get("access_token")) r = await AK.klien.auth.setSession({ access_token: p.get("access_token"), refresh_token: p.get("refresh_token") || "" });
+    else if (p.get("code")) r = await AK.klien.auth.exchangeCodeForSession(p.get("code"));
+    else if (p.get("token_hash")) r = await AK.klien.auth.verifyOtp({ token_hash: p.get("token_hash"), type: "recovery" });
+    else throw new Error("kedaluwarsa");
+    if (r.error) throw r.error;
+    const u = (await AK.klien.auth.getUser()).data.user;
+    AK.emailPulih = u && u.email;
+    akTampilSandiBaru("isi");
+  } catch (e) {
+    akTampilSandiBaru("gagal", /kedaluwarsa|expired|invalid/i.test(e.message || "") ? "Tautan sudah kedaluwarsa atau sudah pernah dipakai. Minta tautan baru lewat Lupa Sandi." : "Tautan tidak berlaku: " + (e.message || e));
+  }
   return true;
+}
+function akTampilSandiBaru(tahap, pesan) {
+  qs("ak-masuk")?.remove();
+  const el = document.createElement("div");
+  el.id = "ak-masuk"; el.className = "ak-pulih";
+  const kepala = `<div class="ak-kepala"><div class="ak-logo">${htmlLogoSekolah(56)}</div><small>PKBM AL-UMM BARABAI</small>`;
+  if (tahap === "memuat") el.innerHTML = `<div class="ak-cahaya"></div><div class="ak-panel">${kepala}<b>Memeriksa Tautan…</b><span>Sebentar, tautan dari email sedang diperiksa.</span></div></div>`;
+  else if (tahap === "gagal") el.innerHTML = `<div class="ak-cahaya"></div><div class="ak-panel">${kepala}<b>Tautan Tidak Berlaku</b><span>${escapeHtml(pesan || "")}</span></div>
+    <button class="ak-tombol" onclick="AK.pulih=false;akTampilMasuk('lupa')">Minta Tautan Baru</button><button class="ak-tautan" onclick="AK.pulih=false;akTampilMasuk()">Ke Halaman Masuk</button></div>`;
+  else el.innerHTML = `<div class="ak-cahaya"></div><div class="ak-panel">${kepala}<b>Buat Sandi Baru</b><span>${AK.emailPulih ? `Untuk akun <b>${escapeHtml(AK.emailPulih)}</b>. ` : ""}Minimal 8 karakter, huruf besar/kecil dibedakan.</span></div>
+    <label class="ak-isian"><span>Sandi Baru</span><span class="ak-sandi"><input id="ak-baru1" type="password" autocomplete="new-password" placeholder="Sandi baru"><button type="button" class="ak-lihat" onclick="akLihatSandi(this)">Lihat</button></span></label>
+    <label class="ak-isian"><span>Ulangi Sandi Baru</span><span class="ak-sandi"><input id="ak-baru2" type="password" autocomplete="new-password" placeholder="Ketik sekali lagi"><button type="button" class="ak-lihat" onclick="akLihatSandi(this)">Lihat</button></span></label>
+    <div id="ak-pesan" class="ak-pesan"></div>
+    <button class="ak-tombol" id="ak-baru-btn" onclick="akSimpanSandiBaru()">Simpan & Masuk</button></div>`;
+  document.body.appendChild(el);
+  el.querySelectorAll("input").forEach((i) => i.addEventListener("keydown", (e) => { if (e.key === "Enter") akSimpanSandiBaru(); }));
+  setTimeout(() => el.querySelector("input")?.focus(), 60);
+}
+async function akSimpanSandiBaru() {
+  const a = qs("ak-baru1").value, b = qs("ak-baru2").value;
+  if (a.length < 8) return _akPesan("Sandi minimal 8 karakter");
+  if (a !== b) return _akPesan("Kedua sandi belum sama");
+  const t = qs("ak-baru-btn"); t.disabled = true; t.textContent = "Menyimpan…"; _akPesan("");
+  const { error } = await AK.klien.auth.updateUser({ password: a });
+  if (error) { t.disabled = false; t.textContent = "Simpan & Masuk"; return _akPesan(/same|different/i.test(error.message) ? "Sandi baru tidak boleh sama dengan sandi lama" : "Gagal: " + error.message); }
+  // langsung masuk dengan sandi baru (perangkat ini ikut terdaftar)
+  try {
+    await AK.klien.auth.signOut({ scope: "local" });
+    const r = await akPanggil("masuk", { login: AK.emailPulih, sandi: a, perangkat: akPerangkat() });
+    const s = await AK.klien.auth.setSession(r.sesi); if (s.error) throw s.error;
+    _akSimpanGuru(r.guru); _akLS.set("akunCek", String(Date.now()));
+    AK.pulih = false;
+    qs("ak-masuk")?.remove(); closeModal();
+    _akMasukkanGuru(r.guru);
+    toast("Sandi baru tersimpan. Antum sudah masuk.", "ok");
+  } catch (e) {
+    AK.pulih = false;
+    akTampilMasuk();
+    _akPesan("Sandi baru tersimpan. Silakan masuk dengan email dan sandi baru." + (e.message ? " (" + e.message + ")" : ""), "ok");
+    const i = qs("ak-login"); if (i && AK.emailPulih) i.value = AK.emailPulih;
+  }
 }
 function akFormSandi(pulih) {
   openModal(`<h3>${pulih ? "Buat Sandi Baru" : "Ubah Sandi"}</h3>
@@ -216,12 +272,14 @@ async function akHapusPerangkat(id, guruId) {
 // ── Pengganti "pilih nama" saat akun sudah wajib ──
 const _akPilihAsli = openPilihGuru;
 openPilihGuru = function () {
+  if (AK.pulih) return;
   if (AK.wajib && !isAdmin() && !akAdalahAdminAkun()) return akTampilMasuk();
   return _akPilihAsli();
 };
 // Admin yang sudah masuk dengan akun tidak perlu PIN admin lagi untuk akunnya sendiri
 const _akPinAsli = mintaPinAdminUntukLogin;
 mintaPinAdminUntukLogin = function (g) {
+  if (AK.pulih) return; // sedang membuat sandi baru dari tautan email
   if (AK.guru && AK.guru.admin && AK.guru.id === g.id) { _ADMIN_TERVERIFIKASI = true; _selesaikanPilihGuru(g); return; }
   return _akPinAsli(g);
 };
