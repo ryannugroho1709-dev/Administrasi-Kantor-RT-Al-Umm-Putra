@@ -342,7 +342,7 @@ renderSidebar = function () {
   if (STATE.ruang === "Pg") {
     RG_MENU_PENGELOLA.forEach((g) => {
       tambahLabel(g.group);
-      g.items.forEach(([key, ikon, nama]) => tambahItem(key, `${rgSvg(key)}<span>${nama}</span>${key === "pg-beranda" ? "" : '<span class="nav-badge">Segera</span>'}`, () => rgBukaPengelola(key)));
+      g.items.forEach(([key, ikon, nama]) => tambahItem(key, `${rgSvg(key)}<span>${nama}</span>${key === "pg-beranda" || (typeof PG_MODUL_SIAP !== "undefined" && PG_MODUL_SIAP.includes(key)) ? "" : '<span class="nav-badge">Segera</span>'}`, () => rgBukaPengelola(key)));
     });
   } else {
     const r = rgRuang(), fitur = r.fitur ? new Set(r.fitur) : null;
