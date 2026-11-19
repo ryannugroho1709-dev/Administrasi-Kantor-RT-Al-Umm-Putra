@@ -19,7 +19,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Amiri:wght@400;700&family=Playfair+Display:wght@600;700;800&display=swap&family=Anton&family=Great+Vibes" rel="stylesheet">
 <!-- Tema elegan + pilihan palet (menu ✨ di topbar). "klasik" = tampilan hijau lama. Dipasang
      sedini mungkin supaya tidak sempat "berkedip" tampilan lain dulu. Disimpan per perangkat. -->
-<link rel="stylesheet" href="src/tema-elegan.css?v=15">
+<link rel="stylesheet" href="src/tema-elegan.css?v=16">
 <link rel="stylesheet" href="src/kas.css?v=6">
 <link rel="stylesheet" href="src/hp.css?v=3">
 <link rel="stylesheet" href="src/kuliah.css?v=6">
@@ -1951,23 +1951,19 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
 
       <!-- ══ DATA SISWA ══ -->
       <section class="page" id="page-data-siswa">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-          <b style="font-size:15px;" data-i18n="menuDataSiswa">Data Siswa</b>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <select id="ds-filter-kelas" class="input" style="width:auto;" onchange="renderDataSiswa()"><option value="">— <span data-i18n="kelas"></span> —</option></select>
-            <label class="btn btn-ghost" style="cursor:pointer;"><span data-i18n="importExcel">Impor Excel</span>
-              <input type="file" id="siswa-file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleImportSiswa(event)"/></label>
-            <button class="btn btn-ghost" onclick="eksporDataSiswaAdministrasi()" data-i18n="eksporExcel">Ekspor Excel</button>
-            <button class="btn btn-outline" onclick="dpkBuka()" title="Cocokkan Data Siswa dengan file Peserta Didik dari Dapodik">🛡️ Cek Dapodik</button>
-            <button class="btn btn-accent" onclick="openFormSiswa(null)" data-i18n="tambah">Tambah</button>
-            <label class="btn btn-ghost admin-only" style="cursor:pointer;display:none;" title="Upload foto banyak santri sekaligus — cocokkan nama file dengan nama santri">📷 Upload Foto
-              <input type="file" id="siswa-foto-bulk-input" accept="image/*" multiple style="display:none" onchange="handleUploadFotoMassalSiswa(event)"/></label>
+        <div class="ds-atas">
+          <div class="ds-judul"><b data-i18n="menuDataSiswa">Data Siswa</b><small>Ketuk kelas untuk menyaring santri</small></div>
+          <div class="ds-aksi">
+            <button class="btn ds-tambah" onclick="openFormSiswa(null)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="8" r="4"/><path d="M3 21c.7-4 3.6-6 7-6 1.6 0 3.1.4 4.3 1.3"/></svg>Tambah Santri</button>
+            <div class="ds-menu-wadah"><button class="btn btn-outline" onclick="dsMenuData(this)">Data ▾</button></div>
             <button id="btn-toggle-siswa" class="btn btn-outline btn-toggle-guru" onclick="toggleTampilSiswaNonaktif()">
               <span id="icon-siswa-nonaktif">🔀</span> <span id="label-siswa-nonaktif">Mutasi Santri</span>
             </button>
-            <button class="btn btn-outline admin-only" style="display:none;" onclick="bukaModalNaikKelas()">🎓 Naik Kelas</button>
             <button id="btn-toggle-pilih-siswa" class="btn btn-outline btn-toggle-guru" title="Pilih untuk Hapus/Aksi Massal" onclick="toggleModePilihSiswa()"><span class="btn-toggle-guru-icon">🗑️</span></button>
           </div>
+          <select id="ds-filter-kelas" class="input" style="display:none" onchange="renderDataSiswa()"><option value=""></option></select>
+          <input type="file" id="siswa-file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleImportSiswa(event)"/>
+          <input type="file" id="siswa-foto-bulk-input" accept="image/*" multiple style="display:none" onchange="handleUploadFotoMassalSiswa(event)"/>
         </div>
         <div id="data-siswa-ringkasan" style="margin-bottom:12px;"></div>
         <div id="data-siswa-bulk-bar" style="display:none;align-items:center;gap:10px;flex-wrap:wrap;background:var(--accent-soft);border-radius:12px;padding:8px 14px;margin-bottom:10px;">
@@ -7868,6 +7864,9 @@ async function ensureLookups() {
   if (LOOKUP_LOADED) return;
   try {
     LOOKUP.kelas = unwrap(await supa.from("kelas").select("id,nama_kelas").order("nama_kelas"));
+    // urut alami: Kelas 1, 2 A, 2 B, …, 10, 11, 12 (bukan urut huruf)
+    const _urutK = (n) => { const m = String(n || "").match(/(\d+)\s*([A-Za-z])?/); return m ? +m[1] * 10 + (m[2] ? m[2].toUpperCase().charCodeAt(0) - 64 : 0) : 9999; };
+    LOOKUP.kelas.sort((x, y) => _urutK(x.nama_kelas) - _urutK(y.nama_kelas));
     LOOKUP.mapel = unwrap(await supa.from("mapel").select("id,nama_mapel,kategori,kkm,tanpa_guru,masuk_umum,masuk_diniyyah,paket_b,paket_c,alias_rapor_umum").order("nama_mapel"));
     LOOKUP.guruAll = await apiGetAllGuru();
     LOOKUP_LOADED = true;
@@ -16163,7 +16162,8 @@ async function handleImportSiswa(evt) {
 <script src="src/nilai-tempel.js?v=3"></script>
 <script src="src/dapodik.js?v=2"></script>
 <script src="src/modul-urut.js?v=1"></script>
-<script src="src/ruang.js?v=10"></script>
+<script src="src/ruang.js?v=11"></script>
 <script src="src/akun.js?v=3"></script>
+<script src="src/siswa-tampil.js?v=2"></script>
 </body>
 </html>

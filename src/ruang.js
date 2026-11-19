@@ -92,11 +92,15 @@ async function _rgIdTetapMasuk() {
 apiGetDaftarGuru = async function () {
   try {
     const tambahan = (await _rgIdTetapMasuk()).filter((x) => /^[0-9a-f-]{36}$/i.test(x));
-    let q = supaSemua.from("guru").select("id,nama,jenis_guru,jabatan,foto_url,status_aktif").order("nama");
+    let q = supaSemua.from("guru").select("id,nama,jenis_guru,jabatan,foto_url,status_aktif,ruang,ruang_nonaktif").order("nama");
     q = tambahan.length ? q.or(`status_aktif.eq.true,id.in.(${tambahan.join(",")})`) : q.eq("status_aktif", true);
     const r = await q;
     if (r.error) throw r.error;
-    return r.data || [];
+    // hanya guru yang terdaftar (dan aktif) di ruang yang sedang dibuka; admin selalu tampil
+    const X = STATE.ruang;
+    const semua = r.data || [];
+    const disaring = X === "Pg" ? semua : semua.filter((g) => _namaTermasukAdmin(g.nama) || ((g.ruang || []).includes(X) && !(g.ruang_nonaktif || []).includes(X)));
+    return disaring.length ? disaring : semua;
   } catch (e) { throw new Error(_pesanErrorRamah(e) || e.message); }
 };
 
@@ -710,3 +714,24 @@ apiSimpanGuru = async function (row) {
   return _rgSimpanGuruAsli(isi);
 };
 apiHapusGuru = async function (id) { return apiSimpanGuru({ id, status_aktif: false }); };
+
+// ── 16. Layar pilih nama: pilihan ruang di atas daftar (daftar nama mengikuti ruang) ──
+const _rgPilihGuruAsli = openPilihGuru;
+openPilihGuru = function () {
+  const hasil = _rgPilihGuruAsli();
+  const panel = qs("modal-panel"), sel = qs("pilih-guru-select");
+  if (panel && sel && !qs("rg-pilih-ruang-mini")) {
+    const ruang = (RG.daftar.length ? RG.daftar : RG.bawaan).filter((r) => r.jenjang);
+    const el = document.createElement("div");
+    el.id = "rg-pilih-ruang-mini"; el.className = "rg-mini";
+    el.innerHTML = `<small>Ruang</small>${ruang.map((r) => `<button type="button" class="${r.id === STATE.ruang ? "aktif" : ""}" style="--rw:${r.warna}" onclick="rgGantiRuangMasuk('${r.id}')">${rgIkonRuang(r.id)}${escapeHtml(rgNamaPendek(r.id))}</button>`).join("")}`;
+    sel.closest(".field")?.insertAdjacentElement("beforebegin", el);
+  }
+  return hasil;
+};
+function rgGantiRuangMasuk(id) {
+  if (id === STATE.ruang) return;
+  try { localStorage.setItem("ruangAktif", id); } catch (e) {}
+  _rgTransisi(id);
+  setTimeout(() => location.reload(), 350);
+}
