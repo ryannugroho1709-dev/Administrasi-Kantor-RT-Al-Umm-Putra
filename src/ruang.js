@@ -365,6 +365,7 @@ renderSidebar = function () {
   }
   // bagian bawah: pengaturan ruang (admin), halaman santri, kembali ke pilihan ruang
   tambahLabel(STATE.ruang === "Pg" ? "Lainnya" : "Santri & Ruang");
+  if (rgRuang().jenjang) tambahItem("rg-profil", `${rgSvg("pg-beranda")}<span>Profil Lembaga</span>`, () => rgBukaProfil());
   if (rgRuang().jenjang) tambahItem("rg-santri", `${rgSvg("rg-santri")}<span>Halaman Ujian Santri</span>`, () => window.open(_rgAlamatSantri(STATE.ruang), "_blank", "noopener"));
   if (rgBisaPengaturan()) tambahItem("rg-atur", `${rgSvg("rg-atur")}<span>Pengaturan Ruang</span>`, () => rgBukaPengaturan());
   if (RG.daftar.filter((x) => rgAkses(x.id) !== "-").length > 1) tambahItem("rg-balik", `${rgSvg("rg-balik")}<span>Kembali Ke Pilihan Ruang</span>`, () => rgTampilPilih(), "rg-balik");
@@ -374,6 +375,7 @@ const _rgAlamatSantri = (id) => location.origin + location.pathname.replace(/[^/
 
 // Halaman milik fitur ruang (terkunci, Pengelola, Pengaturan Ruang)
 function _rgBukaHal(key, judul, html) {
+  if (typeof turTutup === "function") turTutup(true); // panduan halaman sebelumnya jangan tertinggal
   let sec = qs("page-rg");
   if (!sec) { sec = document.createElement("section"); sec.className = "page"; sec.id = "page-rg"; qs("page-container").appendChild(sec); }
   qsa(".page").forEach((p) => p.classList.remove("show"));
@@ -757,3 +759,67 @@ renderJadwalBuilder = async function () {
   }
   return _rgBuilderAsli();
 };
+
+// ── 18. Builder jadwal: jam bawaan ruang (kunci "jadwal:slot_bawaan") langsung tampil sebagai baris jam ──
+const _rgGridAsli = renderGridBuilder;
+renderGridBuilder = async function () {
+  try {
+    const d = await _kvAmbil("jadwal:slot_bawaan", null);
+    (d && d.slot || []).forEach((s) => { if (!JB_EXTRA_SLOTS.some((x) => x.jam_mulai === s.jam_mulai && x.jam_selesai === s.jam_selesai)) JB_EXTRA_SLOTS.push({ jam_mulai: s.jam_mulai, jam_selesai: s.jam_selesai }); });
+  } catch (e) {}
+  return _rgGridAsli();
+};
+
+// ── 19. Profil Lembaga per ruang (kunci "profil_lembaga"): visi, misi, program unggulan, sarana prasarana ──
+const RG_PROFIL = { data: null };
+const rgBolehUbahProfil = () => isAdmin() || rgPendamping();
+async function rgBukaProfil() {
+  const sec = _rgBukaHal("rg-profil", "Profil Lembaga", `<div class="card"><div class="rg-memuat">Memuat profil…</div></div>`);
+  RG_PROFIL.data = await _kvAmbil("profil_lembaga", null);
+  const p = RG_PROFIL.data, r = rgRuang(), e = escapeHtml, boleh = rgBolehUbahProfil() && !STATE.modeLihat;
+  if (!p) { sec.innerHTML = `<div class="card rg-kosong-mapel"><b>Profil ${e(r.nama)} belum diisi</b><p>Isi visi, misi, program unggulan, dan sarana prasarana lembaga.</p>${boleh ? `<button class="btn btn-accent" onclick="rgUbahProfil()">Isi Profil</button>` : ""}</div>`; return; }
+  const KONDISI = ["", "Baik", "Rusak Ringan", "Rusak Berat"];
+  sec.innerHTML = `<div class="rg-pf-hero" style="--rw:${r.warna}"><div class="rg-pf-logo">${htmlLogoSekolah(52)}</div><div><small>${e(p.yayasan || "")}</small><h2>${e(p.nama || r.nama)}</h2><p>${e(p.ringkas || "")}</p>${p.instagram ? `<span class="rg-pf-ig">@${e(p.instagram)}</span>` : ""}</div>
+      ${boleh ? `<button class="btn btn-sm rg-pf-ubah" onclick="rgUbahProfil()">Ubah Profil</button>` : ""}</div>
+    <div class="rg-pf-grid">
+      <div class="card"><h3>Visi</h3><p class="rg-pf-visi">${e(p.visi || "-")}</p></div>
+      <div class="card"><h3>Misi</h3><ol class="rg-pf-list">${(p.misi || []).map((x) => `<li>${e(x)}</li>`).join("")}</ol></div>
+    </div>
+    <div class="card"><h3>Program Unggulan</h3><ul class="rg-pf-list">${(p.program || []).map((x) => `<li>${e(x)}</li>`).join("")}</ul></div>
+    <div class="card"><div class="rg-pf-h3"><h3>Sarana & Prasarana</h3><small>${(p.sarpras || []).length} jenis · kondisi dicatat untuk akreditasi & laporan Dinas</small></div>
+      <div class="table-wrap"><table class="table rg-pf-sarpras"><thead><tr><th>Sarana</th><th style="width:90px">Jumlah</th><th style="width:150px">Kondisi</th><th>Keterangan</th></tr></thead><tbody>
+      ${(p.sarpras || []).map((s, i) => `<tr><td><b>${e(s.nama)}</b></td>
+        <td>${boleh ? `<input class="input" type="number" min="0" value="${s.jumlah ?? ""}" onchange="rgSimpanSarpras(${i},'jumlah',this.value)">` : e(s.jumlah ?? "-")}</td>
+        <td>${boleh ? `<select class="input rg-kondisi k${KONDISI.indexOf(s.kondisi)}" onchange="rgSimpanSarpras(${i},'kondisi',this.value)">${KONDISI.map((k) => `<option value="${k}" ${k === (s.kondisi || "") ? "selected" : ""}>${k || "Belum dicatat"}</option>`).join("")}</select>` : `<span class="rg-kondisi k${KONDISI.indexOf(s.kondisi)}">${e(s.kondisi || "Belum dicatat")}</span>`}</td>
+        <td>${boleh ? `<input class="input" value="${e(s.ket || "")}" placeholder="mis. 2 lantai, 6 ruang" onchange="rgSimpanSarpras(${i},'ket',this.value)">` : e(s.ket || "")}</td></tr>`).join("")}
+      </tbody></table></div></div>
+    ${p.sumber ? `<p class="rg-ket">Sumber: ${e(p.sumber)}</p>` : ""}`;
+}
+async function rgSimpanSarpras(i, kolom, nilai) {
+  const p = RG_PROFIL.data; if (!p || !p.sarpras[i]) return;
+  p.sarpras[i][kolom] = kolom === "jumlah" ? (nilai === "" ? null : +nilai) : nilai;
+  try { RG_PROFIL.data = await _kvGabung("profil_lembaga", { sarpras: p.sarpras, diubah: new Date().toISOString() }); toast("Tersimpan", "ok"); if (kolom === "kondisi") rgBukaProfil(); }
+  catch (e) { toast("Gagal menyimpan: " + e.message, "err"); }
+}
+function rgUbahProfil() {
+  const p = RG_PROFIL.data || {}, e = escapeHtml;
+  openModal(`<h3>Ubah Profil Lembaga</h3>
+    <div class="field"><label class="form-label">Nama Lembaga</label><input id="pf-nama" class="input" value="${e(p.nama || rgRuang().nama)}"></div>
+    <div class="field"><label class="form-label">Yayasan</label><input id="pf-yayasan" class="input" value="${e(p.yayasan || "")}"></div>
+    <div class="field"><label class="form-label">Deskripsi Singkat</label><textarea id="pf-ringkas" class="input" rows="3">${e(p.ringkas || "")}</textarea></div>
+    <div class="field"><label class="form-label">Visi</label><textarea id="pf-visi" class="input" rows="3">${e(p.visi || "")}</textarea></div>
+    <div class="field"><label class="form-label">Misi (satu baris satu misi)</label><textarea id="pf-misi" class="input" rows="5">${e((p.misi || []).join("\n"))}</textarea></div>
+    <div class="field"><label class="form-label">Program Unggulan (satu baris satu program)</label><textarea id="pf-program" class="input" rows="4">${e((p.program || []).join("\n"))}</textarea></div>
+    <div class="field"><label class="form-label">Daftar Sarana (satu baris satu sarana)</label><textarea id="pf-sarpras" class="input" rows="6">${e((p.sarpras || []).map((s) => s.nama).join("\n"))}</textarea></div>
+    <div class="field"><label class="form-label">Instagram (tanpa @)</label><input id="pf-ig" class="input" value="${e(p.instagram || "")}"></div>
+    <button class="btn btn-accent" style="width:100%" onclick="rgSimpanProfil()">Simpan</button>`, { lebar: true });
+}
+async function rgSimpanProfil() {
+  const baris = (id) => qs(id).value.split("\n").map((x) => x.trim()).filter(Boolean);
+  const lama = Object.fromEntries(((RG_PROFIL.data || {}).sarpras || []).map((s) => [s.nama, s]));
+  const isi = { nama: qs("pf-nama").value.trim(), yayasan: qs("pf-yayasan").value.trim(), ringkas: qs("pf-ringkas").value.trim(), visi: qs("pf-visi").value.trim(),
+    misi: baris("pf-misi"), program: baris("pf-program"), instagram: qs("pf-ig").value.trim().replace(/^@/, ""),
+    sarpras: baris("pf-sarpras").map((n) => lama[n] || { nama: n, jumlah: null, kondisi: "", ket: "" }), diubah: new Date().toISOString() };
+  try { await _kvGabung("profil_lembaga", isi); _rgLog("ubah-profil-lembaga", {}); closeModal(); toast("Profil tersimpan", "ok"); rgBukaProfil(); }
+  catch (e) { toast("Gagal menyimpan: " + e.message, "err"); }
+}
