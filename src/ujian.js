@@ -48,7 +48,7 @@ const _ujNamaMapel = (id) => (LOOKUP.mapel.find((m) => m.id === id) || {}).nama_
 // Tampilan sesi untuk santri (mode game) — disimpan di kuliah_pengaturan "ujian:tampilan" { sesiId: gaya }
 const UJ_GAYA = { biasa: ["📄", "Biasa", "Tampilan soal standar"], roket: ["🚀", "Balapan Roket", "Roket melaju tiap soal dijawab"], tangkap: ["🎈", "Tangkap Jawaban", "Pilihan jawaban jadi balon"], menara: ["🏰", "Panjat Menara", "Naik satu lantai tiap soal"] };
 async function _ujSimpanGaya(sesiId, gaya) {
-  try { const d = await _kvAmbil("ujian:tampilan", {}); if (gaya === "biasa") delete d[sesiId]; else d[sesiId] = gaya; await _kvSimpan("ujian:tampilan", d); UJ.gaya = d; }
+  try { UJ.gaya = await _kvGabung("ujian:tampilan", { [sesiId]: gaya === "biasa" ? null : gaya }); }
   catch (e) { toast("Mode game belum tersimpan: " + (e.message || e), "err"); }
 }
 const UJ_JENIS_NILAI = { uh: "Ulangan Harian", tugas: "Tugas", uts: "UTS", uas: "UAS" };
@@ -62,7 +62,8 @@ function _ujJenisNilai(b) {
 const _ujLabelJenis = (b) => { const x = _ujJenisNilai(b); return x.jenis === "uh" || x.jenis === "tugas" ? `${UJ_JENIS_NILAI[x.jenis]} ${x.ke}` : UJ_JENIS_NILAI[x.jenis]; };
 async function _ujSimpanJenis(bankId, jenis, ke, info) {
   if (!bankId || !jenis) return;
-  try { const d = await _kvAmbil("ujian:jenis", {}); d[bankId] = { jenis, ke: Number(ke) || 1, ...(info || {}), t: new Date().toISOString() }; await _kvSimpan("ujian:jenis", d); UJ.jenisNilai = d; }
+  // menggabung (bukan menimpa seluruh daftar) — aman bila banyak guru menyimpan bersamaan
+  try { UJ.jenisNilai = await _kvGabung("ujian:jenis", { [bankId]: { jenis, ke: Number(ke) || 1, ...(info || {}), t: new Date().toISOString() } }); if (typeof UA !== "undefined") UA.jenis = UJ.jenisNilai; }
   catch (e) { console.warn("Jenis nilai tidak tersimpan:", e); }
 }
 const _ujJumlahSoal = (bagian) => (bagian || []).reduce((a, b) => a + (b.soal || []).length, 0);
@@ -703,7 +704,7 @@ function ujPilihKirimRapor() {
       <label><input type="radio" name="uj-tujuan" value="uts" ${tebak === "uts" ? "checked" : ""}> 📘 <b>UTS</b><span>tengah semester</span></label>
       <label><input type="radio" name="uj-tujuan" value="uas" ${tebak === "uas" ? "checked" : ""}> 🎓 <b>UAS</b><span>akhir semester</span></label>
     </div>
-    ${(() => { const subs = typeof subMapel === "function" ? subMapel(b.mapel_id) : []; if (!subs.length) return ""; const tebakSub = subs.find((s) => judul.includes(s.toLowerCase())) || ""; return `<div class="form-label" style="margin-top:10px">🔀 Mapel gabungan — nilai ini untuk mapel:</div><select id="uj-sub" class="input">${tebakSub ? "" : '<option value="">— pilih —</option>'}${subs.map((s) => `<option ${s === tebakSub ? "selected" : ""}>${escapeHtml(s)}</option>`).join("")}</select>`; })()}
+    ${(() => { const subs = typeof subMapel === "function" ? subMapel(b.mapel_id) : []; if (!subs.length) return ""; const tebakSub = ((UJ.jenisNilai || {})[b.id] || {}).sub || subs.find((s) => judul.includes(s.toLowerCase())) || ""; return `<div class="form-label" style="margin-top:10px">🔀 Mapel gabungan — nilai ini untuk mapel:</div><select id="uj-sub" class="input">${tebakSub ? "" : '<option value="">— pilih —</option>'}${subs.map((s) => `<option ${s === tebakSub ? "selected" : ""}>${escapeHtml(s)}</option>`).join("")}</select>`; })()}
     <div class="uj-sub" style="margin-top:8px">Nilai yang sudah diisi manual di kolom itu akan diganti (Anda diberi tahu sebelum dikirim). Kolom lain tidak berubah.</div>
     <div style="display:flex;gap:10px;margin-top:12px"><button class="btn btn-outline" style="flex:1" onclick="ujBukaRekap(UJ.rekapSesi)">‹ Kembali</button>
       <button class="btn btn-accent" style="flex:2" onclick="(function(j){if(qs('uj-sub')&&!qs('uj-sub').value){toast('Pilih mapelnya dulu (Geografi / Sosiologi / …)','err');return;}ujKirimRapor(j, Number(qs(j==='tugas'?'uj-tg-ke':'uj-uh-ke').value), qs('uj-sub')?qs('uj-sub').value:null)})(document.querySelector('input[name=uj-tujuan]:checked').value)">Lanjut</button></div>`);

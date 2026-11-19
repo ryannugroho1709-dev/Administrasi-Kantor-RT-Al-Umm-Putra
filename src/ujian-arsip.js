@@ -100,12 +100,22 @@ function _uaDaftarWajib(j) {
   return [...per.values()];
 }
 // Bank soal Ujian Online yang cocok (mapel + tingkat kelas + jenis UTS/UAS sesuai jadwal)
+// Nama lain tiap bagian mapel gabungan (judul soal sering memakai nama lengkap)
+const _UA_ALIAS_SUB = { ppkn: ["ppkn", "pkn", "pancasila", "kewarganegaraan"], "seni budaya": ["seni"], sejarah: ["sejarah"], ekonomi: ["ekonomi"], geografi: ["geografi"],
+  sosiologi: ["sosiologi"], biologi: ["biologi"], fisika: ["fisika"], kimia: ["kimia"], prakarya: ["prakarya"], pjok: ["pjok", "olahraga", "penjas"] };
+function _uaSubCocok(b, sub) {
+  if (!sub) return true;
+  const x = UA.jenis && UA.jenis[b.id];
+  if (x && x.sub) return String(x.sub).toLowerCase() === sub; // dipilih guru saat membuat soal
+  const judul = String(b.judul || "").toLowerCase();
+  return (_UA_ALIAS_SUB[sub] || [sub]).some((w) => judul.includes(w));
+}
 function _uaBankCocok(j, mapelId, kelasId) {
   const angka = String(_juAngkaKelas(kelasId)).replace(/\D/g, "");
   const jenisPerlu = j.jenis === "uts" ? ["uts"] : j.jenis === "uas" ? ["uas"] : ["uts", "uas"];
   const batas = new Date(_juTgl(j.mulai).getTime() - 150 * 86400000).toISOString();
   const sub = _uaSub(mapelId).toLowerCase();
-  return (UA.bank || []).filter((b) => b.mapel_id === _uaBase(mapelId) && (!sub || String(b.judul || "").toLowerCase().includes(sub)) && String(b.tingkat || "").replace(/\D/g, "") === angka && (b.updated_at || "") >= batas)
+  return (UA.bank || []).filter((b) => b.mapel_id === _uaBase(mapelId) && _uaSubCocok(b, sub) && String(b.tingkat || "").replace(/\D/g, "") === angka && (b.updated_at || "") >= batas)
     .filter((b) => { const x = UA.jenis?.[b.id]; const jn = x?.jenis || (typeof _ujJenisNilai === "function" ? _ujJenisNilai(b).jenis : "uh"); return jenisPerlu.includes(jn); });
 }
 function _uaStatus(j, item) {

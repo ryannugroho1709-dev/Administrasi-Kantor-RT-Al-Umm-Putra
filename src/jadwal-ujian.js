@@ -220,7 +220,18 @@ function juPilihHariPapan(t) {
   }, 60));
 }
 const _juTerkait = (x, kelasId, saya) => (x?.p || []).includes(saya) || (x?.m && (JU.ajar || []).some((a) => a.guru_id === saya && a.mapel_id === x.m && a.kelas_id === kelasId));
+// Ujian ONLINE (pakai LAB): mapel-kelas yang soalnya sudah dibuat di Ujian Online (UTS/UAS sesuai jadwal)
+function _juOnline(j, x, kelasId) {
+  if (!x || !x.m || typeof _uaBankCocok !== "function" || typeof UA === "undefined" || !UA.bank) return false;
+  try { return _uaBankCocok(j, _juKode(x), kelasId).length > 0; } catch (e) { return false; }
+}
+function _juJumlahOnline(j, t, s) { return (j.kelas || []).filter((k) => _juOnline(j, j.slot?.[_juKunci(t, s.id, k)], k)).length; }
+function _juPastikanBank(ulang) {
+  if (typeof UA === "undefined" || UA.bank || typeof _uaMuatBank !== "function" || JU._muatBank) return;
+  JU._muatBank = true; _uaMuatBank().then(() => { if (typeof ulang === "function") ulang(); }).catch(() => {});
+}
 function _juHtmlPapanHari(j, t, saya, atur) {
+  _juPastikanBank(() => { if (typeof _juGambarDaftar === "function" && qs("ju-wadah")?.querySelector(".ju2-tab, .ju2-sesi") && !qs("ju-wadah").querySelector(".ju-tab")) _juGambarDaftar(); });
   if (!t) return `<div class="ju2-kosong">Belum ada hari ujian.</div>`;
   const e = _juEsc;
   const blok = j.sesi.map((s, i) => {
@@ -231,13 +242,14 @@ function _juHtmlPapanHari(j, t, saya, atur) {
       const awas = (x.p || []).includes(saya), milik = x.m && (JU.ajar || []).some((a) => a.guru_id === saya && a.mapel_id === x.m && a.kelas_id === k);
       if (JU.papanSaya && !awas && !milik) return kosong;
       const bisa = x.m && j.jenis !== "tahfizh" && (milik || atur);
-      return `<button class="ju2-sel ${awas ? "awas" : ""} ${milik ? "milik" : ""}" style="--kw:${_juWarnaKelas(k)}" ${bisa ? `onclick="uaKumpulkan('${j.id}','${_juKode(x)}','${k}')"` : "disabled"}>
-        <span class="ju2-sel-kls">Kelas ${e(_juAngkaKelas(k))}</span><b>${e(label)}</b>
+      const online = _juOnline(j, x, k);
+      return `<button class="ju2-sel ${awas ? "awas" : ""} ${milik ? "milik" : ""} ${online ? "online" : ""}" style="--kw:${_juWarnaKelas(k)}" ${bisa ? `onclick="uaKumpulkan('${j.id}','${_juKode(x)}','${k}')"` : "disabled"}>
+        <span class="ju2-sel-kls">Kelas ${e(_juAngkaKelas(k))}${online ? '<em class="ju-online" title="Soal dibuat di Ujian Online — memakai LAB">💻 Online</em>' : ""}</span><b>${e(label)}</b>
         <small>📋 ${(x.p || []).map(_juNamaGuru).map(e).join(", ") || "Pengawas Belum Ada"}</small>
         ${awas || milik ? `<span class="ju2-sel-tanda">${awas ? "📋 Saya mengawas" : ""}${awas && milik ? " · " : ""}${milik ? "📝 Mapel saya" : ""}</span>` : ""}</button>`;
     }).join("");
     const adaIsi = (j.kelas || []).some((k) => { const x = j.slot?.[_juKunci(t, s.id, k)]; return _juLabelSlot(x) && (!JU.papanSaya || _juTerkait(x, k, saya)); });
-    return adaIsi ? `<div class="ju2-sesi"><div class="ju2-sesi-h"><b>Sesi ${i + 1}</b><span class="ju2-jam">🕒 ${_juJamTeks(j, t, s)}</span></div><div class="ju2-gulir"><div class="ju2-sel-grid ju2-kolom-kelas" style="grid-template-columns:repeat(${(j.kelas || []).length},minmax(140px,1fr))">${sel}</div></div></div>` : "";
+    return adaIsi ? `<div class="ju2-sesi"><div class="ju2-sesi-h"><b>Sesi ${i + 1}</b><span class="ju2-jam">🕒 ${_juJamTeks(j, t, s)}</span>${(() => { const n = _juJumlahOnline(j, t, s); return n ? `<span class="ju-online-sesi ${n > 1 ? "padat" : ""}" title="Jumlah kelas yang ujian online (LAB) di sesi ini">💻 ${n} kelas online${n > 1 ? " · cek kapasitas LAB" : ""}</span>` : ""; })()}</div><div class="ju2-gulir"><div class="ju2-sel-grid ju2-kolom-kelas" style="grid-template-columns:repeat(${(j.kelas || []).length},minmax(140px,1fr))">${sel}</div></div></div>` : "";
   }).join("");
   return blok || `<div class="ju2-kosong">${JU.papanSaya ? "Tidak ada ujian yang terkait Antum di hari ini." : "Belum ada mapel di hari ini."}</div>`;
 }
@@ -347,6 +359,7 @@ function _juBentrok(j, tgl, sesiId, kelasId, guruId) {
   return (j.kelas || []).filter((k) => k !== kelasId && (j.slot?.[_juKunci(tgl, sesiId, k)]?.p || []).includes(guruId));
 }
 function _juGambarEditor() {
+  _juPastikanBank(() => { if (qs("ju-wadah")?.querySelector(".ju-tab")) _juGambarEditor(); });
   const j = JU.edit, atur = _juBolehAtur(), wadah = qs("ju-wadah");
   if (!JU.hari || !j.hari.includes(JU.hari)) JU.hari = j.hari[0] || null;
   const beban = _juBeban(j);
@@ -399,13 +412,14 @@ function _juIsiSel(j, tgl, s, kelasId, atur) {
   const mapelKelas = _juMapelDiKelas(kelasId);
   const pengampu = x.m ? [...(mapelKelas[x.m] || [])] : [];
   const label = _juLabelSlot(x);
+  const tandaOnline = _juOnline(j, x, kelasId) ? '<span class="ju-online" title="Soal dibuat di Ujian Online — memakai LAB">💻 Online</span>' : "";
   const chips = (x.p || []).map((g) => { const bentrok = _juBentrok(j, tgl, s.id, kelasId, g); return `<span class="ju-chip ${bentrok.length ? "bentrok" : ""}" title="${bentrok.length ? "Bentrok: juga mengawas Kelas " + bentrok.map(_juAngkaKelas).join(", ") + " di sesi ini" : ""}">${_juEsc(_juNamaGuru(g))}${atur ? `<button onclick="_juLepasPengawas('${kunci}','${g}')" aria-label="lepas">×</button>` : ""}</span>`; }).join("");
-  if (!atur) return label ? `<b>${_juEsc(label)}</b>${x.ruang ? `<small>Ruang ${_juEsc(x.ruang)}</small>` : ""}<div class="ju-chips">${chips || '<span class="ju-ket">Pengawas Belum Ada</span>'}</div>` : "–";
+  if (!atur) return label ? `${tandaOnline}<b>${_juEsc(label)}</b>${x.ruang ? `<small>Ruang ${_juEsc(x.ruang)}</small>` : ""}<div class="ju-chips">${chips || '<span class="ju-ket">Pengawas Belum Ada</span>'}</div>` : "–";
   const dipakai = _juMapelTerpakai(j, kelasId, kunci);
   const opsiUtama = Object.keys(mapelKelas).map((m) => [m, _juNamaMapel(m)]).filter(([, n]) => n).sort((a, b) => a[1].localeCompare(b[1], "id"));
   const opsiLain = (LOOKUP.mapel || []).filter((m) => !mapelKelas[m.id]).map((m) => [m.id, m.nama_mapel]).sort((a, b) => a[1].localeCompare(b[1], "id"));
   return `
-    <select class="input ju-mapel" onchange="_juSetMapel('${kunci}',this.value)">
+    ${tandaOnline}<select class="input ju-mapel" onchange="_juSetMapel('${kunci}',this.value)">
       <option value="">— Kosong —</option>
       ${opsiUtama.length ? `<optgroup label="Mapel Kelas Ini">${opsiUtama.map(([id, n]) => _juSubs(id).length ? _juSubs(id).map((sb) => _juOpsiMapel(`${id}::${sb}`, `${sb} (${n})`, id === x.m && x.sub === sb, dipakai)).join("") + _juOpsiMapel(id, `${n} — Digabung`, id === x.m && !x.sub, dipakai) : _juOpsiMapel(id, n, id === x.m, dipakai)).join("")}</optgroup>` : ""}
       <optgroup label="Mapel Lain">${opsiLain.map(([id, n]) => _juOpsiMapel(id, n, id === x.m, dipakai)).join("")}</optgroup>

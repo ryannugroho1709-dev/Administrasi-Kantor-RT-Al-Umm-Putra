@@ -81,7 +81,7 @@ async function ujEditorBuka(bankId, preset) {
     if (preset) { if (preset.mapel_id) UJE.m.mapel_id = preset.mapel_id; if (preset.tingkat) UJE.m.tingkat = String(preset.tingkat); if (preset.judul) UJE.m.judul = preset.judul; }
     UJE.m.bagian.pg.soal.push(_ujeSoalBaru("pg"));
   }
-  if (bankId) { const jn = typeof _ujJenisNilai === "function" ? _ujJenisNilai(UJ.bank.find((x) => x.id === bankId)) : null; if (jn) { UJE.m.jenisNilai = jn.jenis; UJE.m.jenisKe = jn.ke; } }
+  if (bankId) { const jn = typeof _ujJenisNilai === "function" ? _ujJenisNilai(UJ.bank.find((x) => x.id === bankId)) : null; if (jn) { UJE.m.jenisNilai = jn.jenis; UJE.m.jenisKe = jn.ke; } UJE.m.sub = ((UJ.jenisNilai || {})[bankId] || {}).sub || ""; }
   UJE.tab = UJE_JENIS.find((j) => UJE.m.bagian[j].soal.length) || "pg";
   _ujeGambar();
 }
@@ -143,7 +143,8 @@ function _ujeGambar() {
     <div class="uj-sub" style="margin-bottom:12px">Tidak perlu file JSON. Ketik langsung, <b>tempel dari Word</b>, atau <b>unggah berkas Word/PDF/foto soal</b>. Kunci jawaban disimpan terpisah dan tidak pernah terlihat santri.</div>
     <div class="uje-meta">
       <div class="field" style="grid-column:1/-1"><label class="form-label">📝 Judul</label><input class="input" value="${escapeHtml(m.judul)}" placeholder="mis. Penilaian Bab 2 — Teks Eksposisi" oninput="UJE.m.judul=this.value"></div>
-      <div class="field"><label class="form-label">📘 Mapel</label><select class="input" onchange="UJE.m.mapel_id=this.value"><option value="">— pilih —</option>${LOOKUP.mapel.map((x) => `<option value="${x.id}" ${x.id === m.mapel_id ? "selected" : ""}>${escapeHtml(x.nama_mapel)}</option>`).join("")}</select></div>
+      <div class="field"><label class="form-label">📘 Mapel</label><select class="input" onchange="UJE.m.mapel_id=this.value;UJE.m.sub='';_ujeGambar()"><option value="">— pilih —</option>${LOOKUP.mapel.map((x) => `<option value="${x.id}" ${x.id === m.mapel_id ? "selected" : ""}>${escapeHtml(x.nama_mapel)}</option>`).join("")}</select></div>
+      ${(() => { const subs = m.mapel_id && typeof subMapel === "function" ? subMapel(m.mapel_id) : []; if (!subs.length) return ""; return `<div class="field"><label class="form-label">🔀 Untuk Mapel <b style="color:var(--bad)">*</b></label><select class="input" onchange="UJE.m.sub=this.value"><option value="">— pilih —</option>${subs.map((s) => `<option ${s === m.sub ? "selected" : ""}>${escapeHtml(s)}</option>`).join("")}</select></div>`; })()}
       <div class="field"><label class="form-label">🏫 Kelas (tingkat)</label><input class="input" value="${escapeHtml(m.tingkat)}" placeholder="mis. 10" oninput="UJE.m.tingkat=this.value"></div>
       <div class="field"><label class="form-label">📊 Dihitung sebagai</label><select class="input" onchange="UJE.m.jenisNilai=this.value">${[["uh", "Ulangan Harian"], ["tugas", "Tugas"], ["uts", "UTS"], ["uas", "UAS"]].map(([k, l]) => `<option value="${k}" ${(m.jenisNilai || "uh") === k ? "selected" : ""}>${l}</option>`).join("")}</select></div>
       <div class="field"><label class="form-label">🔖 Bab / ke-</label><input class="input" type="number" min="1" value="${m.bab}" oninput="UJE.m.bab=Number(this.value)||1;UJE.m.jenisKe=UJE.m.bab"></div>
@@ -817,6 +818,12 @@ async function ujeSimpan() {
   const { galat, bank } = _ujeKeBank();
   if (galat.length) { toast(galat.slice(0, 3).join(" · ") + (galat.length > 3 ? ` (+${galat.length - 3} lagi)` : ""), "err"); return; }
   const m = UJE.m;
+  const subsWajib = m.mapel_id && typeof subMapel === "function" ? subMapel(m.mapel_id) : [];
+  if (subsWajib.length && !m.sub) {
+    const judul = String(m.judul || bank.judul || "").toLowerCase();
+    m.sub = subsWajib.find((s) => (({ ppkn: ["ppkn", "pkn", "pancasila"] })[s.toLowerCase()] || [s.toLowerCase()]).some((w) => judul.includes(w))) || "";
+    if (!m.sub) { toast("Mapel ini gabungan — pilih dulu 'Untuk Mapel' (" + subsWajib.join(" / ") + ")", "err"); _ujeGambar(); return; }
+  }
   if (bank.bagian.some((b) => UJE_JENIS_BARU.includes(b.jenis)) && typeof _ujVersi === "function" && (await _ujVersi()) < 4) {
     const lanjut = await konfirmasiTema("Bank soal ini memakai jenis soal baru (Isian / Menjodohkan / Mengurutkan). Penilaian otomatisnya butuh admin menjalankan SQL_UJIAN_SANTRI_4.sql di Supabase.\n\nSimpan sekarang? (Soal tersimpan aman; nilainya baru benar setelah SQL dijalankan.)", { ikon: "⚠️", judul: "Butuh pembaruan database", teksYa: "Simpan saja", teksTidak: "Batal" });
     if (!lanjut) { _ujeGambar(); return; }
@@ -829,7 +836,7 @@ async function ujeSimpan() {
     const pin = await _ujPin("PIN untuk menyimpan soal"); if (!pin) return;
     const { publik, kunci } = _ujPisahKunci(bank);
     m.bankId = await _ujRpc("ujian_bank_simpan", { p_pin: pin, p_kode: m.kode, p_mapel_id: m.mapel_id, p_tingkat: m.tingkat, p_bab: m.bab, p_judul: bank.judul, p_soal: publik, p_kunci: kunci, p_skor_maksimal: bank.skor_maksimal, p_guru: STATE.guruId || null });
-    if (typeof _ujSimpanJenis === "function") await _ujSimpanJenis(m.bankId, m.jenisNilai || "uh", m.jenisKe || m.bab, { mapel_id: m.mapel_id, tingkat: m.tingkat, guru_id: STATE.guruId || null });
+    if (typeof _ujSimpanJenis === "function") await _ujSimpanJenis(m.bankId, m.jenisNilai || "uh", m.jenisKe || m.bab, { mapel_id: m.mapel_id, tingkat: m.tingkat, guru_id: STATE.guruId || null, ...(m.sub ? { sub: m.sub } : {}) });
     toast("💾 Bank soal tersimpan", "ok"); closeModal();
     if (typeof ujMuat === "function" && qs("ujian-root")) ujMuat();
   } catch (e) { toast(_ujPesan(e), "err"); }
