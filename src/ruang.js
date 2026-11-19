@@ -126,6 +126,7 @@ async function _rgMuat() {
     if (b.error) throw b.error;
     RG.daftar = (a.data || []).filter((r) => r.aktif !== false);
     RG.saya = b.data || {};
+    try { const p = await supaSemua.from("kuliah_pengaturan").select("nilai").eq("kunci", "penyelenggara").eq("ruang_id", STATE.ruang).maybeSingle(); RG.penyelenggara = (p.data && p.data.nilai && p.data.nilai.ids) || []; } catch (e) { RG.penyelenggara = []; }
     RG.siap = window.RUANG_SIAP = RG.daftar.length > 0;
   } catch (e) { RG.siap = window.RUANG_SIAP = false; return; } // SQL Tahap 1 belum dijalankan
   if (!RG.siap) return;
@@ -464,6 +465,7 @@ async function rgBukaPengaturan(tab) {
       const r = await supaSemua.from("guru").select("*").eq("status_aktif", true).order("nama");
       if (r.error) throw r.error;
       RG_ATUR.guru = r.data || [];
+      try { const p = await supaSemua.from("kuliah_pengaturan").select("ruang_id,nilai").eq("kunci", "penyelenggara"); RG_ATUR.peny = Object.fromEntries((p.data || []).map((x) => [x.ruang_id, (x.nilai && x.nilai.ids) || []])); } catch (e) { RG_ATUR.peny = {}; }
       isi = `<div id="rg-anggota">${_rgHtmlAnggota()}</div>`;
       // Guru nonaktif (tidak mengajar / tidak ada di jadwal) yang tetap boleh masuk aplikasi
       const [na] = await Promise.all([supaSemua.from("guru").select("id,nama").eq("status_aktif", false).order("nama"), _rgIdTetapMasuk()]);
@@ -522,10 +524,10 @@ function _rgHtmlAnggota() {
     const on = (g.ruang || []).includes(x.id), pend = (g.ruang_pendamping || []).includes(x.id), utama = x.jenjang && rgRuangUtama(g) === x.id;
     return `<div class="rg-pil ${on ? "on" : ""}" style="--rw:${x.warna}">
       <button class="rg-pil-b" onclick="rgTogAnggota('${g.id}','${x.id}')" title="${on ? "Keluarkan dari" : "Tambahkan ke"} ${escapeHtml(x.nama)}"><i class="rg-pil-titik"></i>${escapeHtml(x.id === "Pa" ? "Putra" : x.id === "Pi" ? "Putri" : x.id === "Pg" ? "Pengelola" : x.nama)}</button>
-      ${on && x.jenjang ? `<button class="rg-pil-k ${utama ? "aktif" : ""}" onclick="rgTogUtama('${g.id}','${x.id}')" title="Ruang utama (pegawai tetap)">Utama</button><button class="rg-pil-k ${pend ? "aktif" : ""}" onclick="rgUbahAnggota('${g.id}','${x.id}','ruang_pendamping',${!pend})" title="Admin Pendamping ruang ini">Pendamping</button>` : ""}
+      ${on && x.jenjang ? `<button class="rg-pil-k ${utama ? "aktif" : ""}" onclick="rgTogUtama('${g.id}','${x.id}')" title="Ruang utama (pegawai tetap)">Utama</button><button class="rg-pil-k ${pend ? "aktif" : ""}" onclick="rgUbahAnggota('${g.id}','${x.id}','ruang_pendamping',${!pend})" title="Admin Pendamping ruang ini">Pendamping</button>${x.id !== "Pa" ? `<button class="rg-pil-k ${((RG_ATUR.peny || {})[x.id] || []).includes(g.id) ? "aktif" : ""}" onclick="rgTogPenyelenggara('${g.id}','${x.id}')" title="Penyelenggara jenjang ini: menerima notifikasi & menyetujui izin/sakit/tukar jam">Penyelenggara</button>` : ""}` : ""}
     </div>`;
   };
-  return `<p class="rg-ket">Ketuk nama ruang untuk menambah/mengeluarkan guru. Pada ruang yang aktif: <b>Utama</b> = tempat guru menjadi pegawai tetap (dihitung sebagai tutor jenjang itu), <b>Pendamping</b> = Admin Pendamping ruang itu. Guru baru Paket A/Putri cukup ditambahkan lewat <b>Data Guru</b> di ruangnya — otomatis masuk ruang itu.</p>
+  return `<p class="rg-ket">Ketuk nama ruang untuk menambah/mengeluarkan guru. Pada ruang yang aktif: <b>Utama</b> = tempat guru menjadi pegawai tetap (dihitung sebagai tutor jenjang itu), <b>Pendamping</b> = Admin Pendamping ruang itu. <b>Penyelenggara</b> (Paket A/Putri) = menerima notifikasi dan bisa menyetujui/menolak izin, sakit, dan tukar jam di jenjangnya. Guru baru Paket A/Putri cukup ditambahkan lewat <b>Data Guru</b> di ruangnya — otomatis masuk ruang itu.</p>
     <div class="rg-ang-alat"><input class="input" placeholder="Cari nama guru…" value="${escapeHtml(RG_ANG.cari)}" oninput="RG_ANG.cari=this.value;_rgSegarAnggota(true)">
       <div class="rg-ang-saring">${[["semua", "Semua", daftar.length, "#64748b"], ...kol.map((x) => [x.id, x.id === "Pa" ? "Putra" : x.id === "Pi" ? "Putri" : x.id === "Pg" ? "Pengelola" : x.nama, jumlah[x.id], x.warna])].map(([k, n, j, w]) => `<button class="${RG_ANG.saring === k ? "aktif" : ""}" style="--rw:${w}" onclick="RG_ANG.saring='${k}';_rgSegarAnggota()">${escapeHtml(n)} <b>${j}</b></button>`).join("")}</div></div>
     <div class="rg-ang-daftar">${tampil.map((g) => `<div class="rg-ang-baris"><div class="rg-ang-nama"><b>${escapeHtml(g.nama)}</b><small>${(g.ruang || []).length} ruang</small></div><div class="rg-ang-pil">${kol.map((x) => pil(g, x)).join("")}</div></div>`).join("") || '<div class="rg-ket">Tidak ada guru yang cocok.</div>'}</div>`;
@@ -666,6 +668,7 @@ function _rgKalimatLog(x) {
     case "hapus-akun": return `menghapus akun ${guru(r.guru)}`;
     case "masuk-akun": return `masuk dengan akun${r.perangkat ? ` dari <b>${escapeHtml(r.perangkat)}</b>` : ""}`;
     case "akun-wajib": return `${r.aktif ? "menyalakan" : "mematikan"} <b>Wajib Masuk Dengan Akun</b>`;
+    case "ubah-penyelenggara": return `${r.aktif ? "menjadikan" : "mencabut"} ${guru(r.guru)} ${r.aktif ? "sebagai" : "dari"} Penyelenggara <b>${nm(r.ruang)}</b>`;
     case "tetap-bisa-masuk": return `${r.aktif ? "mengizinkan" : "mencabut izin"} guru nonaktif masuk aplikasi`;
     case "lihat-nik": return `melihat NIK/KK ${guru(r.siswa || r.nama)}`;
     default: return escapeHtml(x.aksi.replace(/-/g, " "));
@@ -704,9 +707,39 @@ function _rgGuruPerRuang(g) {
   return o;
 }
 const _rgGetAllGuruAsli = apiGetAllGuru;
-apiGetAllGuru = async function () { return (await _rgGetAllGuruAsli()).map(_rgGuruPerRuang); };
+// Wali kelas PER RUANG: sumbernya kolom kelas.wali_kelas_id milik ruang ini, jadi satu guru bisa
+// menjadi wali kelas di Putra dan di Paket A sekaligus. Putra yang belum memakai kelas.wali_kelas_id
+// tetap memakai guru.wali_kelas_id lama.
+async function _rgPetaWaliRuang() {
+  try { const r = await supa.from("kelas").select("id,wali_kelas_id"); return r.error ? null : (r.data || []); } catch (e) { return null; }
+}
+function _rgPasangWali(g, kelas) {
+  if (!kelas || !g) return g;
+  const k = kelas.find((x) => x.wali_kelas_id === g.id);
+  const milikRuang = kelas.some((x) => x.id === g.wali_kelas_id);
+  return { ...g, wali_kelas_id: k ? k.id : milikRuang && !kelas.some((x) => x.wali_kelas_id && x.id === g.wali_kelas_id && x.wali_kelas_id !== g.id) ? g.wali_kelas_id : null };
+}
+apiGetAllGuru = async function () {
+  const [rows, kelas] = await Promise.all([_rgGetAllGuruAsli(), RG.siap ? _rgPetaWaliRuang() : null]);
+  return rows.map(_rgGuruPerRuang).map((x) => _rgPasangWali(x, kelas));
+};
+const _rgDetailAsli = apiGetGuruDetail;
+apiGetGuruDetail = async function (id) {
+  const [g, kelas] = await Promise.all([_rgDetailAsli(id), RG.siap ? _rgPetaWaliRuang() : null]);
+  return g ? _rgPasangWali(_rgGuruPerRuang(g), kelas) : g;
+};
 const _rgSimpanGuruAsli = apiSimpanGuru;
 apiSimpanGuru = async function (row) {
+  if (row && row.id && RG.siap && "wali_kelas_id" in row) {
+    // wali kelas disimpan di kelas ruang ini (bukan menimpa wali kelas guru itu di ruang lain)
+    const baru = row.wali_kelas_id || null;
+    const lepas = await supa.from("kelas").update({ wali_kelas_id: null }).eq("wali_kelas_id", row.id);
+    if (lepas.error) throw new Error(lepas.error.message);
+    if (baru) { const r = await supa.from("kelas").update({ wali_kelas_id: row.id }).eq("id", baru); if (r.error) throw new Error(r.error.message); }
+    row = { ...row };
+    if (STATE.ruang !== "Pa") delete row.wali_kelas_id; // kolom lama tetap milik Putra
+    if (Object.keys(row).length <= 1) return [row];
+  }
   if (!row || !row.id || !RG.siap || !("penerima_honda" in row || "status_aktif" in row)) return _rgSimpanGuruAsli(row);
   const X = STATE.ruang, isi = { ...row };
   const { data: lama, error } = await supaSemua.from("guru").select("honda_ruang,ruang_nonaktif,ruang,status_aktif").eq("id", row.id).maybeSingle();
@@ -823,3 +856,25 @@ async function rgSimpanProfil() {
   try { await _kvGabung("profil_lembaga", isi); _rgLog("ubah-profil-lembaga", {}); closeModal(); toast("Profil tersimpan", "ok"); rgBukaProfil(); }
   catch (e) { toast("Gagal menyimpan: " + e.message, "err"); }
 }
+
+
+// ── 20. Penyelenggara jenjang (kunci "penyelenggara" per ruang): hak seperti Kepala Sekolah di ruangnya —
+//        menerima notifikasi & menyetujui/menolak izin, sakit, tukar jam ──
+async function rgTogPenyelenggara(guruId, ruangId) {
+  const ids = new Set((RG_ATUR.peny || {})[ruangId] || []);
+  const aktif = !ids.has(guruId);
+  aktif ? ids.add(guruId) : ids.delete(guruId);
+  const { error } = await supaSemua.from("kuliah_pengaturan").upsert({ ruang_id: ruangId, kunci: "penyelenggara", nilai: { ids: [...ids], diubah: new Date().toISOString() } }, { onConflict: "ruang_id,kunci" });
+  if (error) { toast("Gagal menyimpan: " + error.message, "err"); return; }
+  (RG_ATUR.peny = RG_ATUR.peny || {})[ruangId] = [...ids];
+  if (ruangId === STATE.ruang) RG.penyelenggara = [...ids];
+  const gg = (RG_ATUR.guru || []).find((x) => x.id === guruId);
+  _rgLog("ubah-penyelenggara", { guru: gg && gg.nama, ruang: ruangId, aktif });
+  toast(`${_namaSingkatTopbar(gg ? gg.nama : "")}: ${aktif ? "menjadi" : "bukan lagi"} Penyelenggara ${rgNamaPendek(ruangId)}`, "ok");
+  _rgSegarAnggota();
+}
+const _rgKepsekAsli = isKepsek;
+isKepsek = function () {
+  if (typeof RG !== "undefined" && RG.siap && (RG.penyelenggara || []).includes(STATE.guruId) && !isAdmin()) return true;
+  return _rgKepsekAsli();
+};
