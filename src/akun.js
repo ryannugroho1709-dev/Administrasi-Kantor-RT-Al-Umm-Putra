@@ -61,8 +61,8 @@ function akTampilMasuk(mode = "masuk") {
       <button class="ak-tombol" id="ak-kirim" onclick="akKirimLupa()">Kirim Tautan</button>
       <button class="ak-tautan" onclick="akTampilMasuk()">‹ Kembali Ke Halaman Masuk</button></div>`;
   } else {
-    el.innerHTML = `<div class="ak-cahaya"></div><div class="ak-panel">${kepala}<b>Masuk Akun Guru</b><span>Masuk dengan email dan sandi yang didaftarkan admin.</span></div>
-      <label class="ak-isian"><span>Email</span><input id="ak-login" type="email" inputmode="email" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="nama@gmail.com"></label>
+    el.innerHTML = `<div class="ak-cahaya"></div><div class="ak-panel">${kepala}<b>Masuk Akun Guru</b><span>Masuk dengan nama pengguna (dari WA admin) atau email, dan sandi.</span></div>
+      <label class="ak-isian"><span>Nama Pengguna atau Email</span><input id="ak-login" type="text" inputmode="email" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="contoh: ahmad.fauzi"></label>
       <label class="ak-isian"><span>Sandi</span><span class="ak-sandi"><input id="ak-sandi" type="password" autocomplete="current-password" placeholder="Sandi"><button type="button" class="ak-lihat" onclick="akLihatSandi(this)" aria-label="Lihat sandi">Lihat</button></span></label>
       <div id="ak-pesan" class="ak-pesan"></div>
       <button class="ak-tombol" id="ak-tombol" onclick="akMasuk()">Masuk</button>
@@ -79,8 +79,8 @@ function akLihatSandi(b) { const i = b.previousElementSibling; i.type = i.type =
 function _akPesan(teks, jenis = "err") { const p = qs("ak-pesan"); if (p) { p.textContent = teks; p.className = "ak-pesan " + jenis; } }
 
 async function akMasuk() {
-  const login = (qs("ak-login")?.value || "").trim(), sandi = qs("ak-sandi")?.value || "";
-  if (!login || !sandi) return _akPesan("Isi email dan sandi");
+  const login = (qs("ak-login")?.value || "").trim().toLowerCase(), sandi = qs("ak-sandi")?.value || "";
+  if (!login || !sandi) return _akPesan("Isi nama pengguna/email dan sandi");
   const b = qs("ak-tombol"); b.disabled = true; b.textContent = "Memeriksa…"; _akPesan("");
   try {
     const r = await akPanggil("masuk", { login, sandi, perangkat: akPerangkat() });
@@ -90,6 +90,7 @@ async function akMasuk() {
     _akLS.set("akunCek", String(Date.now()));
     qs("ak-masuk")?.remove();
     _akMasukkanGuru(r.guru);
+    if (r.wajibGanti) { _akLS.set("akunWajibGanti", "1"); akTampilWajibGanti(); }
   } catch (e) {
     _akPesan(e.message || "Gagal masuk");
     b.disabled = false; b.textContent = "Masuk";
@@ -151,11 +152,12 @@ function akTampilSandiBaru(tahap, pesan) {
   if (tahap === "memuat") el.innerHTML = `<div class="ak-cahaya"></div><div class="ak-panel">${kepala}<b>Memeriksa Tautan…</b><span>Sebentar, tautan dari email sedang diperiksa.</span></div></div>`;
   else if (tahap === "gagal") el.innerHTML = `<div class="ak-cahaya"></div><div class="ak-panel">${kepala}<b>Tautan Tidak Berlaku</b><span>${escapeHtml(pesan || "")}</span></div>
     <button class="ak-tombol" onclick="AK.pulih=false;akTampilMasuk('lupa')">Minta Tautan Baru</button><button class="ak-tautan" onclick="AK.pulih=false;akTampilMasuk()">Ke Halaman Masuk</button></div>`;
-  else el.innerHTML = `<div class="ak-cahaya"></div><div class="ak-panel">${kepala}<b>${AK.undangan ? "Selamat Datang — Buat Sandi Akun" : "Buat Sandi Baru"}</b><span>${AK.emailPulih ? `Untuk akun <strong class="ak-email">${escapeHtml(AK.emailPulih)}</strong>. ` : ""}Minimal 8 karakter, huruf besar/kecil dibedakan.</span></div>
+  else el.innerHTML = `<div class="ak-cahaya"></div><div class="ak-panel">${kepala}<b>${tahap === "wajib" ? "Buat Sandi Pribadi" : AK.undangan ? "Selamat Datang — Buat Sandi Akun" : "Buat Sandi Baru"}</b><span>${tahap === "wajib" ? `Ahlan wa sahlan, ${escapeHtml(_namaSingkatTopbar(AK.guru?.nama || ""))}. Sandi dari admin hanya untuk masuk pertama kali. Buat sandi pribadi yang hanya Antum ketahui. ` : AK.emailPulih ? `Untuk akun <strong class="ak-email">${escapeHtml(AK.emailPulih)}</strong>. ` : ""}Minimal 8 karakter, huruf besar/kecil dibedakan.</span></div>
     <label class="ak-isian"><span>Sandi Baru</span><span class="ak-sandi"><input id="ak-baru1" type="password" autocomplete="new-password" placeholder="Sandi baru"><button type="button" class="ak-lihat" onclick="akLihatSandi(this)">Lihat</button></span></label>
     <label class="ak-isian"><span>Ulangi Sandi Baru</span><span class="ak-sandi"><input id="ak-baru2" type="password" autocomplete="new-password" placeholder="Ketik sekali lagi"><button type="button" class="ak-lihat" onclick="akLihatSandi(this)">Lihat</button></span></label>
     <div id="ak-pesan" class="ak-pesan"></div>
-    <button class="ak-tombol" id="ak-baru-btn" onclick="akSimpanSandiBaru()">Simpan & Masuk</button></div>`;
+    <button class="ak-tombol" id="ak-baru-btn" onclick="akSimpanSandiBaru()">${tahap === "wajib" ? "Simpan Sandi" : "Simpan & Masuk"}</button></div>`;
+  AK.modeWajibGanti = tahap === "wajib";
   document.body.appendChild(el);
   el.querySelectorAll("input").forEach((i) => i.addEventListener("keydown", (e) => { if (e.key === "Enter") akSimpanSandiBaru(); }));
   setTimeout(() => el.querySelector("input")?.focus(), 60);
@@ -165,6 +167,15 @@ async function akSimpanSandiBaru() {
   if (a.length < 8) return _akPesan("Sandi minimal 8 karakter");
   if (a !== b) return _akPesan("Kedua sandi belum sama");
   const t = qs("ak-baru-btn"); t.disabled = true; t.textContent = "Menyimpan…"; _akPesan("");
+  if (AK.modeWajibGanti) {
+    const { error } = await AK.klien.auth.updateUser({ password: a, data: { wajib_ganti: false } });
+    if (error) { t.disabled = false; t.textContent = "Simpan Sandi"; return _akPesan(/same|different/i.test(error.message) ? "Sandi pribadi tidak boleh sama dengan sandi dari admin" : "Gagal: " + error.message); }
+    AK.modeWajibGanti = false; _akLS.set("akunWajibGanti", null);
+    qs("ak-masuk")?.remove();
+    _rgLog?.("ganti-sandi-awal", {});
+    toast("Sandi pribadi tersimpan. Gunakan sandi ini untuk masuk berikutnya.", "ok");
+    return;
+  }
   const { error } = await AK.klien.auth.updateUser({ password: a });
   if (error) { t.disabled = false; t.textContent = "Simpan & Masuk"; return _akPesan(/same|different/i.test(error.message) ? "Sandi baru tidak boleh sama dengan sandi lama" : "Gagal: " + error.message); }
   // langsung masuk dengan sandi baru (perangkat ini ikut terdaftar)
@@ -184,6 +195,8 @@ async function akSimpanSandiBaru() {
     const i = qs("ak-login"); if (i && AK.emailPulih) i.value = AK.emailPulih;
   }
 }
+// Masuk pertama dengan sandi dari admin → wajib membuat sandi pribadi (tidak bisa dilewati)
+function akTampilWajibGanti() { akTampilSandiBaru("wajib"); }
 function akFormSandi(pulih) {
   openModal(`<h3>${pulih ? "Buat Sandi Baru" : "Ubah Sandi"}</h3>
     <div style="font-size:12px;color:var(--text-secondary);margin:-4px 0 12px;">Minimal 8 karakter. Gunakan campuran huruf dan angka.</div>
@@ -197,8 +210,9 @@ async function akSimpanSandi(pulih) {
   if (a.length < 8) { err.textContent = "Sandi minimal 8 karakter"; return; }
   if (a !== b) { err.textContent = "Kedua sandi belum sama"; return; }
   const t = qs("ak-baru-btn"); t.disabled = true;
-  const { error } = await AK.klien.auth.updateUser({ password: a });
+  const { error } = await AK.klien.auth.updateUser({ password: a, data: { wajib_ganti: false } });
   t.disabled = false;
+  if (!error) _akLS.set("akunWajibGanti", null);
   if (error) { err.textContent = "Gagal: " + error.message; return; }
   closeModal();
   if (pulih) {
@@ -302,6 +316,7 @@ boot = async function () {
     }
   }
   await _akBootAsli();
+  if (AK.guru && _akLS.get("akunWajibGanti") === "1" && !AK.pulih) akTampilWajibGanti();
   akMuatPengaturan();
   akCekBerkala();
 };
@@ -357,16 +372,18 @@ async function akIsiTabAkun() {
   const bisaUndang = AK_ATUR.guru.filter((g) => !g.auth_user_id && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(g.email || "").trim()));
   return `${menunggu.length ? `<div class="ak-menunggu"><b>Menunggu Persetujuan · ${menunggu.length}</b><small>Guru ini mendaftar sendiri dengan email yang belum cocok dengan Data Guru. Pastikan benar orangnya, lalu setujui.</small>
       ${menunggu.map((g) => `<div class="ak-alat-baris"><div><b>${escapeHtml(g.nama)}</b><small>${escapeHtml(g.email || "-")}</small></div><span><button class="btn btn-sm btn-accent" onclick="akSetujui('${g.id}')">Setujui</button> <button class="btn btn-sm btn-ghost" onclick="akHapusAkun('${g.id}')">Tolak</button></span></div>`).join("")}</div>` : ""}
+    ${(() => { const n = _akCalonMassal().length; return `<div class="ak-undang ak-massal"><div><b>Buat Akun & Kirim Lewat WA · ${escapeHtml(rgNamaPendek(STATE.ruang))}</b><small>${n ? `${n} guru aktif di ruang ini belum punya akun. Akun dibuat sekaligus (nama pengguna + sandi awal), lalu Antum tinggal menekan <b>Kirim WA</b> untuk tiap guru. Saat pertama masuk, guru wajib membuat sandi pribadi. Email tidak wajib.` : "Semua guru aktif di ruang ini sudah punya akun."}</small></div>
+      ${n ? `<button class="btn btn-accent" id="ak-massal-btn" onclick="akBuatMassal()">Buat ${n} Akun</button>` : ""}</div>`; })()}
     <div class="ak-undang"><div><b>Undang Lewat Email</b><small>${bisaUndang.length} guru belum punya akun tetapi emailnya sudah ada di Data Guru. Mereka menerima email undangan dan membuat sandinya sendiri. Guru tanpa email bisa memakai tombol <b>Daftar</b> di layar masuk.</small></div>
       ${bisaUndang.length ? `<button class="btn btn-accent" id="ak-undang-btn" onclick="akUndangSemua()">Undang ${bisaUndang.length} Guru</button>` : ""}</div>
     <div class="ak-wajib ${AK.wajib ? "on" : ""}">
-      <div><b>Wajib Masuk Dengan Akun</b><small>${AK.wajib ? "Menyala — semua guru masuk dengan email & sandi. Pilihan nama guru hanya untuk admin." : "Mati — guru masih memilih nama seperti biasa. Nyalakan setelah semua guru punya akun."}</small>
+      <div><b>Wajib Masuk Dengan Akun</b><small>${AK.wajib ? "Menyala — semua guru masuk dengan akun. Pilihan nama guru hanya untuk admin." : "Mati — guru masih memilih nama seperti biasa. Nyalakan setelah semua guru punya akun."}</small>
       <small>${punya} dari ${AK_ATUR.guru.length} guru sudah punya akun.</small></div>
       <button class="rg-saklar ${AK.wajib ? "on" : ""}" onclick="akUbahWajib(${!AK.wajib})" aria-label="Nyalakan/matikan"></button></div>
-    <p class="rg-ket">Akun memakai nama guru di Data Guru; guru masuk dengan <b>email + sandi</b>. ${_AK_ATURAN_SANDI}. Sandi awal dibagikan ke guru lewat WA; guru bisa menggantinya sendiri di menu akun. Lupa sandi dikirim ke email yang terdaftar. Maksimal ${AK.BATAS} perangkat per guru.</p>
-    <div class="table-wrap"><table class="table"><thead><tr><th>Guru</th><th>Email</th><th style="text-align:center">Perangkat</th><th>Aksi</th></tr></thead><tbody>
+    <p class="rg-ket">Akun memakai nama guru di Data Guru; guru masuk dengan <b>nama pengguna (atau email) + sandi</b>. ${_AK_ATURAN_SANDI}. Sandi awal dibagikan ke guru lewat WA; guru bisa menggantinya sendiri di menu akun. Lupa sandi dikirim ke email yang terdaftar. Maksimal ${AK.BATAS} perangkat per guru.</p>
+    <div class="table-wrap"><table class="table"><thead><tr><th>Guru</th><th>Nama Pengguna · Email</th><th style="text-align:center">Perangkat</th><th>Aksi</th></tr></thead><tbody>
     ${AK_ATUR.guru.map((g) => `<tr><td>${escapeHtml(g.nama)}</td>
-      <td style="font-size:12px">${g.auth_user_id ? escapeHtml(g.email || "-") + (g.akun_menunggu ? ' <em class="ak-tunggu">Menunggu</em>' : "") : `<span class="ak-belum">Belum Punya Akun${g.email ? " · " + escapeHtml(g.email) : ""}</span>`}</td>
+      <td style="font-size:12px">${g.auth_user_id ? `<b>${escapeHtml(g.username || "-")}</b>${g.email ? " · " + escapeHtml(g.email) : ""}` + (g.akun_menunggu ? ' <em class="ak-tunggu">Menunggu</em>' : "") : `<span class="ak-belum">Belum Punya Akun${g.email ? " · " + escapeHtml(g.email) : ""}</span>`}</td>
       <td style="text-align:center">${g.auth_user_id ? `<button class="btn btn-sm btn-ghost" onclick="akPerangkatGuru('${g.id}')">${jmlAlat[g.id] || 0}/${AK.BATAS}</button>` : "-"}</td>
       <td style="white-space:nowrap">${g.auth_user_id
         ? `<button class="btn btn-sm btn-outline" onclick="akFormAkun('${g.id}','ubah')">Ubah Email</button> <button class="btn btn-sm btn-outline" onclick="akResetSandi('${g.id}')">Reset Sandi</button> <button class="btn btn-sm btn-ghost" onclick="akHapusAkun('${g.id}')">Hapus</button>`
@@ -379,7 +396,7 @@ async function akUbahWajib(nyala) {
     toast("Buat akun untuk Antum sendiri dulu, lalu masuk dengan akun itu (menu akun → Masuk Dengan Akun) sebelum menyalakan ini.", "warn");
     return;
   }
-  if (nyala && !(await konfirmasiTema("Setelah dinyalakan, semua guru wajib masuk dengan email & sandi. Guru yang belum punya akun tidak bisa masuk. Lanjutkan?", { judul: "Wajib Masuk Dengan Akun", ikon: "🔐", teksYa: "Ya, Nyalakan" }))) return;
+  if (nyala && !(await konfirmasiTema("Setelah dinyalakan, semua guru wajib masuk dengan akun. Guru yang belum punya akun tidak bisa masuk. Lanjutkan?", { judul: "Wajib Masuk Dengan Akun", ikon: "🔐", teksYa: "Ya, Nyalakan" }))) return;
   const { error } = await supa.from("kuliah_pengaturan").upsert({ kunci: "akun:wajib", nilai: { aktif: !!nyala, oleh: STATE.guruNama, waktu: new Date().toISOString() } });
   if (error) { toast("Gagal menyimpan: " + error.message, "err"); return; }
   AK.wajib = !!nyala; _akLS.set("akunWajib", nyala ? "1" : "0");
@@ -407,7 +424,8 @@ function akFormAkun(guruId, mode) {
   const g = AK_ATUR.guru.find((x) => x.id === guruId); if (!g) return;
   openModal(`<h3>${mode === "buat" ? "Buat Akun" : "Ubah Email"}</h3>
     <div class="ak-nama-guru"><small>Nama (dari Data Guru)</small><b>${escapeHtml(g.nama)}</b></div>
-    <div class="field"><label class="form-label">Email (untuk masuk & lupa sandi)</label><input id="akf-email" type="email" inputmode="email" autocapitalize="none" class="input" value="${escapeHtml(g.email || "")}" placeholder="nama@gmail.com"></div>
+    ${mode === "buat" ? `<div class="field"><label class="form-label">Nama Pengguna (untuk masuk)</label><input class="input" readonly value="${escapeHtml(_akNamaPenggunaUnik(g))}"></div>` : ""}
+    <div class="field"><label class="form-label">${mode === "buat" ? "Email (Boleh Kosong — hanya untuk Lupa Sandi)" : "Email (untuk masuk & lupa sandi)"}</label><input id="akf-email" type="email" inputmode="email" autocapitalize="none" class="input" value="${escapeHtml(g.email || "")}" placeholder="nama@gmail.com"></div>
     ${mode === "buat" ? `<div class="field"><label class="form-label">Sandi Awal</label><div style="display:flex;gap:6px"><input id="akf-sandi" class="input" autocomplete="new-password" value="${_akSandiAcak()}" placeholder="Minimal 8 karakter"><button class="btn btn-outline" onclick="qs('akf-sandi').value=_akSandiAcak()">Acak</button></div>
       <small class="ak-aturan">${_AK_ATURAN_SANDI}. Boleh diketik sendiri.</small></div>` : ""}
     <div id="akf-err" style="color:var(--bad);font-size:11.5px;min-height:14px;margin:-4px 0 10px;"></div>
@@ -417,14 +435,14 @@ async function akSimpanAkun(guruId, mode) {
   const g = AK_ATUR.guru.find((x) => x.id === guruId);
   const email = qs("akf-email").value.trim().toLowerCase(), sandi = qs("akf-sandi") ? qs("akf-sandi").value : undefined, username = _akNamaPenggunaUnik(g);
   const err = qs("akf-err");
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.textContent = "Tulis email dengan benar, contoh: nama@gmail.com"; return; }
+  if ((email || mode !== "buat") && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.textContent = "Tulis email dengan benar, contoh: nama@gmail.com" + (mode === "buat" ? " — atau kosongkan" : ""); return; }
   if (mode === "buat" && (!sandi || sandi.length < 8)) { err.textContent = "Sandi minimal 8 karakter"; return; }
   if (mode === "buat" && /^\s|\s$/.test(sandi)) { err.textContent = "Sandi tidak boleh diawali atau diakhiri spasi"; return; }
   const b = qs("akf-btn"); b.disabled = true;
   try {
     await akPanggilAdmin(mode, mode === "buat" ? { guruId, email, username, sandi } : { guruId, email });
     _rgLog?.(mode === "buat" ? "buat-akun" : "ubah-akun", { guru: g.nama, email });
-    if (mode === "buat") akInfoLogin({ ...g, email }, email, sandi); else { closeModal(); toast("Email akun diperbarui", "ok"); }
+    if (mode === "buat") akInfoLogin({ ...g, email: email || g.email, username }, email, sandi); else { closeModal(); toast("Email akun diperbarui", "ok"); }
     rgBukaPengaturan("akun");
   } catch (e) { err.textContent = e.message; b.disabled = false; }
 }
@@ -432,7 +450,7 @@ async function akResetSandi(guruId) {
   const g = AK_ATUR.guru.find((x) => x.id === guruId); if (!g) return;
   if (!(await konfirmasiTema(`Buat sandi baru untuk ${_namaSingkatTopbar(g.nama)}? Sandi lama tidak berlaku lagi.`, { judul: "Reset Sandi", ikon: "🔑", teksYa: "Ya, Reset" }))) return;
   const sandi = _akSandiAcak();
-  try { await akPanggilAdmin("reset_sandi", { guruId, sandi }); _rgLog?.("reset-sandi", { guru: g.nama }); akInfoLogin(g, g.email, sandi); }
+  try { await akPanggilAdmin("reset_sandi", { guruId, sandi }); _rgLog?.("reset-sandi", { guru: g.nama }); akInfoLogin(g, "", sandi); }
   catch (e) { toast(e.message, "err"); }
 }
 async function akHapusAkun(guruId) {
@@ -441,10 +459,63 @@ async function akHapusAkun(guruId) {
   try { await akPanggilAdmin("hapus", { guruId }); _rgLog?.("hapus-akun", { guru: g.nama }); toast("Akun dihapus", "ok"); rgBukaPengaturan("akun"); }
   catch (e) { toast(e.message, "err"); }
 }
+// ── Buat akun massal untuk guru ruang aktif, lalu kirim lewat WA satu per satu ──
+const _akEmailSah = (e) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(e || "").trim());
+function _akCalonMassal() {
+  const r = STATE.ruang;
+  return AK_ATUR.guru.filter((g) => !g.auth_user_id && g.status_aktif !== false
+    && (!Array.isArray(g.ruang) || !r || g.ruang.includes(r)) && !(g.ruang_nonaktif || []).includes(r));
+}
+async function akBuatMassal() {
+  const calon = _akCalonMassal();
+  if (!calon.length) return;
+  if (!(await konfirmasiTema(`Buat akun untuk ${calon.length} guru sekaligus? Setelah itu tekan Kirim WA untuk tiap guru. Sandi awal hanya tampil sekali.`, { judul: "Buat Akun Massal", ikon: "👥", teksYa: "Ya, Buat" }))) return;
+  const b = qs("ak-massal-btn"); if (b) b.disabled = true;
+  const hasil = [];
+  for (let i = 0; i < calon.length; i++) {
+    const g = calon[i];
+    if (b) b.textContent = `Membuat ${i + 1}/${calon.length}…`;
+    const username = _akNamaPenggunaUnik(g), sandi = _akSandiAcak();
+    // email dari Data Guru dipakai hanya bila sah & tidak dipakai guru lain (email bersama lembaga dilewati)
+    let email = String(g.email || "").trim().toLowerCase();
+    if (!_akEmailSah(email) || AK_ATUR.guru.some((x) => x.id !== g.id && String(x.email || "").trim().toLowerCase() === email)) email = "";
+    try {
+      try { await akPanggilAdmin("buat", { guruId: g.id, username, sandi, ...(email ? { email } : {}) }); }
+      catch (e) { if (!email || !/sudah dipakai/i.test(e.message)) throw e; email = ""; await akPanggilAdmin("buat", { guruId: g.id, username, sandi }); }
+      g.username = username; g.auth_user_id = "baru";
+      hasil.push({ g, sandi, email, ok: true });
+    } catch (e) { hasil.push({ g, ok: false, pesan: e.message }); }
+  }
+  _rgLog?.("buat-akun-massal", { jumlah: hasil.filter((h) => h.ok).length, ruang: STATE.ruang });
+  AK.hasilMassal = hasil;
+  akTampilHasilMassal();
+}
+function akTampilHasilMassal() {
+  const hasil = AK.hasilMassal || [];
+  const ok = hasil.filter((h) => h.ok).length;
+  openModal(`<h3>Kirim Akun Lewat WA</h3>
+    <div class="ak-massal-ket">${ok} akun dibuat${hasil.length > ok ? `, ${hasil.length - ok} gagal` : ""}. Tekan <b>Kirim WA</b> satu per satu — WhatsApp terbuka dengan pesan siap kirim. <b>Jangan tutup jendela ini sebelum semua terkirim</b>; sandi awal tidak bisa dilihat lagi (bila terlewat, pakai Reset Sandi).</div>
+    <div class="ak-massal-daftar">${hasil.map((h, i) => {
+      if (!h.ok) return `<div class="ak-alat-baris"><div><b>${escapeHtml(h.g.nama)}</b><small style="color:var(--bad)">${escapeHtml(h.pesan || "Gagal")}</small></div></div>`;
+      const wa = typeof normalisasiNomorWa === "function" ? normalisasiNomorWa(h.g.no_wa) : { valid: false };
+      return `<div class="ak-alat-baris" id="ak-ms-${i}"><div><b>${escapeHtml(h.g.nama)}</b><small>${escapeHtml(h.g.username)} · ${escapeHtml(h.sandi)}${wa.valid ? "" : " · <em>No. WA belum ada</em>"}</small></div>
+        <span>${wa.valid ? `<a class="btn btn-sm btn-accent" target="_blank" rel="noopener" onclick="akTandaiTerkirim(${i})" href="https://wa.me/${wa.nomor}?text=${encodeURIComponent(_akTeksWa(h.g, h.email, h.sandi))}">Kirim WA</a>` : ""} <button class="btn btn-sm btn-outline" onclick="akSalinMassal(${i})">Salin</button></span></div>`;
+    }).join("")}</div>
+    <button class="btn btn-outline" style="width:100%;margin-top:10px" onclick="closeModal();rgBukaPengaturan('akun')">Selesai</button>`);
+}
+function akTandaiTerkirim(i) { const el = qs("ak-ms-" + i); if (el) el.classList.add("terkirim"); }
+function akSalinMassal(i) {
+  const h = (AK.hasilMassal || [])[i]; if (!h) return;
+  navigator.clipboard.writeText(_akTeksWa(h.g, h.email, h.sandi)).then(() => { toast("Disalin", "ok"); akTandaiTerkirim(i); });
+}
 // Info masuk untuk dibagikan ke guru
-function akInfoLogin(g, email, sandi) {
+function _akTeksWa(g, email, sandi) {
   const alamat = location.origin + location.pathname;
-  const teks = `Assalamu'alaikum ${_namaSingkatTopbar(g.nama)},\n\nBerikut akun aplikasi Guru PKBM Al-Umm Barabai:\nAlamat: ${alamat}\nEmail: ${email}\nSandi: ${sandi}\n\nSetelah masuk, silakan ganti sandi lewat menu akun (pojok kanan atas) → Ubah Sandi. Jangan bagikan sandi ke orang lain.`;
+  const emailAsli = email && !/\.local$/i.test(email);
+  return `Assalamu'alaikum ${_namaSingkatTopbar(g.nama)},\n\nBerikut akun aplikasi Guru PKBM Al-Umm Barabai:\nAlamat: ${alamat}\nNama pengguna: ${g.username || _akNamaPenggunaUnik(g)}\nSandi awal: ${sandi}\n\nCara masuk: buka alamat di atas, ketik nama pengguna dan sandi awal, lalu Antum akan diminta membuat sandi pribadi.${emailAsli ? `\nBila lupa sandi, tekan "Lupa Sandi?" — tautan dikirim ke ${email}.` : "\nBila lupa sandi, hubungi admin."}\n\nJangan bagikan sandi ke orang lain. Jazakumullahu khairan.`;
+}
+function akInfoLogin(g, email, sandi) {
+  const teks = _akTeksWa(g, email, sandi);
   const wa = typeof normalisasiNomorWa === "function" ? normalisasiNomorWa(g.no_wa) : { valid: false };
   openModal(`<h3>Akun Siap</h3><div style="font-size:12px;color:var(--text-secondary);margin:-4px 0 10px;">Bagikan info ini ke ${escapeHtml(_namaSingkatTopbar(g.nama))}. Sandi tidak bisa dilihat lagi setelah jendela ini ditutup.</div>
     <pre class="ak-info-login">${escapeHtml(teks)}</pre>
