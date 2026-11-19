@@ -447,13 +447,7 @@ async function rgBukaPengaturan(tab) {
       const r = await supaSemua.from("guru").select("*").eq("status_aktif", true).order("nama");
       if (r.error) throw r.error;
       RG_ATUR.guru = r.data || [];
-      const kol = RG.daftar;
-      isi = `<p class="rg-ket">Centang ruang tempat guru <b>mengajar</b> (boleh ubah). Ruang jenjang lain otomatis <b>Lihat Saja</b>. <b>Pendamping</b> = Admin Pendamping di ruang itu (boleh melihat data asli). <b>Utama</b> = ruang tempat guru menjadi pegawai tetap; di Beranda Pengelola ia dihitung sebagai tutor jenjang itu saja.</p>
-        <div class="table-wrap"><table class="table"><thead><tr><th>Guru</th>${kol.map((x) => `<th style="text-align:center">${x.ikon}<br><small>${escapeHtml(x.nama)}</small></th>`).join("")}</tr></thead><tbody>
-        ${RG_ATUR.guru.map((g) => `<tr><td>${escapeHtml(g.nama)}</td>${kol.map((x) => {
-          const anggota = (g.ruang || []).includes(x.id), pend = (g.ruang_pendamping || []).includes(x.id);
-          return `<td style="text-align:center;white-space:nowrap"><label class="rg-cek"><input type="checkbox" ${anggota ? "checked" : ""} onchange="rgUbahAnggota('${g.id}','${x.id}','ruang',this.checked)"> Mengajar</label>${x.jenjang ? `<br><label class="rg-cek rg-cek-p"><input type="checkbox" ${pend ? "checked" : ""} onchange="rgUbahAnggota('${g.id}','${x.id}','ruang_pendamping',this.checked)"> Pendamping</label><br><label class="rg-cek rg-cek-u"><input type="radio" name="utama-${g.id}" ${rgRuangUtama(g) === x.id ? "checked" : ""} ${anggota ? "" : "disabled"} onchange="rgUbahUtama('${g.id}','${x.id}')"> Utama</label>` : ""}</td>`;
-        }).join("")}</tr>`).join("")}</tbody></table></div>`;
+      isi = `<div id="rg-anggota">${_rgHtmlAnggota()}</div>`;
       // Guru nonaktif (tidak mengajar / tidak ada di jadwal) yang tetap boleh masuk aplikasi
       const [na] = await Promise.all([supaSemua.from("guru").select("id,nama").eq("status_aktif", false).order("nama"), _rgIdTetapMasuk()]);
       const nonaktif = na.data || [];
@@ -500,6 +494,36 @@ async function rgUbahTetapMasuk(guruId, centang) {
   try { STATE.daftarGuru = await apiGetDaftarGuru(); } catch (e) {}
   toast(centang ? "Guru ini sekarang bisa masuk aplikasi" : "Guru ini tidak lagi muncul di daftar masuk", "ok");
 }
+// ── Guru Per Ruang: kartu per guru, pil ruang berwarna (ketuk = mengajar / tidak) ──
+const RG_ANG = { cari: "", saring: "semua" };
+function _rgHtmlAnggota() {
+  const daftar = RG_ATUR.guru || [], kol = RG.daftar;
+  const jumlah = Object.fromEntries(kol.map((x) => [x.id, daftar.filter((g) => (g.ruang || []).includes(x.id)).length]));
+  const cari = RG_ANG.cari.toLowerCase();
+  const tampil = daftar.filter((g) => (!cari || g.nama.toLowerCase().includes(cari)) && (RG_ANG.saring === "semua" || (g.ruang || []).includes(RG_ANG.saring)));
+  const pil = (g, x) => {
+    const on = (g.ruang || []).includes(x.id), pend = (g.ruang_pendamping || []).includes(x.id), utama = x.jenjang && rgRuangUtama(g) === x.id;
+    return `<div class="rg-pil ${on ? "on" : ""}" style="--rw:${x.warna}">
+      <button class="rg-pil-b" onclick="rgTogAnggota('${g.id}','${x.id}')" title="${on ? "Keluarkan dari" : "Tambahkan ke"} ${escapeHtml(x.nama)}"><i class="rg-pil-titik"></i>${escapeHtml(x.id === "Pa" ? "Putra" : x.id === "Pi" ? "Putri" : x.id === "Pg" ? "Pengelola" : x.nama)}</button>
+      ${on && x.jenjang ? `<button class="rg-pil-k ${utama ? "aktif" : ""}" onclick="rgTogUtama('${g.id}','${x.id}')" title="Ruang utama (pegawai tetap)">Utama</button><button class="rg-pil-k ${pend ? "aktif" : ""}" onclick="rgUbahAnggota('${g.id}','${x.id}','ruang_pendamping',${!pend})" title="Admin Pendamping ruang ini">Pendamping</button>` : ""}
+    </div>`;
+  };
+  return `<p class="rg-ket">Ketuk nama ruang untuk menambah/mengeluarkan guru. Pada ruang yang aktif: <b>Utama</b> = tempat guru menjadi pegawai tetap (dihitung sebagai tutor jenjang itu), <b>Pendamping</b> = Admin Pendamping ruang itu. Guru baru Paket A/Putri cukup ditambahkan lewat <b>Data Guru</b> di ruangnya — otomatis masuk ruang itu.</p>
+    <div class="rg-ang-alat"><input class="input" placeholder="Cari nama guru…" value="${escapeHtml(RG_ANG.cari)}" oninput="RG_ANG.cari=this.value;_rgSegarAnggota(true)">
+      <div class="rg-ang-saring">${[["semua", "Semua", daftar.length, "#64748b"], ...kol.map((x) => [x.id, x.id === "Pa" ? "Putra" : x.id === "Pi" ? "Putri" : x.id === "Pg" ? "Pengelola" : x.nama, jumlah[x.id], x.warna])].map(([k, n, j, w]) => `<button class="${RG_ANG.saring === k ? "aktif" : ""}" style="--rw:${w}" onclick="RG_ANG.saring='${k}';_rgSegarAnggota()">${escapeHtml(n)} <b>${j}</b></button>`).join("")}</div></div>
+    <div class="rg-ang-daftar">${tampil.map((g) => `<div class="rg-ang-baris"><div class="rg-ang-nama"><b>${escapeHtml(g.nama)}</b><small>${(g.ruang || []).length} ruang</small></div><div class="rg-ang-pil">${kol.map((x) => pil(g, x)).join("")}</div></div>`).join("") || '<div class="rg-ket">Tidak ada guru yang cocok.</div>'}</div>`;
+}
+function _rgSegarAnggota(tetapFokus) {
+  const w = qs("rg-anggota"); if (!w) return;
+  const pos = tetapFokus ? w.querySelector(".rg-ang-alat input")?.selectionStart : null;
+  w.innerHTML = _rgHtmlAnggota();
+  if (tetapFokus) { const i = w.querySelector(".rg-ang-alat input"); i.focus(); try { i.setSelectionRange(pos, pos); } catch (e) {} }
+}
+async function rgTogAnggota(guruId, ruangId) {
+  const g = (RG_ATUR.guru || []).find((x) => x.id === guruId); if (!g) return;
+  await rgUbahAnggota(guruId, ruangId, "ruang", !(g.ruang || []).includes(ruangId));
+}
+async function rgTogUtama(guruId, ruangId) { await rgUbahUtama(guruId, ruangId); }
 async function rgUbahUtama(guruId, ruangId) {
   const g = (RG_ATUR.guru || []).find((x) => x.id === guruId);
   if (!g) return;
@@ -507,6 +531,7 @@ async function rgUbahUtama(guruId, ruangId) {
   const { error } = await supaSemua.from("guru").update({ ruang_utama: ruangId }).eq("id", guruId);
   if (error) { toast("Gagal menyimpan: " + error.message, "err"); rgBukaPengaturan("anggota"); return; }
   g.ruang_utama = ruangId;
+  _rgSegarAnggota();
   _rgLog("ubah-ruang-utama", { guru: g.nama, ruang: ruangId });
   toast(`${_namaSingkatTopbar(g.nama)}: ruang utama ${rgRuang(ruangId).nama}`, "ok");
 }
@@ -515,11 +540,12 @@ async function rgUbahAnggota(guruId, ruangId, kolom, centang) {
   if (!g) return;
   const set = new Set(g[kolom] || []);
   centang ? set.add(ruangId) : set.delete(ruangId);
-  if (kolom === "ruang" && !set.size) { toast("Guru harus punya minimal satu ruang", "warn"); rgBukaPengaturan("anggota"); return; }
+  if (kolom === "ruang" && !set.size) { toast("Guru harus punya minimal satu ruang", "warn"); return; }
   const nilai = [...set];
   const { error } = await supaSemua.from("guru").update({ [kolom]: nilai }).eq("id", guruId);
   if (error) { toast("Gagal menyimpan: " + error.message, "err"); rgBukaPengaturan("anggota"); return; }
   g[kolom] = nilai;
+  _rgSegarAnggota();
   _rgLog("ubah-ruang-guru", { guru: g.nama, ruang: ruangId, [kolom]: centang });
   toast(`${_namaSingkatTopbar(g.nama)}: ${centang ? "ditambahkan ke" : "dikeluarkan dari"} ${rgRuang(ruangId).nama}${kolom === "ruang_pendamping" ? " (Pendamping)" : ""}`, "ok");
 }
