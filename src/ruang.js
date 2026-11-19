@@ -473,10 +473,10 @@ async function rgBukaPengaturan(tab) {
     } else if (RG_ATUR.tab === "akun") {
       isi = typeof akIsiTabAkun === "function" ? await akIsiTabAkun() : "<p>Fitur akun belum dimuat.</p>";
     } else {
-      const r = await supaSemua.from("log_aktivitas").select("waktu,ruang_id,nama,aksi,rincian").order("waktu", { ascending: false }).limit(80);
+      const r = await supaSemua.from("log_aktivitas").select("waktu,ruang_id,nama,aksi,rincian").order("waktu", { ascending: false }).limit(200);
       if (r.error) throw r.error;
-      isi = `<p class="rg-ket">80 aktivitas terakhir. Hanya Admin yang bisa melihat catatan ini.</p><div class="table-wrap"><table class="table"><thead><tr><th>Waktu</th><th>Ruang</th><th>Siapa</th><th>Aktivitas</th></tr></thead><tbody>
-        ${(r.data || []).map((x) => `<tr><td style="white-space:nowrap">${new Date(x.waktu).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}</td><td>${escapeHtml(rgRuang(x.ruang_id).nama)}</td><td>${escapeHtml(x.nama || "-")}</td><td>${escapeHtml(x.aksi)}${x.rincian ? ` <small style="color:var(--text-secondary)">${escapeHtml(JSON.stringify(x.rincian))}</small>` : ""}</td></tr>`).join("") || `<tr><td colspan="4">Belum ada catatan.</td></tr>`}</tbody></table></div>`;
+      RG_LOG.data = r.data || [];
+      isi = `<div id="rg-log">${_rgHtmlLog()}</div>`;
     }
     sec.innerHTML = `<div class="card">${kepala}${isi}</div>`;
   } catch (e) { sec.innerHTML = `<div class="card">${kepala}<p>Gagal memuat: ${escapeHtml(e.message)}</p></div>`; }
@@ -557,7 +557,7 @@ async function rgUbahAnggota(guruId, ruangId, kolom, centang) {
   if (error) { toast("Gagal menyimpan: " + error.message, "err"); rgBukaPengaturan("anggota"); return; }
   g[kolom] = nilai;
   _rgSegarAnggota();
-  _rgLog("ubah-ruang-guru", { guru: g.nama, ruang: ruangId, [kolom]: centang });
+  _rgLog("ubah-ruang-guru", { guru: g.nama, ruang: ruangId, peran: kolom === "ruang" ? "anggota" : "pendamping", aktif: centang });
   toast(`${_namaSingkatTopbar(g.nama)}: ${centang ? "ditambahkan ke" : "dikeluarkan dari"} ${rgRuang(ruangId).nama}${kolom === "ruang_pendamping" ? " (Pendamping)" : ""}`, "ok");
 }
 
@@ -611,10 +611,15 @@ apiGetPengaturanSekolah = async function () {
   } catch (e) { return sendiri; }
 };
 const _rgPengSimpanAsli = apiSimpanPengaturanSekolah;
+// Nama Kepala PKBM sama di semua ruang: diubah di satu ruang → ikut berubah di ruang lain
+async function _rgSamakanKepala(nama) {
+  try { await supaSemua.from("pengaturan_sekolah").update({ kepala_pkbm: nama }).eq("id", 1); } catch (e) {}
+}
 apiSimpanPengaturanSekolah = async function (data) {
-  if (!rgPengaturanIkutPutra()) return _rgPengSimpanAsli(data);
+  if (!rgPengaturanIkutPutra()) { const h = await _rgPengSimpanAsli(data); if (data && data.kepala_pkbm && RG.siap) await _rgSamakanKepala(data.kepala_pkbm); return h; }
   const isi = {};
   RG_KOLOM_ABSEN.forEach((k) => { if (data && k in data) isi[k] = data[k]; });
+  if (data && data.kepala_pkbm) await _rgSamakanKepala(data.kepala_pkbm);
   await _rgPengSimpanAsli(isi);
   return apiGetPengaturanSekolah();
 };
@@ -625,3 +630,83 @@ pilihTabPengaturan = function (kode) {
   qsa("#pg-tab-bar button").forEach((b) => { b.hidden = b.dataset.tab !== "absensi"; });
   if (!qs("rg-peng-ket")) qs("pg-tab-bar")?.insertAdjacentHTML("afterend", `<div id="rg-peng-ket" class="rg-ket" style="margin:0 0 10px">Di ${escapeHtml(rgRuang().nama)}, pengaturan yang terpisah hanya bagian <b>Absensi</b> (lokasi, radius, jam masuk/pulang, hari libur). Pengaturan lain mengikuti Paket B & C Putra.</div>`);
 };
+
+
+// ── 14. Catatan Aktivitas: linimasa per hari, kalimat yang mudah dibaca, saring per ruang ──
+const RG_LOG = { data: [], ruang: "semua", cari: "" };
+function _rgKalimatLog(x) {
+  const r = x.rincian || {}, nm = (id) => escapeHtml(rgNamaPendek(id));
+  const guru = (v) => `<b>${escapeHtml(_namaSingkatTopbar(v || "guru"))}</b>`;
+  switch (x.aksi) {
+    case "pindah-ruang": return `membuka ruang <b>${nm(r.ke)}</b> (dari ${nm(r.dari)})`;
+    case "ubah-ruang-guru":
+      if (r.peran === "anggota") return `${r.aktif ? "menambahkan" : "mengeluarkan"} ${guru(r.guru)} ${r.aktif ? "ke" : "dari"} <b>${nm(r.ruang)}</b>`;
+      if (r.peran === "pendamping") return `${r.aktif ? "menjadikan" : "mencabut"} ${guru(r.guru)} ${r.aktif ? "sebagai" : "dari"} Admin Pendamping <b>${nm(r.ruang)}</b>`;
+      if ("ruang_pendamping" in r) return `${r.ruang_pendamping ? "menjadikan" : "mencabut"} ${guru(r.guru)} ${r.ruang_pendamping ? "sebagai" : "dari"} Admin Pendamping ${nm(r.ruang)}`;
+      return `${r.ruang === false || r.ruang === true ? (r.ruang ? "menambahkan" : "mengeluarkan") : "mengubah ruang"} ${guru(r.guru)} ${r.ruang ? "ke" : "dari"} ruang`;
+    case "ubah-ruang-utama": return `menetapkan ruang utama ${guru(r.guru)}: <b>${nm(r.ruang)}</b>`;
+    case "ubah-fitur-ruang": { const it = MENU.flatMap((m) => m.items).find((m) => m.key === r.fitur); return `${r.aktif ? "menyalakan" : "mematikan"} menu <b>${escapeHtml(it ? t(it.i18n) : r.fitur)}</b> di ${nm(r.ruang)}`; }
+    case "buat-akun": return `membuat akun untuk ${guru(r.guru)}`;
+    case "ubah-akun": return `mengubah email akun ${guru(r.guru)}`;
+    case "reset-sandi": return `mereset sandi ${guru(r.guru)}`;
+    case "hapus-akun": return `menghapus akun ${guru(r.guru)}`;
+    case "masuk-akun": return `masuk dengan akun${r.perangkat ? ` dari <b>${escapeHtml(r.perangkat)}</b>` : ""}`;
+    case "akun-wajib": return `${r.aktif ? "menyalakan" : "mematikan"} <b>Wajib Masuk Dengan Akun</b>`;
+    case "tetap-bisa-masuk": return `${r.aktif ? "mengizinkan" : "mencabut izin"} guru nonaktif masuk aplikasi`;
+    case "lihat-nik": return `melihat NIK/KK ${guru(r.siswa || r.nama)}`;
+    default: return escapeHtml(x.aksi.replace(/-/g, " "));
+  }
+}
+function _rgIkonLog(aksi) {
+  return /akun|sandi|masuk/.test(aksi) ? "rg-akun" : aksi === "pindah-ruang" ? "rg-balik" : /fitur/.test(aksi) ? "rg-atur" : "pg-ptk";
+}
+function _rgHtmlLog() {
+  const cari = RG_LOG.cari.toLowerCase();
+  const data = RG_LOG.data.filter((x) => (RG_LOG.ruang === "semua" || x.ruang_id === RG_LOG.ruang) && (!cari || (String(x.nama || "") + " " + _rgKalimatLog(x).replace(/<[^>]+>/g, "")).toLowerCase().includes(cari)));
+  const hari = {};
+  data.forEach((x) => { const k = new Date(x.waktu).toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" }); (hari[k] = hari[k] || []).push(x); });
+  const pilihan = [["semua", "Semua", "#64748b"], ...RG.daftar.map((r) => [r.id, rgNamaPendek(r.id), r.warna])];
+  return `<div class="rg-log-alat"><input class="input" placeholder="Cari nama atau aktivitas…" value="${escapeHtml(RG_LOG.cari)}" oninput="RG_LOG.cari=this.value;_rgSegarLog()">
+      <div class="rg-ang-saring">${pilihan.map(([k, n, w]) => `<button class="${RG_LOG.ruang === k ? "aktif" : ""}" style="--rw:${w}" onclick="RG_LOG.ruang='${k}';_rgSegarLog()">${escapeHtml(n)}</button>`).join("")}</div></div>
+    <p class="rg-ket">${data.length} dari ${RG_LOG.data.length} aktivitas terakhir. Hanya Admin yang bisa melihat catatan ini.</p>
+    ${Object.entries(hari).map(([tgl, xs]) => `<div class="rg-log-hari"><div class="rg-log-tgl">${escapeHtml(tgl)}</div>
+      ${xs.map((x) => { const r = rgRuang(x.ruang_id); return `<div class="rg-log-baris"><span class="rg-log-jam">${new Date(x.waktu).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</span>
+        <span class="rg-log-titik" style="--rw:${r.warna}">${rgSvg(_rgIkonLog(x.aksi), "")}</span>
+        <div class="rg-log-isi"><div><b>${escapeHtml(_namaSingkatTopbar(x.nama || "Sistem"))}</b> ${_rgKalimatLog(x)}</div>
+          <span class="rg-log-ruang" style="--rw:${r.warna}">${rgIkonRuang(r.id)}${escapeHtml(rgNamaPendek(r.id))}</span></div></div>`; }).join("")}</div>`).join("") || '<div class="rg-ket">Belum ada catatan.</div>'}`;
+}
+function _rgSegarLog() {
+  const w = qs("rg-log"); if (!w) return;
+  const i = w.querySelector(".rg-log-alat input"), pos = document.activeElement === i ? i.selectionStart : null;
+  w.innerHTML = _rgHtmlLog();
+  if (pos !== null) { const j = w.querySelector(".rg-log-alat input"); j.focus(); try { j.setSelectionRange(pos, pos); } catch (e) {} }
+}
+
+// ── 15. Data Guru per jenjang: Honda & nonaktif dicatat per ruang (SQL_PKBM_7_GURU_PER_RUANG.sql) ──
+function _rgGuruPerRuang(g) {
+  const X = STATE.ruang, o = { ...g };
+  if (g && "honda_ruang" in g) { const m = g.honda_ruang || {}; o.penerima_honda = X in m ? m[X] : X === "Pa" ? g.penerima_honda : null; }
+  if (g && Array.isArray(g.ruang_nonaktif) && g.ruang_nonaktif.includes(X)) o.status_aktif = false;
+  return o;
+}
+const _rgGetAllGuruAsli = apiGetAllGuru;
+apiGetAllGuru = async function () { return (await _rgGetAllGuruAsli()).map(_rgGuruPerRuang); };
+const _rgSimpanGuruAsli = apiSimpanGuru;
+apiSimpanGuru = async function (row) {
+  if (!row || !row.id || !RG.siap || !("penerima_honda" in row || "status_aktif" in row)) return _rgSimpanGuruAsli(row);
+  const X = STATE.ruang, isi = { ...row };
+  const { data: lama, error } = await supaSemua.from("guru").select("honda_ruang,ruang_nonaktif,ruang,status_aktif").eq("id", row.id).maybeSingle();
+  if (error || !lama || !("honda_ruang" in lama)) return _rgSimpanGuruAsli(row); // SQL belum dijalankan → cara lama
+  if ("penerima_honda" in isi) {
+    isi.honda_ruang = { ...(lama.honda_ruang || {}), [X]: isi.penerima_honda };
+    if (X !== "Pa") delete isi.penerima_honda; // kolom lama tetap milik Putra
+  }
+  if ("status_aktif" in isi) {
+    const set = new Set(lama.ruang_nonaktif || []);
+    isi.status_aktif ? set.delete(X) : set.add(X);
+    isi.ruang_nonaktif = [...set];
+    isi.status_aktif = (lama.ruang || []).some((r) => !set.has(r)); // aktif bila masih aktif di salah satu ruangnya
+  }
+  return _rgSimpanGuruAsli(isi);
+};
+apiHapusGuru = async function (id) { return apiSimpanGuru({ id, status_aktif: false }); };

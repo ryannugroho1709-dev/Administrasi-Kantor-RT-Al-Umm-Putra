@@ -91,7 +91,7 @@ const KOLOM_PENGATURAN_SEKOLAH_PUBLIK =
   "jabatan_bendahara,toleransi_masuk_menit,batas_pulang_menit,kaldik_latar_url,kaldik_latar_pos_x," +
   "kaldik_latar_pos_y,kaldik_latar_zoom,kaldik_latar_opacity,kaldik_warna_judul,kaldik_warna_teks," +
   "kaldik_teks_panel,minggu_ganjil_genap_acuan,kaldik_logo_ukuran,kaldik_ukuran_judul," +
-  "metode_mengajar_list,harga_snack_per_orang,tunjangan_wali_kelas_aktif,tahun_ajaran_mulai,bobot_nilai";
+  "metode_mengajar_list,harga_snack_per_orang,tunjangan_wali_kelas_aktif,tahun_ajaran_mulai,bobot_nilai,kepala_pkbm";
 async function apiGetPengaturanSekolah() {
   try {
     const rows = unwrap(await supa.from("pengaturan_sekolah").select(KOLOM_PENGATURAN_SEKOLAH_PUBLIK).eq("id", 1).limit(1));

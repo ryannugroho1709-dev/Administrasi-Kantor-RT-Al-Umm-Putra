@@ -144,7 +144,6 @@ function _uaGambar() {
     <div class="card ua-ringkas"><div class="ua-angka"><b>${sudah}</b>/<span>${baris.length}</span><small>mapel-kelas sudah</small></div><div class="ju-bar" style="flex:1"><i style="width:${baris.length ? Math.round((sudah / baris.length) * 100) : 0}%"></i></div>
       <button class="btn btn-accent btn-sm" onclick="uaBuatWord('${j.id}')" title="Tempel teks soal, otomatis jadi Word berkop & terkumpul">📝 Buat Soal Word</button>${atur ? `<button class="btn btn-wa btn-sm" onclick="uaKirimWa()">💬 WA Sudah & Belum</button>` : ""}</div>
     ${_uaHtmlBatas(j, atur)}
-    ${atur ? `<div class="ua-ket-kontak">📇 Supaya tag @ di pesan WA tepat orangnya, samakan nomor WA guru dengan Kontak Google: <a href="#" onclick="event.preventDefault();guruSinkronKontak()">Sinkron Kontak Google</a></div>` : ""}
     <div class="card ua-ket">💻 <b>Ujian Online</b> otomatis tercentang bila guru sudah membuat soal ${j.jenis === "uas" ? "UAS" : j.jenis === "uts" ? "UTS" : "UTS/UAS"} di menu Ujian Online untuk mapel & kelas itu. 📄 Guru juga bisa mengunggah berkas Word/PDF. 📦 Admin/kepala sekolah menandai soal kertas yang sudah diterima.</div>
     <div class="ua-saring">${tombolSaring}</div>
     ${tampil.length ? "" : `<div class="card empty-state">${saring === "belum" ? "Alhamdulillah, semua sudah mengumpulkan ✓" : "Belum ada yang mengumpulkan."}</div>`}

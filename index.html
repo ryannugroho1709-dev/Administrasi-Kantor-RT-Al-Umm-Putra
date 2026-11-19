@@ -19,7 +19,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Amiri:wght@400;700&family=Playfair+Display:wght@600;700;800&display=swap&family=Anton&family=Great+Vibes" rel="stylesheet">
 <!-- Tema elegan + pilihan palet (menu ✨ di topbar). "klasik" = tampilan hijau lama. Dipasang
      sedini mungkin supaya tidak sempat "berkedip" tampilan lain dulu. Disimpan per perangkat. -->
-<link rel="stylesheet" href="src/tema-elegan.css?v=14">
+<link rel="stylesheet" href="src/tema-elegan.css?v=15">
 <link rel="stylesheet" href="src/kas.css?v=6">
 <link rel="stylesheet" href="src/hp.css?v=3">
 <link rel="stylesheet" href="src/kuliah.css?v=6">
@@ -47,7 +47,7 @@ function _logoAwal(){try{return localStorage.getItem("logoSekolahUrl")||"assets/
 <!-- pdf.js — hanya dipakai fitur "Ambil sampul dari halaman pertama PDF" di Modul Ajar (render page 1 ke canvas) -->
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script>if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";</script>
-<script src="src/api.js?v=25"></script>
+<script src="src/api.js?v=26"></script>
 <script>
 // ── Override apiPerbaikanAbsenAdmin: pakai RPC SECURITY DEFINER (bypass RLS) ──
 // Blok ini di index.html mengoverride versi dari api.js agar pasti termuat,
@@ -1937,7 +1937,7 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
                 <button class="btn btn-ghost" style="width:100%;justify-content:flex-start;" onclick="closeMenuDataGuru();eksporDataGuru();">📤 <span data-i18n="eksporExcel">Ekspor Excel</span></button>
               </div>
             </div>
-            <button class="btn btn-outline admin-only" style="display:none;" onclick="guruSinkronKontak()" title="Samakan nomor WA guru dengan Kontak Google supaya tag @ tepat">📇 Kontak Google</button>
+            
             <button class="btn btn-outline" onclick="bukaKelolaWaliKelasSemua()" title="Kelola Wali Kelas">🎓 <span data-i18n="waliKelasSingkat">Wali Kelas</span></button>
             <button class="btn btn-outline btn-toggle-guru" id="btn-toggle-guru-nonaktif" onclick="toggleModeGuruNonaktif()"><span class="btn-toggle-guru-icon" id="icon-guru-nonaktif">⏸️</span><span id="label-guru-nonaktif" data-i18n="guruNonAktif">Guru Non Aktif</span></button>
             <button class="btn btn-outline btn-toggle-guru" id="btn-toggle-guru-honda" onclick="bukaHalamanHonda()"><span class="btn-toggle-guru-icon">💰</span> <span data-i18n="guruHonda">Guru Honda</span></button>
@@ -16155,7 +16155,7 @@ async function handleImportSiswa(evt) {
 <script src="src/hp.js?v=8"></script>
 <script src="src/leger-nilai.js?v=5"></script>
 <script src="src/jadwal-ujian.js?v=11"></script>
-<script src="src/ujian-arsip.js?v=9"></script>
+<script src="src/ujian-arsip.js?v=10"></script>
 <script src="src/tur.js?v=4"></script>
 <script src="src/soal-word.js?v=8"></script>
 <script src="src/jurnal-mengawas.js?v=4"></script>
@@ -16163,7 +16163,7 @@ async function handleImportSiswa(evt) {
 <script src="src/nilai-tempel.js?v=3"></script>
 <script src="src/dapodik.js?v=2"></script>
 <script src="src/modul-urut.js?v=1"></script>
-<script src="src/ruang.js?v=9"></script>
+<script src="src/ruang.js?v=10"></script>
 <script src="src/akun.js?v=3"></script>
 </body>
 </html>
