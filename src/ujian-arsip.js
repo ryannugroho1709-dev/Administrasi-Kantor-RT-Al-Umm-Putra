@@ -135,7 +135,10 @@ function _uaGambar() {
   const perGuru = new Map();
   baris.forEach((x) => { const gs = x.guru.size ? [...x.guru] : ["-"]; gs.forEach((g) => { if (!perGuru.has(g)) perGuru.set(g, []); perGuru.get(g).push(x); }); });
   const urut = [...perGuru.entries()].sort((a, b) => (a[0] === saya ? -1 : b[0] === saya ? 1 : 0) || _juNamaGuru(a[0]).localeCompare(_juNamaGuru(b[0]), "id"));
-  const tampil = atur ? urut : urut.filter(([g]) => g === saya);
+  // saring: semua / belum / sudah (per mapel-kelas)
+  const saring = UA.saring || "semua", lolos = (x) => saring === "semua" || (saring === "sudah" ? x.st.length > 0 : x.st.length === 0);
+  const tampil = (atur ? urut : urut.filter(([g]) => g === saya)).map(([g, xs]) => [g, xs.filter(lolos), xs]).filter(([, xs]) => xs.length);
+  const tombolSaring = [["semua", `Semua · ${baris.length}`], ["belum", `Belum · ${baris.length - sudah}`], ["sudah", `Sudah · ${sudah}`]].map(([k, n]) => `<button class="ua-saring-b ${saring === k ? "aktif" : ""}" onclick="UA.saring='${k}';_uaGambar()">${n}</button>`).join("");
   qs("ju-wadah").innerHTML = `
     <div class="ju-editor-h"><button class="btn btn-ghost" onclick="_juGambarDaftar()">← Daftar</button><div class="ju-eh-judul"><b class="ju-judul">📥 Pengumpulan Soal</b><small class="ju-ket">${e(j.judul)}</small></div></div>
     <div class="card ua-ringkas"><div class="ua-angka"><b>${sudah}</b>/<span>${baris.length}</span><small>mapel-kelas sudah</small></div><div class="ju-bar" style="flex:1"><i style="width:${baris.length ? Math.round((sudah / baris.length) * 100) : 0}%"></i></div>
@@ -143,7 +146,9 @@ function _uaGambar() {
     ${_uaHtmlBatas(j, atur)}
     ${atur ? `<div class="ua-ket-kontak">📇 Supaya tag @ di pesan WA tepat orangnya, samakan nomor WA guru dengan Kontak Google: <a href="#" onclick="event.preventDefault();guruSinkronKontak()">Sinkron Kontak Google</a></div>` : ""}
     <div class="card ua-ket">💻 <b>Ujian Online</b> otomatis tercentang bila guru sudah membuat soal ${j.jenis === "uas" ? "UAS" : j.jenis === "uts" ? "UTS" : "UTS/UAS"} di menu Ujian Online untuk mapel & kelas itu. 📄 Guru juga bisa mengunggah berkas Word/PDF. 📦 Admin/kepala sekolah menandai soal kertas yang sudah diterima.</div>
-    ${tampil.map(([g, xs]) => `<div class="card ua-guru"><div class="ua-guru-h"><b>${e(g === "-" ? "Belum ada pengampu" : _juGuru(g)?.nama || "?")}</b><span class="ua-ke">${xs.filter((x) => x.st.length).length}/${xs.length}</span></div>
+    <div class="ua-saring">${tombolSaring}</div>
+    ${tampil.length ? "" : `<div class="card empty-state">${saring === "belum" ? "Alhamdulillah, semua sudah mengumpulkan ✓" : "Belum ada yang mengumpulkan."}</div>`}
+    ${tampil.map(([g, xs, semuaG]) => `<div class="card ua-guru"><div class="ua-guru-h"><b>${e(g === "-" ? "Belum ada pengampu" : _juGuru(g)?.nama || "?")}</b><span class="ua-ke">${semuaG.filter((x) => x.st.length).length}/${semuaG.length}</span></div>
       ${xs.sort((a, b) => _juNamaMapel(a.mapelId).localeCompare(_juNamaMapel(b.mapelId), "id") || String(_juAngkaKelas(a.kelasId)).localeCompare(String(_juAngkaKelas(b.kelasId)), "id", { numeric: true })).map((x) => {
         const kunci = _uaKunci(x.mapelId, x.kelasId), boleh = atur || x.guru.has(saya);
         return `<div class="ua-baris ${x.st.length ? "ok" : ""}" style="--kw:${_juWarnaKelas(x.kelasId)}">
@@ -161,18 +166,14 @@ async function uaUnggah(kunci, input) {
   try {
     setGlobalLoading(true, "Mengunggah soal…");
     const url = await apiUploadFoto(f, "soal-ujian");
-    UA.data = await _kvAmbil("ujian:soal:" + UA.jadwal.id, {}); // ambil terbaru (guru lain mungkin baru mengunggah)
-    UA.data[kunci] = { ...(UA.data[kunci] || {}), file_url: url, nama_file: f.name, oleh: STATE.guruNama || "", t: new Date().toISOString() };
-    await _uaSimpan(); toast("📄 Soal terunggah ✓ — admin bisa langsung melihatnya", "ok"); UA.terakhir = { kunci, url, nama: f.name }; UA.segarkan ? UA.segarkan() : _uaGambar();
+    UA.data = await _kvGabung("ujian:soal:" + UA.jadwal.id, { [kunci]: { file_url: url, nama_file: f.name, oleh: STATE.guruNama || "", t: new Date().toISOString(), sumber: "unggah" } }); toast("📄 Soal terunggah ✓ — admin bisa langsung melihatnya", "ok"); UA.terakhir = { kunci, url, nama: f.name }; UA.segarkan ? UA.segarkan() : _uaGambar();
   } catch (e) { toast("Gagal mengunggah: " + (typeof _diagnosaErrorUploadFoto === "function" ? _diagnosaErrorUploadFoto(e.message) : e.message), "err"); }
   finally { setGlobalLoading(false); }
 }
 async function uaToggleFisik(kunci) {
   try {
-    UA.data = await _kvAmbil("ujian:soal:" + UA.jadwal.id, {});
-    const d = (UA.data[kunci] = UA.data[kunci] || {});
-    d.fisik = !d.fisik; d.fisik_oleh = d.fisik ? `${STATE.guruNama || "Admin"} · ${new Date().toLocaleDateString("id-ID")}` : "";
-    await _uaSimpan(); UA.segarkan ? UA.segarkan() : _uaGambar();
+    const fisik = !(UA.data[kunci] || {}).fisik;
+    UA.data = await _kvGabung("ujian:soal:" + UA.jadwal.id, { [kunci]: { fisik, fisik_oleh: fisik ? `${STATE.guruNama || "Admin"} · ${new Date().toLocaleDateString("id-ID")}` : "" } }); UA.segarkan ? UA.segarkan() : _uaGambar();
   } catch (e) { toast("Gagal: " + (e.message || e), "err"); }
 }
 // ── Batas pengumpulan soal: disimpan di data pengumpulan (kunci "_batas"); bawaan H-7 sebelum ujian dimulai ──
@@ -190,7 +191,7 @@ function uaAturBatas() {
 }
 async function uaSimpanBatas() {
   const v = qs("ua-batas").value; if (!v) return;
-  try { UA.data = await _kvAmbil("ujian:soal:" + UA.jadwal.id, {}); UA.data._batas = v; await _uaSimpan(); closeModal(); toast(`⏳ Batas pengumpulan: ${_juHariPanjang(v)} (${_uaLabelH(v)})`, "ok"); UA.segarkan ? UA.segarkan() : _uaGambar(); }
+  try { UA.data = await _kvGabung("ujian:soal:" + UA.jadwal.id, { _batas: v }); closeModal(); toast(`⏳ Batas pengumpulan: ${_juHariPanjang(v)} (${_uaLabelH(v)})`, "ok"); UA.segarkan ? UA.segarkan() : _uaGambar(); }
   catch (e) { toast("Gagal: " + (e.message || e), "err"); }
 }
 // Pesan WA: SATU daftar per ustadz; tiap mapel langsung bertanda ✅ sudah / ⏳ belum (tidak dipisah ke bawah).

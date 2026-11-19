@@ -258,6 +258,23 @@ async function _kvAmbil(kunci, bawaan) {
   catch (e) { return bawaan; }
 }
 async function _kvSimpan(kunci, nilai) { const { error } = await supa.from("kuliah_pengaturan").upsert({ kunci, nilai }); if (error) throw error; }
+// Tambah/ubah sebagian entri tanpa menimpa entri lain (data bersama banyak guru, mis. pengumpulan soal).
+// Di server (SQL_PKBM_6_KV_GABUNG.sql) bila ada; bila belum, baca KETAT (gagal baca = batal, tidak menimpa).
+async function _kvGabung(kunci, potongan) {
+  const r = await supa.rpc("kv_gabung", { p_kunci: kunci, p_isi: potongan });
+  if (!r.error) return r.data || {};
+  if (!/kv_gabung|PGRST202|schema cache|Could not find the function/i.test(r.error.message || "")) throw r.error;
+  const a = await supa.from("kuliah_pengaturan").select("nilai").eq("kunci", kunci).maybeSingle();
+  if (a.error) throw new Error("Gagal membaca data terbaru, coba lagi: " + a.error.message);
+  const nilai = { ...((a.data && a.data.nilai) || {}) };
+  for (const [k, v] of Object.entries(potongan)) {
+    if (v === null) delete nilai[k];
+    else if (v && typeof v === "object" && !Array.isArray(v) && nilai[k] && typeof nilai[k] === "object") nilai[k] = { ...nilai[k], ...v };
+    else nilai[k] = v;
+  }
+  await _kvSimpan(kunci, nilai);
+  return nilai;
+}
 
 // ── Kelengkapan profil ──
 const _PF_WAJIB = [["foto_url", "foto"], ["nip_nik", "NIK"], ["no_wa", "No. WA"], ["email", "email"], ["tempat_lahir", "tempat lahir"], ["tanggal_lahir", "tanggal lahir"], ["alamat_domisili", "alamat"], ["tmt", "TMT"]];

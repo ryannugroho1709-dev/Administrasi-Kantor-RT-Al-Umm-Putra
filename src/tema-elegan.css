@@ -430,3 +430,7 @@ html.tema-elegan .splash-dots span{background:#d4a64a;}
 .ak-wajib small{display:block;font-size:12px;color:var(--text-secondary);margin-top:3px}
 .ak-belum{font-size:11.5px;color:var(--text-secondary);font-style:italic}
 .ak-info-login{white-space:pre-wrap;font-family:inherit;font-size:12.5px;background:var(--accent-soft);border-radius:12px;padding:12px;margin:0 0 12px;line-height:1.55}
+/* Pengumpulan Soal: saring Semua / Belum / Sudah */
+.ua-saring{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+.ua-saring-b{border:1px solid var(--border-soft);background:var(--card,#fff);color:var(--text-secondary);border-radius:99px;padding:6px 14px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+.ua-saring-b.aktif{background:var(--accent);border-color:var(--accent);color:#fff}

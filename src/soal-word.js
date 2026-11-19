@@ -65,6 +65,10 @@ function _swUrai(teks) {
     const s = b.replace(/[‎‏]/g, "").trim();
     if (!s) return;
     let m;
+    const bg = _swBagian(s);
+    if (bg) return hasil.push(bg);
+    const akhir0 = hasil[hasil.length - 1];
+    if (akhir0 && akhir0.jenis === "bagian" && !/^([0-9٠-٩]{1,3})\s*[.)\-–:]/.test(s) && s.length <= 160) return hasil.push({ jenis: "petunjuk", teks: s });
     if ((m = s.match(/^([0-9٠-٩]{1,3})\s*[.)\-–:]\s*(.*)$/))) return hasil.push({ jenis: "soal", label: m[1] + ".", teks: m[2] });
     if ((m = s.match(/^([-–•*·▪●])\s*(.+)$/))) return hasil.push({ jenis: "butir", label: m[1] === "*" || m[1] === "▪" || m[1] === "●" ? "•" : m[1] === "–" ? "-" : m[1], teks: m[2] });
     if ((m = s.match(/^([a-eA-E]|[أابجدهـ])\s*[.)]\s+(.+)$/))) return hasil.push({ jenis: "butir", label: m[1] + ".", teks: m[2] });
@@ -74,6 +78,18 @@ function _swUrai(teks) {
   });
   // baris ke-2 "judul" hanya bila pendek (mis. nama kitab + sub judul); selain itu paragraf petunjuk
   return hasil.map((x, i) => (x.jenis === "judul" && i > 1 ? { ...x, jenis: "paragraf" } : x));
+}
+// Judul bagian soal: "A. Pilihan Ganda", "II. Essay", "Isian Singkat", "أَوَّلًا: ..." dsb.
+const _SW_TANPA_HARAKAT = (t) => String(t).replace(/[\u064B-\u065F\u0670\u0640]/g, "");
+function _swBagian(s) {
+  const m = s.match(/^(?:([A-E]|I{1,3}|IV|V)\s*[.)]\s*)?(soal pilihan ganda|pilihan ganda|soal essa?y|essa?y|soal esai|esai|soal uraian|uraian|soal isian|isian( singkat)?|menjodohkan|benar[ -]salah)\b(.*)$/i);
+  if (m) {
+    const nama = m[2].toLowerCase(), tipe = /pilihan|benar/.test(nama) ? "pg" : "esai";
+    return { jenis: "bagian", tipe, huruf: m[1] || "", teks: (m[2] + (m[4] || "")).trim().replace(/[:：]\s*$/, ""), ar: false };
+  }
+  const a = _SW_TANPA_HARAKAT(s);
+  if (/^(اولا|أولا|ثانيا|ثالثا|رابعا|خامسا)\s*[:：.]/.test(a)) return { jenis: "bagian", tipe: /اختر|الاختيار|متعدد/.test(a) ? "pg" : "", huruf: "", teks: s, ar: true };
+  return null;
 }
 const _swArab = (t) => { const a = (String(t).match(new RegExp(_SW_AR_HURUF.source, "g")) || []).length, l = (String(t).match(/[A-Za-z]/g) || []).length; return a > 0 && a >= l; };
 
@@ -90,7 +106,7 @@ function _swRuns(teks, o) {
   if (cur) seg.push(cur);
   const sz = o.sz || 24, szAr = o.szAr || 32;
   return seg.map((x) => {
-    const rPr = `<w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:eastAsia="Times New Roman" w:cs="Traditional Arabic"/>${o.tebal ? "<w:b/><w:bCs/>" : ""}<w:sz w:val="${sz}"/><w:szCs w:val="${szAr}"/>${x.t === "a" ? "<w:rtl/>" : ""}</w:rPr>`;
+    const rPr = `<w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:eastAsia="Times New Roman" w:cs="Traditional Arabic"/>${o.tebal ? "<w:b/><w:bCs/>" : ""}${o.miring ? "<w:i/>" : ""}<w:sz w:val="${sz}"/><w:szCs w:val="${szAr}"/>${x.t === "a" ? "<w:rtl/>" : ""}</w:rPr>`;
     return x.s.split("\t").map((p, i) => (i ? `<w:r>${rPr}<w:tab/></w:r>` : "") + (p ? `<w:r>${rPr}<w:t xml:space="preserve">${_swEsc(p)}</w:t></w:r>` : "")).join("");
   }).join("");
 }
@@ -100,17 +116,61 @@ function _swPara(teks, o = {}) {
   const pPr = `<w:pPr>${o.simpan ? "<w:keepNext/>" : ""}${ar ? "<w:bidi/>" : ""}<w:spacing w:before="${o.sebelum || 0}" w:after="${o.sesudah ?? 100}" w:line="${o.spasi || (ar ? 300 : 360)}" w:lineRule="auto"/>${ind}<w:jc w:val="${o.rata || "both"}"/></w:pPr>`;
   return `<w:p>${pPr}${o.label ? _swRuns(o.label + "\t", { ...o, tebal: o.tebalLabel ?? o.tebal }) : ""}${_swRuns(teks, o)}</w:p>`;
 }
-function _swParagrafSoal(urai) {
+// Hemat kertas: spasi rapat, pilihan jawaban berjajar dalam tabel tanpa garis (contoh rapi dari admin).
+const _SW_PETUNJUK = { pg: "Pilihlah salah satu jawaban yang paling tepat!", esai: "Jawablah pertanyaan di bawah ini dengan tepat!" };
+function _swTabelPilihan(xs, lebar, ar) {
+  const n = xs.length, panjang = Math.max(...xs.map((x) => String(x.label + " " + x.teks).length));
+  const kol = panjang <= 20 && n <= 5 ? n : panjang <= 42 ? 2 : 1;
+  if (kol === 1) return null;
+  const NOMOR = 567, w = Math.floor((lebar - NOMOR) / kol);
+  const sel = (x) => `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/></w:tcPr>${x ? _swPara(x.teks, { ar: _swArab(x.teks), label: x.label, kiri: 397, gantung: 397, sesudah: 20, spasi: 264, rata: _swArab(x.teks) ? "right" : "left" }) : "<w:p/>"}</w:tc>`;
+  let baris = "";
+  for (let i = 0; i < n; i += kol) baris += `<w:tr><w:trPr><w:cantSplit/></w:trPr>${Array.from({ length: kol }, (_, k) => sel(xs[i + k])).join("")}</w:tr>`;
+  const tanpaGaris = ["top", "left", "bottom", "right", "insideH", "insideV"].map((s) => `<w:${s} w:val="nil"/>`).join("");
+  return `<w:tbl><w:tblPr>${ar ? "<w:bidiVisual/>" : ""}<w:tblW w:w="${w * kol}" w:type="dxa"/><w:tblInd w:w="${NOMOR}" w:type="dxa"/><w:tblBorders>${tanpaGaris}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="40" w:type="dxa"/><w:right w:w="40" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${Array.from({ length: kol }, () => `<w:gridCol w:w="${w}"/>`).join("")}</w:tblGrid>${baris}</w:tbl>`;
+}
+function _swParagrafSoal(urai, lebar = 10000) {
   const NOMOR = 567, BUTIR = 851; // 1 cm, 1,5 cm
-  return urai.map((x, i) => {
-    const ar = _swArab(x.teks);
-    if (x.jenis === "judul") return _swPara(x.teks, { ar, rata: "center", tebal: true, sz: 28, szAr: 40, sesudah: i === urai.length - 1 || urai[i + 1]?.jenis !== "judul" ? 240 : 40, spasi: ar ? 276 : 300 });
-    if (x.jenis === "soal") return _swPara(x.teks, { ar, label: x.label, kiri: NOMOR, gantung: NOMOR, sebelum: 80 });
-    if (x.jenis === "lanjut") return _swPara(x.teks, { ar, kiri: NOMOR });
-    if (x.jenis === "butir") return _swPara(x.teks, { ar, label: x.label, kiri: BUTIR + 284, gantung: 284, sesudah: 40 });
-    if (x.jenis === "lanjutButir") return _swPara(x.teks, { ar, kiri: BUTIR + 284, sesudah: 40 });
-    return _swPara(x.teks, { ar, sesudah: 120 });
-  }).join("");
+  // jumlah soal per bagian & huruf A, B, ... bila guru tidak menulisnya
+  let hurufKe = 0;
+  urai.forEach((x, i) => {
+    if (x.jenis !== "bagian") return;
+    let n = 0; for (let k = i + 1; k < urai.length && urai[k].jenis !== "bagian"; k++) if (urai[k].jenis === "soal") n++;
+    x.jumlah = n;
+    if (!x.ar) x.huruf = x.huruf || "ABCDE"[hurufKe] || "";
+    hurufKe++;
+  });
+  let tipe = "";
+  const keluar = [];
+  for (let i = 0; i < urai.length; i++) {
+    const x = urai[i], ar = _swArab(x.teks);
+    if (x.jenis === "bagian") {
+      tipe = x.tipe;
+      const jml = !x.ar && x.jumlah && !/\(\s*\d+\s*soal\s*\)/i.test(x.teks) ? ` (${x.jumlah} Soal)` : "";
+      const judul = x.ar ? x.teks : x.teks.replace(/\b\w/g, (c) => c.toUpperCase()) + jml;
+      keluar.push(_swPara(judul, { ar: x.ar, label: x.huruf ? x.huruf + "." : "", kiri: x.huruf ? NOMOR : 0, gantung: x.huruf ? NOMOR : 0, tebal: true, sebelum: keluar.length ? 160 : 0, sesudah: 20, spasi: 276, rata: x.ar ? "right" : "left", simpan: true }));
+      if (!x.ar && x.tipe && urai[i + 1]?.jenis !== "petunjuk") keluar.push(_swPara(_SW_PETUNJUK[x.tipe], { kiri: NOMOR, sesudah: 60, spasi: 276, rata: "left", miring: true, simpan: true }));
+      continue;
+    }
+    if (x.jenis === "petunjuk") { keluar.push(_swPara(x.teks, { ar, kiri: ar ? 0 : NOMOR, sesudah: 60, spasi: 276, rata: ar ? "right" : "left", miring: !ar, simpan: true })); continue; }
+    if (x.jenis === "judul") { keluar.push(_swPara(x.teks, { ar, rata: "center", tebal: true, sz: 28, szAr: 40, sesudah: i === urai.length - 1 || urai[i + 1]?.jenis !== "judul" ? 160 : 20, spasi: ar ? 264 : 276 })); continue; }
+    if (x.jenis === "soal") { keluar.push(_swPara(x.teks, { ar, label: x.label, kiri: NOMOR, gantung: NOMOR, sebelum: 40, sesudah: 20, spasi: 276, simpan: urai[i + 1]?.jenis === "butir" })); continue; }
+    if (x.jenis === "lanjut") { keluar.push(_swPara(x.teks, { ar, kiri: NOMOR, sesudah: 20, spasi: 276, simpan: urai[i + 1]?.jenis === "butir" })); continue; }
+    if (x.jenis === "butir") {
+      // pilihan berhuruf (a–e / أ–هـ) sesudah soal → berjajar dalam tabel (tidak di bagian esai/isian)
+      const grup = []; let k = i;
+      while (k < urai.length && urai[k].jenis === "butir" && /^([a-eA-E]|[أابجدهـ]+).$/.test(urai[k].label || "")) grup.push(urai[k++]);
+      if (tipe !== "esai" && grup.length >= 2 && urai[k]?.jenis !== "lanjutButir") {
+        const tbl = _swTabelPilihan(grup, lebar, grup.some((z) => _swArab(z.teks)) && /[أابجده]/.test(grup[0].label));
+        if (tbl) { keluar.push(tbl); i = k - 1; continue; }
+      }
+      keluar.push(_swPara(x.teks, { ar, label: x.label, kiri: BUTIR + 284, gantung: 284, sesudah: 0, spasi: 264 }));
+      continue;
+    }
+    if (x.jenis === "lanjutButir") { keluar.push(_swPara(x.teks, { ar, kiri: BUTIR + 284, sesudah: 0, spasi: 264 })); continue; }
+    keluar.push(_swPara(x.teks, { ar, sesudah: 60, spasi: 276 }));
+  }
+  return keluar.join("");
 }
 
 // ── Rakit dokumen dari kop ──
@@ -151,12 +211,12 @@ function _swBarisIdentitas(xml, penanda, kanan, kiri) {
   pPr = /<w:bidi[\s/>]/.test(pPr) ? pPr.replace(/<w:bidi(?=[\s/>])/, tabs + "<w:bidi") : pPr.replace("<w:pPr>", "<w:pPr>" + tabs + "<w:bidi/>");
   const gambar = (p.match(/<w:r(?:\s[^>]*)?>(?:(?!<\/w:r>)[\s\S])*?<mc:AlternateContent[\s\S]*?<\/mc:AlternateContent>\s*<\/w:r>/g) || []).join("");
   const rPr = (tebal, sz) => `<w:rPr><w:rFonts w:ascii="Traditional Arabic" w:hAnsi="Traditional Arabic" w:eastAsia="Traditional Arabic" w:cs="Traditional Arabic"/>${tebal ? "<w:b/><w:bCs/>" : ""}<w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/><w:rtl/></w:rPr>`;
-  const r = (t, tebal) => `<w:r>${rPr(tebal, tebal ? 40 : 36)}<w:t xml:space="preserve">${_swEsc(t)}</w:t></w:r>`;
+  const r = (t, tebal) => `<w:r>${rPr(tebal, tebal ? 34 : 30)}<w:t xml:space="preserve">${_swEsc(t)}</w:t></w:r>`;
   const isi = (x) => r(x[0] + " ", true) + (x[1] ? r(x[1], false) : "");
-  const baru = buka + pPr + isi(kanan) + `<w:r>${rPr(false, 36)}<w:tab/></w:r>` + isi(kiri) + gambar + "</w:p>";
+  const baru = buka + pPr + isi(kanan) + `<w:r>${rPr(false, 30)}<w:tab/></w:r>` + isi(kiri) + gambar + "</w:p>";
   return xml.slice(0, a) + baru + xml.slice(b + 6);
 }
-const _SW_TAB_IDENTITAS = 5300; // ± setengah lebar kertas: kolom kedua (المادة / التاريخ) selalu sejajar
+const _SW_TAB_IDENTITAS = 6071; // ± setengah lebar kertas: kolom kedua (المادة / التاريخ) selalu sejajar
 function _swIsiKop(xml, info) {
   if (info.kat === "diniyyah") {
     xml = _swBarisIdentitas(xml, "المادة", ["الإسم :", ""], ["المادة :", info.mapel]);
@@ -191,8 +251,11 @@ async function _swBuatDocx(o) {
   if (iSect < 0 || iBody < 0) throw new Error("Susunan berkas kop tidak dikenali");
   const kepala = _swBuangKosongAkhir(xml.slice(0, iSect));
   const urai = _swUrai(o.teks);
-  const badan = `<w:p><w:pPr><w:spacing w:before="0" w:after="0"/></w:pPr></w:p>` + _swParagrafSoal(urai);
-  let baru = _swIsiKop(kepala, o.info) + badan + xml.slice(iSect);
+  // margin hemat kertas (atas 1,25 cm · kiri-kanan 1,27 cm · bawah 1 cm), sama dengan contoh yang dirapikan admin
+  const sect = xml.slice(iSect).replace(/<w:pgMar [^>]*\/>/, (m) => m.replace(/w:top="\d+"/, 'w:top="709"').replace(/w:right="\d+"/, 'w:right="720"').replace(/w:bottom="\d+"/, 'w:bottom="567"').replace(/w:left="\d+"/, 'w:left="720"'));
+  const lebarKertas = +((sect.match(/<w:pgSz [^>]*w:w="(\d+)"/) || [])[1] || 12189);
+  const badan = `<w:p><w:pPr><w:spacing w:before="0" w:after="0"/></w:pPr></w:p>` + _swParagrafSoal(urai, lebarKertas - 1440 - 60);
+  let baru = _swIsiKop(kepala, o.info) + badan + sect;
   zip.file("word/document.xml", baru);
   const blob = await zip.generateAsync({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", compression: "DEFLATE" });
   return { blob, kop, urai, teksKop: _swTeksKop(xml) };
@@ -308,9 +371,8 @@ async function swProses(aksi) {
       const berkas = new File([hasil.blob], namaFile, { type: hasil.blob.type });
       setGlobalLoading(true, "Mengumpulkan soal ke arsip…");
       const url = await apiUploadFoto(berkas, "soal-ujian");
-      UA.data = await _kvAmbil("ujian:soal:" + j.id, {});
-      UA.data[kunci] = { ...(UA.data[kunci] || {}), file_url: url, nama_file: namaFile, oleh: STATE.guruNama || "", t: new Date().toISOString(), teks, sumber: "tempel" };
-      await _kvSimpan("ujian:soal:" + j.id, UA.data);
+      UA.data = await _kvGabung("ujian:soal:" + j.id, { [kunci]: { file_url: url, nama_file: namaFile, oleh: STATE.guruNama || "", t: new Date().toISOString(), teks, sumber: "tempel" } });
+      if (typeof _SW_DASBOR !== "undefined") _SW_DASBOR.t = 0;
       try { localStorage.removeItem(_swKunciDraf()); } catch (e) {}
       closeModal();
       toast(`📤 Soal ${_juNamaMapel(mapelId)} Kelas ${_juAngkaKelas(kelasId)} terkumpul di arsip ✓ (file Word juga terunduh)`, "ok");
@@ -336,14 +398,14 @@ async function _swCetak(j, mapelId, kelasId, urai, info) {
     ? `<div class="idn ar" dir="rtl"><span>الإسم :</span><span>المادة : ${e(info.mapel)}</span><span>الفصل : ${e(_swAngkaArab(info.kelas))}</span><span>التاريخ : ${e(info.tanggalAr)}</span></div>`
     : `<table class="idn"><tr><td>Nama</td><td>:</td><td></td><td>Hari/Tanggal</td><td>: ${e(info.hariTanggal)}</td></tr><tr><td>Mata Pelajaran</td><td>:</td><td>${e(info.mapel)}</td><td>Waktu</td><td>: ${e(info.waktu)}</td></tr><tr><td>Kelas</td><td>:</td><td>${e(info.kelasTeks)}</td><td></td><td></td></tr></table>`;
   w.document.write(`<!doctype html><html lang="id"><head><meta charset="utf-8"><title>${e(_juNamaMapel(mapelId))} Kelas ${e(_juAngkaKelas(kelasId))}</title><style>
-    @page{size:215mm 330mm;margin:12mm 15mm 15mm 20mm}body{font-family:"Times New Roman",serif;font-size:12pt;color:#000;margin:0}
+    @page{size:215mm 330mm;margin:12.5mm 12.7mm 10mm 12.7mm}body{font-family:"Times New Roman",serif;font-size:12pt;color:#000;margin:0}
     .kop{display:flex;align-items:center;gap:12px;border-bottom:3px double #000;padding-bottom:6px;margin-bottom:8px}.kop img{width:22mm;height:22mm;object-fit:contain}.kop div{flex:1;text-align:center;line-height:1.25}
     .kop p{margin:0}.kop p:nth-child(-n+2){font-weight:700;font-size:13pt}.kop p:nth-child(n+5){font-size:9pt}
     .idn{width:100%;border-collapse:collapse;margin:4px 0 12px}.idn td{padding:1px 4px}div.idn{display:grid;grid-template-columns:1fr 1fr;gap:2px 20px;font-size:16pt}
     .ar,[dir=rtl]{font-family:"Traditional Arabic","Amiri",serif;font-size:16pt}
     .b{display:flex;gap:8px;text-align:justify;line-height:1.5;margin:0 0 4px}.b i{font-style:normal;min-width:1cm}.b span{flex:1}
     .b.judul{justify-content:center;font-weight:700;font-size:14pt;margin-bottom:10px}.b.judul[dir=rtl]{font-size:20pt}
-    .b.soal{margin-top:6px}.b.lanjut{padding-inline-start:1cm}.b.butir{padding-inline-start:1.5cm}.b.butir i{min-width:.5cm}.b.lanjutButir{padding-inline-start:2cm}
+    .b.soal{margin-top:6px}.b.bagian{font-weight:700;margin-top:12px}.b.petunjuk{font-style:italic}.b.lanjut{padding-inline-start:1cm}.b.butir{padding-inline-start:1.5cm}.b.butir i{min-width:.5cm}.b.lanjutButir{padding-inline-start:2cm}
   </style></head><body><div class="kop">${logo ? `<img src="${e(logo)}">` : ""}<div>${kopTeks.map((t) => `<p>${e(t)}</p>`).join("")}</div></div>${identitas}${isi}
   <script>window.onload=function(){setTimeout(function(){window.print()},400)}<\/script></body></html>`);
   w.document.close();
