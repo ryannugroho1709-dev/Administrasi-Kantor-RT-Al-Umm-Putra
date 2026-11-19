@@ -10,7 +10,15 @@ window.PERINGKAT = {
       id: "s1",
       judul: { id: "Semester 1", ar: "الفصل الدراسي الأول" },
       maks: 100,
-      mapel: [],            // isi nama mata kuliah sesuai urutan kolom bila sudah dipastikan
+      // urutan kolom lembar nilai resmi (kolom M–R)
+      mapel: [
+        { id: "Aqidah", ar: "العقيدة" },
+        { id: "Ulumul Qur'an", ar: "علوم القرآن" },
+        { id: "Ushul Tafsir", ar: "أصول التفسير" },
+        { id: "Nasikh Mansukh", ar: "الناسخ والمنسوخ" },
+        { id: "Tajwid", ar: "التجويد" },
+        { id: "Nahwu", ar: "النحو" }
+      ],
       mahasiswa: [
         { nama: "Nur Adli Zal Farizi", nilai: [82, 82, 70, 62, 60, 78] },
         { nama: "Abdul Gani Majidi", nilai: [82, 90, 66, 60, 80, 70] },
