@@ -7,7 +7,7 @@
 //  Data dibaca lewat klien lintas ruang (supaSemua). Hanya Admin & anggota Pengelola yang bisa membuka.
 // ============================================================
 const PG_MODUL_SIAP = ["pg-pd", "pg-ptk"];
-const PGL = { pd: null, ptk: null, kelas: [], f: { ruang: "semua", kelas: "", paket: "", cari: "", status: "aktif" }, g: { ruang: "semua", cari: "", jenis: "" } };
+const PGL = { pd: null, ptk: null, dpk: null, jadwal: {}, kelas: [], f: { ruang: "semua", kelas: "", paket: "", cari: "", status: "aktif" }, g: { ruang: "semua", cari: "", jenis: "", tanda: "" } };
 const _pglE = (s) => escapeHtml(s == null ? "" : String(s));
 const _pglPaket = (k) => { const n = parseInt(String(k || "").replace(/\D/g, ""), 10); return !n ? "-" : n <= 6 ? "A" : n <= 9 ? "B" : "C"; };
 const _pglTgl = (d) => (d ? new Date(d).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" }) : "-");
@@ -86,9 +86,16 @@ async function pglBukaPtk(muatUlang) {
   const sec = _rgBukaHal("pg-ptk", "Guru & PTK", `<div class="card"><div class="rg-memuat">Memuat guru & tenaga kependidikan…</div></div>`);
   try {
     if (!PGL.ptk || muatUlang) {
-      const r = await supaSemua.from("guru").select("*").order("nama");
+      const [r, dk, jd] = await Promise.all([
+        supaSemua.from("guru").select("*").order("nama"),
+        supaSemua.from("kuliah_pengaturan").select("nilai").eq("kunci", "dapodik:ptk").eq("ruang_id", "*").maybeSingle(),
+        supaSemua.from("jadwal_pelajaran").select("guru_id,ruang_id").eq("aktif", true),
+      ]);
       if (r.error) throw r.error;
       PGL.ptk = r.data || [];
+      PGL.dpk = (dk.data && dk.data.nilai) || null;
+      PGL.jadwal = {};
+      (jd.data || []).forEach((x) => { if (!x.guru_id) return; const o = (PGL.jadwal[x.guru_id] = PGL.jadwal[x.guru_id] || {}); o[x.ruang_id] = (o[x.ruang_id] || 0) + 1; });
     }
     sec.innerHTML = `<div id="pg-ptk">${_pglHtmlPtk()}</div>`;
   } catch (e) { sec.innerHTML = `<div class="card">Gagal memuat: ${_pglE(e.message)}</div>`; }
@@ -97,8 +104,11 @@ const _pglJenis = { dalam: "Guru Dalam", luar: "Guru Luar", afiliasi: "Afiliasi"
 function _pglSaringPtk() {
   const f = PGL.g, cari = f.cari.toLowerCase();
   return (PGL.ptk || []).filter((g) => g.status_aktif !== false && (f.ruang === "semua" || (g.ruang || []).includes(f.ruang)) && (!f.jenis || g.jenis_guru === f.jenis)
+    && (!f.tanda || (f.tanda === "dapodik" ? !!_pglDpk(g) : f.tanda === "bukan" ? !_pglDpk(g) : !_pglJmlJadwal(g)))
     && (!cari || [g.nama, g.jabatan, g.email].some((v) => String(v || "").toLowerCase().includes(cari))));
 }
+const _pglDpk = (g) => ((PGL.dpk && PGL.dpk.ptk) || []).find((d) => d.guru_id === g.id) || null;
+const _pglJmlJadwal = (g) => Object.values(PGL.jadwal[g.id] || {}).reduce((a, b) => a + b, 0);
 function _pglHtmlPtk() {
   const f = PGL.g, aktif = (PGL.ptk || []).filter((g) => g.status_aktif !== false), daftar = _pglSaringPtk();
   const jenjang = RG.daftar.length ? RG.daftar : RG.bawaan;
@@ -110,15 +120,31 @@ function _pglHtmlPtk() {
     <div class="card pg-alat">
       <input class="input" placeholder="Cari nama, jabatan, atau email…" value="${_pglE(f.cari)}" oninput="PGL.g.cari=this.value;_pglSegarPtk(true)">
       <select class="input" onchange="PGL.g.jenis=this.value;_pglSegarPtk()"><option value="">Semua Jenis</option>${Object.entries(_pglJenis).map(([k, n]) => `<option value="${k}" ${f.jenis === k ? "selected" : ""}>${n}</option>`).join("")}</select>
+      <div class="ua-saring">${[["", "Semua"], ["dapodik", "Terdaftar Dapodik"], ["bukan", "Belum di Dapodik"], ["jadwal", "Tanpa Jadwal Mengajar"]].map(([k, n]) => `<button class="ua-saring-b ${f.tanda === k ? "aktif" : ""}" onclick="PGL.g.tanda='${k}';_pglSegarPtk()">${n}</button>`).join("")}</div>
       <span class="pg-jml">${daftar.length} orang</span>
       <button class="btn btn-accent" onclick="pglUnduhPtk()">Unduh Excel</button>
     </div>
-    <div class="card" style="overflow-x:auto"><table class="table pg-tabel"><thead><tr><th>No</th><th>Nama</th><th>Bertugas Di</th><th>Jenis</th><th>Jabatan</th><th>TMT</th><th>No. WA</th><th>Akun</th></tr></thead><tbody>
+    ${_pglHtmlDpkLuar()}
+    <div class="card" style="overflow-x:auto"><table class="table pg-tabel"><thead><tr><th>No</th><th>Nama</th><th>Bertugas Di</th><th>Jenis</th><th>Jabatan</th><th>Dapodik</th><th>Jadwal</th><th>TMT</th><th>No. WA</th><th>Akun</th></tr></thead><tbody>
       ${daftar.map((g, i) => `<tr><td>${i + 1}</td><td><b>${_pglE(g.nama)}</b>${g.nip_nik ? `<br><small>NIK ${_pglE(g.nip_nik)}</small>` : ""}</td>
         <td>${(g.ruang || []).map((id) => `<span class="pg-chip ${rgRuangUtama(g) === id ? "utama" : ""}" style="--rw:${rgRuang(id).warna}" title="${rgRuangUtama(g) === id ? "Ruang utama" : ""}">${_pglE(rgNamaPendek(id))}</span>`).join(" ")}</td>
-        <td>${_pglE(_pglJenis[g.jenis_guru] || g.jenis_guru || "-")}</td><td><small>${_pglE(g.jabatan || "-")}</small></td><td>${_pglTgl(g.tmt)}</td><td>${_pglE(g.no_wa || "-")}</td>
-        <td>${g.auth_user_id ? (g.akun_menunggu ? '<span class="ak-tunggu">Menunggu</span>' : "✓") : '<span class="ak-belum">Belum</span>'}</td></tr>`).join("") || `<tr><td colspan="8" class="empty-state">Tidak ada data.</td></tr>`}
+        <td>${_pglE(_pglJenis[g.jenis_guru] || g.jenis_guru || "-")}</td><td><small>${_pglE(g.jabatan || "-")}</small></td>
+        <td>${(() => { const d = _pglDpk(g); return d ? `<span class="pg-dpk ok" title="${_pglE([d.nuptk ? "NUPTK " + d.nuptk : "", d.nip ? "NIP " + d.nip : "", d.golongan, d.tugas].filter(Boolean).join(" · "))}">✓ ${_pglE(d.status)}</span>` : '<span class="pg-dpk">Belum</span>'; })()}</td>
+        <td>${(() => { const j = PGL.jadwal[g.id] || {}, n = _pglJmlJadwal(g); return n ? Object.entries(j).map(([r, x]) => `<span class="pg-chip" style="--rw:${rgRuang(r).warna}">${_pglE(rgNamaPendek(r))} ${x}</span>`).join(" ") : '<span class="pg-tanpa">Tanpa jadwal</span>'; })()}</td>
+        <td>${_pglTgl(g.tmt)}</td><td>${_pglE(g.no_wa || "-")}</td>
+        <td>${g.auth_user_id ? (g.akun_menunggu ? '<span class="ak-tunggu">Menunggu</span>' : "✓") : '<span class="ak-belum">Belum</span>'}</td></tr>`).join("") || `<tr><td colspan="10" class="empty-state">Tidak ada data.</td></tr>`}
     </tbody></table></div>`;
+}
+// PTK yang ada di Dapodik tetapi belum ada / nonaktif di aplikasi
+function _pglHtmlDpkLuar() {
+  const ptk = (PGL.dpk && PGL.dpk.ptk) || [];
+  if (!ptk.length) return `<div class="card rg-ket">Belum ada potret data Dapodik.</div>`;
+  const belum = ptk.filter((d) => !d.guru_id);
+  const nonaktif = ptk.filter((d) => d.guru_id && (PGL.ptk || []).some((g) => g.id === d.guru_id && g.status_aktif === false));
+  if (!belum.length && !nonaktif.length) return "";
+  return `<div class="card pg-dpk-luar"><b>Cek Dapodik</b><small>Potret ${_pglE(PGL.dpk.sumber || "Dapodik")}, ${_pglE(PGL.dpk.diambil || "")}.</small>
+    ${belum.length ? `<div class="pg-dpk-blok"><span>Terdaftar di Dapodik, <b>belum ada di aplikasi</b> (${belum.length}):</span>${belum.map((d) => `<em>${_pglE(d.nama)} · ${_pglE(d.jenis)}</em>`).join("")}</div>` : ""}
+    ${nonaktif.length ? `<div class="pg-dpk-blok"><span>Terdaftar di Dapodik, tetapi <b>nonaktif di aplikasi</b> (${nonaktif.length}) — perbarui di Dapodik bila sudah tidak bertugas:</span>${nonaktif.map((d) => `<em>${_pglE(d.nama)}</em>`).join("")}</div>` : ""}</div>`;
 }
 function _pglSegarPtk(fokus) {
   const w = qs("pg-ptk"); if (!w) return;
@@ -130,7 +156,9 @@ function pglUnduhPtk() {
   const baris = _pglSaringPtk().map((g, i) => ({ No: i + 1, Nama: g.nama, NIK: g.nip_nik || "", "Bertugas Di": (g.ruang || []).map((id) => rgRuang(id).nama).join(", "),
     "Ruang Utama": rgRuangUtama(g) ? rgRuang(rgRuangUtama(g)).nama : "", Jenis: _pglJenis[g.jenis_guru] || g.jenis_guru || "", Jabatan: g.jabatan || "",
     "Tempat Lahir": g.tempat_lahir || "", "Tanggal Lahir": g.tanggal_lahir || "", TMT: g.tmt || "", "No WA": g.no_wa || "", Email: g.email || "",
-    Akun: g.auth_user_id ? (g.akun_menunggu ? "Menunggu" : "Ada") : "Belum" }));
+    Akun: g.auth_user_id ? (g.akun_menunggu ? "Menunggu" : "Ada") : "Belum",
+    Dapodik: _pglDpk(g) ? "Terdaftar" : "Belum", "Status Kepegawaian": _pglDpk(g)?.status || "", NUPTK: _pglDpk(g)?.nuptk || "", NIP: _pglDpk(g)?.nip || "",
+    "Jumlah Jadwal": _pglJmlJadwal(g) }));
   _pglUnduh(baris, "Guru & PTK", `Guru dan PTK PKBM Al-Umm Barabai ${tanggalISO()}.xlsx`);
   _rgLog("unduh-guru-ptk", { jumlah: baris.length });
 }
