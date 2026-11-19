@@ -1,6 +1,6 @@
 // ============================================================
 //  DATA SISWA — tampilan atas yang rapi + naik kelas otomatis
-//  • Tombol "Tambah Santri" menonjol; Impor/Ekspor/Cek Dapodik/Upload Foto dalam satu menu "Data".
+//  • Tombol "Tambah Santri" menonjol; Impor/Ekspor/Upload Foto dalam satu menu "Data" (Cek Dapodik ada di kartu bawah).
 //  • Kelas berupa chip berwarna khas (ketuk = saring santri kelas itu), urut 1, 2 A, 2 B, …
 //  • Paket A cukup Total; Putra & Putri menampilkan Paket B / Paket C.
 //  • Upload Foto: khusus Admin & Admin Pendamping, dengan petunjuk dulu.
@@ -59,7 +59,6 @@ function dsMenuData(btn) {
   el.id = "ds-menu-data"; el.className = "ds-menu";
   el.innerHTML = `<button onclick="qs('siswa-file-input').click()"><b>Impor Excel</b><small>Tambah banyak santri dari file Excel</small></button>
     <button onclick="eksporDataSiswaAdministrasi()"><b>Ekspor Excel</b><small>Unduh data santri lengkap</small></button>
-    <button onclick="dpkBuka()"><b>Cek Dapodik</b><small>Cocokkan dengan file Peserta Didik Dapodik</small></button>
     ${dsBolehFoto() ? `<button onclick="dsPanduanFoto()"><b>Upload Foto Massal</b><small>Khusus Admin & Admin Pendamping</small></button>` : ""}`;
   btn.parentElement.appendChild(el);
   setTimeout(() => document.addEventListener("click", function tutup(e) { if (!el.contains(e.target) && e.target !== btn) { el.remove(); document.removeEventListener("click", tutup); } }), 0);
