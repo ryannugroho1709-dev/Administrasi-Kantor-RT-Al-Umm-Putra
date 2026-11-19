@@ -935,41 +935,48 @@
       '<div class="wk-chart">' + W.map((w, i) => '<div class="wk-col' + (i === 7 ? " now" : "") + '" title="' + esc("Pekan " + w.a.toLocaleDateString("id-ID", { day: "numeric", month: "short" }) + ": " + w.modul + " modul, " + Math.round(w.menit) + " menit, " + w.xp + " XP") + '"><b>' + n(w.modul) + '</b><i style="height:' + Math.round(w.modul / maxM * 100) + '%"></i><small>' + w.a.getDate() + "/" + (w.a.getMonth() + 1) + "</small><em>" + n(Math.round(w.menit)) + "′</em></div>").join("") + "</div>" +
       '<p class="muted sm">' + lab("Batang = modul selesai dibaca per pekan (Senin–Ahad); angka bawah = menit belajar.", "الأعمدة = الوحدات المنجزة أسبوعيًا") + "</p>";
   }
-  /* ===================== PERINGKAT KELAS ===================== */
+  /* ===================== PERINGKAT KELAS (per semester) ===================== */
   function peringkat(semId) {
     const P = window.PERINGKAT || { semester: [] };
-    const daftarSem = P.semester || [];
-    const sem = daftarSem.find((s) => s.id === semId) || daftarSem[daftarSem.length - 1];
-    if (!sem) { view.innerHTML = '<div class="wrap empty">' + Icon("medal") + "<h2>" + lab("Belum ada nilai", "لا توجد درجات بعد") + "</h2></div>"; return; }
-    const inti = (s) => String(s || "").split(",")[0].toLowerCase().replace(/[^a-z\s]/g, "").trim().split(/\s+/).slice(0, 2).join(" ");
+    const ada = P.semester || [];
+    const SEM = [1, 2, 3, 4].map((no) => ada.find((s) => s.id === "s" + no) || { id: "s" + no, no, kosong: true, judul: { id: "Semester " + no, ar: "الفصل " + arNum(no) } });
+    const terakhir = [...ada].reverse().find((s) => (s.mahasiswa || []).length) || SEM[0];
+    const sem = SEM.find((s) => s.id === semId) || SEM.find((s) => s.id === terakhir.id);
+    const tab = '<nav class="rk-tab">' + SEM.map((s, i) => '<a class="' + (s.id === sem.id ? "on" : "") + (s.kosong ? " kosong" : "") + '" href="#/peringkat/' + s.id + '"><small>' + lab("Semester", "الفصل") + "</small><b>" + n(i + 1) + "</b></a>").join("") + "</nav>";
+    const kepala = (isi) => '<section class="rk-hero"><div class="rk-hero-in"><span class="rk-eyebrow">' + lab("Magister Ulumul Qur'an · Shofwa", "ماجستير علوم القرآن") + "</span>" +
+      '<h1 class="rk-judul">' + lab("Peringkat Kelas", "ترتيب الفصل") + "</h1><p class=\"rk-sub\">Class Ranking · " + one(sem.judul) + "</p>" + tab + (isi || "") + "</div></section>";
+    if (sem.kosong || !(sem.mahasiswa || []).length) {
+      view.innerHTML = '<div class="wrap rk">' + kepala('<div class="rk-belum">' + Icon("clock") + "<b>" + lab("Nilai " + one(sem.judul) + " belum keluar", "لم تصدر الدرجات بعد") + "</b><small>" + lab("Peringkat tampil otomatis setelah nilai ujian akhir semester diumumkan.", "") + "</small></div>") + footer() + "</div>";
+      return;
+    }
+    const inti = (s) => String(s || "").split(",")[0].toLowerCase().replace(/[^a-z\s]/g, "").trim().split(/\s+/);
     const saya = inti((S().profil || {}).nama);
+    const cocok = (nm) => { const x = inti(nm); return saya[0] && x[0] === saya[0] && (!saya[1] || x.includes(saya[1])); };
     const jmlMk = Math.max(...sem.mahasiswa.map((m) => m.nilai.length));
     const maks = (sem.maks || 100) * jmlMk;
     const baris = sem.mahasiswa.map((m) => {
-      const jumlah = m.nilai.reduce((a, b) => a + (+b || 0), 0);
-      return Object.assign({}, m, { jumlah, rata: jumlah / m.nilai.length, persen: Math.round((jumlah / maks) * 100), saya: !!saya && inti(m.nama).startsWith(saya.split(" ")[0]) && inti(m.nama).includes(saya.split(" ")[1] || "") });
-    }).sort((a, b) => b.jumlah - a.jumlah || b.rata - a.rata);
-    let no = 0, sebelum = null;
-    baris.forEach((x, i) => { if (x.jumlah !== sebelum) no = i + 1; x.no = no; sebelum = x.jumlah; });
-    const tertinggi = baris[0].jumlah, rataKelas = baris.reduce((a, x) => a + x.jumlah, 0) / baris.length;
+      const jumlah = m.nilai.reduce((x, y) => x + (+y || 0), 0);
+      return Object.assign({}, m, { jumlah, rata: jumlah / m.nilai.length, persen: Math.round((jumlah / maks) * 100), saya: cocok(m.nama) });
+    }).sort((x, y) => y.jumlah - x.jumlah || y.rata - x.rata);
+    let no = 0, prev = null;
+    baris.forEach((x, i) => { if (x.jumlah !== prev) no = i + 1; x.no = no; prev = x.jumlah; });
+    const rataKelas = baris.reduce((s, x) => s + x.rata, 0) / baris.length;
+    const urutan = (k) => lab(k === 1 ? "Peringkat Pertama" : k === 2 ? "Peringkat Kedua" : k === 3 ? "Peringkat Ketiga" : "Peringkat " + k, ["", "الأول", "الثاني", "الثالث"][k] || arNum(k));
     const nama = (x) => esc(x.nama) + (x.saya ? ' <em class="rk-saya">' + lab("Antum", "أنت") + "</em>" : "");
+    const medali = (k) => '<span class="rk-medali m' + k + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="14" r="6"/><path d="M8.5 9 6 3h4l2 4 2-4h4l-2.5 6"/></svg><b>' + n(k) + "</b></span>";
     const podium = [baris[1], baris[0], baris[2]].filter(Boolean).map((x) =>
-      '<div class="rk-pod p' + x.no + (x.saya ? " saya" : "") + '"><span class="rk-mahkota">' + Icon(x.no === 1 ? "trophy" : "medal") + '</span><b class="rk-pn">' + n(x.no) + "</b>" +
-      '<div class="rk-pnama">' + nama(x) + "</div><div class=\"rk-pskor\"><b>" + n(x.jumlah) + "</b><small>" + n(x.persen) + "%</small></div><i class=\"rk-tiang\"></i></div>").join("");
-    const nmMk = (i) => (sem.mapel && sem.mapel[i]) ? one(sem.mapel[i]) : "MK " + n(i + 1);
+      '<div class="rk-pod p' + x.no + (x.saya ? " saya" : "") + '">' + medali(x.no) + '<small class="rk-ord">' + urutan(x.no) + '</small><div class="rk-pnama">' + nama(x) + '</div><div class="rk-pskor"><b>' + n(x.jumlah) + "</b><span>" + n(x.persen) + "%</span></div></div>").join("");
+    const nmMk = (k) => (sem.mapel && sem.mapel[k]) ? one(sem.mapel[k]) : "MK " + n(k + 1);
     const daftar = baris.map((x, i) =>
       '<div class="rk-baris st' + (x.saya ? " saya" : "") + '" style="--i:' + i + '"><span class="rk-no n' + x.no + '">' + n(x.no) + "</span>" +
-      '<div class="rk-isi"><div class="rk-atas"><b>' + nama(x) + '</b><span class="rk-total">' + n(x.jumlah) + "<small>/" + n(maks) + "</small></span></div>" +
-      '<div class="bar"><i style="width:' + x.persen + '%"></i></div>' +
-      '<div class="rk-mk">' + x.nilai.map((v, k) => '<span title="' + esc(String(nmMk(k)).replace(/<[^>]+>/g, "")) + '"><small>' + nmMk(k) + "</small>" + n(v) + "</span>").join("") + "</div></div>" +
-      '<span class="rk-persen">' + n(x.persen) + "%</span></div>").join("");
-    view.innerHTML = '<div class="wrap">' +
-      '<div class="page-h">' + Icon("medal", "ph-ic") + "<div><h1>" + lab("Peringkat Kelas", "ترتيب الفصل") + '</h1><p class="muted">' + one(sem.judul) + " · " + lab(n(baris.length) + " mahasiswa · nilai ujian akhir", arNum(baris.length) + " طلاب") + "</p></div></div>" +
-      (daftarSem.length > 1 ? '<div class="rk-sem">' + daftarSem.map((s) => '<a class="' + (s === sem ? "on" : "") + '" href="#/peringkat/' + s.id + '">' + one(s.judul) + "</a>").join("") + "</div>" : "") +
-      '<div class="rk-podium">' + podium + "</div>" +
-      '<div class="stats rk-ringkas">' + stat("skor", Icon("trophy", "big"), n(tertinggi), lab("Jumlah tertinggi", "أعلى مجموع"), "#/peringkat") + stat("baca", Icon("target", "big"), n(Math.round(rataKelas)), lab("Rata-rata kelas", "متوسط الفصل"), "#/peringkat") + "</div>" +
-      '<div class="card rk-daftar">' + daftar + "</div>" +
-      '<p class="muted rk-ket">' + lab("Peringkat diurutkan dari jumlah nilai semua mata kuliah. Persentase = jumlah ÷ " + n(maks) + ".", "الترتيب حسب مجموع الدرجات") + "</p>" +
+      '<div class="rk-isi"><div class="rk-atas"><b>' + nama(x) + '</b><span class="rk-total">' + n(x.jumlah) + "<small> / " + n(maks) + "</small></span></div>" +
+      '<div class="rk-garis"><i style="width:' + x.persen + '%"></i></div>' +
+      '<div class="rk-mk">' + x.nilai.map((v, k) => "<span><small>" + nmMk(k) + "</small>" + n(v) + "</span>").join("") + "</div></div>" +
+      '<div class="rk-persen"><b>' + n(x.persen) + '%</b><small>' + lab("rata " + n(Math.round(x.rata)), "") + "</small></div></div>").join("");
+    view.innerHTML = '<div class="wrap rk">' + kepala('<div class="rk-podium">' + podium + "</div>") +
+      '<div class="rk-ringkas"><div><small>' + lab("Mahasiswa", "الطلاب") + "</small><b>" + n(baris.length) + "</b></div><div><small>" + lab("Rata-rata kelas", "متوسط الفصل") + "</small><b>" + n(Math.round(rataKelas)) + "</b></div><div><small>" + lab("Nilai tertinggi", "أعلى مجموع") + "</small><b>" + n(baris[0].jumlah) + "</b></div></div>" +
+      '<div class="rk-daftar">' + daftar + "</div>" +
+      '<p class="muted rk-ket">' + lab("Diurutkan dari jumlah nilai " + n(jmlMk) + " mata kuliah ujian akhir " + one(sem.judul) + ". Persentase = jumlah ÷ " + n(maks) + ".", "الترتيب حسب مجموع الدرجات") + "</p>" +
       footer() + "</div>";
   }
 

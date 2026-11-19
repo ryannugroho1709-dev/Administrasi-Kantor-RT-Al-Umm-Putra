@@ -1282,30 +1282,52 @@ body.focus .reader { grid-template-columns: 1fr !important; max-width: 860px; ma
 .tts-now { outline: 2px solid var(--c2); outline-offset: 6px; border-radius: 12px; background-color: color-mix(in srgb, var(--c2) 7%, transparent); transition: background-color .3s; }
 .tts-bar .tts-info { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
 
-/* ---------- Peringkat kelas ---------- */
-.rk-sem{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}.rk-sem a{padding:6px 14px;border-radius:99px;border:1px solid var(--line2);color:var(--ink2);text-decoration:none;font-weight:700;font-size:.8em}.rk-sem a.on{background:var(--acc);border-color:var(--acc);color:#fff}
-.rk-podium{display:grid;grid-template-columns:1fr 1.15fr 1fr;align-items:end;gap:10px;margin:8px 0 18px}
-.rk-pod{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;padding:14px 8px 0;border-radius:var(--r) var(--r) 0 0;background:linear-gradient(180deg,var(--sf),var(--sf2));box-shadow:var(--sh1);overflow:hidden}
-.rk-pod .rk-mahkota{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:#fff;background:var(--mut)}
-.rk-pod.p1 .rk-mahkota{background:linear-gradient(135deg,var(--c2),var(--c2d));width:48px;height:48px;box-shadow:0 0 0 6px var(--gold-bg)}
-.rk-pod.p2 .rk-mahkota{background:linear-gradient(135deg,#a9b4bd,#6f7b85)}.rk-pod.p3 .rk-mahkota{background:linear-gradient(135deg,#c98a5a,#8e5a35)}
-.rk-pod .rk-mahkota svg{width:22px;height:22px}
-.rk-pn{font-size:1.5em;line-height:1;margin:8px 0 2px;color:var(--acc)}.rk-pod.p1 .rk-pn{font-size:1.9em;color:var(--c2d)}
-.rk-pnama{font-weight:700;font-size:.82em;line-height:1.3;min-height:2.6em;padding:0 4px}
-.rk-pskor{margin:4px 0 8px}.rk-pskor b{display:block;font-size:1.15em}.rk-pskor small{color:var(--mut);font-weight:700}
-.rk-tiang{display:block;width:100%;height:18px;background:var(--acc-bg)}.rk-pod.p1 .rk-tiang{height:34px;background:var(--gold-bg)}.rk-pod.p2 .rk-tiang{height:24px}
-.rk-pod.saya{outline:2px solid var(--acc)}
-.rk-ringkas{margin-bottom:14px}
-.rk-daftar{padding:6px 14px}
-.rk-baris{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}.rk-baris:last-child{border-bottom:0}
-.rk-baris.saya{background:var(--acc-bg);margin:0 -14px;padding:12px 14px;border-radius:12px}
-.rk-no{flex:0 0 36px;height:36px;border-radius:12px;display:grid;place-items:center;font-weight:800;background:var(--sf3);color:var(--ink2)}
-.rk-no.n1{background:linear-gradient(135deg,var(--c2),var(--c2d));color:#fff}.rk-no.n2{background:linear-gradient(135deg,#a9b4bd,#6f7b85);color:#fff}.rk-no.n3{background:linear-gradient(135deg,#c98a5a,#8e5a35);color:#fff}
-.rk-isi{flex:1;min-width:0}.rk-atas{display:flex;justify-content:space-between;gap:8px;align-items:baseline}.rk-atas b{font-size:.92em}
-.rk-total{font-weight:800;white-space:nowrap}.rk-total small{color:var(--mut);font-weight:600;font-size:.75em}
-.rk-isi .bar{margin:6px 0}
-.rk-mk{display:flex;flex-wrap:wrap;gap:5px}.rk-mk span{display:inline-flex;align-items:baseline;gap:4px;font-size:.75em;font-weight:800;background:var(--sf2);border:1px solid var(--line);border-radius:8px;padding:2px 7px}.rk-mk small{font-weight:600;color:var(--mut);font-size:.9em}
-.rk-persen{flex:0 0 auto;font-weight:800;color:var(--acc);font-size:1.05em}
-.rk-saya{font-style:normal;font-size:.7em;background:var(--acc);color:#fff;border-radius:99px;padding:1px 8px;margin-left:4px;vertical-align:middle}
-.rk-ket{font-size:.78em;margin:10px 2px 18px}
-@media (max-width:520px){.rk-podium{gap:6px}.rk-pnama{font-size:.72em}.rk-persen{font-size:.9em}}
+/* ---------- Peringkat kelas (gaya akademik internasional) ---------- */
+.rk-hero{position:relative;margin:6px 0 18px;border-radius:var(--r2);overflow:hidden;color:#fff;
+  background:radial-gradient(120% 90% at 50% 0%,color-mix(in srgb,var(--c1) 85%,#fff 6%) 0%,var(--c1) 45%,var(--c1d) 100%);box-shadow:var(--sh2)}
+.rk-hero::before{content:"";position:absolute;inset:10px;border:1px solid color-mix(in srgb,var(--c2) 55%,transparent);border-radius:calc(var(--r2) - 8px);pointer-events:none}
+.rk-hero::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.08;background:repeating-linear-gradient(45deg,#fff 0 1px,transparent 1px 14px)}
+.rk-hero-in{position:relative;z-index:1;padding:26px 18px 20px;text-align:center}
+.rk-eyebrow{display:inline-block;font-size:.66em;letter-spacing:.22em;text-transform:uppercase;font-weight:700;color:var(--c2)}
+.rk-judul{font-family:"Cormorant Garamond",Georgia,serif;font-weight:700;font-size:2.1em;line-height:1.05;margin:6px 0 2px;letter-spacing:.01em}
+.rk-sub{margin:0 0 14px;font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;font-size:1.02em;opacity:.85}
+.rk-tab{display:inline-flex;gap:4px;padding:4px;border-radius:14px;background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.14);margin-bottom:18px}
+.rk-tab a{display:flex;flex-direction:column;align-items:center;min-width:58px;padding:5px 10px;border-radius:10px;color:rgba(255,255,255,.75);text-decoration:none;line-height:1.1}
+.rk-tab a small{font-size:.58em;letter-spacing:.08em;text-transform:uppercase}.rk-tab a b{font-family:"Cormorant Garamond",Georgia,serif;font-size:1.25em}
+.rk-tab a.on{background:linear-gradient(135deg,var(--c2),var(--c2d));color:#fff;box-shadow:0 6px 14px -6px rgba(0,0,0,.5)}
+.rk-tab a.kosong:not(.on){opacity:.45}
+.rk-podium{display:grid;grid-template-columns:1fr 1.12fr 1fr;align-items:end;gap:10px}
+.rk-pod{display:flex;flex-direction:column;align-items:center;padding:14px 8px 14px;border-radius:18px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(6px)}
+.rk-pod.p1{padding-top:18px;padding-bottom:20px;background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.06));border-color:color-mix(in srgb,var(--c2) 60%,transparent)}
+.rk-pod.saya{box-shadow:0 0 0 2px var(--c2)}
+.rk-medali{position:relative;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;color:rgba(255,255,255,.85);
+  background:radial-gradient(circle at 32% 28%,#eef1f4,#9aa6b0 60%,#66727c);box-shadow:inset 0 -3px 6px rgba(0,0,0,.25),0 6px 14px -6px rgba(0,0,0,.6)}
+.rk-medali svg{position:absolute;width:30px;height:30px;opacity:.35}
+.rk-medali b{position:relative;font-family:"Cormorant Garamond",Georgia,serif;font-size:1.35em;color:#2b3238}
+.rk-medali.m1{width:58px;height:58px;background:radial-gradient(circle at 32% 28%,#fff3c4,#e2b84f 55%,#a57a22)}.rk-medali.m1 b{font-size:1.7em;color:#4a3608}
+.rk-medali.m3{background:radial-gradient(circle at 32% 28%,#f6d2b4,#c98a5a 55%,#8a5530)}.rk-medali.m3 b{color:#3f230f}
+.rk-ord{margin-top:8px;font-size:.6em;letter-spacing:.14em;text-transform:uppercase;color:var(--c2);font-weight:700}
+.rk-pnama{font-family:"Cormorant Garamond",Georgia,serif;font-weight:700;font-size:1em;line-height:1.2;margin:4px 0 6px;min-height:2.4em;display:flex;align-items:center;justify-content:center}
+.rk-pod.p1 .rk-pnama{font-size:1.12em}
+.rk-pskor b{font-size:1.25em;display:block;line-height:1}.rk-pskor span{font-size:.72em;opacity:.8;font-weight:700}
+.rk-belum{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0 4px}.rk-belum svg{width:34px;height:34px;color:var(--c2)}.rk-belum small{opacity:.8;max-width:320px}
+.rk-ringkas{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.rk-ringkas>div{background:var(--sf);border:1px solid var(--line);border-radius:16px;padding:12px;text-align:center;box-shadow:var(--sh1)}
+.rk-ringkas small{display:block;font-size:.66em;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);font-weight:700}
+.rk-ringkas b{font-family:"Cormorant Garamond",Georgia,serif;font-size:1.6em;color:var(--acc)}
+.rk-daftar{background:var(--sf);border:1px solid var(--line);border-radius:var(--r2);box-shadow:var(--sh1);padding:4px 16px}
+.rk-baris{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--line)}.rk-baris:last-child{border-bottom:0}
+.rk-baris.saya{background:var(--gold-bg);margin:0 -16px;padding:14px 16px}
+.rk-no{flex:0 0 40px;height:40px;border-radius:50%;display:grid;place-items:center;font-family:"Cormorant Garamond",Georgia,serif;font-weight:700;font-size:1.3em;color:var(--ink2);border:1.5px solid var(--line2)}
+.rk-no.n1{border:0;color:#4a3608;background:radial-gradient(circle at 32% 28%,#fff3c4,#e2b84f 55%,#a57a22)}
+.rk-no.n2{border:0;color:#2b3238;background:radial-gradient(circle at 32% 28%,#eef1f4,#9aa6b0 60%,#66727c)}
+.rk-no.n3{border:0;color:#3f230f;background:radial-gradient(circle at 32% 28%,#f6d2b4,#c98a5a 55%,#8a5530)}
+.rk-isi{flex:1;min-width:0}.rk-atas{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.rk-atas b{font-family:"Cormorant Garamond",Georgia,serif;font-size:1.08em}
+.rk-total{font-weight:800;white-space:nowrap;font-size:.95em}.rk-total small{color:var(--mut);font-weight:600}
+.rk-garis{height:5px;border-radius:9px;background:var(--sf3);margin:7px 0;overflow:hidden}.rk-garis i{display:block;height:100%;border-radius:9px;background:linear-gradient(90deg,var(--c1),var(--c2))}
+.rk-mk{display:flex;flex-wrap:wrap;gap:5px}.rk-mk span{display:inline-flex;align-items:baseline;gap:5px;font-size:.74em;font-weight:800;border:1px solid var(--line);border-radius:8px;padding:2px 8px;background:var(--sf2)}.rk-mk small{font-weight:600;color:var(--mut)}
+.rk-persen{flex:0 0 auto;text-align:right}.rk-persen b{display:block;font-family:"Cormorant Garamond",Georgia,serif;font-size:1.45em;color:var(--acc);line-height:1}.rk-persen small{font-size:.66em;color:var(--mut)}
+.rk-saya{font-style:normal;font-family:inherit;font-size:.62em;letter-spacing:.06em;text-transform:uppercase;background:var(--c2);color:#fff;border-radius:99px;padding:2px 8px;margin-left:6px;vertical-align:middle}
+.rk-ket{font-size:.78em;margin:12px 2px 18px;text-align:center}
+@media (max-width:520px){.rk-judul{font-size:1.7em}.rk-podium{gap:6px}.rk-pnama{font-size:.86em}.rk-pod.p1 .rk-pnama{font-size:.95em}.rk-tab a{min-width:48px;padding:4px 7px}.rk-baris{gap:10px}.rk-no{flex-basis:34px;height:34px;font-size:1.1em}}
