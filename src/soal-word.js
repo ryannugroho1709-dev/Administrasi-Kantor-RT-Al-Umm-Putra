@@ -314,6 +314,7 @@ async function uaBuatWord(jadwalId, mapelId, kelasId) {
       <button class="btn btn-accent" id="sw-kumpul" onclick="swProses('kumpul')">📤 Buat Word & Kumpulkan</button>
     </div>
     <div class="sw-kaki">Tulisan: Times New Roman 12 pt, spasi 1,5, rata kiri-kanan · Arab: Traditional Arabic 16 pt, kanan ke kiri · nomor soal menggantung.</div></div>`);
+  if (typeof rapiPasang === "function") rapiPasang(qs("sw-teks"));
   _swGantiKelas(mapelId);
 }
 function _swGantiKelas(mapelPilih) {
@@ -371,6 +372,7 @@ function swKunciLagi() {
 function _swPratinjau() {
   const ta = qs("sw-teks"); if (!ta) return;
   if (!ta.readOnly) try { localStorage.setItem(_swKunciDraf(), ta.value); } catch (e) {}
+  if (typeof rapiSegar === "function") rapiSegar(ta);
   const urai = _swUrai(ta.value), e = _uaEsc;
   const nSoal = urai.filter((x) => x.jenis === "soal").length;
   qs("sw-hitung").textContent = urai.length ? `${nSoal} soal bernomor · ${urai.filter((x) => x.jenis === "butir").length} pilihan/butir` : "";
@@ -387,6 +389,7 @@ async function swProses(aksi) {
     const d = UA.data[_uaKunci(mapelId, kelasId)] || {};
     if (d.file_url && (!SW.bukaKunci || !_swBolehUbah(d))) { toast("Soal ini sudah terkumpul. Buka kunci dulu untuk mengubah.", "err"); return; }
   }
+  if (aksi !== "cetak" && typeof rapiPengingat === "function" && !rapiPengingat(qs("sw-teks"))) return;
   const urai = _swUrai(teks);
   if (!urai.some((x) => x.jenis === "soal") && !(await konfirmasiTema("Tidak ada soal bernomor (1., 2., …). Tetap buat?", { ikon: "⚠️", judul: "Periksa teks", teksYa: "Tetap buat" }))) return;
   const info = _swInfoUjian(j, mapelId, kelasId, urai); info.kat = _swKatAktif(mapelId);

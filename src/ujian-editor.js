@@ -384,6 +384,7 @@ Kunci: masa peralihan antarmusim</pre>
   const ta = qs("uje-tempel");
   ta.oninput = () => _ujeInfoTempel();
   if (UJE.impor.teks) { ta.value = UJE.impor.teks; _ujeInfoTempel(); }
+  if (typeof rapiPasang === "function") rapiPasang(ta);
   ta.focus();
 }
 function _ujeInfoTempel(tambahan) {
@@ -394,6 +395,7 @@ function _ujeInfoTempel(tambahan) {
   el.innerHTML = (tambahan ? tambahan + "<br>" : "") + (ta.value.trim() ? `Terbaca <b>${n}</b> soal: ${UJE_JENIS.filter((j) => h[j].length).map((j) => `${UJE_IKON[j]} ${h[j].length} ${UJE_LABEL[j]}`).join(" · ") || "-"}${h.tanpaKunci ? ` · <b style="color:#b45309">${h.tanpaKunci} tanpa kunci</b>` : ""}${h.gambar ? ` · 🖼️ ${h.gambar} gambar` : ""}` : "");
 }
 async function ujeTempelProses() {
+  if (typeof rapiPengingat === "function" && !rapiPengingat(qs("uje-tempel"))) return;
   const h = _ujeUraiTeks(qs("uje-tempel").value);
   const n = UJE_JENIS.reduce((a, j) => a + h[j].length, 0);
   if (!n) { toast("Tidak ada soal bernomor yang terbaca", "err"); return; }
@@ -454,6 +456,7 @@ async function ujeBacaBerkas(input) {
     if (!teks.trim()) { _ujeInfoTempel("⚠️ Tidak ada teks yang terbaca dari berkas ini."); return; }
     const ta = qs("uje-tempel"); if (!ta) return;
     ta.value = teks; ta.scrollTop = 0;
+    if (typeof rapiSegar === "function") rapiSegar(ta);
     _ujeInfoTempel(`✅ <b>${escapeHtml(f.name)}</b> terbaca. ${catatan} Periksa teks di bawah (boleh diedit), lalu tekan <b>✨ Masukkan soal</b>.`);
   } catch (e) { console.error(e); _ujeInfoTempel(`⚠️ Gagal membaca berkas: ${escapeHtml(e.message || String(e))}`); }
 }
