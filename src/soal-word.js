@@ -304,13 +304,14 @@ async function uaBuatWord(jadwalId, mapelId, kelasId) {
       <label class="field"><span class="form-label">Mapel</span><select id="sw-mapel" class="input" onchange="_swSegarkanInfo()"></select></label>
     </div>
     <div class="sw-chip" id="sw-info"></div>
+    <div id="sw-kunci-bar"></div>
     <textarea id="sw-teks" class="input sw-teks" dir="auto" rows="9" placeholder="Tempel teks soal di sini, contoh:&#10;Judul / nama kitab&#10;1. Soal pertama …&#10;2. Soal kedua …&#10;   a. pilihan …&#10;- butir …" oninput="_swPratinjau()"></textarea>
     <div class="sw-prat-h"><b>Pratinjau Susunan</b><small id="sw-hitung"></small></div>
     <div class="sw-prat" id="sw-prat"><div class="sw-kosong">Belum ada teks.</div></div>
     <div class="sw-aksi">
       <button class="btn btn-outline" onclick="swProses('unduh')" title="Hanya mengunduh file Word">⬇️ Unduh Word</button>
       <button class="btn btn-outline" onclick="swProses('cetak')" title="Buka tampilan cetak">🖨️ Cetak</button>
-      <button class="btn btn-accent" onclick="swProses('kumpul')">📤 Buat Word & Kumpulkan</button>
+      <button class="btn btn-accent" id="sw-kumpul" onclick="swProses('kumpul')">📤 Buat Word & Kumpulkan</button>
     </div>
     <div class="sw-kaki">Tulisan: Times New Roman 12 pt, spasi 1,5, rata kiri-kanan · Arab: Traditional Arabic 16 pt, kanan ke kiri · nomor soal menggantung.</div></div>`);
   _swGantiKelas(mapelId);
@@ -331,7 +332,12 @@ async function _swSegarkanInfo() {
   // isi teks: draf yang belum dikirim → teks yang pernah dikumpulkan
   let draf = ""; try { draf = localStorage.getItem(_swKunciDraf()) || ""; } catch (e) {}
   const ta = qs("sw-teks");
-  if (ta && (!ta.value.trim() || ta.dataset.dari !== mapelId + kelasId)) { ta.value = draf || d.teks || ""; ta.dataset.dari = mapelId + kelasId; }
+  const gantiPilihan = ta && ta.dataset.dari !== mapelId + kelasId;
+  // sudah terkumpul → tampil MODE BACA (teks terkunci); hanya pengumpul & admin yang bisa membuka kunci
+  if (gantiPilihan) SW.bukaKunci = false;
+  const terkunci = !!d.file_url && !SW.bukaKunci;
+  if (ta && (gantiPilihan || !ta.value.trim())) { ta.value = terkunci ? d.teks || "" : draf || d.teks || ""; ta.dataset.dari = mapelId + kelasId; }
+  _swAturKunci(d, terkunci);
   qs("sw-info").innerHTML = `<span>🏫 Paket ${paket.toUpperCase()} <small>(${paket === "b" ? "setara SMP" : "setara SMA"})</small></span><span class="sw-kunci" title="Mengikuti kategori di Data Mapel (tidak bisa diganti di sini)">🔒 ${kat === "diniyyah" ? "🕌 Diniyyah" : "📘 Umum"}</span><span>📋 ${uts ? "UTS" : "PAS"} · Semester ${sem === "ganjil" ? "Ganjil" : "Genap"}</span><span id="sw-kop-ket">⏳ Memeriksa Kop…</span>${d.file_url ? `<span class="ok">✅ Sudah Terkumpul${d.sumber === "tempel" ? " (Bisa Diperbarui)" : ""}</span>` : ""}`;
   _swPratinjau();
   const kop = await _swCariKop(kat, uts, sem, paket);
@@ -339,9 +345,32 @@ async function _swSegarkanInfo() {
   el.className = kop ? (kop.cadangan ? "awas" : "ok") : "bahaya";
   el.textContent = kop ? (kop.cadangan ? `⚠️ Kop UTS belum diunggah — dipakai kop ${_swLabelKop(kop.kode)}` : `🧾 Kop ${_swLabelKop(kop.kode)}`) : "❌ Kop belum ada — minta admin mengunggah di menu Kop Soal";
 }
+// Pengumpul soal (dicatat namanya) atau admin boleh mengubah soal yang sudah terkumpul
+const _swBolehUbah = (d) => _uaBolehAtur() || !d.oleh || d.oleh === STATE.guruNama;
+function _swAturKunci(d, terkunci) {
+  const ta = qs("sw-teks"), bar = qs("sw-kunci-bar"), kumpul = qs("sw-kumpul"); if (!ta || !bar) return;
+  ta.readOnly = terkunci; ta.classList.toggle("sw-terkunci", terkunci);
+  if (kumpul) kumpul.style.display = terkunci ? "none" : "";
+  const waktu = d.t ? new Date(d.t).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "";
+  bar.innerHTML = !d.file_url ? "" : terkunci
+    ? `<div class="sw-baca"><div><b>🔒 Mode Baca</b><small>Soal ini sudah dikumpulkan${d.oleh ? " oleh " + _uaEsc(d.oleh) : ""}${waktu ? ", " + waktu : ""}. Teks tidak bisa diubah${d.teks ? "" : " (dikumpulkan sebagai berkas, bukan teks tempel)"}.</small></div>
+      ${_swBolehUbah(d) ? `<button class="btn btn-sm btn-outline" onclick="swBukaKunci()">✏️ Buka Kunci Untuk Edit</button>` : `<small class="sw-baca-ket">Hanya pengumpul & admin yang bisa mengubah.</small>`}</div>`
+    : `<div class="sw-baca edit"><div><b>✏️ Mode Edit</b><small>Perubahan baru tersimpan setelah menekan <b>Buat Word & Kumpulkan</b> — berkas lama diganti.</small></div><button class="btn btn-sm btn-ghost" onclick="swKunciLagi()">Batal</button></div>`;
+}
+function swBukaKunci() {
+  const d = UA.data[_uaKunci(qs("sw-mapel").value, qs("sw-kelas").value)] || {};
+  if (!_swBolehUbah(d)) { toast("Hanya pengumpul soal & admin yang bisa mengubah", "err"); return; }
+  SW.bukaKunci = true; _swAturKunci(d, false); qs("sw-teks").focus();
+}
+function swKunciLagi() {
+  const d = UA.data[_uaKunci(qs("sw-mapel").value, qs("sw-kelas").value)] || {};
+  SW.bukaKunci = false; const ta = qs("sw-teks"); ta.value = d.teks || "";
+  try { localStorage.removeItem(_swKunciDraf()); } catch (e) {}
+  _swAturKunci(d, true); _swPratinjau();
+}
 function _swPratinjau() {
   const ta = qs("sw-teks"); if (!ta) return;
-  try { localStorage.setItem(_swKunciDraf(), ta.value); } catch (e) {}
+  if (!ta.readOnly) try { localStorage.setItem(_swKunciDraf(), ta.value); } catch (e) {}
   const urai = _swUrai(ta.value), e = _uaEsc;
   const nSoal = urai.filter((x) => x.jenis === "soal").length;
   qs("sw-hitung").textContent = urai.length ? `${nSoal} soal bernomor · ${urai.filter((x) => x.jenis === "butir").length} pilihan/butir` : "";
@@ -354,6 +383,10 @@ async function swProses(aksi) {
   const j = JU.daftar.find((x) => x.id === SW.jadwalId), kelasId = qs("sw-kelas").value, mapelId = qs("sw-mapel").value, teks = qs("sw-teks").value;
   if (!mapelId) { toast("Pilih mapel dulu", "err"); return; }
   if (!teks.trim()) { toast("Tempel teks soalnya dulu", "err"); qs("sw-teks").focus(); return; }
+  if (aksi === "kumpul") {
+    const d = UA.data[_uaKunci(mapelId, kelasId)] || {};
+    if (d.file_url && (!SW.bukaKunci || !_swBolehUbah(d))) { toast("Soal ini sudah terkumpul. Buka kunci dulu untuk mengubah.", "err"); return; }
+  }
   const urai = _swUrai(teks);
   if (!urai.some((x) => x.jenis === "soal") && !(await konfirmasiTema("Tidak ada soal bernomor (1., 2., …). Tetap buat?", { ikon: "⚠️", judul: "Periksa teks", teksYa: "Tetap buat" }))) return;
   const info = _swInfoUjian(j, mapelId, kelasId, urai); info.kat = _swKatAktif(mapelId);

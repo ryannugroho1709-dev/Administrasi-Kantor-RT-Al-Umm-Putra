@@ -446,8 +446,7 @@ async function ujeBacaBerkas(input) {
     if (/\.docx$/.test(nama)) { _ujeProgres("Membaca Word…"); teks = await _ujeTeksDocx(f); }
     else if (/\.pdf$/.test(nama) || f.type === "application/pdf") {
       _ujeProgres("Membaca PDF…"); const r = await _ujeTeksPdf(f); teks = r.teks;
-      if (r.scan) catatan = "📷 PDF hasil scan dibaca dengan pengenal huruf (OCR) — periksa ejaannya.";
-    } else if (/^image\//.test(f.type)) { teks = await _ujeOcr([f]); catatan = "📷 Foto dibaca dengan pengenal huruf (OCR) — periksa ejaan & kuncinya."; }
+      if (r.scan) catatan = "📷 PDF hasil scan dibaca dengan pengenal huruf (OCR) — periksa ejaannya.";    } else if (/^image\//.test(f.type)) { teks = await _ujeOcr([f]); catatan = "📷 Foto dibaca dengan pengenal huruf (OCR) — periksa ejaan & kuncinya."; }
     else if (/\.txt$/.test(nama)) teks = await f.text();
     else if (/\.doc$/.test(nama)) { toast("Format .doc lama belum bisa dibaca. Di Word: File → Simpan Sebagai → .docx, lalu unggah lagi.", "err"); _ujeProgres(""); return; }
     else { toast("Format berkas belum dikenali", "err"); return; }
@@ -625,8 +624,8 @@ const _ujeKunciArab = (v) => (/^[\s,،وهـأاإبجدزح.*]+$/.test(v) ? v.s
 // Pengurai teks bebas → { pg:[], pgk:[], isian:[], jodoh:[], urut:[], uraian:[], tanpaKunci, gambar }
 function _ujeUraiTeks(teks, tanpaLewati) {
   const hasil = { pg: [], pgk: [], isian: [], jodoh: [], urut: [], uraian: [], tanpaKunci: 0, gambar: 0 };
-  const baris = String(teks || "").replace(/\r/g, "").replace(/\t/g, "  ").split("\n");
-  let bagian = null, cur = null, bacaan = [], jodohKini = null, gambarTunda = "";
+  const baris = _ujeSusunPilihanKolom(String(teks || "").replace(/\r/g, "").replace(/\t/g, "  ").split("\n"));
+  let bagian = null, bersama = null, cur = null, bacaan = [], jodohKini = null, gambarTunda = "";
   const RE_JUDUL = /^\s*(?:[A-H]|[IVX]{1,4})?\s*[.)]?\s*(soal\s+)?(pilihan\s+ganda\s+kompleks|pg\s*kompleks|pilihan\s+ganda|isian(\s+singkat)?|isilah|lengkapilah|melengkapi|menjodohkan|jodohkanlah|jodohkan|pasangkanlah|mengurutkan|urutkanlah|urutkan|menyusun|susunlah|uraian|essay|esai)\b/i;
   const RE_NO = /^\s*(\d{1,3})\s*[.)]\s*(.*)$/;
   const RE_OPSI = /(^|\s{2,}|\t)(\*?)\(?([a-hA-H])\s*[.)]\s+(.+?)(?=(\s{2,}\*?\(?[a-hA-H]\s*[.)]\s)|$)/g;
@@ -667,7 +666,7 @@ function _ujeUraiTeks(teks, tanpaLewati) {
     if (!_ujeAdaKunci(jenis, s)) hasil.tanpaKunci++;
     hasil[jenis].push(s); cur = null;
   };
-  let judulBagian = "", lewatiPetunjuk = false, pernahLewati = false;
+  let judulBagian = "", lewatiPetunjuk = false, pernahLewati = false, nomorAkhir = 0;
   for (const raw of baris) {
     let l = _ujeNormalArab(raw.replace(/\s+$/, ""));
     // gambar dari berkas: tempel ke soal/pilihan yang sedang dibaca
@@ -688,7 +687,7 @@ function _ujeUraiTeks(teks, tanpaLewati) {
     }
     if (!l.trim() || /^\s*(pilihlah|jawablah|kerjakan|setiap soal|bernilai|=== halaman)/i.test(l)) continue;
     // blok petunjuk pengerjaan ("Petunjuk:", "Langkah Pengerjaan", "Tata tertib") bukan soal → dilewati sampai judul bagian
-    if (!tanpaLewati && l.trim().length < 50 && /^\s*(?:[A-H]\s*[.)]\s*)?(petunjuk|langkah(\s+-?\s*langkah)?(\s+pengerjaan)?|tata\s+tertib|perhatian|identitas)\b/i.test(l) && !RE_NO.test(l)) { tutup(); lewatiPetunjuk = pernahLewati = true; continue; }
+    if (!tanpaLewati && l.trim().length < 50 && !/^\s*\*?\(?[a-h]\s*[.)]\s/.test(l) && /^\s*(?:[A-H]\s*[.)]\s*)?(petunjuk|langkah(\s+-?\s*langkah)?(\s+pengerjaan)?|tata\s+tertib|perhatian|identitas)\b/i.test(l) && !RE_NO.test(l)) { tutup(); lewatiPetunjuk = pernahLewati = true; continue; }
     const jdl = l.trim().length < 70 && l.match(RE_JUDUL);
     if (lewatiPetunjuk && !(jdl && !RE_NO.test(l))) continue;
     if (jdl && !RE_NO.test(l)) {
@@ -697,15 +696,28 @@ function _ujeUraiTeks(teks, tanpaLewati) {
       const x = jdl[2].toLowerCase();
       bagian = /kompleks/.test(x) ? "pgk" : /pilihan/.test(x) ? "pg" : /isian|isilah|lengkap/.test(x) ? "isian" : /jodoh|pasang/.test(x) ? "jodoh" : /urut|susun/.test(x) ? "urut" : "uraian";
       judulBagian = /jodoh|pasang/.test(x) && l.trim().length > 25 ? l.trim().replace(/^\s*(?:[A-H]|[IVX]{1,4})\s*[.)]\s*/, "") : "";
-      jodohKini = null; bacaan = []; continue;
+      jodohKini = null; bacaan = []; nomorAkhir = 0; continue;
     }
     const kn = l.match(RE_KUNCI);
     if (kn && cur) { cur.kunci = kn[4]; continue; }
-    const no = l.match(RE_NO);
+    let no = l.match(RE_NO);
+    // daftar bernomor DI DALAM soal ("Perhatikan pernyataan berikut! 1. … 2. …") bukan soal baru:
+    // nomor soal harus melanjutkan urutan (nomor terakhir + 1…5); selain itu jadi bagian teks soal
+    if (no && cur && !cur.o.length && cur.kunci == null) {
+      const n = Number(no[1]);
+      if (!(n > nomorAkhir && n <= nomorAkhir + 5)) no = null;
+    }
     if (no) {
+      nomorAkhir = Number(no[1]);
       tutup();
-      const panjang = bacaan.join("\n").trim();
-      cur = { t: no[2], o: [], kunci: null, stimulus: panjang.length > 60 ? panjang : "", g: gambarTunda, judulBagian };
+      let panjang = bacaan.join("\n").trim();
+      const nomor = Number(no[1]);
+      // bacaan untuk beberapa soal: "untuk soal nomor 4 dan 5" / "nomor 4–6" / "nomor 4 sampai 6"
+      const rentang = panjang.match(/soal\s+(?:nomor|no\.?)\s*(\d{1,3})\s*(?:dan|-|–|—|s\.?\s*d\.?|sampai(?:\s+dengan)?|hingga)\s*(\d{1,3})/i);
+      if (panjang.length > 60) bersama = rentang && Number(rentang[1]) <= nomor && Number(rentang[2]) > nomor ? { teks: panjang, sampai: Number(rentang[2]) } : null;
+      else if (bersama && nomor <= bersama.sampai) panjang = bersama.teks;
+      else bersama = null;
+      cur = { t: no[2].replace(/\s+HOTS\s*$/, ""), o: [], kunci: null, stimulus: panjang.length > 60 ? panjang : "", g: gambarTunda, judulBagian };
       gambarTunda = ""; bacaan = [];
       if (gbrSebaris) gbrSebaris.forEach((tok) => { if (!cur.g) cur.g = tok; });
       continue;
@@ -713,7 +725,7 @@ function _ujeUraiTeks(teks, tanpaLewati) {
     if (cur) {
       if (_ujeAmbilOpsi(cur, l, RE_OPSI)) { if (gbrSebaris) cur.o[cur.o.length - 1].g = gbrSebaris[0]; continue; }
       // kalimat pembuka bacaan ("Teks berikut…", "Bacalah…") = soal sebelumnya selesai, mulai teks bacaan baru
-      if (cur.kunci != null || (cur.o.length && /^\s*(teks|bacalah|perhatikan|cermatilah|cermati|bacaan|wacana|paragraf)\b/i.test(l))) { tutup(); bacaan.push(l.trim()); continue; }
+      if (cur.kunci != null || (cur.o.length && (/^\s*(teks|bacalah|perhatikan|cermatilah|cermati|bacaan|wacana|paragraf|kutipan|penggalan|simaklah|gambar|tabel|grafik|diagram|data|informasi)\b/i.test(l) || /untuk\s+(menjawab\s+)?soal\s+(nomor|no\.?)/i.test(l)))) { tutup(); bacaan.push(l.trim()); continue; }
       if (cur.o.length) cur.o[cur.o.length - 1].teks += " " + l.trim(); else cur.t += "\n" + l.trim();
       if (gbrSebaris && !cur.g) cur.g = gbrSebaris[0];
     } else bacaan.push(l.trim());
@@ -722,6 +734,24 @@ function _ujeUraiTeks(teks, tanpaLewati) {
   // petunjuk tidak diikuti judul bagian sehingga semua terlewati → baca ulang tanpa melewati
   if (pernahLewati && !UJE_JENIS.some((j) => hasil[j].length)) return _ujeUraiTeks(teks, true);
   return hasil;
+}
+// Pilihan dua/tiga kolom dari PDF ("a. …   d. …" / "b. …   e. …" / "c. …") → satu pilihan per baris, urut huruf
+function _ujeSusunPilihanKolom(baris) {
+  const AWAL = /^\s*\*?\(?[a-hA-H]\s*[.)]\s+\S/, BANYAK = /\S\s{2,}\*?\(?[a-hA-H]\s*[.)]\s+\S/;
+  const out = [];
+  for (let i = 0; i < baris.length; i++) {
+    if (!(AWAL.test(baris[i]) && BANYAK.test(baris[i]))) { out.push(baris[i]); continue; }
+    let j = i; const blok = [];
+    while (j < baris.length && AWAL.test(baris[j])) blok.push(baris[j++]);
+    const opsi = [];
+    blok.forEach((b) => b.trim().split(/\s{2,}(?=\*?\(?[a-hA-H]\s*[.)]\s)/).forEach((p) => { const m = p.match(/^\*?\(?([a-hA-H])/); opsi.push({ h: m ? m[1].toLowerCase() : "z", p }); }));
+    const huruf = opsi.map((o) => o.h).sort();
+    const lengkap = huruf.every((x, k) => x === String.fromCharCode(97 + k));
+    if (lengkap) { opsi.sort((a, b) => a.h.localeCompare(b.h)); opsi.forEach((o) => out.push(o.p)); }
+    else out.push(...blok);
+    i = j - 1;
+  }
+  return out;
 }
 // Baris pilihan: "a. teks", "(b) teks", "*c. teks" (bintang = benar), atau beberapa pilihan dalam satu baris.
 function _ujeAmbilOpsi(cur, l, re) {
