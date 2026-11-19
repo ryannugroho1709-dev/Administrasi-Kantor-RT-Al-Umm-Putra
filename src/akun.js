@@ -150,7 +150,7 @@ function akTampilSandiBaru(tahap, pesan) {
   if (tahap === "memuat") el.innerHTML = `<div class="ak-cahaya"></div><div class="ak-panel">${kepala}<b>Memeriksa Tautan…</b><span>Sebentar, tautan dari email sedang diperiksa.</span></div></div>`;
   else if (tahap === "gagal") el.innerHTML = `<div class="ak-cahaya"></div><div class="ak-panel">${kepala}<b>Tautan Tidak Berlaku</b><span>${escapeHtml(pesan || "")}</span></div>
     <button class="ak-tombol" onclick="AK.pulih=false;akTampilMasuk('lupa')">Minta Tautan Baru</button><button class="ak-tautan" onclick="AK.pulih=false;akTampilMasuk()">Ke Halaman Masuk</button></div>`;
-  else el.innerHTML = `<div class="ak-cahaya"></div><div class="ak-panel">${kepala}<b>Buat Sandi Baru</b><span>${AK.emailPulih ? `Untuk akun <b>${escapeHtml(AK.emailPulih)}</b>. ` : ""}Minimal 8 karakter, huruf besar/kecil dibedakan.</span></div>
+  else el.innerHTML = `<div class="ak-cahaya"></div><div class="ak-panel">${kepala}<b>Buat Sandi Baru</b><span>${AK.emailPulih ? `Untuk akun <strong class="ak-email">${escapeHtml(AK.emailPulih)}</strong>. ` : ""}Minimal 8 karakter, huruf besar/kecil dibedakan.</span></div>
     <label class="ak-isian"><span>Sandi Baru</span><span class="ak-sandi"><input id="ak-baru1" type="password" autocomplete="new-password" placeholder="Sandi baru"><button type="button" class="ak-lihat" onclick="akLihatSandi(this)">Lihat</button></span></label>
     <label class="ak-isian"><span>Ulangi Sandi Baru</span><span class="ak-sandi"><input id="ak-baru2" type="password" autocomplete="new-password" placeholder="Ketik sekali lagi"><button type="button" class="ak-lihat" onclick="akLihatSandi(this)">Lihat</button></span></label>
     <div id="ak-pesan" class="ak-pesan"></div>

@@ -536,3 +536,15 @@ html.tema-elegan .splash-dots span{background:#d4a64a;}
 .rg-pf-sarpras .input{padding:6px 8px;font-size:12.5px}
 .rg-kondisi{font-weight:700}.rg-kondisi.k1{color:#15803d}.rg-kondisi.k2{color:#b45309}.rg-kondisi.k3{color:#b91c1c}
 @media (max-width:720px){.rg-pf-grid{grid-template-columns:1fr}.rg-pf-hero{flex-direction:column;text-align:center}.rg-pf-ubah{position:static}}
+/* Lampu neon "bernapas" di lingkaran logo (layar masuk, sandi baru, pilih ruang) — warna mengikuti tema */
+#ak-masuk .ak-logo,#rg-pilih .rg-logo{--neon:color-mix(in srgb,var(--accent,#5eead4) 55%,#9ff3ff);position:relative;animation:neonNapas 2.8s ease-in-out infinite}
+#ak-masuk .ak-logo::after,#rg-pilih .rg-logo::after{content:"";position:absolute;inset:-7px;border-radius:50%;border:2.5px solid var(--neon);
+  box-shadow:0 0 10px color-mix(in srgb,var(--neon) 80%,transparent),inset 0 0 10px color-mix(in srgb,var(--neon) 60%,transparent);animation:neonCincin 2.8s ease-in-out infinite;pointer-events:none}
+@keyframes neonNapas{0%,100%{box-shadow:0 0 0 5px rgba(255,255,255,.06),0 0 14px 2px color-mix(in srgb,var(--neon) 30%,transparent)}
+  50%{box-shadow:0 0 0 5px rgba(255,255,255,.12),0 0 34px 10px color-mix(in srgb,var(--neon) 80%,transparent),0 0 80px 24px color-mix(in srgb,var(--neon) 40%,transparent)}}
+@keyframes neonCincin{0%,100%{opacity:.35;filter:brightness(.8)}50%{opacity:1;filter:brightness(1.25)}}
+@media (prefers-reduced-motion:reduce){#ak-masuk .ak-logo,#rg-pilih .rg-logo,#ak-masuk .ak-logo::after,#rg-pilih .rg-logo::after{animation:none}}
+#ak-masuk .ak-email{font-weight:700;color:#fff}
+.ds-det-kepala{display:flex;gap:12px;align-items:center;margin-bottom:12px}.ds-det-kepala img,.ds-det-kepala .tj-avatar{width:58px;height:58px;border-radius:14px;object-fit:cover;object-position:center 15%}
+.ds-det-kepala h3{margin:0}.ds-det-kepala small{color:var(--text-secondary)}
+.ds-det-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.ds-det-b{background:var(--accent-soft);border-radius:10px;padding:8px 10px}.ds-det-b small{display:block;font-size:11px;color:var(--text-secondary)}.ds-det-b b{font-size:13px;word-break:break-word}

@@ -126,3 +126,57 @@ async function dsNaikKelasOtomatis() {
   const coba = () => { if (typeof STATE !== "undefined" && STATE.guruId && (typeof RG === "undefined" || RG.siap)) dsNaikKelasOtomatis(); };
   window.addEventListener("load", () => { setTimeout(coba, 8000); });
 })();
+
+// ============================================================
+//  DATA SISWA YANG AMAN
+//  • Tutor bisa membuka Data Siswa (lihat saja); NIK & No. KK disamarkan (6308••••••••0002).
+//  • Data asli hanya untuk Admin, Admin Pendamping ruang itu, dan anggota Pengelola.
+//  • Foto santri Putri hanya untuk guru Putri (ruang Putri sebagai "Ruang Saya") dan Admin/Pengelola.
+//  • Membuka data asli santri oleh selain admin utama tercatat di Catatan Aktivitas ("lihat-nik").
+// ============================================================
+const dsBolehDataAsli = () => (typeof isAdmin === "function" && isAdmin()) || (typeof rgPendamping === "function" && rgPendamping())
+  || (typeof RG !== "undefined" && RG.saya && (RG.saya.ruang || []).includes("Pg"));
+const dsBolehFotoPutri = () => dsBolehDataAsli() || (typeof rgAkses === "function" && rgAkses("Pi") === "U" && !(typeof STATE !== "undefined" && STATE.modeLihat));
+const _dsAksesAsli = adaAksesModul;
+const dsBolehKelola = () => _dsAksesAsli("data-siswa") || (typeof isKepsekOrTU === "function" && isKepsekOrTU());
+// semua guru jenjang boleh membuka Data Siswa (lihat saja)
+adaAksesModul = function (k) {
+  if (k === "data-siswa" && typeof RG !== "undefined" && RG.siap && STATE.ruang !== "Pg") return true;
+  return _dsAksesAsli(k);
+};
+function dsSamarkan(v) {
+  const s = String(v || "").replace(/\s/g, "");
+  if (!s) return v;
+  return s.length <= 8 ? "•".repeat(s.length) : s.slice(0, 4) + "•".repeat(s.length - 8) + s.slice(-4);
+}
+function _dsAmankan(rows) {
+  const asli = dsBolehDataAsli(), foto = !(STATE.ruang === "Pi" && !dsBolehFotoPutri());
+  if (asli && foto) return rows;
+  return (rows || []).map((s) => ({ ...s, ...(asli ? {} : { nik: dsSamarkan(s.nik), no_kk: dsSamarkan(s.no_kk), _samar: true }), ...(foto ? {} : { foto_url: null }) }));
+}
+const _dsAllAsli = apiGetAllSiswa;
+apiGetAllSiswa = async function (...a) { return _dsAmankan(await _dsAllAsli(...a)); };
+const _dsNonAsli = apiGetSiswaNonaktif;
+apiGetSiswaNonaktif = async function (...a) { return _dsAmankan(await _dsNonAsli(...a)); };
+
+// Tutor: tombol kelola disembunyikan, ketuk santri = kartu detail (lihat saja)
+const _dsRenderAsli = renderDataSiswa;
+renderDataSiswa = async function (...a) {
+  const kelola = dsBolehKelola();
+  qsa("#page-data-siswa .ds-aksi > *").forEach((el) => { el.style.display = kelola ? "" : "none"; });
+  const sub = qs("page-data-siswa")?.querySelector(".ds-judul small");
+  if (sub) sub.textContent = kelola ? "Ketuk kelas untuk menyaring santri" : "Lihat saja · NIK dan No. KK disamarkan";
+  return _dsRenderAsli(...a);
+};
+const _dsFormAsli = openFormSiswa;
+openFormSiswa = async function (row) {
+  if (row && dsBolehDataAsli() && typeof _rgLog === "function" && !(typeof isAdmin === "function" && isAdmin())) _rgLog("lihat-nik", { siswa: row.nama });
+  if (dsBolehKelola() && !(row && row._samar)) return _dsFormAsli(row);
+  if (!row) return;
+  const e = escapeHtml, b = (l, v) => `<div class="ds-det-b"><small>${l}</small><b>${e(v || "-")}</b></div>`;
+  openModal(`<div class="ds-det-kepala">${row.foto_url ? `<img src="${e(row.foto_url)}" alt="">` : `<span class="tj-avatar">${_inisial(row.nama)}</span>`}
+      <div><h3>${e(row.nama)}</h3><small>${e(formatKelasLabel(row.kelas?.nama_kelas || ""))} · Angkatan ${e(row.angkatan || "-")}</small></div></div>
+    <div class="ds-det-grid">${b("Tempat, Tanggal Lahir", [row.tempat_lahir, row.tanggal_lahir].filter(Boolean).join(", "))}${b("NIS", row.nis)}${b("NISN", row.nisn)}
+      ${b("NIK", row.nik)}${b("No. KK", row.no_kk)}${b("Sekolah Asal", row.sekolah_asal)}${b("Nama Ayah", row.nama_ayah)}${b("Nama Ibu", row.nama_ibu)}</div>
+    <p class="ds-catatan">NIK dan No. KK disamarkan. Data lengkap hanya untuk Admin dan Admin Pendamping.</p>`);
+};
