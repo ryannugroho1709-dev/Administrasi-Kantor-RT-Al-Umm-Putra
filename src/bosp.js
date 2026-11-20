@@ -605,11 +605,19 @@ function bspBukaJuknis(dariKK) {
       try {
         if (typeof RG === "undefined" || !RG.siap || STATE.ruang === "Pg" || !bspBolehSusun()) return h;
         const nav = qs("nav-list"); if (!nav || nav.querySelector("[data-bsp]")) return h;
-        const lbl = [...nav.querySelectorAll(".nav-group-label")].find((l) => /Santri & Ruang/.test(l.textContent));
-        const grup = document.createElement("div"); grup.className = "nav-group-label"; grup.textContent = "Keuangan";
         const el = document.createElement("div"); el.className = "nav-item" + (STATE.currentPage === "bsp-kk" ? " active" : ""); el.dataset.bsp = "1";
         el.innerHTML = `${rgSvg("bsp-kk")}<span>Kertas Kerja BOSP</span>`; el.onclick = () => bspBukaKK();
-        if (lbl) { nav.insertBefore(grup, lbl); nav.insertBefore(el, lbl); } else { nav.appendChild(grup); nav.appendChild(el); }
+        // masuk ke grup "Keuangan" yang sudah ada (paling bawah grup itu); bila ruang tidak punya grup Keuangan, buat grup baru
+        const label = [...nav.querySelectorAll(".nav-group-label")];
+        const keu = label.find((l) => /^(keuangan|finance)$/i.test(l.textContent.trim()));
+        if (keu) {
+          let akhir = keu; while (akhir.nextElementSibling && !akhir.nextElementSibling.classList.contains("nav-group-label")) akhir = akhir.nextElementSibling;
+          akhir.after(el);
+        } else {
+          const lbl = label.find((l) => /Santri & Ruang/.test(l.textContent));
+          const grup = document.createElement("div"); grup.className = "nav-group-label"; grup.textContent = "Keuangan";
+          if (lbl) { nav.insertBefore(grup, lbl); nav.insertBefore(el, lbl); } else { nav.appendChild(grup); nav.appendChild(el); }
+        }
       } catch (e) { console.warn("Menu BOSP:", e); }
       return h;
     };
