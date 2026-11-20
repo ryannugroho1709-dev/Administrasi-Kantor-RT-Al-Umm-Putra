@@ -223,15 +223,15 @@ async function bukaInsentifTambahan() {
     <div class="field"><label class="form-label">Keterangan</label><input id="it-ket" class="input" placeholder="mis. Tahsin Musyrif Senin malam (Sep–Okt)"/></div>
     <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:8px;">
       <div class="field"><label class="form-label">Jumlah kali</label><input id="it-qty" type="number" min="1" value="1" class="input" oninput="_itHitung()"/></div>
-      <div class="field"><label class="form-label">Tarif per kali (Rp)</label><input id="it-tarif" type="number" min="0" step="1000" class="input" placeholder="50000" oninput="_itHitung()"/></div>
+      <div class="field"><label class="form-label">Tarif per kali (Rp)</label><input id="it-tarif" type="text" inputmode="numeric" class="input" placeholder="50.000" oninput="this.value=formatRibuan(this.value);_itHitung()"/></div>
     </div>
     <div id="it-total" style="font-size:12.5px;font-weight:800;margin:-4px 0 10px;">Total: Rp0</div>
     <button class="btn btn-accent" style="width:100%;" onclick="_tambahInsentifTambahan('${bulanYM}')">💾 Tambahkan ke ${namaBulanIndo(bulanYM)}</button>`);
 }
-function _itHitung() { const el = qs("it-total"); if (el) el.textContent = "Total: " + formatRupiah((+qs("it-qty").value || 0) * (+qs("it-tarif").value || 0)); }
+function _itHitung() { const el = qs("it-total"); if (el) el.textContent = "Total: " + formatRupiah((+qs("it-qty").value || 0) * angkaRibuan(qs("it-tarif").value)); }
 async function _tambahInsentifTambahan(bulanYM) {
   if (!isAdmin()) { toast("Hanya admin utama yang bisa menambah insentif", "err"); return; }
-  const guruId = qs("it-guru").value, qty = +qs("it-qty").value || 0, tarif = +qs("it-tarif").value || 0, ket0 = qs("it-ket").value.trim();
+  const guruId = qs("it-guru").value, qty = +qs("it-qty").value || 0, tarif = angkaRibuan(qs("it-tarif").value), ket0 = qs("it-ket").value.trim();
   if (!ket0) { toast("Isi keterangannya dulu", "err"); qs("it-ket").focus(); return; }
   if (qty <= 0 || tarif <= 0) { toast("Isi jumlah kali dan tarif", "err"); return; }
   const ket = qty > 1 ? `${ket0} — ${qty}x @ ${formatRupiah(tarif)}` : ket0;

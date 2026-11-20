@@ -2310,6 +2310,8 @@ function countUp(el, target, duration) {
 // Tampilkan angka dengan titik ribuan (1.000.000) saat mengetik di input keuangan.
 // Gunakan di: oninput="this.value=formatRibuan(this.value)"
 // Baca nilainya dengan: parseRibuan(el.value) → Number
+// Baca angka dari kolom bertitik ribuan ("1.250.000" → 1250000)
+function angkaRibuan(val) { return Number(String(val == null ? "" : val).replace(/[^0-9]/g, "")) || 0; }
 function formatRibuan(val) {
   const raw = String(val).replace(/\./g, "").replace(/[^0-9]/g, "");
   if (!raw) return "";
@@ -7417,7 +7419,7 @@ function renderRencanaSnackMingguan() {
     <div class="field" style="display:flex;align-items:center;gap:8px;">
       <label class="form-label" style="margin:0;white-space:nowrap;" data-i18n="hargaSnackPerOrangLabel">Harga per Orang (Rp)</label>
       ${admin
-        ? `<input id="rs-harga" type="number" step="500" class="input" value="${harga}" onchange="simpanHargaSnackPerOrang()"/>`
+        ? `<input id="rs-harga" type="text" inputmode="numeric" oninput="this.value=formatRibuan(this.value)" class="input" value="${formatRibuan(harga)}" onchange="simpanHargaSnackPerOrang()"/>`
         : `<b class="font-data">Rp${harga.toLocaleString("id-ID")}</b>`}
     </div>
     <table class="simple-table" style="margin-top:8px;">
@@ -7441,7 +7443,7 @@ function renderRencanaSnackMingguan() {
 }
 async function simpanHargaSnackPerOrang() {
   if (!isAdmin()) { toast(t("hanyaAdminHapus"), "err"); return; }
-  const harga = Number(qs("rs-harga").value) || 0;
+  const harga = angkaRibuan(qs("rs-harga").value);
   try {
     STATE.pengaturan = await apiSimpanPengaturanSekolah({ harga_snack_per_orang: harga });
     renderRencanaSnackMingguan();
@@ -7450,7 +7452,7 @@ async function simpanHargaSnackPerOrang() {
 async function simpanCatatanSnackMingguan() {
   if (!isAdmin()) { toast(t("hanyaAdminHapus"), "err"); return; }
   if (!SNACK_MINGGU_CACHE) return;
-  const harga = Number(qs("rs-harga").value) || 0;
+  const harga = angkaRibuan(qs("rs-harga").value);
   const { harian, seninStr } = SNACK_MINGGU_CACHE;
   const totalOrang = harian.reduce((a, h) => a + h.jumlah, 0);
   try {
@@ -12103,14 +12105,14 @@ async function openEditTarif() {
     <h3>${t("tarifInsentifTunjangan")}</h3>
     <div style="font-size:11px;color:var(--text-secondary);margin:-10px 0 14px;">Khusus admin/bendahara — perubahan berlaku untuk perhitungan slip gaji berikutnya.</div>
     <div style="display:flex;gap:10px;">
-      <div class="field" style="flex:1"><label class="form-label">${t("guruDalam")} — ${t("jpPaketB")} (Rp/JP)</label><input type="number" id="tf-dalam-b" class="input" value="${cari("dalam","B")}"/></div>
-      <div class="field" style="flex:1"><label class="form-label">${t("guruLuar")} — ${t("jpPaketB")} (Rp/JP)</label><input type="number" id="tf-luar-b" class="input" value="${cari("luar","B")}"/></div>
+      <div class="field" style="flex:1"><label class="form-label">${t("guruDalam")} — ${t("jpPaketB")} (Rp/JP)</label><input type="text" inputmode="numeric" oninput="this.value=formatRibuan(this.value)" id="tf-dalam-b" class="input" value="${formatRibuan(cari("dalam","B"))}"/></div>
+      <div class="field" style="flex:1"><label class="form-label">${t("guruLuar")} — ${t("jpPaketB")} (Rp/JP)</label><input type="text" inputmode="numeric" oninput="this.value=formatRibuan(this.value)" id="tf-luar-b" class="input" value="${formatRibuan(cari("luar","B"))}"/></div>
     </div>
     <div style="display:flex;gap:10px;">
-      <div class="field" style="flex:1"><label class="form-label">${t("guruDalam")} — ${t("jpPaketC")} (Rp/JP)</label><input type="number" id="tf-dalam-c" class="input" value="${cari("dalam","C")}"/></div>
-      <div class="field" style="flex:1"><label class="form-label">${t("guruLuar")} — ${t("jpPaketC")} (Rp/JP)</label><input type="number" id="tf-luar-c" class="input" value="${cari("luar","C")}"/></div>
+      <div class="field" style="flex:1"><label class="form-label">${t("guruDalam")} — ${t("jpPaketC")} (Rp/JP)</label><input type="text" inputmode="numeric" oninput="this.value=formatRibuan(this.value)" id="tf-dalam-c" class="input" value="${formatRibuan(cari("dalam","C"))}"/></div>
+      <div class="field" style="flex:1"><label class="form-label">${t("guruLuar")} — ${t("jpPaketC")} (Rp/JP)</label><input type="text" inputmode="numeric" oninput="this.value=formatRibuan(this.value)" id="tf-luar-c" class="input" value="${formatRibuan(cari("luar","C"))}"/></div>
     </div>
-    <div class="field"><label class="form-label">${t("tunjanganWaliKelas")} (Rp/bulan)</label><input type="number" id="tf-tunjangan-wali" class="input" value="${pengaturan.tunjangan_wali_kelas || 0}"/></div>
+    <div class="field"><label class="form-label">${t("tunjanganWaliKelas")} (Rp/bulan)</label><input type="text" inputmode="numeric" oninput="this.value=formatRibuan(this.value)" id="tf-tunjangan-wali" class="input" value="${formatRibuan(pengaturan.tunjangan_wali_kelas || 0)}"/></div>
     <label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;margin:-6px 0 14px;">
       <input type="checkbox" id="tf-tunjangan-aktif" style="width:16px;height:16px;" ${pengaturan.tunjangan_wali_kelas_aktif ? "checked" : ""}/>
       <span data-i18n="aktifkanTunjanganWaliKelas">Aktifkan Tunjangan Wali Kelas (tampil & ikut dihitung di slip gaji)</span>
@@ -12122,13 +12124,13 @@ async function simpanTarif() {
   if (!isAdmin()) { toast(t("hanyaAdminHapus"), "err"); return; }
   try {
     await Promise.all([
-      apiSimpanInsentifRate({ jenis_guru: "dalam", paket: "B", rate_per_jp: Number(qs("tf-dalam-b").value) || 0 }),
-      apiSimpanInsentifRate({ jenis_guru: "luar", paket: "B", rate_per_jp: Number(qs("tf-luar-b").value) || 0 }),
-      apiSimpanInsentifRate({ jenis_guru: "dalam", paket: "C", rate_per_jp: Number(qs("tf-dalam-c").value) || 0 }),
-      apiSimpanInsentifRate({ jenis_guru: "luar", paket: "C", rate_per_jp: Number(qs("tf-luar-c").value) || 0 }),
+      apiSimpanInsentifRate({ jenis_guru: "dalam", paket: "B", rate_per_jp: angkaRibuan(qs("tf-dalam-b").value) }),
+      apiSimpanInsentifRate({ jenis_guru: "luar", paket: "B", rate_per_jp: angkaRibuan(qs("tf-luar-b").value) }),
+      apiSimpanInsentifRate({ jenis_guru: "dalam", paket: "C", rate_per_jp: angkaRibuan(qs("tf-dalam-c").value) }),
+      apiSimpanInsentifRate({ jenis_guru: "luar", paket: "C", rate_per_jp: angkaRibuan(qs("tf-luar-c").value) }),
     ]);
     await apiSimpanPengaturanSekolah({
-      tunjangan_wali_kelas: Number(qs("tf-tunjangan-wali").value) || 0,
+      tunjangan_wali_kelas: angkaRibuan(qs("tf-tunjangan-wali").value),
       tunjangan_wali_kelas_aktif: qs("tf-tunjangan-aktif").checked,
     });
     STATE.pengaturan = await apiGetPengaturanSekolah();
@@ -14368,7 +14370,7 @@ function bopBukaSelDetail(itemId, bulan) {
     <h3>💰 ${escapeHtml(item.nama)} — ${periode}</h3>
     <div class="field">
       <label class="form-label">Nominal Anggaran</label>
-      <input id="bop-sel-nominal" type="number" class="input" value="${nominal || ""}" placeholder="0"/>
+      <input id="bop-sel-nominal" type="text" inputmode="numeric" oninput="this.value=formatRibuan(this.value)" class="input" value="${nominal ? formatRibuan(nominal) : ""}" placeholder="0"/>
     </div>
     <button type="button" class="btn btn-accent" style="width:100%;margin-bottom:10px;" onclick="bopSimpanNominal('${itemId}',${bulan})">💾 Simpan Nominal</button>
     <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface2);border-radius:10px;margin-bottom:10px;cursor:pointer;">
@@ -14385,7 +14387,7 @@ function bopBukaSelDetail(itemId, bulan) {
       <label class="form-label">Tambah Transaksi Baru</label>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <input id="bop-tx-tanggal" type="date" class="input" style="flex:1;min-width:130px;" value="${tanggalISO()}"/>
-        <input id="bop-tx-nominal" type="number" class="input" style="flex:1;min-width:130px;" placeholder="Nominal"/>
+        <input id="bop-tx-nominal" type="text" inputmode="numeric" oninput="this.value=formatRibuan(this.value)" class="input" style="flex:1;min-width:130px;" placeholder="Nominal"/>
       </div>
       <input id="bop-tx-catatan" class="input" style="margin-top:8px;width:100%;" placeholder="Catatan (opsional, mis. nama toko)"/>
       <button type="button" class="btn btn-outline" style="margin-top:8px;width:100%;" onclick="bopTambahTransaksi('${itemId}',${bulan})">➕ Catat Transaksi</button>
@@ -14393,7 +14395,7 @@ function bopBukaSelDetail(itemId, bulan) {
   `);
 }
 async function bopSimpanNominal(itemId, bulan) {
-  const nominal = Number(qs("bop-sel-nominal").value) || 0;
+  const nominal = angkaRibuan(qs("bop-sel-nominal").value);
   try {
     await apiSimpanBopAnggaranBulan(itemId, STATE.bopDataTahun, bulan, nominal);
     toast("Nominal disimpan", "ok");
@@ -14412,7 +14414,7 @@ async function bopToggleLunasManual(itemId, bulan) {
 }
 async function bopTambahTransaksi(itemId, bulan) {
   const tanggal = qs("bop-tx-tanggal").value || tanggalISO();
-  const nominal = Number(qs("bop-tx-nominal").value) || 0;
+  const nominal = angkaRibuan(qs("bop-tx-nominal").value);
   const catatan = qs("bop-tx-catatan").value.trim();
   if (!nominal) { toast("Isi nominal transaksi dulu", "err"); return; }
   try {
@@ -16145,7 +16147,7 @@ async function handleImportSiswa(evt) {
 <script src="src/rekap-hadir-cetak.js?v=1"></script>
 <script src="src/kelengkapan-nilai.js?v=2"></script>
 <script src="src/pengumuman.js?v=5"></script>
-<script src="src/kesimpulan.js?v=2"></script>
+<script src="src/kesimpulan.js?v=3"></script>
 <script src="src/profil.js?v=6"></script>
 <script src="src/kaldik-desain.js?v=6"></script>
 <script src="src/ujian.js?v=14"></script>
@@ -16168,6 +16170,6 @@ async function handleImportSiswa(evt) {
 <script src="src/siswa-tampil.js?v=4"></script>
 <script src="src/pengelola.js?v=4"></script>
 <script src="src/bosp-data.js?v=1"></script>
-<script src="src/bosp.js?v=1"></script>
+<script src="src/bosp.js?v=2"></script>
 </body>
 </html>

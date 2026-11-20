@@ -391,9 +391,9 @@ function _bspGambarGab() {
       <div class="bsp-kanan"><div class="bsp-tombol"><button class="btn btn-outline" onclick="bspBukaBendahara(BSP.th)">↻ Perbarui</button><button class="btn bsp-hitam" onclick="BSP.mode='review';_bspGambarGab()">Review</button><button class="btn btn-accent" onclick="bspUnduhGab()">⬇ Unduh Excel (Urutan ARKAS)</button></div>
       <small class="bsp-catatan"><a href="#" onclick="bspBukaRek();return false">Data Rekening</a> · <a href="#" onclick="bspBukaJuknis();return false">Juknis</a>${bend ? "" : " · Hanya Bendahara BOSP yang bisa mengubah"}</small></div></div>
     <div class="card bsp-pagu-atur"><h4>Pagu BOP Kesetaraan Reguler PKBM</h4>
-      <div class="bsp-pagu-grid"><label>Total Pagu PKBM<input id="bsp-p-total" class="input" inputmode="numeric" ${bend ? "" : "disabled"} value="${total ? total.toLocaleString("id-ID") : ""}" placeholder="Rp"></label>
-        ${BSP_RUANG.map((r) => `<label>${_bspE(_bspNamaRuang(r))}<input id="bsp-p-${r}" class="input" inputmode="numeric" ${bend ? "" : "disabled"} value="${pagu[r] ? Number(pagu[r]).toLocaleString("id-ID") : ""}" placeholder="Rp"></label>`).join("")}</div>
-      <small class="${total && bagi !== total ? "bsp-merah" : ""}">Jumlah pagu ruang ${bspRp(bagi)}${total ? (bagi === total ? " — sama dengan total ✓" : ` — selisih ${bspRp(total - bagi)} dari total`) : ""}. Total pagu = satuan biaya daerah × jumlah murid usia 7–<25 tahun ber-NISN (Dapodik 31 Agustus tahun sebelumnya).</small>
+      <div class="bsp-pagu-grid"><label>Total Pagu PKBM<input id="bsp-p-total" class="input" inputmode="numeric" oninput="this.value=formatRibuan(this.value);_bspCekPagu()" ${bend ? "" : "disabled"} value="${total ? total.toLocaleString("id-ID") : ""}" placeholder="Rp"></label>
+        ${BSP_RUANG.map((r) => `<label>${_bspE(_bspNamaRuang(r))}<input id="bsp-p-${r}" class="input" inputmode="numeric" oninput="this.value=formatRibuan(this.value);_bspCekPagu()" ${bend ? "" : "disabled"} value="${pagu[r] ? Number(pagu[r]).toLocaleString("id-ID") : ""}" placeholder="Rp"></label>`).join("")}</div>
+      <small class="${total && bagi !== total ? "bsp-merah" : ""}"><span id="bsp-p-cek">Jumlah pagu ruang ${bspRp(bagi)}${total ? (bagi === total ? " — sama dengan total ✓" : ` — selisih ${bspRp(total - bagi)} dari total`) : ""}.</span> Total pagu = satuan biaya daerah × jumlah murid usia 7–<25 tahun ber-NISN (Dapodik 31 Agustus tahun sebelumnya).</small>
       ${bend ? `<div><button class="btn btn-accent btn-sm" onclick="bspSimpanPagu()">Simpan Pagu</button></div>` : ""}</div>
     <div class="bsp-ruang-grid">${kartuRuang}</div>
     <div class="card"><h4 style="margin-top:0">Pemeriksaan Juknis (dari Total Pagu PKBM)</h4><div class="bsp-cek-baris">${cek("Honor", h.honor, 40, "maks")}${cek("Buku", h.buku, 10, "min")}${cek("Sarpras", h.sarpras, 20, "maks")}<span class="bsp-cek">Sudah dianggarkan ${bspRp(h.tot)} dari ${bspRp(total)}</span></div></div>
@@ -405,6 +405,11 @@ function _bspGambarGab() {
           <td>${bend ? `<input class="bsp-kode-rek" value="${_bspE(b.kodeRek)}" placeholder="5.1.02.…" onchange="bspSimpanKodeRek('${b.ruang}','${b.id}',this.value)">` : _bspE(b.kodeRek || "—")}</td>
           <td class="bsp-uraian" title="${_bspE(b.uraian)}">${_bspE(b.uraian)}<small>${bl.map((m) => BSP_BULAN[m - 1].slice(0, 3)).join(", ")}</small></td><td>${vol} ${_bspE(Object.values(b.bulan || {})[0]?.sat || "")}</td><td>${bspRp(b.harga)}</td><td><b>${bspRp(tot)}</b></td></tr>`; }).join("") || `<tr><td colspan="10" class="bsp-kosong">Belum ada usulan dari ruang.</td></tr>`}
     </tbody></table></div></div>`;
+}
+function _bspCekPagu() {
+  const v = (id) => _bspAngka(qs(id)?.value), total = v("bsp-p-total"), bagi = BSP_RUANG.reduce((a, r) => a + v("bsp-p-" + r), 0), el = qs("bsp-p-cek"); if (!el) return;
+  el.parentElement.className = total && bagi !== total ? "bsp-merah" : "";
+  el.textContent = `Jumlah pagu ruang ${bspRp(bagi)}${total ? (bagi === total ? " — sama dengan total ✓" : ` — selisih ${bspRp(total - bagi)} dari total`) : ""}. `;
 }
 async function bspSimpanPagu() {
   const v = (id) => _bspAngka(qs(id)?.value);
