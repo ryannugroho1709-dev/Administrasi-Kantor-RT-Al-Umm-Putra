@@ -448,7 +448,7 @@ async function ujeBacaBerkas(input) {
     if (/\.docx$/.test(nama)) { _ujeProgres("Membaca Word…"); teks = await _ujeTeksDocx(f); }
     else if (/\.pdf$/.test(nama) || f.type === "application/pdf") {
       _ujeProgres("Membaca PDF…"); const r = await _ujeTeksPdf(f); teks = r.teks;
-      if (r.scan) catatan = "📷 PDF hasil scan dibaca dengan pengenal huruf (OCR) — periksa ejaannya.";    } else if (/^image\//.test(f.type)) { teks = await _ujeOcr([f]); catatan = "📷 Foto dibaca dengan pengenal huruf (OCR) — periksa ejaan & kuncinya."; }
+      if (r.scan) catatan = "📷 PDF hasil scan dibaca dengan pengenal huruf (OCR) — periksa ejaannya.";    } else if (/^image\//.test(f.type)) { teks = _ujeOpsiOcr(await _ujeOcr([f])); catatan = "📷 Foto dibaca dengan pengenal huruf (OCR) — periksa ejaan & kuncinya."; }
     else if (/\.txt$/.test(nama)) teks = await f.text();
     else if (/\.doc$/.test(nama)) { toast("Format .doc lama belum bisa dibaca. Di Word: File → Simpan Sebagai → .docx, lalu unggah lagi.", "err"); _ujeProgres(""); return; }
     else { toast("Format berkas belum dikenali", "err"); return; }
@@ -554,12 +554,27 @@ async function _ujeTeksPdf(file) {
   await _ujeMuatSkrip(_UJE_CDN.pdf);
   pdfjsLib.GlobalWorkerOptions.workerSrc = _UJE_CDN.pdfWorker;
   const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
-  const halaman = [], scan = [];
+  const halaman = [], scan = [], perHal = {};
+  // tahap 1: teks + letak gambar tiap halaman
   for (let h = 1; h <= pdf.numPages; h++) {
     _ujeProgres(`Membaca PDF halaman ${h}/${pdf.numPages}…`);
     const pg = await pdf.getPage(h), isi = await pg.getTextContent();
     const item = isi.items.filter((x) => x.str && x.str.trim()).map((x) => ({ s: x.str, x: x.transform[4], y: x.transform[5], w: x.width, t: Math.abs(x.transform[3]) || 10 }));
-    if (item.reduce((a, x) => a + x.s.length, 0) < 25) { scan.push(h); halaman.push(null); continue; }
+    const ada = item.reduce((a, x) => a + x.s.length, 0) >= 25;
+    perHal[h] = { item, ada, gbr: ada ? await _ujeLetakGambar(pg).catch(() => []) : [] };
+  }
+  // gambar yang berulang di beberapa halaman (logo, kotak nilai, bingkai) bukan gambar soal
+  const hitungUkuran = {};
+  Object.values(perHal).forEach((p) => new Set(p.gbr.map((g) => g.kunci)).forEach((k) => { hitungUkuran[k] = (hitungUkuran[k] || 0) + 1; }));
+  for (let h = 1; h <= pdf.numPages; h++) {
+    const { item, ada } = perHal[h];
+    if (!ada) { scan.push(h); halaman.push(null); continue; }
+    const gbr = perHal[h].gbr.filter((g) => hitungUkuran[g.kunci] === 1);
+    if (gbr.length) {
+      _ujeProgres(`Mengambil gambar soal halaman ${h}…`);
+      const potong = await _ujePotongGambar(await pdf.getPage(h), gbr).catch(() => []);
+      potong.forEach(({ g, data }) => { UJE.impor.gambar.push(data); item.push({ s: `[[GAMBAR:${UJE.impor.gambar.length - 1}]]`, x: g.x, y: g.y + g.h, w: 10, t: 10 }); });
+    }
     item.sort((a, b) => b.y - a.y || a.x - b.x);
     const brs = [];
     item.forEach((it) => { const b = brs[brs.length - 1]; if (b && Math.abs(b.y - it.y) < it.t * 0.55) b.i.push(it); else brs.push({ y: it.y, i: [it] }); });
@@ -569,15 +584,103 @@ async function _ujeTeksPdf(file) {
     const kanvas = [];
     for (const h of scan) {
       _ujeProgres(`Menyiapkan halaman scan ${h}…`);
-      const pg = await pdf.getPage(h), vp = pg.getViewport({ scale: 2 });
+      const pg = await pdf.getPage(h), vp = pg.getViewport({ scale: 2.5 });
       const c = document.createElement("canvas"); c.width = vp.width; c.height = vp.height;
-      await pg.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise; kanvas.push([h, c]);
+      await _ujeTungguRender(pg.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise); kanvas.push([h, c]);
     }
     const hasil = await _ujeOcr(kanvas.map((x) => x[1]));
     const per = hasil.split("\n=== HALAMAN ===\n");
     kanvas.forEach(([h], x) => { halaman[h - 1] = per[x] || ""; });
+    // halaman OCR yang berurutan dibaca bersambung (soal bisa terpotong di pergantian halaman), lalu huruf pilihan dipasang
+    for (let k = 0; k < kanvas.length; ) {
+      let a = k; while (a + 1 < kanvas.length && kanvas[a + 1][0] === kanvas[a][0] + 1) a++;
+      const gab = _ujeOpsiOcr(kanvas.slice(k, a + 1).map(([h]) => halaman[h - 1]).join("\n"));
+      kanvas.slice(k, a + 1).forEach(([h], x) => { halaman[h - 1] = x === 0 ? gab : ""; });
+      k = a + 1;
+    }
   }
-  return { teks: halaman.join("\n"), scan: scan.length > 0 };
+  // gambar hiasan dibuang: semua gambar sebelum judul bagian pertama (kop, kotak Nama/Kelas, spanduk)
+  // dan gambar yang menempel pada judul bagian (label "Setiap Soal Bernilai … poin")
+  const BAGIAN = /^\s*(?:[A-H]\s*[.)]\s*)?(pilihan\s+ganda|isian|uraian|menjodohkan|essay|esai|benar\s*[-/]?\s*salah)\b/i, TOKEN = /\s*\[\[GAMBAR:\d+\]\]\s*/g;
+  const brs = halaman.join("\n").split("\n");
+  let pertama = brs.findIndex((l) => BAGIAN.test(l));
+  if (pertama < 0) pertama = brs.findIndex((l) => /^\s*1\s*[.)]\s/.test(l));
+  const tetangga = (i, arah) => { for (let k = i + arah; k >= 0 && k < brs.length; k += arah) if (brs[k].replace(TOKEN, "").trim()) return brs[k]; return ""; };
+  brs.forEach((l, i) => { if (/\[\[GAMBAR:/.test(l) && (i < pertama || BAGIAN.test(tetangga(i, 1)) || BAGIAN.test(tetangga(i, -1)) || /bernilai|poin\b/i.test(l))) brs[i] = l.replace(TOKEN, " ").replace(/\s+$/, ""); });
+  return { teks: brs.join("\n"), scan: scan.length > 0 };
+}
+// Halaman yang tidak terlihat (tab di belakang) bisa membuat penggambaran PDF berhenti → batasi waktunya
+const _ujeTungguRender = (janji, ms = 45000) => Promise.race([janji, new Promise((_, no) => setTimeout(() => no(new Error("Halaman PDF tidak selesai digambar. Biarkan layar aplikasi tetap terbuka saat membaca berkas, lalu coba lagi.")), ms))]);
+// Letak gambar pada halaman (dari daftar perintah gambar PDF). Hanya gambar berukuran soal:
+// bukan potongan huruf kecil, bukan gambar seukuran halaman (hasil scan/bingkai).
+async function _ujeLetakGambar(pg) {
+  const O = pdfjsLib.OPS, ops = await pg.getOperatorList(), [, , lebarHal, tinggiHal] = pg.view;
+  const kali = (m, n) => [m[0] * n[0] + m[2] * n[1], m[1] * n[0] + m[3] * n[1], m[0] * n[2] + m[2] * n[3], m[1] * n[2] + m[3] * n[3], m[0] * n[4] + m[2] * n[5] + m[4], m[1] * n[4] + m[3] * n[5] + m[5]];
+  let ctm = [1, 0, 0, 1, 0, 0]; const tumpuk = [], hasil = [];
+  ops.fnArray.forEach((f, i) => {
+    if (f === O.save) tumpuk.push(ctm.slice());
+    else if (f === O.restore) ctm = tumpuk.pop() || ctm;
+    else if (f === O.transform) ctm = kali(ctm, ops.argsArray[i]);
+    else if (f === O.paintImageXObject || f === O.paintInlineImageXObject || f === O.paintJpegXObject) {
+      const xs = [ctm[4], ctm[4] + ctm[0], ctm[4] + ctm[2], ctm[4] + ctm[0] + ctm[2]], ys = [ctm[5], ctm[5] + ctm[1], ctm[5] + ctm[3], ctm[5] + ctm[1] + ctm[3]];
+      const x = Math.min(...xs), y = Math.min(...ys), w = Math.max(...xs) - x, h = Math.max(...ys) - y;
+      if (w > 60 && h > 40 && w < lebarHal * 0.85 && h < tinggiHal * 0.7) hasil.push({ x, y, w, h, kunci: `${Math.round(w)}x${Math.round(h)}` });
+    }
+  });
+  // buang duplikat (gambar yang sama digambar dua kali)
+  return hasil.filter((g, i) => hasil.findIndex((k) => Math.abs(k.x - g.x) < 2 && Math.abs(k.y - g.y) < 2 && k.kunci === g.kunci) === i);
+}
+async function _ujePotongGambar(pg, daftar) {
+  const vp = pg.getViewport({ scale: 2 });
+  const c = document.createElement("canvas"); c.width = vp.width; c.height = vp.height;
+  const ctx = c.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height);
+  await _ujeTungguRender(pg.render({ canvasContext: ctx, viewport: vp }).promise);
+  return daftar.map((g) => {
+    const [x1, y1, x2, y2] = vp.convertToViewportRectangle([g.x, g.y, g.x + g.w, g.y + g.h]);
+    const l = Math.floor(Math.min(x1, x2)), t = Math.floor(Math.min(y1, y2)), w = Math.ceil(Math.abs(x2 - x1)), h = Math.ceil(Math.abs(y2 - y1));
+    const k = document.createElement("canvas"); k.width = w; k.height = h;
+    k.getContext("2d").drawImage(c, l, t, w, h, 0, 0, w, h);
+    return { g, data: k.toDataURL("image/jpeg", 0.9) };
+  });
+}
+// sisa bulatan pilihan tabel yang terbaca OCR di ujung baris ("… perumahan. 0 | O |", "layak. CO | O |")
+function _ujeBersihBulatan(l) {
+  if (/\|\s*(sesuai|benar|tepat|salah|tidak)/i.test(l)) return l; // baris judul tabel
+  let s = l, lama;
+  do { lama = s; s = s.replace(/\s*\|\s*$/, "").replace(/\s+[0OoCDQ]{1,2}\.?\s*$/, "").replace(/\s*\|\s*[0OoCDQ]{1,2}\.?\s*$/, ""); } while (s !== lama);
+  return s;
+}
+// Hasil OCR lembar soal ber-bulatan (ⓐ ⓑ ⓒ): huruf pilihan sering hilang/terbaca "©", "®", "O".
+// Setiap soal bernomor: baris sesudah kalimat tanya ("….", "?", "!") yang berjumlah 2–5 diberi huruf a–e.
+function _ujeOpsiOcr(teks) {
+  const baris = String(teks || "").replace(/\r/g, "").split("\n")
+    .map((l) => l.replace(/^\s*(?:[©®@○◯◎●]|\(\s?\)|O(?=\s+[a-z(])|0(?=\s+[a-z]))\)?\s*/, "").replace(/^(\s*\d{1,3}\s*[.)]\s*)[“"](?=[A-Z])/, "$1").replace(/(\.{3,}|…)\s*[[(|]?\s*[A-Za-z0-9]{1,6}\s*[\])|]?\s*$/, "$1"));
+  const out = [], NO = /^\s*\d{1,3}\s*[.)]\s+\S/, JUDUL = /^\s*(?:[A-H]|[IVX]{1,4})\s*[.)]\s+\S|^\s*soal\s+nomor\b|^\s*(teks|bacalah|perhatikan|kutipan|penggalan)\b/i;
+  const UJUNG = /(\.{3,}|…|\?|!)\s*$/, HURUF = /^\s*\(?[a-eA-E]\s*[.)]\s/;
+  let i = 0;
+  while (i < baris.length) {
+    if (!NO.test(baris[i])) { out.push(baris[i]); i++; continue; }
+    // satu blok soal: baris bernomor sampai sebelum nomor/judul berikutnya
+    let j = i + 1; while (j < baris.length && !NO.test(baris[j]) && !JUDUL.test(baris[j])) j++;
+    const blok = baris.slice(i, j), isi = blok.filter((l) => l.trim());
+    // pilihan panjang yang terpotong ke baris berikutnya → gabungkan (baris sebelumnya panjang & baris ini mulai huruf kecil)
+    const gabung = (ls) => ls.length <= 5 ? ls : ls.reduce((a, l) => { const p = a[a.length - 1]; if (p && p.trim().length > 80 && l.trim().length < 45 && /^\s*[a-z]/.test(l)) a[a.length - 1] = p.trim() + " " + l.trim(); else a.push(l); return a; }, []);
+    // akhir kalimat tanya = baris berakhiran "….", "?" atau "!" yang menyisakan tepat 5 pilihan (lalu 4, 3, 2).
+    // Dengan begitu daftar pernyataan (1)…(5) sesudah "Perhatikan … berikut!" tidak dikira pilihan.
+    const calon = []; isi.forEach((l, k) => { if (UJUNG.test(l) && !HURUF.test(l)) calon.push(k); });
+    let akhirTanya = -1, opsi = [];
+    for (const mau of [5, 4, 3, 2]) {
+      for (const k of calon.slice().reverse()) { const o = gabung(isi.slice(k + 1)); if (o.length === mau) { akhirTanya = k; opsi = o; break; } }
+      if (akhirTanya >= 0) break;
+    }
+    // soal tabel Benar/Salah, Sesuai/Tidak Sesuai, Tepat/Tidak Tepat → bukan pilihan ganda, jangan diberi huruf
+    const tabel = opsi.some((l) => /\|/.test(l) || /\b(benar|sesuai|tepat|fakta)\b.*\b(salah|tidak\s+sesuai|tidak\s+tepat|opini)\b/i.test(l));
+    if (!tabel && opsi.length >= 2 && opsi.length <= 5 && !opsi.some((l) => HURUF.test(l)) && opsi.every((l) => l.trim().length < 160)) {
+      out.push(...isi.slice(0, akhirTanya + 1), ...opsi.map((l, k) => `${String.fromCharCode(97 + k)}. ${l.trim()}`));
+    } else out.push(...(tabel ? blok.map(_ujeBersihBulatan) : blok));
+    i = j;
+  }
+  return out.join("\n");
 }
 // OCR (pengenal huruf) — berjalan di perangkat guru, tanpa biaya server. Bahasa Indonesia + Inggris (+ Arab bila dicentang).
 async function _ujeOcr(sumber) {
