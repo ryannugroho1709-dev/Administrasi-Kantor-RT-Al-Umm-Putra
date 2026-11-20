@@ -612,3 +612,15 @@ td .ju-online,.ju-hp-isi .ju-online{margin:0 0 4px}
 .rapi-sesudah{font-size:12px;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:10px;padding:6px 10px;margin:6px 0;display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap}
 .rapi-kedip .rapi-awas{animation:rapiKedip .45s ease-in-out 3}
 @keyframes rapiKedip{50%{box-shadow:0 0 0 4px #facc15}}
+
+/* Proses membaca berkas soal: animasi + bar persentase */
+.uje-prog{background:var(--accent-soft,#eef2ff);border:1px solid rgba(99,102,241,.25);border-radius:12px;padding:10px 12px;margin:4px 0}
+.uje-prog-h{display:flex;align-items:center;gap:8px;font-size:12.5px}
+.uje-prog-h b{flex:1;font-weight:600;color:var(--text)}
+.uje-prog-h em{font-style:normal;font-weight:800;font-variant-numeric:tabular-nums;color:var(--accent,#4f46e5);min-width:40px;text-align:right}
+.uje-prog-putar{width:16px;height:16px;border-radius:50%;border:2.5px solid rgba(99,102,241,.25);border-top-color:var(--accent,#4f46e5);animation:ujePutar .8s linear infinite;flex:none}
+.uje-prog-bar{height:8px;border-radius:99px;background:rgba(99,102,241,.15);overflow:hidden;margin:8px 0 6px}
+.uje-prog-bar i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--accent,#4f46e5),#22c55e);background-size:200% 100%;transition:width .35s ease;animation:ujeKilau 1.6s linear infinite}
+.uje-prog small{font-size:11px;color:var(--text-secondary)}
+@keyframes ujePutar{to{transform:rotate(360deg)}}
+@keyframes ujeKilau{0%{background-position:0 0}100%{background-position:200% 0}}

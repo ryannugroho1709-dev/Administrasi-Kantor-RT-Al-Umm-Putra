@@ -438,16 +438,29 @@ const _ujeSkrip = {};
 function _ujeMuatSkrip(url) {
   return (_ujeSkrip[url] = _ujeSkrip[url] || new Promise((ok, no) => { const s = document.createElement("script"); s.src = url; s.onload = ok; s.onerror = () => { delete _ujeSkrip[url]; no(new Error("Gagal memuat alat pembaca (periksa internet)")); }; document.head.appendChild(s); }));
 }
-function _ujeProgres(teks) { const el = qs("uje-tempel-info"); if (el) el.innerHTML = `<span class="uje-proses">⏳ ${teks}</span>`; }
+// Tampilan proses membaca berkas: animasi + bar persentase. persen = 0–100 (boleh dikosongkan → memakai angka terakhir)
+const _UJE_PROG = { persen: 0, ocr: [0, 100] };
+function _ujeProgres(teks, persen) {
+  const el = qs("uje-tempel-info"); if (!el) return;
+  if (!teks) { el.innerHTML = ""; _UJE_PROG.persen = 0; return; }
+  if (persen != null) _UJE_PROG.persen = Math.max(_UJE_PROG.persen, Math.min(100, Math.round(persen)));
+  const p = _UJE_PROG.persen;
+  let box = el.querySelector(".uje-prog");
+  if (!box) { el.innerHTML = `<div class="uje-prog"><div class="uje-prog-h"><span class="uje-prog-putar"></span><b class="uje-prog-teks"></b><em class="uje-prog-angka"></em></div><div class="uje-prog-bar"><i></i></div><small>Biarkan layar ini tetap terbuka sampai selesai.</small></div>`; box = el.querySelector(".uje-prog"); }
+  box.querySelector(".uje-prog-teks").textContent = teks;
+  box.querySelector(".uje-prog-angka").textContent = p + "%";
+  box.querySelector(".uje-prog-bar i").style.width = p + "%";
+}
 async function ujeBacaBerkas(input) {
   const f = input.files && input.files[0]; input.value = ""; if (!f) return;
   const nama = f.name.toLowerCase();
   UJE.impor = { gambar: [] };
+  _UJE_PROG.persen = 0; _UJE_PROG.ocr = [0, 100];
   try {
     let teks = "", catatan = "";
-    if (/\.docx$/.test(nama)) { _ujeProgres("Membaca Word…"); teks = await _ujeTeksDocx(f); }
+    if (/\.docx$/.test(nama)) { _ujeProgres("Membaca Word…", 30); teks = await _ujeTeksDocx(f); _ujeProgres("Menyusun soal…", 95); }
     else if (/\.pdf$/.test(nama) || f.type === "application/pdf") {
-      _ujeProgres("Membaca PDF…"); const r = await _ujeTeksPdf(f); teks = r.teks;
+      _ujeProgres("Membaca PDF…", 2); const r = await _ujeTeksPdf(f); teks = r.teks;
       if (r.scan) catatan = "📷 PDF hasil scan dibaca dengan pengenal huruf (OCR) — periksa ejaannya.";    } else if (/^image\//.test(f.type)) { teks = _ujeOpsiOcr(await _ujeOcr([f])); catatan = "📷 Foto dibaca dengan pengenal huruf (OCR) — periksa ejaan & kuncinya."; }
     else if (/\.txt$/.test(nama)) teks = await f.text();
     else if (/\.doc$/.test(nama)) { toast("Format .doc lama belum bisa dibaca. Di Word: File → Simpan Sebagai → .docx, lalu unggah lagi.", "err"); _ujeProgres(""); return; }
@@ -557,7 +570,7 @@ async function _ujeTeksPdf(file) {
   const halaman = [], scan = [], perHal = {};
   // tahap 1: teks + letak gambar tiap halaman
   for (let h = 1; h <= pdf.numPages; h++) {
-    _ujeProgres(`Membaca PDF halaman ${h}/${pdf.numPages}…`);
+    _ujeProgres(`Membaca PDF halaman ${h}/${pdf.numPages}…`, 2 + 23 * h / pdf.numPages);
     const pg = await pdf.getPage(h), isi = await pg.getTextContent();
     const item = isi.items.filter((x) => x.str && x.str.trim()).map((x) => ({ s: x.str, x: x.transform[4], y: x.transform[5], w: x.width, t: Math.abs(x.transform[3]) || 10 }));
     const ada = item.reduce((a, x) => a + x.s.length, 0) >= 25;
@@ -571,7 +584,7 @@ async function _ujeTeksPdf(file) {
     if (!ada) { scan.push(h); halaman.push(null); continue; }
     const gbr = perHal[h].gbr.filter((g) => hitungUkuran[g.kunci] === 1);
     if (gbr.length) {
-      _ujeProgres(`Mengambil gambar soal halaman ${h}…`);
+      _ujeProgres(`Mengambil gambar soal halaman ${h}…`, 25 + 5 * h / pdf.numPages);
       const potong = await _ujePotongGambar(await pdf.getPage(h), gbr).catch(() => []);
       potong.forEach(({ g, data }) => { UJE.impor.gambar.push(data); item.push({ s: `[[GAMBAR:${UJE.impor.gambar.length - 1}]]`, x: g.x, y: g.y + g.h, w: 10, t: 10 }); });
     }
@@ -582,12 +595,13 @@ async function _ujeTeksPdf(file) {
   }
   if (scan.length) {
     const kanvas = [];
-    for (const h of scan) {
-      _ujeProgres(`Menyiapkan halaman scan ${h}…`);
+    for (const [i, h] of scan.entries()) {
+      _ujeProgres(`Menyiapkan halaman bergambar ${i + 1}/${scan.length}…`, 30 + 10 * i / scan.length);
       const pg = await pdf.getPage(h), vp = pg.getViewport({ scale: 2.5 });
       const c = document.createElement("canvas"); c.width = vp.width; c.height = vp.height;
       await _ujeTungguRender(pg.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise); kanvas.push([h, c]);
     }
+    _UJE_PROG.ocr = [40, 58];
     const hasil = await _ujeOcr(kanvas.map((x) => x[1]));
     const per = hasil.split("\n=== HALAMAN ===\n");
     kanvas.forEach(([h], x) => { halaman[h - 1] = per[x] || ""; });
@@ -684,14 +698,17 @@ function _ujeOpsiOcr(teks) {
 }
 // OCR (pengenal huruf) — berjalan di perangkat guru, tanpa biaya server. Bahasa Indonesia + Inggris (+ Arab bila dicentang).
 async function _ujeOcr(sumber) {
-  _ujeProgres("Memuat pengenal huruf (pertama kali ±10 MB, berikutnya lebih cepat)…");
+  const [awal, rentang] = _UJE_PROG.ocr;
+  _ujeProgres("Memuat pengenal huruf (pertama kali ±10 MB, berikutnya lebih cepat)…", awal);
   await _ujeMuatSkrip(_UJE_CDN.ocr);
   const bahasa = qs("uje-ocr-arab")?.checked ? "ara+ind" : "ind+eng";
-  const pekerja = await Tesseract.createWorker(bahasa, 1, { logger: (m) => { if (m.status === "recognizing text") _ujeProgres(`Membaca tulisan… ${Math.round((m.progress || 0) * 100)}%`); } });
+  let ke = 0;
+  const pekerja = await Tesseract.createWorker(bahasa, 1, { logger: (m) => { if (m.status === "recognizing text") _ujeProgres(`Membaca tulisan halaman ${ke + 1}/${sumber.length}…`, awal + rentang * (ke + (m.progress || 0)) / sumber.length); } });
   const out = [];
   try {
     for (let x = 0; x < sumber.length; x++) {
-      _ujeProgres(`Membaca tulisan ${x + 1}/${sumber.length}…`);
+      ke = x;
+      _ujeProgres(`Membaca tulisan halaman ${x + 1}/${sumber.length}…`, awal + rentang * x / sumber.length);
       const { data } = await pekerja.recognize(sumber[x]);
       out.push(data.text || "");
     }
