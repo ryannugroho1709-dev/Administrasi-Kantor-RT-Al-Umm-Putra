@@ -71,6 +71,31 @@ const BSP_LABEL_STATUS = { draf: ["Draf", "#64748b"], diajukan: ["Diajukan ke Be
 const _bspBisaUbah = () => ["draf", "dikembalikan"].includes(bspStatus(BSP.kk, STATE.ruang).status);
 const _bspPaguRuang = (r) => Number((((BSP.umum || {}).pagu) || {})[r || STATE.ruang]) || 0;
 
+// ── Honor Pengelola PKBM: diisi Bendahara di ruang Pengelola, biayanya dibebankan ke tiap jenjang ──
+//    Dibagi sebanding pagu tiap ruang (pagu = satuan biaya × jumlah murid → adil menurut jumlah murid) atau dibagi rata.
+//    Bagian tiap ruang otomatis masuk Kertas Kerja ruang itu sebagai baris terkunci "Honor Pengelola PKBM".
+const BSP_KODE_HONOR_PG = [["07.12.03", "Pembayaran Honor tenaga administrasi"], ["07.12.04", "Pembayaran honor Tenaga Penunjang atau pelaksana"], ["07.12.01", "Pembayaran honor Guru/Pendidik/Tutor"]];
+const BSP_REK_HONOR_PG = [["Belanja Jasa Tenaga Administrasi", "barang"], ["Belanja Jasa Tenaga Pendidikan (Honorarium Guru/Tutor)", "pegawai"], ["Belanja Jasa Tenaga Kebersihan", "barang"], ["Belanja Jasa Tenaga Keamanan", "barang"]];
+const BSP_JABATAN_PG = ["Kepala PKBM", "Sekretaris PKBM", "Bendahara BOSP", "Operator Dapodik", "Tata Usaha", "Admin ARKAS", "Penanggung Jawab Program", "Tenaga Kebersihan", "Tenaga Keamanan"];
+const _bspPengelola = () => Object.entries((BSP.umum || {}).pengelola || {}).filter(([, p]) => p && !p.dihapus).map(([id, p]) => ({ id, ...p })).sort((a, b) => (a.t || 0) - (b.t || 0));
+const bspPengelolaBulan = (m) => _bspPengelola().reduce((a, p) => a + ((p.bulan || []).includes(m) ? Number(p.honor) || 0 : 0), 0);
+const bspTotalPengelola = () => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].reduce((a, m) => a + bspPengelolaBulan(m), 0);
+function _bspRasio() {
+  const pagu = (BSP.umum || {}).pagu || {}, s = BSP_RUANG.reduce((a, r) => a + (Number(pagu[r]) || 0), 0);
+  const rata = (BSP.umum || {}).bagi_pengelola === "rata" || !s;
+  return Object.fromEntries(BSP_RUANG.map((r) => [r, rata ? 1 / BSP_RUANG.length : (Number(pagu[r]) || 0) / s]));
+}
+// bagian tiap ruang pada bulan m — dibulatkan, jumlahnya tetap pas dengan total bulan itu
+function bspBagiPengelola(m) { const t = bspPengelolaBulan(m), q = _bspRasio(), A = Math.round(t * q.A), Pa = Math.round(t * q.Pa); return { A, Pa, Pi: t - A - Pa }; }
+const bspBagianTahun = (r) => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].reduce((a, m) => a + bspBagiPengelola(m)[r], 0);
+function _bspBarisPengelolaRuang(r) {
+  const bulan = {};
+  for (let m = 1; m <= 12; m++) { const v = bspBagiPengelola(m)[r]; if (v) bulan[m] = { jml: v, sat: "Rupiah" }; }
+  if (!Object.keys(bulan).length) return [];
+  return [{ id: "pg-honor", otomatis: true, kode: "07.12.03", kegiatan: "Honor Pengelola PKBM (bagian ruang)", rek: "Honor Pengelola — rincian di ruang Pengelola", jenis: "pegawai", uraian: `Honor Pengelola PKBM, bagian ${_bspNamaRuang(r)} (${(BSP.umum || {}).bagi_pengelola === "rata" ? "dibagi rata" : "sebanding pagu"}) — otomatis dari Bendahara`, harga: 1, bulan, t: 0 }];
+}
+const _bspBarisRuang = (kk, r) => _bspPengelola().length ? _bspBarisPengelolaRuang(r).concat(_bspBaris(kk)) : _bspBaris(kk);
+
 // ── Kelompok angka juknis ──
 function bspHitung(baris, pagu) {
   const tot = baris.reduce((a, b) => a + bspTotalBaris(b), 0);
@@ -96,8 +121,8 @@ async function bspBukaKK(th) {
 }
 function _bspGambar() {
   const sec = qs("page-rg"); if (!sec || STATE.currentPage !== "bsp-kk") return;
-  if (BSP.mode === "review") { sec.innerHTML = _bspHtmlReview(_bspBaris(BSP.kk), _bspPaguRuang(), `Usulan ${_bspNamaRuang(STATE.ruang)}`); return; }
-  const baris = _bspBaris(BSP.kk), pagu = _bspPaguRuang(), sudah = baris.reduce((a, b) => a + bspTotalBaris(b), 0), st = bspStatus(BSP.kk, STATE.ruang), ubah = _bspBisaUbah();
+  if (BSP.mode === "review") { sec.innerHTML = _bspHtmlReview(_bspBarisRuang(BSP.kk, STATE.ruang), _bspPaguRuang(), `Usulan ${_bspNamaRuang(STATE.ruang)}`); return; }
+  const baris = _bspBarisRuang(BSP.kk, STATE.ruang), pagu = _bspPaguRuang(), sudah = baris.reduce((a, b) => a + bspTotalBaris(b), 0), st = bspStatus(BSP.kk, STATE.ruang), ubah = _bspBisaUbah();
   const lbl = BSP_LABEL_STATUS[st.status] || BSP_LABEL_STATUS.draf;
   const cari = BSP.cari.trim().toLowerCase();
   const tampil = baris.filter((b) => (b.bulan || {})[BSP.bulan]).filter((b) => !cari || [b.kode, b.kegiatan, b.rek, b.uraian].join(" ").toLowerCase().includes(cari));
@@ -121,7 +146,7 @@ function _bspGambar() {
       </div>
     </div>
     ${st.status !== "draf" ? `<div class="bsp-status" style="--st:${lbl[1]}"><b>${lbl[0]}</b><span>${st.oleh ? "oleh " + _bspE(st.oleh) + " · " : ""}${st.t ? new Date(st.t).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" }) : ""}</span>${st.catatan ? `<em>Catatan Bendahara: ${_bspE(st.catatan)}</em>` : ""}${!ubah ? "<small>Kertas Kerja terkunci — tidak bisa ditambah, diedit, atau disisip uraian.</small>" : ""}</div>` : ""}
-    <div class="bsp-pagu" data-tur="bsp-pagu"><span>Pagu Usulan BOP Kesetaraan Reguler</span><b>${pagu ? bspRp(pagu) : "Belum diisi Bendahara"}</b></div>
+    <div class="bsp-pagu" data-tur="bsp-pagu"><span>Pagu Usulan BOP Kesetaraan Reguler</span><b>${pagu ? bspRp(pagu) : "Belum diisi Bendahara"}</b>${_bspPengelola().length ? `<small>Sudah termasuk Honor Pengelola PKBM bagian ruang ini <b>${bspRp(bspBagianTahun(STATE.ruang))}</b> (otomatis)</small>` : ""}</div>
     <div class="bsp-periode">
       <h3>Periode Anggaran ${th}</h3>
       <div class="bsp-ringkas" data-tur="bsp-ringkas">
@@ -133,13 +158,13 @@ function _bspGambar() {
     ${BSP.cariBuka ? `<div class="bsp-cari"><input id="bsp-cari" class="input" placeholder="Cari kegiatan, rekening, atau uraian…" value="${_bspE(BSP.cari)}" oninput="BSP.cari=this.value;_bspGambar();setTimeout(()=>{const i=qs('bsp-cari');if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length)}},0)"><button class="btn btn-ghost btn-sm" onclick="BSP.cari='';BSP.cariBuka=false;_bspGambar()">Tutup</button></div>` : ""}
     <div class="bsp-bulan" data-tur="bsp-bulan">${BSP_BULAN.map((n, i) => { const m = i + 1, ada = baris.some((b) => (b.bulan || {})[m]); return `<button class="${m === BSP.bulan ? "aktif" : ""} ${ada ? "ada" : ""}" onclick="BSP.bulan=${m};_bspGambar()">${n}</button>`; }).join("")}</div>
     <div class="table-wrap bsp-tabel-wrap" data-tur="bsp-tabel"><table class="bsp-tabel"><thead><tr><th>No</th><th>Program Kegiatan</th><th>Kegiatan</th><th>Rekening Belanja</th><th>Uraian</th><th>Jumlah</th><th>Satuan</th><th>Harga Satuan</th><th>Total</th><th>Aksi</th></tr></thead><tbody>
-      ${tampil.map((b, i) => { const p = bspProgram(b.kode), x = b.bulan[BSP.bulan]; return `<tr class="${b.sisip ? "sisip" : ""}">
+      ${tampil.map((b, i) => { const p = bspProgram(b.kode), x = b.bulan[BSP.bulan]; return `<tr class="${b.sisip ? "sisip" : ""} ${b.otomatis ? "otomatis" : ""}">
         <td>${i + 1}</td><td class="bsp-prog" style="--pw:${p[1]}" title="${_bspE(p[0])}">${_bspE(p[0])}</td>
         <td title="${_bspE(b.kode + " " + b.kegiatan)}"><small>${_bspE(b.kode)}</small> ${_bspE(b.kegiatan)}</td>
         <td title="${_bspE(b.rek)}"><i class="bsp-jenis" style="--jw:${(BSP_JENIS[b.jenis] || BSP_JENIS.barang)[1]}"></i>${_bspE(b.rek)}</td>
-        <td class="bsp-uraian" title="${_bspE(b.uraian)}">${_bspE(b.uraian)}</td><td>${_bspE(x.jml)}</td><td>${_bspE(x.sat || "")}</td>
-        <td>${bspRp(b.harga)}</td><td><b>${bspRp(bspTotalBulan(b, BSP.bulan))}</b></td>
-        <td><button class="bsp-titik" ${ubah ? "" : "disabled"} onclick="bspMenuAksi(event,'${b.id}')">···</button></td></tr>`; }).join("") || `<tr><td colspan="10" class="bsp-kosong">${baris.length ? `Tidak ada kegiatan di bulan ${BSP_BULAN[BSP.bulan - 1]}${cari ? " yang cocok" : ""}.` : `Belum ada kegiatan. Klik <b>+ Tambah Kegiatan</b> untuk mulai menyusun.`}</td></tr>`}
+        <td class="bsp-uraian" title="${_bspE(b.uraian)}">${_bspE(b.uraian)}</td><td>${b.otomatis ? "—" : _bspE(x.jml)}</td><td>${b.otomatis ? "—" : _bspE(x.sat || "")}</td>
+        <td>${b.otomatis ? "—" : bspRp(b.harga)}</td><td><b>${bspRp(bspTotalBulan(b, BSP.bulan))}</b></td>
+        <td>${b.otomatis ? '<small class="bsp-oto" title="Diisi Bendahara di ruang Pengelola">Otomatis</small>' : `<button class="bsp-titik" ${ubah ? "" : "disabled"} onclick="bspMenuAksi(event,'${b.id}')">···</button>`}</td></tr>`; }).join("") || `<tr><td colspan="10" class="bsp-kosong">${baris.length ? `Tidak ada kegiatan di bulan ${BSP_BULAN[BSP.bulan - 1]}${cari ? " yang cocok" : ""}.` : `Belum ada kegiatan. Klik <b>+ Tambah Kegiatan</b> untuk mulai menyusun.`}</td></tr>`}
     </tbody></table></div>
   </div>`;
 }
@@ -253,7 +278,7 @@ async function bspMasukkan() {
   for (const k of E.kartu) { const j = Number(String(k.jml).replace(",", ".")) || 0; if (!j) { toast(`Isi jumlah untuk bulan ${BSP_BULAN[k.m - 1]}`, "err"); return; } if (!String(k.sat || "").trim()) { toast(`Pilih satuan untuk bulan ${BSP_BULAN[k.m - 1]}`, "err"); return; } bulan[k.m] = { jml: j, sat: k.sat.trim() }; }
   const baru = { kode: E.dasar.kode, kegiatan: E.dasar.kegiatan, rek: E.dasar.rek, jenis: E.dasar.jenis || "barang", uraian, harga, bulan, oleh: STATE.guruNama || "", t: E.id ? (BSP.kk.baris[E.id].t || Date.now()) : Date.now(), ...(E.sisip ? { sisip: true } : E.id && BSP.kk.baris[E.id].sisip ? { sisip: true } : {}) };
   // tidak boleh melebihi pagu (seperti ARKAS: Belum Dianggarkan tidak boleh minus)
-  const pagu = _bspPaguRuang(), lain = _bspBaris(BSP.kk).filter((b) => b.id !== E.id).reduce((a, b) => a + bspTotalBaris(b), 0);
+  const pagu = _bspPaguRuang(), lain = _bspBarisRuang(BSP.kk, STATE.ruang).filter((b) => b.id !== E.id).reduce((a, b) => a + bspTotalBaris(b), 0);
   if (pagu && lain + bspTotalBaris(baru) > pagu) { toast(`Melebihi pagu. Sisa yang belum dianggarkan ${bspRp(Math.max(0, pagu - lain))}.`, "err"); return; }
   if (BSP_KODE_ASET.includes(baru.kode) && baru.jenis !== "modal" && !(await konfirmasiTema("Kegiatan ini menghasilkan aset, tetapi rekeningnya bukan Belanja Modal. Aset (laptop, printer, proyektor, mebel, seragam inventaris) seharusnya Belanja Modal dan dicatat di buku inventaris. Tetap simpan?", { judul: "Periksa Jenis Belanja", ikon: "⚠️", teksYa: "Tetap Simpan" }))) return;
   const id = E.id || _bspId();
@@ -280,7 +305,7 @@ async function bspHapus(id) {
   } catch (e) { toast("Gagal: " + e.message, "err"); }
 }
 async function bspAjukan() {
-  const baris = _bspBaris(BSP.kk), pagu = _bspPaguRuang(), sudah = baris.reduce((a, b) => a + bspTotalBaris(b), 0);
+  const baris = _bspBarisRuang(BSP.kk, STATE.ruang), pagu = _bspPaguRuang(), sudah = baris.reduce((a, b) => a + bspTotalBaris(b), 0);
   if (!pagu) { toast("Pagu ruang ini belum diisi Bendahara. Minta Bendahara mengisi pagu di ruang Pengelola.", "warn"); return; }
   if (sudah !== pagu) { toast(`Belum bisa diajukan: Belum Dianggarkan harus Rp 0 (sisa ${bspRp(pagu - sudah)}).`, "warn"); return; }
   const h = bspHitung(baris, pagu);
@@ -302,7 +327,7 @@ function _bspHtmlReview(baris, pagu, judul, gabungan) {
     const w = bspProgram(rs[0].kode)[1], tot = rs.reduce((a, b) => a + bulanList.reduce((s, m) => s + bspTotalBulan(b, m), 0), 0);
     if (!tot) return "";
     return `<details class="bsp-rv-prog" style="--pw:${w}"><summary><b>${_bspE(p)}</b><span>${bspRp(tot)}</span></summary><table class="bsp-tabel kecil"><thead><tr>${gabungan ? "<th>Ruang</th>" : ""}<th>Kegiatan</th><th>Rekening Belanja</th><th>Uraian</th><th>Volume</th><th>Harga Satuan</th><th>Total</th></tr></thead><tbody>
-      ${rs.map((b) => { const vol = bulanList.reduce((s, m) => s + ((b.bulan || {})[m] ? Number(b.bulan[m].jml) || 0 : 0), 0); const t = bulanList.reduce((s, m) => s + bspTotalBulan(b, m), 0); return t ? `<tr>${gabungan ? `<td>${_bspE(_bspNamaRuang(b.ruang))}</td>` : ""}<td><small>${_bspE(b.kode)}</small> ${_bspE(b.kegiatan)}</td><td>${_bspE(b.rek)}</td><td>${_bspE(b.uraian)}</td><td>${vol} ${_bspE(Object.values(b.bulan || {})[0]?.sat || "")}</td><td>${bspRp(b.harga)}</td><td><b>${bspRp(t)}</b></td></tr>` : ""; }).join("")}</tbody></table></details>`;
+      ${rs.map((b) => { const vol = bulanList.reduce((s, m) => s + ((b.bulan || {})[m] ? Number(b.bulan[m].jml) || 0 : 0), 0); const t = bulanList.reduce((s, m) => s + bspTotalBulan(b, m), 0); return t ? `<tr>${gabungan ? `<td>${_bspE(_bspNamaRuang(b.ruang))}</td>` : ""}<td><small>${_bspE(b.kode)}</small> ${_bspE(b.kegiatan)}</td><td>${_bspE(b.rek)}</td><td>${_bspE(b.uraian)}</td><td>${b.otomatis ? "—" : vol + " " + _bspE(Object.values(b.bulan || {})[0]?.sat || "")}</td><td>${b.otomatis ? "—" : bspRp(b.harga)}</td><td><b>${bspRp(t)}</b></td></tr>` : ""; }).join("")}</tbody></table></details>`;
   }).join("");
   const bar = (label, nilai, batas, jenis, ket) => { const p = h.pct(nilai), lolos = jenis === "maks" ? p <= batas : p >= batas; return `<div class="bsp-rv-bar ${lolos ? "ok" : "gagal"}"><div class="bsp-rv-bar-h"><b>${label}</b><span>${p.toFixed(1)}% · ${bspRp(nilai)}</span></div><div class="bsp-rv-track"><i style="width:${Math.min(100, p)}%"></i><u style="left:${batas}%" title="${jenis === "maks" ? "Batas maksimal" : "Batas minimal"} ${batas}%"></u></div><small>${lolos ? "✓ Sesuai juknis" : "✗ Belum sesuai"} — ${jenis === "maks" ? "paling banyak" : "paling sedikit"} ${batas}% dari pagu. ${ket || ""}</small></div>`; };
   const semua = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
@@ -367,8 +392,11 @@ async function bspBukaBendahara(th) {
   } catch (e) { sec.innerHTML = `<div class="card">Gagal memuat: ${_bspE(e.message)}</div>`; return; }
   _bspGambarGab();
 }
+const _bspBarisPengelolaGab = () => _bspPengelola().map((p) => ({ id: p.id, ruang: "Pg", kode: p.kode, kegiatan: (BSP_KODE_HONOR_PG.find((k) => k[0] === p.kode) || [, ""])[1], rek: p.rek, jenis: p.jenis || "barang",
+  uraian: `Honor ${p.jabatan} — ${p.nama}`, harga: Number(p.honor) || 0, bulan: Object.fromEntries((p.bulan || []).map((m) => [m, { jml: 1, sat: "Orang/Bulan" }])), oleh: p.oleh,
+  kodeRek: ((BSP.umum.rek || {})["Pg:" + p.id]) || (BSP_REK.find((x) => x.nama === p.rek) || {}).kode || "" }));
 function _bspBarisGab() {
-  return BSP_RUANG.flatMap((r) => _bspBaris(BSP.gab[r]).map((b) => ({ ...b, ruang: r, kodeRek: ((BSP.umum.rek || {})[r + ":" + b.id]) || (BSP_REK.find((x) => x.nama === b.rek) || {}).kode || "" })));
+  return BSP_RUANG.flatMap((r) => _bspBaris(BSP.gab[r]).map((b) => ({ ...b, ruang: r, kodeRek: ((BSP.umum.rek || {})[r + ":" + b.id]) || (BSP_REK.find((x) => x.nama === b.rek) || {}).kode || "" }))).concat(_bspBarisPengelolaGab());
 }
 function _bspGambarGab() {
   const sec = qs("page-rg"); if (!sec || STATE.currentPage !== "pg-bosp") return;
@@ -377,7 +405,7 @@ function _bspGambarGab() {
   const f = BSP.f, tampil = semua.filter((b) => (!f.ruang || b.ruang === f.ruang) && (!f.bulan || (b.bulan || {})[f.bulan]));
   const h = bspHitung(semua, total), bagi = BSP_RUANG.reduce((a, r) => a + (Number(pagu[r]) || 0), 0);
   const kartuRuang = BSP_RUANG.map((r) => {
-    const rr = typeof rgRuang === "function" ? rgRuang(r) : { warna: "#64748b" }, kk = BSP.gab[r], st = bspStatus(kk, r), lbl = BSP_LABEL_STATUS[st.status], rows = _bspBaris(kk), sudah = rows.reduce((a, b) => a + bspTotalBaris(b), 0), pg = Number(pagu[r]) || 0;
+    const rr = typeof rgRuang === "function" ? rgRuang(r) : { warna: "#64748b" }, kk = BSP.gab[r], st = bspStatus(kk, r), lbl = BSP_LABEL_STATUS[st.status], rows = _bspBarisRuang(kk, r), sudah = rows.reduce((a, b) => a + bspTotalBaris(b), 0), pg = Number(pagu[r]) || 0;
     return `<div class="card bsp-ruang" style="--rw:${rr.warna}"><div class="bsp-ruang-h"><b>${_bspE(_bspNamaRuang(r))}</b><em style="--st:${lbl[1]}">${lbl[0]}</em></div>
       <div class="bsp-ruang-angka"><span>Pagu <b>${bspRp(pg)}</b></span><span>Dianggarkan <b>${bspRp(sudah)}</b></span><span>${rows.length} uraian</span></div>
       <div class="bsp-progres"><i style="width:${pg ? Math.min(100, (sudah / pg) * 100) : 0}%"></i></div>
@@ -395,9 +423,9 @@ function _bspGambarGab() {
         ${BSP_RUANG.map((r) => `<label>${_bspE(_bspNamaRuang(r))}<input id="bsp-p-${r}" class="input" inputmode="numeric" oninput="this.value=formatRibuan(this.value);_bspCekPagu()" ${bend ? "" : "disabled"} value="${pagu[r] ? Number(pagu[r]).toLocaleString("id-ID") : ""}" placeholder="Rp"></label>`).join("")}</div>
       <small class="${total && bagi !== total ? "bsp-merah" : ""}"><span id="bsp-p-cek">Jumlah pagu ruang ${bspRp(bagi)}${total ? (bagi === total ? " — sama dengan total ✓" : ` — selisih ${bspRp(total - bagi)} dari total`) : ""}.</span> Total pagu = satuan biaya daerah × jumlah murid usia 7–<25 tahun ber-NISN (Dapodik 31 Agustus tahun sebelumnya).</small>
       ${bend ? `<div><button class="btn btn-accent btn-sm" onclick="bspSimpanPagu()">Simpan Pagu</button></div>` : ""}</div>
-    <div class="bsp-ruang-grid">${kartuRuang}</div>
+    <div class="bsp-ruang-grid">${kartuRuang}${_bspKartuPengelola(bend)}</div>
     <div class="card"><h4 style="margin-top:0">Pemeriksaan Juknis (dari Total Pagu PKBM)</h4><div class="bsp-cek-baris">${cek("Honor", h.honor, 40, "maks")}${cek("Buku", h.buku, 10, "min")}${cek("Sarpras", h.sarpras, 20, "maks")}<span class="bsp-cek">Sudah dianggarkan ${bspRp(h.tot)} dari ${bspRp(total)}</span></div></div>
-    <div class="bsp-saring"><select onchange="BSP.f.ruang=this.value;_bspGambarGab()"><option value="">Semua Ruang</option>${BSP_RUANG.map((r) => `<option value="${r}" ${f.ruang === r ? "selected" : ""}>${_bspE(_bspNamaRuang(r))}</option>`).join("")}</select>
+    <div class="bsp-saring"><select onchange="BSP.f.ruang=this.value;_bspGambarGab()"><option value="">Semua Ruang</option>${[...BSP_RUANG, "Pg"].map((r) => `<option value="${r}" ${f.ruang === r ? "selected" : ""}>${_bspE(_bspNamaRuang(r))}</option>`).join("")}</select>
       <select onchange="BSP.f.bulan=+this.value;_bspGambarGab()"><option value="0">Semua Bulan</option>${BSP_BULAN.map((n, i) => `<option value="${i + 1}" ${f.bulan === i + 1 ? "selected" : ""}>${n}</option>`).join("")}</select><span>${tampil.length} uraian</span></div>
     <div class="table-wrap bsp-tabel-wrap"><table class="bsp-tabel"><thead><tr><th>No</th><th>Ruang</th><th>Program Kegiatan</th><th>Kegiatan</th><th>Rekening Belanja</th><th>Kode Rekening</th><th>Uraian</th><th>Volume</th><th>Harga Satuan</th><th>Total</th></tr></thead><tbody>
       ${tampil.map((b, i) => { const p = bspProgram(b.kode), bl = f.bulan ? [f.bulan] : Object.keys(b.bulan || {}).map(Number), vol = bl.reduce((s, m) => s + ((b.bulan || {})[m] ? Number(b.bulan[m].jml) || 0 : 0), 0), tot = bl.reduce((s, m) => s + bspTotalBulan(b, m), 0);
@@ -410,6 +438,78 @@ function _bspCekPagu() {
   const v = (id) => _bspAngka(qs(id)?.value), total = v("bsp-p-total"), bagi = BSP_RUANG.reduce((a, r) => a + v("bsp-p-" + r), 0), el = qs("bsp-p-cek"); if (!el) return;
   el.parentElement.className = total && bagi !== total ? "bsp-merah" : "";
   el.textContent = `Jumlah pagu ruang ${bspRp(bagi)}${total ? (bagi === total ? " — sama dengan total ✓" : ` — selisih ${bspRp(total - bagi)} dari total`) : ""}. `;
+}
+function _bspKartuPengelola(bend) {
+  const orang = _bspPengelola(), total = bspTotalPengelola(), mode = (BSP.umum || {}).bagi_pengelola === "rata" ? "rata" : "pagu";
+  return `<div class="card bsp-ruang bsp-ruang-pg" style="--rw:#b45309"><div class="bsp-ruang-h"><b>Pengelola</b><em style="--st:#b45309">Honor Pengelola</em></div>
+    <div class="bsp-ruang-angka"><span>Total setahun <b>${bspRp(total)}</b></span><span>${orang.length} orang</span></div>
+    <div class="bsp-pg-bagi">${BSP_RUANG.map((r) => `<span><i style="background:${(typeof rgRuang === "function" ? rgRuang(r) : {}).warna || "#64748b"}"></i>${_bspE(_bspNamaRuang(r))}<b>${bspRp(bspBagianTahun(r))}</b></span>`).join("")}</div>
+    ${bend ? `<div class="bsp-ruang-aksi"><select onchange="bspUbahBagi(this.value)"><option value="pagu" ${mode === "pagu" ? "selected" : ""}>Dibagi sebanding pagu</option><option value="rata" ${mode === "rata" ? "selected" : ""}>Dibagi rata 3 jenjang</option></select>
+      <button class="btn btn-sm btn-accent" onclick="bspKelolaPengelola()">Kelola Honor Pengelola</button></div>` : `<small>${mode === "rata" ? "Dibagi rata 3 jenjang" : "Dibagi sebanding pagu tiap jenjang"}</small>`}</div>`;
+}
+async function bspUbahBagi(mode) {
+  try { BSP.umum = await _bspGabungUmum(_bspKunciUmum(BSP.th), { bagi_pengelola: mode }); toast(mode === "rata" ? "Honor pengelola dibagi rata" : "Honor pengelola dibagi sebanding pagu", "ok"); _bspGambarGab(); }
+  catch (e) { toast("Gagal: " + e.message, "err"); }
+}
+// Daftar & formulir honor pengelola (Bendahara)
+async function bspKelolaPengelola(editId) {
+  if (!bspBendahara()) return;
+  if (!BSP.guruNama) { try { const r = await supaSemua.from("guru").select("id,nama,nip_nik").eq("status_aktif", true).order("nama"); BSP.guruNama = r.data || []; } catch (e) { BSP.guruNama = []; } }
+  if (!BSP.dpk) { try { const r = await supaSemua.from("kuliah_pengaturan").select("nilai").eq("kunci", "dapodik:ptk").eq("ruang_id", "*").maybeSingle(); BSP.dpk = (r.data && r.data.nilai && r.data.nilai.ptk) || []; } catch (e) { BSP.dpk = []; } }
+  const p = editId ? _bspPengelola().find((x) => x.id === editId) : null, d = p || { nama: "", jabatan: "", kode: "07.12.03", rek: BSP_REK_HONOR_PG[0][0], honor: "", bulan: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] };
+  BSP.pgEdit = { id: editId || null, bulan: [...(d.bulan || [])] };
+  const orang = _bspPengelola();
+  openModal(`<div class="bsp-modal"><h3>Honor Pengelola PKBM ${BSP.th}</h3>
+    <p class="bsp-ket">Honor bulanan pengelola PKBM. Totalnya otomatis dibebankan ke Paket A, Putra, dan Putri (${(BSP.umum || {}).bagi_pengelola === "rata" ? "dibagi rata" : "sebanding pagu"}) dan langsung mengurangi sisa pagu Kertas Kerja tiap jenjang.</p>
+    ${orang.length ? `<div class="table-wrap"><table class="bsp-tabel kecil"><thead><tr><th>Nama</th><th>Jabatan</th><th>Kegiatan</th><th>Honor/Bulan</th><th>Bulan</th><th>Setahun</th><th></th></tr></thead><tbody>
+      ${orang.map((x) => `<tr class="${x.id === editId ? "sisip" : ""}"><td>${_bspE(x.nama)}${_bspDpkPg(x.nama)}</td><td>${_bspE(x.jabatan)}</td><td>${_bspE(x.kode)}</td><td>${bspRp(x.honor)}</td><td>${(x.bulan || []).length} bln</td><td><b>${bspRp((Number(x.honor) || 0) * (x.bulan || []).length)}</b></td>
+        <td style="white-space:nowrap"><button class="btn btn-sm btn-ghost" onclick="bspKelolaPengelola('${x.id}')">Ubah</button><button class="btn btn-sm btn-ghost" onclick="bspHapusPengelola('${x.id}')">Hapus</button></td></tr>`).join("")}
+      <tr><td colspan="5"><b>Total</b></td><td colspan="2"><b>${bspRp(bspTotalPengelola())}</b></td></tr></tbody></table></div>` : ""}
+    <h4 style="margin:12px 0 6px">${p ? "Ubah" : "Tambah"} Pengelola</h4>
+    <div class="bsp-baris2"><label class="bsp-f"><span>Nama</span><input id="bpg-nama" class="input" list="bpg-guru" value="${_bspE(d.nama)}" placeholder="Pilih dari Data Guru atau ketik"><datalist id="bpg-guru">${BSP.guruNama.map((x) => `<option value="${_bspE(x.nama)}">`).join("")}</datalist></label>
+      <label class="bsp-f"><span>Jabatan</span><input id="bpg-jabatan" class="input" list="bpg-jab" value="${_bspE(d.jabatan)}" placeholder="mis. Kepala PKBM, Operator Dapodik"><datalist id="bpg-jab">${BSP_JABATAN_PG.map((x) => `<option value="${x}">`).join("")}</datalist></label></div>
+    <div class="bsp-baris2"><label class="bsp-f"><span>Kegiatan (Kode Referensi)</span><select id="bpg-kode" class="input">${BSP_KODE_HONOR_PG.map(([k, n]) => `<option value="${k}" ${d.kode === k ? "selected" : ""}>${k} — ${n}</option>`).join("")}</select></label>
+      <label class="bsp-f"><span>Rekening Belanja</span><select id="bpg-rek" class="input">${BSP_REK_HONOR_PG.map(([n]) => `<option ${d.rek === n ? "selected" : ""}>${n}</option>`).join("")}</select></label></div>
+    <div class="bsp-baris2"><label class="bsp-f"><span>Honor per Bulan</span><input id="bpg-honor" class="input" inputmode="numeric" value="${d.honor ? formatRibuan(d.honor) : ""}" placeholder="Rp" oninput="this.value=formatRibuan(this.value);_bspPgTotal()"></label>
+      <div class="bsp-f"><span>Total Setahun</span><b id="bpg-total" class="bsp-pg-total">Rp 0</b></div></div>
+    <div class="bsp-f"><span>Dibayar pada Bulan</span><div id="bpg-bulan" class="bsp-pg-bulan"></div></div>
+    <p class="bsp-ket">Syarat honor (Pasal 48 ayat 5): tercatat di Dapodik, ditugaskan dengan surat penugasan/SK, aktif bertugas, dan belum memiliki gaji pokok dari PKBM.</p>
+    <div class="bsp-aksi-bawah">${p ? `<button class="btn btn-outline" onclick="bspKelolaPengelola()">Batal Ubah</button>` : ""}<button class="btn btn-outline" onclick="closeModal()">Tutup</button><button class="btn bsp-hitam" onclick="bspSimpanPengelola()">${p ? "Perbarui" : "+ Masukkan ke Anggaran"}</button></div></div>`, { lebar: true });
+  _bspPgBulan();
+}
+function _bspDpkPg(nama) {
+  const n = String(nama || "").toLowerCase().split(",")[0].replace(/[^a-z ]/g, "").trim(); if (!n || !(BSP.dpk || []).length) return "";
+  const ada = BSP.dpk.some((x) => String(x.nama || "").toLowerCase().replace(/[^a-z ]/g, "").trim() === n || (x.guru_id && (BSP.guruNama || []).some((gg) => gg.id === x.guru_id && String(gg.nama).toLowerCase().split(",")[0].replace(/[^a-z ]/g, "").trim() === n)));
+  return ada ? '<small class="bsp-dpk-ok">✓ Terdaftar Dapodik</small>' : '<small class="bsp-dpk-no">Belum di Dapodik — honor mensyaratkan tercatat di Dapodik</small>';
+}
+function _bspPgBulan() {
+  const el = qs("bpg-bulan"); if (!el) return;
+  el.innerHTML = BSP_BULAN.map((n, i) => `<button class="${BSP.pgEdit.bulan.includes(i + 1) ? "aktif" : ""}" onclick="_bspPgTogBulan(${i + 1})">${n.slice(0, 3)}</button>`).join("") + `<button class="bsp-pg-semua" onclick="BSP.pgEdit.bulan=BSP.pgEdit.bulan.length===12?[]:[1,2,3,4,5,6,7,8,9,10,11,12];_bspPgBulan()">${BSP.pgEdit.bulan.length === 12 ? "Kosongkan" : "Semua"}</button>`;
+  _bspPgTotal();
+}
+function _bspPgTogBulan(m) { const b = BSP.pgEdit.bulan; const i = b.indexOf(m); i >= 0 ? b.splice(i, 1) : b.push(m); b.sort((x, y) => x - y); _bspPgBulan(); }
+function _bspPgTotal() { const el = qs("bpg-total"); if (el) el.textContent = bspRp(_bspAngka(qs("bpg-honor")?.value) * BSP.pgEdit.bulan.length); }
+async function bspSimpanPengelola() {
+  const nama = qs("bpg-nama").value.trim(), jabatan = qs("bpg-jabatan").value.trim(), honor = _bspAngka(qs("bpg-honor").value), kode = qs("bpg-kode").value, rek = qs("bpg-rek").value;
+  if (!nama) { toast("Isi nama pengelola", "err"); return; }
+  if (!jabatan) { toast("Isi jabatan", "err"); return; }
+  if (!honor) { toast("Isi honor per bulan", "err"); return; }
+  if (!BSP.pgEdit.bulan.length) { toast("Pilih minimal satu bulan", "err"); return; }
+  const jenis = (BSP_REK_HONOR_PG.find((x) => x[0] === rek) || [, "barang"])[1], id = BSP.pgEdit.id || _bspId();
+  const lama = BSP.pgEdit.id ? _bspPengelola().find((x) => x.id === id) : null;
+  const baris = { nama, jabatan, kode, rek, jenis, honor, bulan: [...BSP.pgEdit.bulan], oleh: STATE.guruNama || "", t: lama ? lama.t : Date.now() };
+  try {
+    BSP.umum = await _bspGabungUmum(_bspKunciUmum(BSP.th), { pengelola: { [id]: baris } });
+    toast(lama ? "Honor pengelola diperbarui" : "Honor pengelola ditambahkan", "ok");
+    if (typeof _rgLog === "function") _rgLog("bosp-honor-pengelola", { nama, honor });
+    bspKelolaPengelola(); _bspGambarGab();
+  } catch (e) { toast("Gagal: " + e.message, "err"); }
+}
+async function bspHapusPengelola(id) {
+  const p = _bspPengelola().find((x) => x.id === id); if (!p) return;
+  if (!confirm(`Hapus honor ${p.jabatan} — ${p.nama}?`)) return;
+  try { BSP.umum = await _bspGabungUmum(_bspKunciUmum(BSP.th), { pengelola: { [id]: { dihapus: true, t: Date.now(), oleh: STATE.guruNama || "" } } }); toast("Dihapus", "ok"); bspKelolaPengelola(); _bspGambarGab(); }
+  catch (e) { toast("Gagal: " + e.message, "err"); }
 }
 async function bspSimpanPagu() {
   const v = (id) => _bspAngka(qs(id)?.value);

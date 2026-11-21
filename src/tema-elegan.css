@@ -743,3 +743,13 @@ td .ju-online,.ju-hp-isi .ju-online{margin:0 0 4px}
 @media print{.bsp-tombol,.bsp-kembali,.bsp-rv-tab,.bsp-panduan,.bsp-catatan{display:none!important}}
 .bsp{grid-template-columns:minmax(0,1fr)}.bsp>*{min-width:0}.bsp-atas>div{min-width:0}
 @media(max-width:700px){.bsp-kanan{justify-items:start;width:100%}.bsp-tombol{justify-content:flex-start}.bsp-kotak{min-width:0;flex:1}.bsp-simpan{text-align:left}.bsp-judul{font-size:18px}}
+
+/* Honor Pengelola di Kertas Kerja */
+.bsp-pagu{flex-wrap:wrap}.bsp-pagu small{width:100%;font-size:11px;color:#b45309}
+.bsp-tabel tr.otomatis td{background:color-mix(in srgb,#fef3c7 55%,var(--surface))}.bsp-oto{font-size:10px;font-weight:800;color:#b45309;background:#fef3c7;border-radius:99px;padding:2px 7px}
+.bsp-ruang-grid{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.bsp-pg-bagi{display:grid;gap:3px}.bsp-pg-bagi span{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text-secondary)}.bsp-pg-bagi i{width:8px;height:8px;border-radius:50%}.bsp-pg-bagi b{margin-left:auto;color:var(--text-primary)}
+.bsp-ruang-aksi select{border:1px solid var(--border-soft);border-radius:8px;padding:4px 6px;font:inherit;font-size:11.5px;background:var(--surface);color:var(--text-primary)}
+.bsp-pg-bulan{display:flex;flex-wrap:wrap;gap:4px}.bsp-pg-bulan button{border:1px solid var(--border-soft);background:var(--surface);border-radius:8px;padding:5px 9px;font:inherit;font-size:12px;cursor:pointer;color:var(--text-primary)}.bsp-pg-bulan button.aktif{background:#1d4ed8;border-color:#1d4ed8;color:#fff}.bsp-pg-bulan .bsp-pg-semua{border-style:dashed}
+.bsp-pg-total{font-size:17px;color:#1d4ed8;padding:6px 0}
+.bsp-dpk-ok{color:#15803d!important;font-weight:700}.bsp-dpk-no{color:#b45309!important}
