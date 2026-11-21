@@ -753,3 +753,26 @@ td .ju-online,.ju-hp-isi .ju-online{margin:0 0 4px}
 .bsp-pg-bulan{display:flex;flex-wrap:wrap;gap:4px}.bsp-pg-bulan button{border:1px solid var(--border-soft);background:var(--surface);border-radius:8px;padding:5px 9px;font:inherit;font-size:12px;cursor:pointer;color:var(--text-primary)}.bsp-pg-bulan button.aktif{background:#1d4ed8;border-color:#1d4ed8;color:#fff}.bsp-pg-bulan .bsp-pg-semua{border-style:dashed}
 .bsp-pg-total{font-size:17px;color:#1d4ed8;padding:6px 0}
 .bsp-dpk-ok{color:#15803d!important;font-weight:700}.bsp-dpk-no{color:#b45309!important}
+
+/* BOSP tambahan: isi cepat, rutin, SSH, realisasi */
+.bsp-cepat{background:linear-gradient(135deg,#eef2ff,#ecfeff);border:1px solid #c7d2fe;border-radius:12px;padding:10px 12px;display:grid;gap:6px;color:#1e293b}
+.bsp-cepat>b{font-size:13.5px}.bsp-cepat>small{font-size:11.5px;color:#475569}.bsp-cepat .bsp-pilihan{max-height:34vh}
+.bsp-atau{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-secondary);margin:10px 0 8px}.bsp-atau i{flex:1;height:1px;background:var(--border-soft)}
+.bsp-dianggarkan{align-items:center;gap:10px;flex-wrap:wrap}.bsp-beda{display:inline-flex;gap:5px;align-items:center;font-size:12px;font-weight:600;color:var(--text-primary);cursor:pointer;margin-right:auto}
+.bsp-harga-bulan{border-color:#93c5fd!important}
+#bsp-ssh{display:block;border-radius:8px;padding:4px 8px;line-height:1.45}
+.bsp-ssh-ok{background:#dcfce7;color:#166534!important}.bsp-ssh-salah{background:#fee2e2;color:#991b1b!important}.bsp-ssh-info{background:#eff6ff;color:#1e3a8a!important}.bsp-ssh-tanya{background:#fffbeb;color:#92400e!important}
+.bsp-ssh-info-kartu p{font-size:12.5px;line-height:1.6;margin:6px 0}
+.bsp-rutin-pilih{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px;margin-bottom:10px}
+.bsp-rutin-pilih label{display:flex;gap:6px;align-items:center;border:1px solid var(--border-soft);border-radius:10px;padding:7px 9px;font-size:12.5px;cursor:pointer;background:var(--surface)}
+.bsp-rutin-pilih label.aktif{border-color:#1d4ed8;background:color-mix(in srgb,#1d4ed8 7%,var(--surface))}.bsp-rutin-pilih small{margin-left:auto;font-family:ui-monospace,Consolas,monospace;font-size:10.5px;color:var(--text-secondary)}
+.bsp-rutin-tabel input{width:96px;padding:5px 6px;font-size:12px}.bsp-rutin-tabel td:first-child{min-width:140px}
+.bsp-real-ringkas{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.bsp-real-ringkas .card{display:grid;gap:3px}.bsp-real-ringkas small{font-size:11.5px;color:var(--text-secondary)}.bsp-real-ringkas b{font-size:18px}.bsp-real-ringkas em{font-style:normal;font-size:11px;color:var(--text-secondary)}
+.bsp-real-t1.ok{border-left:4px solid #16a34a}.bsp-real-t1.awas{border-left:4px solid #f59e0b}.bsp-real-t1.awas .bsp-rv-track i{background:#f59e0b}
+.bsp-real-grafik{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;align-items:end}
+.bsp-real-grafik button{border:0;background:none;cursor:pointer;display:grid;gap:3px;padding:4px 0;border-radius:8px;font:inherit}.bsp-real-grafik button.aktif{background:var(--bg-subtle,#f1f5f9)}
+.bsp-real-grafik span{height:90px;display:flex;align-items:flex-end;justify-content:center;gap:2px}.bsp-real-grafik i{width:9px;border-radius:3px 3px 0 0;display:block;min-height:2px}
+.bsp-real-grafik .ren{background:#cbd5e1}.bsp-real-grafik .rea{background:#16a34a}.bsp-real-grafik small{font-size:10.5px;color:var(--text-secondary)}
+.bsp-real-leg{display:flex;gap:14px}.bsp-real-leg span{width:auto}
+.bsp-real-n{width:120px}

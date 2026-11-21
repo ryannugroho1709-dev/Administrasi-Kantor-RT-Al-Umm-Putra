@@ -59,8 +59,8 @@ async function _bspMuatKK(th) {
   BSP.kk.baris = BSP.kk.baris || {};
 }
 const _bspBaris = (kk) => Object.entries((kk && kk.baris) || {}).filter(([, b]) => b && !b.dihapus).map(([id, b]) => ({ id, ...b })).sort((a, b) => (a.t || 0) - (b.t || 0));
-const bspTotalBaris = (b) => Object.values(b.bulan || {}).reduce((a, x) => a + (Number(x.jml) || 0), 0) * (Number(b.harga) || 0);
-const bspTotalBulan = (b, m) => { const x = (b.bulan || {})[m]; return x ? (Number(x.jml) || 0) * (Number(b.harga) || 0) : 0; };
+const bspTotalBaris = (b) => Object.values(b.bulan || {}).reduce((a, x) => a + (Number(x.jml) || 0) * (Number(x.harga ?? b.harga) || 0), 0);
+const bspTotalBulan = (b, m) => { const x = (b.bulan || {})[m]; return x ? (Number(x.jml) || 0) * (Number(x.harga ?? b.harga) || 0) : 0; };
 // Status usulan ruang: diajukan oleh ruang ↔ keputusan Bendahara (yang paling baru berlaku)
 function bspStatus(kk, ruang) {
   const s = (kk && kk._status) || {}, k = ((BSP.umum || {}).keputusan || {})[ruang];
@@ -137,6 +137,8 @@ function _bspGambar() {
         <div class="bsp-panduan">❔ Butuh panduan mengisi? <a href="#" onclick="bspPanduan();return false">Baca Panduan Selengkapnya</a></div>
         <div class="bsp-tombol" data-tur="bsp-tombol">
           <button class="btn btn-outline" data-tur="bsp-tambah" ${ubah ? "" : "disabled"} onclick="bspTambah()">+ Tambah Kegiatan</button>
+          <button class="btn btn-outline" data-tur="bsp-rutin" ${ubah ? "" : "disabled"} onclick="bspRutin()">⚡ Kegiatan Rutin</button>
+          ${ubah && !_bspBaris(BSP.kk).length ? `<button class="btn btn-outline" onclick="bspSalinTahunLalu()">⧉ Salin dari ${th - 1}</button>` : ""}
           <button class="btn btn-outline" onclick="bspBukaKK(BSP.th)">↻ Perbarui Data Referensi</button>
           <button class="btn btn-outline" onclick="bspCari()">🔍 Cari</button>
           <button class="btn bsp-hitam" data-tur="bsp-review" onclick="BSP.mode='review';_bspGambar()">Review</button>
@@ -163,7 +165,7 @@ function _bspGambar() {
         <td title="${_bspE(b.kode + " " + b.kegiatan)}"><small>${_bspE(b.kode)}</small> ${_bspE(b.kegiatan)}</td>
         <td title="${_bspE(b.rek)}"><i class="bsp-jenis" style="--jw:${(BSP_JENIS[b.jenis] || BSP_JENIS.barang)[1]}"></i>${_bspE(b.rek)}</td>
         <td class="bsp-uraian" title="${_bspE(b.uraian)}">${_bspE(b.uraian)}</td><td>${b.otomatis ? "—" : _bspE(x.jml)}</td><td>${b.otomatis ? "—" : _bspE(x.sat || "")}</td>
-        <td>${b.otomatis ? "—" : bspRp(b.harga)}</td><td><b>${bspRp(bspTotalBulan(b, BSP.bulan))}</b></td>
+        <td>${b.otomatis ? "—" : bspRp(x.harga ?? b.harga)}</td><td><b>${bspRp(bspTotalBulan(b, BSP.bulan))}</b></td>
         <td>${b.otomatis ? '<small class="bsp-oto" title="Diisi Bendahara di ruang Pengelola">Otomatis</small>' : `<button class="bsp-titik" ${ubah ? "" : "disabled"} onclick="bspMenuAksi(event,'${b.id}')">···</button>`}</td></tr>`; }).join("") || `<tr><td colspan="10" class="bsp-kosong">${baris.length ? `Tidak ada kegiatan di bulan ${BSP_BULAN[BSP.bulan - 1]}${cari ? " yang cocok" : ""}.` : `Belum ada kegiatan. Klik <b>+ Tambah Kegiatan</b> untuk mulai menyusun.`}</td></tr>`}
     </tbody></table></div>
   </div>`;
@@ -234,10 +236,12 @@ function _bspPilihRek(i) { const r = BSP_REK[i]; BSP.draf.rek = r.nama; BSP.draf
 function bspIsiDetail(id, sisip) {
   document.querySelector(".bsp-menu")?.remove();
   const asal = id ? BSP.kk.baris[id] : null;
-  const d = asal ? { ...asal, bulan: sisip ? {} : { ...asal.bulan }, uraian: sisip ? "" : asal.uraian, harga: sisip ? "" : asal.harga } : { ...BSP.draf, bulan: {}, uraian: "", harga: "" };
+  const dr = BSP.draf || {};
+  const d = asal ? { ...asal, bulan: sisip ? {} : { ...asal.bulan }, uraian: sisip ? "" : asal.uraian, harga: sisip ? "" : asal.harga } : { ...dr, bulan: {}, uraian: dr.uraian || "", harga: dr.harga || "" };
   BSP.edit = { id: sisip ? null : id, sisip: !!sisip, dasar: d };
-  const kartu = Object.keys(d.bulan).length ? Object.entries(d.bulan).map(([m, x]) => ({ m: +m, jml: x.jml, sat: x.sat })) : [{ m: BSP.bulan || 1, jml: "", sat: "" }];
+  const kartu = Object.keys(d.bulan).length ? Object.entries(d.bulan).map(([m, x]) => ({ m: +m, jml: x.jml, sat: x.sat, harga: x.harga || "" })) : [{ m: BSP.bulan || 1, jml: "", sat: dr.satuan || "", harga: "" }];
   BSP.edit.kartu = kartu;
+  BSP.edit.beda = kartu.some((k) => k.harga);
   openModal(`<div class="bsp-modal bsp-detail"><div class="bsp-detail-h"><h3>${sisip ? "Sisip Uraian" : id ? "Edit Detail Anggaran" : "Isi Detail Anggaran Kegiatan"}</h3>${id && !sisip ? `<button class="bsp-hapus-semua" onclick="bspHapus('${id}')">🗑 Hapus Semua</button>` : ""}</div>
     ${!id ? `<div class="bsp-langkah"><span class="selesai">1. Kegiatan</span><span class="selesai">2. Rekening Belanja</span><span class="aktif">3. Detail Anggaran</span></div>` : ""}
     <label class="bsp-f"><span>Kegiatan</span><input class="input" disabled value="${_bspE(d.kode + " — " + d.kegiatan)}"></label>
@@ -245,38 +249,57 @@ function bspIsiDetail(id, sisip) {
     <div class="bsp-kotak-isi">
       <div class="bsp-baris2">
         <label class="bsp-f"><span>Uraian</span><textarea id="bsp-uraian" class="input" rows="2" maxlength="500" placeholder="Apa jenis barang atau jasanya? Mis. makan siang peserta pelatihan, kertas HVS A4 70 gram">${_bspE(d.uraian)}</textarea><small id="bsp-uraian-n">${String(d.uraian || "").length}/500</small></label>
-        <label class="bsp-f"><span>Harga Satuan yang Dianggarkan</span><input id="bsp-harga" class="input" inputmode="numeric" placeholder="Berapa perkiraan harganya?" value="${d.harga ? Number(d.harga).toLocaleString("id-ID") : ""}"><small>Harus dalam batas harga yang ditentukan Dinas (SSH) saat diinput ke ARKAS.</small></label>
+        <label class="bsp-f"><span>Harga Satuan yang Dianggarkan</span><input id="bsp-harga" class="input" inputmode="numeric" placeholder="Berapa perkiraan harganya?" value="${d.harga ? Number(d.harga).toLocaleString("id-ID") : ""}"><small id="bsp-ssh">Harus dalam batas harga yang ditentukan Dinas (SSH).</small></label>
       </div>
-      <div class="bsp-dianggarkan"><span>Dianggarkan untuk Bulan</span><b id="bsp-total">Total Anggaran : Rp 0</b></div>
+      <div class="bsp-dianggarkan"><span>Dianggarkan untuk Bulan</span><label class="bsp-beda"><input type="checkbox" id="bsp-beda" ${BSP.edit.beda ? "checked" : ""} onchange="BSP.edit.beda=this.checked;_bspKartu()"> Nominal berbeda tiap bulan</label><b id="bsp-total">Total Anggaran : Rp 0</b></div>
       <div id="bsp-kartu" class="bsp-kartu-wrap"></div>
     </div>
     <div class="bsp-aksi-bawah"><button class="btn btn-outline" onclick="closeModal()">Batal</button><button class="btn bsp-hitam" onclick="bspMasukkan()">${id && !sisip ? "Perbarui" : "+ Masukkan ke Anggaran"}</button></div></div>`, { lebar: true });
   qs("bsp-harga").oninput = (e) => { const n = _bspAngka(e.target.value); e.target.value = n ? n.toLocaleString("id-ID") : ""; _bspKartu(); };
-  qs("bsp-uraian").oninput = (e) => { qs("bsp-uraian-n").textContent = e.target.value.length + "/500"; };
+  qs("bsp-uraian").oninput = (e) => { qs("bsp-uraian-n").textContent = e.target.value.length + "/500"; clearTimeout(BSP._tSsh); BSP._tSsh = setTimeout(() => typeof _bspCekSSH === "function" && _bspCekSSH(), 250); };
   _bspKartu();
 }
+// harga yang berlaku untuk satu kartu bulan (nominal khusus bulan itu, atau harga satuan umum)
+const _bspHargaKartu = (k) => (BSP.edit.beda && _bspAngka(k.harga)) || _bspAngka(qs("bsp-harga")?.value);
 function _bspKartu() {
   const el = qs("bsp-kartu"); if (!el) return;
-  const harga = _bspAngka(qs("bsp-harga")?.value), K = BSP.edit.kartu;
+  const K = BSP.edit.kartu, beda = BSP.edit.beda;
   const dipakai = new Set(K.map((k) => k.m));
   el.innerHTML = K.map((k, i) => `<div class="bsp-kartu">
       <div class="bsp-kartu-h"><select onchange="BSP.edit.kartu[${i}].m=+this.value;_bspKartu()">${BSP_BULAN.map((n, j) => `<option value="${j + 1}" ${j + 1 === k.m ? "selected" : ""} ${dipakai.has(j + 1) && j + 1 !== k.m ? "disabled" : ""}>${n}</option>`).join("")}</select>
-        <span>${bspRp((Number(k.jml) || 0) * harga)}</span>${K.length > 1 ? `<button class="bsp-kurang" title="Batalkan bulan ini" onclick="BSP.edit.kartu.splice(${i},1);_bspKartu()">−</button>` : ""}</div>
+        <span id="bsp-sub-${i}">${bspRp((Number(String(k.jml).replace(",", ".")) || 0) * _bspHargaKartu(k))}</span>${K.length > 1 ? `<button class="bsp-kurang" title="Batalkan bulan ini" onclick="BSP.edit.kartu.splice(${i},1);_bspKartu()">−</button>` : ""}</div>
       <div class="bsp-kartu-isi"><input class="input" inputmode="numeric" placeholder="Jumlah" value="${_bspE(k.jml)}" oninput="BSP.edit.kartu[${i}].jml=this.value.replace(/[^\\d.,]/g,'');_bspTotal()">
-        <input class="input" list="bsp-satuan" placeholder="🔍 Satuan" value="${_bspE(k.sat)}" oninput="BSP.edit.kartu[${i}].sat=this.value"></div></div>`).join("")
+        <input class="input" list="bsp-satuan" placeholder="🔍 Satuan" value="${_bspE(k.sat)}" oninput="BSP.edit.kartu[${i}].sat=this.value"></div>
+      ${beda ? `<input class="input bsp-harga-bulan" inputmode="numeric" placeholder="Harga bulan ini (Rp)" value="${k.harga ? formatRibuan(k.harga) : ""}" oninput="this.value=formatRibuan(this.value);BSP.edit.kartu[${i}].harga=this.value;_bspTotal()">` : ""}</div>`).join("")
     + (K.length < 12 ? `<button class="bsp-tambah-bulan" onclick="_bspTambahBulan()">+ Tambah Bulan</button>` : "")
+    + (K.length < 12 ? `<button class="bsp-tambah-bulan" onclick="_bspSemuaBulan()">+ Isi 12 Bulan Sekaligus</button>` : "")
     + `<datalist id="bsp-satuan">${BSP_SATUAN.map((s) => `<option value="${s}">`).join("")}</datalist>`;
   _bspTotal();
 }
-function _bspTambahBulan() { const ada = new Set(BSP.edit.kartu.map((k) => k.m)); const m = [...Array(12).keys()].map((x) => x + 1).find((x) => !ada.has(x)); if (m) { BSP.edit.kartu.push({ m, jml: "", sat: (BSP.edit.kartu[0] || {}).sat || "" }); _bspKartu(); } }
-function _bspTotal() { const harga = _bspAngka(qs("bsp-harga")?.value); const t = BSP.edit.kartu.reduce((a, k) => a + (Number(String(k.jml).replace(",", ".")) || 0) * harga, 0); const el = qs("bsp-total"); if (el) el.textContent = "Total Anggaran : " + bspRp(t); }
+function _bspTambahBulan() { const ada = new Set(BSP.edit.kartu.map((k) => k.m)); const m = [...Array(12).keys()].map((x) => x + 1).find((x) => !ada.has(x)); if (m) { const k0 = BSP.edit.kartu[0] || {}; BSP.edit.kartu.push({ m, jml: k0.jml || "", sat: k0.sat || "", harga: "" }); _bspKartu(); } }
+function _bspSemuaBulan() { const k0 = BSP.edit.kartu[0] || {}, ada = new Set(BSP.edit.kartu.map((k) => k.m)); for (let m = 1; m <= 12; m++) if (!ada.has(m)) BSP.edit.kartu.push({ m, jml: k0.jml || "", sat: k0.sat || "", harga: "" }); BSP.edit.kartu.sort((a, b) => a.m - b.m); _bspKartu(); }
+function _bspTotal() {
+  const t = BSP.edit.kartu.reduce((a, k, i) => { const s = (Number(String(k.jml).replace(",", ".")) || 0) * _bspHargaKartu(k); const el = qs("bsp-sub-" + i); if (el) el.textContent = bspRp(s); return a + s; }, 0);
+  const el = qs("bsp-total"); if (el) el.textContent = "Total Anggaran : " + bspRp(t);
+  if (typeof _bspCekSSH === "function") _bspCekSSH();
+}
 async function bspMasukkan() {
   const E = BSP.edit, uraian = qs("bsp-uraian").value.trim(), harga = _bspAngka(qs("bsp-harga").value);
   if (!uraian) { toast("Tulis uraian barang/jasa yang dianggarkan", "err"); qs("bsp-uraian").focus(); return; }
-  if (!harga) { toast("Isi harga satuan", "err"); qs("bsp-harga").focus(); return; }
+  if (!harga && !E.beda) { toast("Isi harga satuan", "err"); qs("bsp-harga").focus(); return; }
   const bulan = {};
-  for (const k of E.kartu) { const j = Number(String(k.jml).replace(",", ".")) || 0; if (!j) { toast(`Isi jumlah untuk bulan ${BSP_BULAN[k.m - 1]}`, "err"); return; } if (!String(k.sat || "").trim()) { toast(`Pilih satuan untuk bulan ${BSP_BULAN[k.m - 1]}`, "err"); return; } bulan[k.m] = { jml: j, sat: k.sat.trim() }; }
-  const baru = { kode: E.dasar.kode, kegiatan: E.dasar.kegiatan, rek: E.dasar.rek, jenis: E.dasar.jenis || "barang", uraian, harga, bulan, oleh: STATE.guruNama || "", t: E.id ? (BSP.kk.baris[E.id].t || Date.now()) : Date.now(), ...(E.sisip ? { sisip: true } : E.id && BSP.kk.baris[E.id].sisip ? { sisip: true } : {}) };
+  for (const k of E.kartu) {
+    const j = Number(String(k.jml).replace(",", ".")) || 0, nm = BSP_BULAN[k.m - 1];
+    if (!j) { toast(`Isi jumlah untuk bulan ${nm}`, "err"); return; }
+    if (!String(k.sat || "").trim()) { toast(`Pilih satuan untuk bulan ${nm}`, "err"); return; }
+    const hk = _bspHargaKartu(k);
+    if (!hk) { toast(`Isi harga untuk bulan ${nm}`, "err"); return; }
+    bulan[k.m] = { jml: j, sat: k.sat.trim(), ...(E.beda && _bspAngka(k.harga) && _bspAngka(k.harga) !== harga ? { harga: _bspAngka(k.harga) } : {}) };
+  }
+  const hargaUtama = harga || _bspHargaKartu(E.kartu[0]);
+  // batas harga SSH (seperti ARKAS: harga harus di antara batas bawah & batas atas)
+  if (typeof _bspValidasiSSH === "function") { const pesan = _bspValidasiSSH(uraian, [hargaUtama, ...Object.values(bulan).map((x) => x.harga).filter(Boolean)]); if (pesan) { toast(pesan, "err"); return; } }
+  const baru = { kode: E.dasar.kode, kegiatan: E.dasar.kegiatan, rek: E.dasar.rek, jenis: E.dasar.jenis || "barang", uraian, harga: hargaUtama, bulan, oleh: STATE.guruNama || "", t: E.id ? (BSP.kk.baris[E.id].t || Date.now()) : Date.now(), ...(E.sisip ? { sisip: true } : E.id && BSP.kk.baris[E.id].sisip ? { sisip: true } : {}) };
   // tidak boleh melebihi pagu (seperti ARKAS: Belum Dianggarkan tidak boleh minus)
   const pagu = _bspPaguRuang(), lain = _bspBarisRuang(BSP.kk, STATE.ruang).filter((b) => b.id !== E.id).reduce((a, b) => a + bspTotalBaris(b), 0);
   if (pagu && lain + bspTotalBaris(baru) > pagu) { toast(`Melebihi pagu. Sisa yang belum dianggarkan ${bspRp(Math.max(0, pagu - lain))}.`, "err"); return; }
@@ -286,6 +309,7 @@ async function bspMasukkan() {
     const hasil = await _kvGabung(_bspKunciKK(BSP.th), { baris: { [id]: baru } });
     BSP.kk = hasil && hasil.baris ? hasil : { ...BSP.kk, baris: { ...BSP.kk.baris, [id]: baru } };
     BSP.simpan = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+    BSP.draf = null;
     closeModal();
     BSP.bulan = Math.min(...Object.keys(bulan).map(Number));
     _bspGambar();
@@ -312,9 +336,10 @@ async function bspAjukan() {
   const catatan = [h.pct(h.honor) > 40 ? `honor ${h.pct(h.honor).toFixed(1)}% (maks 40%)` : "", h.pct(h.sarpras) > 20 ? `sarpras ${h.pct(h.sarpras).toFixed(1)}% (maks 20%)` : "", h.pct(h.buku) < 10 ? `buku ${h.pct(h.buku).toFixed(1)}% (min 10%)` : ""].filter(Boolean);
   if (!(await konfirmasiTema(`Ajukan Kertas Kerja ${_bspNamaRuang(STATE.ruang)} ${BSP.th} (${bspRp(sudah)}) ke Bendahara? Setelah diajukan, Kertas Kerja terkunci sampai disahkan atau dikembalikan.${catatan.length ? " Perhatian: " + catatan.join(", ") + " — batas dihitung dari pagu PKBM oleh Bendahara." : ""}`, { judul: "Ajukan Pengesahan", ikon: "📤", teksYa: "Ya, Ajukan" }))) return;
   try {
-    const hasil = await _kvGabung(_bspKunciKK(BSP.th), { _status: { status: "diajukan", t: Date.now(), oleh: STATE.guruNama || "" } });
+    const hasil = await _kvGabung(_bspKunciKK(BSP.th), { _status: { status: "diajukan", t: Date.now(), oleh: STATE.guruNama || "", oleh_id: STATE.guruId || "" } });
     if (hasil && hasil.baris) BSP.kk = hasil; else BSP.kk._status = { status: "diajukan", t: Date.now(), oleh: STATE.guruNama };
     _bspGambar(); toast("Kertas Kerja diajukan ke Bendahara ✓", "ok");
+    if (typeof _bspPushAjukan === "function") _bspPushAjukan(sudah);
     if (typeof _rgLog === "function") _rgLog("bosp-ajukan", { tahun: BSP.th, total: sudah });
   } catch (e) { toast("Gagal: " + e.message, "err"); }
 }
@@ -529,6 +554,7 @@ async function bspPutuskan(ruang, status) {
   try {
     BSP.umum = await _bspGabungUmum(_bspKunciUmum(BSP.th), { keputusan: { [ruang]: { status, catatan: catatan.trim(), oleh: STATE.guruNama || "", t: Date.now() } } });
     toast(status === "disahkan" ? "Usulan disahkan ✓" : "Usulan dikembalikan untuk revisi", "ok"); _bspGambarGab();
+    if (typeof _bspPushKeputusan === "function") _bspPushKeputusan(ruang, status, catatan.trim());
     if (typeof _rgLog === "function") _rgLog("bosp-" + status, { ruang, tahun: BSP.th });
   } catch (e) { toast("Gagal: " + e.message, "err"); }
 }
@@ -538,7 +564,7 @@ function bspUnduhGab() {
   const baris = [];
   semua.sort((a, b) => a.kode.localeCompare(b.kode)).forEach((b) => Object.entries(b.bulan || {}).sort((x, y) => x[0] - y[0]).forEach(([m, x]) => baris.push({
     Bulan: BSP_BULAN[m - 1], "Program Kegiatan": bspProgram(b.kode)[0], "Kode Kegiatan": b.kode, Kegiatan: b.kegiatan, "Jenis Belanja": (BSP_JENIS[b.jenis] || BSP_JENIS.barang)[0],
-    "Kode Rekening": b.kodeRek || "", "Rekening Belanja": b.rek, Uraian: b.uraian, Jumlah: x.jml, Satuan: x.sat, "Harga Satuan": b.harga, Total: (Number(x.jml) || 0) * (Number(b.harga) || 0), Ruang: _bspNamaRuang(b.ruang), Penyusun: b.oleh || "",
+    "Kode Rekening": b.kodeRek || "", "Rekening Belanja": b.rek, Uraian: b.uraian, Jumlah: x.jml, Satuan: x.sat, "Harga Satuan": x.harga ?? b.harga, Total: (Number(x.jml) || 0) * (Number(x.harga ?? b.harga) || 0), Ruang: _bspNamaRuang(b.ruang), Penyusun: b.oleh || "",
   })));
   baris.sort((a, b) => BSP_BULAN.indexOf(a.Bulan) - BSP_BULAN.indexOf(b.Bulan));
   const wb = XLSX.utils.book_new();
