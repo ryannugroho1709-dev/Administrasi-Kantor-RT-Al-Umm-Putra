@@ -1,7 +1,7 @@
 {
-  "name": "PKBM Al-Umm Barabai — Guru Kelas Rumah Tahfizh Putra",
-  "short_name": "RT Putra",
-  "description": "Aplikasi guru: absensi, jadwal, jurnal, nilai rapor, dan kalender akademik PKBM Al-Umm Barabai — Rumah Tahfizh Putra.",
+  "name": "PKBM Al-Umm Barabai",
+  "short_name": "PKBM Al-Umm",
+  "description": "Aplikasi resmi PKBM Al-Umm Barabai: Paket A, Paket B & C Putra, Paket B & C Putri, dan Pengelola — absensi, jadwal, jurnal, ujian, nilai rapor, keuangan, dan BOSP.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
@@ -11,8 +11,23 @@
   "lang": "id",
   "dir": "ltr",
   "icons": [
-    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }
