@@ -47,7 +47,9 @@ async function _brHias() {
     hero.insertBefore(el, hero.querySelector(".dash-hero-top"));
   }
   // salam
-  const nama = typeof _namaSingkatTopbar === "function" ? _namaSingkatTopbar(STATE.guruNama || "") : (STATE.guruNama || "");
+  // nama lengkap persis seperti di Data Guru (termasuk gelar, mis. "Ryan Nugroho, S.H., M.A")
+  const gData = [...(LOOKUP.guruAll || []), ...(STATE.daftarGuru || [])].find((x) => x && x.id === STATE.guruId);
+  const nama = String((gData && gData.nama) || STATE.guruNama || "").trim();
   const g = qs("dash-greeting");
   if (g && (!STATE.lang || STATE.lang === "id")) g.innerHTML = `<small class="br-salam">Assalamu'alaikum · ${_brSalamWaktu()}</small>${escapeHtml(nama || "Bapak/Ibu Guru")}`;
   // mutiara hikmah
