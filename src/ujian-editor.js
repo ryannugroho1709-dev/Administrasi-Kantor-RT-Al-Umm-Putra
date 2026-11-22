@@ -66,7 +66,56 @@ function _ujeDariBank(b, kunci) {
 }
 
 // preset (opsional, dari Jadwal Ujian → Pengumpulan Soal): { mapel_id, tingkat, jenisNilai, judul }
+// ── Isian identitas soal: Kelas → Mapel (sesuai jadwal kelas itu) → Dihitung sebagai → Bab → Judul ──
+// Mapel yang diajarkan di kelas terpilih (dari jadwal pelajaran) tampil di atas; mapel lain di paling bawah.
+async function _ujeMuatJadwalKelas() {
+  if (UJE.jadwalKelas) return UJE.jadwalKelas;
+  try {
+    const rows = await supa.from("jadwal_pelajaran").select("kelas_id,mapel_id").eq("aktif", true).then(unwrap);
+    const per = {};
+    rows.forEach((r) => {
+      const k = (LOOKUP.kelas || []).find((x) => x.id === r.kelas_id); if (!k || !r.mapel_id) return;
+      const t = String(k.nama_kelas || "").replace(/\D/g, ""); if (!t) return;
+      (per[t] = per[t] || new Set()).add(String(r.mapel_id).split("::")[0]);
+    });
+    UJE.jadwalKelas = per;
+  } catch (e) { UJE.jadwalKelas = {}; }
+  return UJE.jadwalKelas;
+}
+const _ujeTingkatAda = () => [...new Set((LOOKUP.kelas || []).map((k) => String(k.nama_kelas || "").replace(/\D/g, "")).filter(Boolean))].sort((a, b) => +a - +b);
+const UJE_JENIS_NAMA = { uh: "Ulangan Harian", tugas: "Tugas", uts: "UTS", uas: "UAS" };
+// Judul otomatis (selama guru belum mengetik judul sendiri): "UAS Sosiologi Kelas 11", "Ulangan Harian 2 — Tafsir Kelas 11"
+function _ujeJudulOtomatis(m) {
+  const mp = m.sub || ((LOOKUP.mapel || []).find((x) => x.id === m.mapel_id) || {}).nama_mapel || "";
+  if (!mp || !m.tingkat) return "";
+  const j = m.jenisNilai || "uh";
+  return j === "uas" || j === "uts" ? `${UJE_JENIS_NAMA[j]} ${mp} Kelas ${m.tingkat}` : `${UJE_JENIS_NAMA[j]} ${m.bab || 1} — ${mp} Kelas ${m.tingkat}`;
+}
+function _ujePerbaruiJudul() {
+  const m = UJE.m; if (!m) return;
+  if (!m.judul || m.judul === m._judulAuto) { m._judulAuto = _ujeJudulOtomatis(m); m.judul = m._judulAuto; const i = qs("uje-judul"); if (i) i.value = m.judul; }
+}
+function _ujeHtmlMeta(m) {
+  const tingkat = String(m.tingkat || "").replace(/\D/g, "");
+  const diKelas = (UJE.jadwalKelas || {})[tingkat] || new Set();
+  const mapel = (LOOKUP.mapel || []).slice().sort((a, b) => a.nama_mapel.localeCompare(b.nama_mapel, "id"));
+  const opsi = (x) => `<option value="${x.id}" ${x.id === m.mapel_id ? "selected" : ""}>${escapeHtml(x.nama_mapel)}</option>`;
+  const utama = mapel.filter((x) => diKelas.has(x.id)), lain = mapel.filter((x) => !diKelas.has(x.id));
+  const subs = m.mapel_id && typeof subMapel === "function" ? subMapel(m.mapel_id) : [];
+  const no = (n) => `<span class="uje-no">${n}</span>`;
+  return `<div class="uje-meta uje-meta2">
+    <div class="field"><label class="form-label">${no(1)} 🏫 Kelas</label><select class="input" onchange="UJE.m.tingkat=this.value;_ujePerbaruiJudul();_ujeGambar()"><option value="">— pilih kelas —</option>${_ujeTingkatAda().map((t) => `<option value="${t}" ${t === tingkat ? "selected" : ""}>Kelas ${t}</option>`).join("")}${tingkat && !_ujeTingkatAda().includes(tingkat) ? `<option selected value="${escapeHtml(tingkat)}">Kelas ${escapeHtml(tingkat)}</option>` : ""}</select></div>
+    <div class="field"><label class="form-label">${no(2)} 📘 Mapel</label><select class="input" ${tingkat ? "" : "disabled"} onchange="UJE.m.mapel_id=this.value;UJE.m.sub='';_ujePerbaruiJudul();_ujeGambar()"><option value="">${tingkat ? "— pilih mapel —" : "Pilih kelas dulu"}</option>
+      ${utama.length ? `<optgroup label="Mapel di Kelas ${escapeHtml(tingkat)} (sesuai jadwal)">${utama.map(opsi).join("")}</optgroup>` : ""}
+      ${lain.length ? `<optgroup label="${utama.length ? "Mapel lain (tidak ada di jadwal kelas ini)" : "Semua mapel"}">${lain.map(opsi).join("")}</optgroup>` : ""}</select></div>
+    ${subs.length ? `<div class="field"><label class="form-label">🔀 Untuk Mapel <b style="color:var(--bad)">*</b></label><select class="input" onchange="UJE.m.sub=this.value;_ujePerbaruiJudul()"><option value="">— pilih —</option>${subs.map((s) => `<option ${s === m.sub ? "selected" : ""}>${escapeHtml(s)}</option>`).join("")}</select></div>` : ""}
+    <div class="field"><label class="form-label">${no(3)} 📊 Dihitung sebagai</label><select class="input" onchange="UJE.m.jenisNilai=this.value;_ujePerbaruiJudul()">${Object.entries(UJE_JENIS_NAMA).map(([k, l]) => `<option value="${k}" ${(m.jenisNilai || "uh") === k ? "selected" : ""}>${l}</option>`).join("")}</select></div>
+    <div class="field"><label class="form-label">${no(4)} 🔖 Bab / ke-</label><input class="input" type="number" min="1" value="${m.bab}" oninput="UJE.m.bab=Number(this.value)||1;UJE.m.jenisKe=UJE.m.bab;_ujePerbaruiJudul()"></div>
+    <div class="field uje-judul-f"><label class="form-label">${no(5)} 📝 Judul <small>(terisi otomatis — boleh diubah)</small></label><input id="uje-judul" class="input" value="${escapeHtml(m.judul)}" placeholder="mis. Penilaian Bab 2 — Teks Eksposisi" oninput="UJE.m.judul=this.value"></div>
+  </div>`;
+}
 async function ujEditorBuka(bankId, preset) {
+  await _ujeMuatJadwalKelas();
   if (bankId) {
     const b = UJ.bank.find((x) => x.id === bankId); if (!b) return;
     if (typeof _ujBolehKelola === "function" && !_ujBolehKelola(b)) { _ujTolakBukanMilik(b); return; }
@@ -79,6 +128,8 @@ async function ujEditorBuka(bankId, preset) {
     UJE.m = _ujeModelKosong();
     Object.assign(UJE.m, pilih);
     if (preset) { if (preset.mapel_id) UJE.m.mapel_id = preset.mapel_id; if (preset.tingkat) UJE.m.tingkat = String(preset.tingkat); if (preset.judul) UJE.m.judul = preset.judul; }
+    if (UJE.m.tingkat) UJE.m.tingkat = String(UJE.m.tingkat).replace(/D/g, "") || UJE.m.tingkat;
+    _ujePerbaruiJudul();
     UJE.m.bagian.pg.soal.push(_ujeSoalBaru("pg"));
   }
   if (bankId) { const jn = typeof _ujJenisNilai === "function" ? _ujJenisNilai(UJ.bank.find((x) => x.id === bankId)) : null; if (jn) { UJE.m.jenisNilai = jn.jenis; UJE.m.jenisKe = jn.ke; } UJE.m.sub = ((UJ.jenisNilai || {})[bankId] || {}).sub || ""; }
@@ -141,14 +192,7 @@ function _ujeGambar() {
   openModal(`<div class="uje">
     <h3 style="margin-bottom:4px">${m.bankId ? "✏️ Ubah soal" : "✨ Buat soal baru"}</h3>
     <div class="uj-sub" style="margin-bottom:12px">Tidak perlu file JSON. Ketik langsung, <b>tempel dari Word</b>, atau <b>unggah berkas Word/PDF/foto soal</b>. Kunci jawaban disimpan terpisah dan tidak pernah terlihat santri.</div>
-    <div class="uje-meta">
-      <div class="field" style="grid-column:1/-1"><label class="form-label">📝 Judul</label><input class="input" value="${escapeHtml(m.judul)}" placeholder="mis. Penilaian Bab 2 — Teks Eksposisi" oninput="UJE.m.judul=this.value"></div>
-      <div class="field"><label class="form-label">📘 Mapel</label><select class="input" onchange="UJE.m.mapel_id=this.value;UJE.m.sub='';_ujeGambar()"><option value="">— pilih —</option>${LOOKUP.mapel.map((x) => `<option value="${x.id}" ${x.id === m.mapel_id ? "selected" : ""}>${escapeHtml(x.nama_mapel)}</option>`).join("")}</select></div>
-      ${(() => { const subs = m.mapel_id && typeof subMapel === "function" ? subMapel(m.mapel_id) : []; if (!subs.length) return ""; return `<div class="field"><label class="form-label">🔀 Untuk Mapel <b style="color:var(--bad)">*</b></label><select class="input" onchange="UJE.m.sub=this.value"><option value="">— pilih —</option>${subs.map((s) => `<option ${s === m.sub ? "selected" : ""}>${escapeHtml(s)}</option>`).join("")}</select></div>`; })()}
-      <div class="field"><label class="form-label">🏫 Kelas (tingkat)</label><input class="input" value="${escapeHtml(m.tingkat)}" placeholder="mis. 10" oninput="UJE.m.tingkat=this.value"></div>
-      <div class="field"><label class="form-label">📊 Dihitung sebagai</label><select class="input" onchange="UJE.m.jenisNilai=this.value">${[["uh", "Ulangan Harian"], ["tugas", "Tugas"], ["uts", "UTS"], ["uas", "UAS"]].map(([k, l]) => `<option value="${k}" ${(m.jenisNilai || "uh") === k ? "selected" : ""}>${l}</option>`).join("")}</select></div>
-      <div class="field"><label class="form-label">🔖 Bab / ke-</label><input class="input" type="number" min="1" value="${m.bab}" oninput="UJE.m.bab=Number(this.value)||1;UJE.m.jenisKe=UJE.m.bab"></div>
-    </div>
+    ${_ujeHtmlMeta(m)}
     <div class="uje-tab">${UJE_JENIS.map((j) => `<button class="${j === tab ? "aktif" : ""}" style="--rgb:${UJE_WARNA[j]}" onclick="UJE.tab='${j}';_ujeGambar()">${UJE_IKON[j]} ${UJE_LABEL[j]} <span>${m.bagian[j].soal.length}</span>${UJE_JENIS_BARU.includes(j) && !m.bagian[j].soal.length ? `<i class="uje-baru">baru</i>` : ""}</button>`).join("")}</div>
     <div class="uje-bagian" style="--rgb:${UJE_WARNA[tab]}">
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
