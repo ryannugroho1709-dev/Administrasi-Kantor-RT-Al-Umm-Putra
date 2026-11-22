@@ -280,7 +280,7 @@ function _ujGambarSesi() {
     return `<div class="uj-item ${s.dibuka ? "uj-hidup" : "uj-tutup"}">
       <div class="uj-ikon">${s.mode === "ujian" ? "📝" : "🎯"}${s.dibuka ? `<i class="uj-denyut"></i>` : ""}</div>
       <div style="flex:1;min-width:0"><b>${escapeHtml(b.judul || "Bank soal terhapus")}</b>
-        <div class="uj-sub">${escapeHtml(_ujNamaKelas(s.kelas_id))} · <span class="uj-lencana ${s.mode}">${s.mode === "ujian" ? "UJIAN" : "LATIHAN"}</span>${UJ.gaya && UJ.gaya[s.id] && UJ_GAYA[UJ.gaya[s.id]] ? ` · ${UJ_GAYA[UJ.gaya[s.id]][0]} ${UJ_GAYA[UJ.gaya[s.id]][1]}` : ""}${s.durasi_menit ? ` · ${s.durasi_menit} mnt` : ""}${s.token ? ` · token <b>${escapeHtml(s.token)}</b>` : ""} · ${s.dibuka ? "<b style='color:var(--success,#1F8A5F)'>dibuka</b>" : "ditutup"}${s.dikirim_rapor_at ? " · ✅ sudah ke rapor" : ""}
+        <div class="uj-sub">${escapeHtml(_ujNamaKelas(s.kelas_id))} · <span class="uj-lencana ${s.mode}">${s.mode === "ujian" ? "UJIAN" : "LATIHAN"}</span>${(() => { const g = UJ.gaya && UJ.gaya[s.id]; if (!g) return ""; const ut = typeof g === "object" ? g.gaya : g, n = typeof g === "object" && g.per ? Object.keys(g.per).length : 0; return (ut && UJ_GAYA[ut] ? ` · ${UJ_GAYA[ut][0]} ${UJ_GAYA[ut][1]}` : "") + (n ? ` · 🎮 ${n} game` : ""); })()}${s.durasi_menit ? ` · ${s.durasi_menit} mnt` : ""}${s.token ? ` · token <b>${escapeHtml(s.token)}</b>` : ""} · ${s.dibuka ? "<b style='color:var(--success,#1F8A5F)'>dibuka</b>" : "ditutup"}${s.dikirim_rapor_at ? " · ✅ sudah ke rapor" : ""}
         · ${new Date(s.created_at).toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "short" })}</div>
         ${st ? `<div class="uj-langsung"><span class="kerja">⏳ ${nKerja} mengerjakan</span><span class="kirim">✅ ${nKirim} sudah kirim</span></div>` : ""}</div>
       <div class="uj-aksi">
@@ -452,7 +452,17 @@ function ujBukaSesiModal(bankId) {
     </div>
     <div class="field"><label class="form-label">🎮 Tampilan untuk santri</label>
       <div class="uj-gaya">${Object.entries(UJ_GAYA).map(([k, v], i) => `<label><input type="radio" name="uj-s-gaya" value="${k}" ${i === 0 ? "checked" : ""}><span class="uj-gaya-ikon">${v[0]}</span><b>${v[1]}</b><small>${v[2]}</small></label>`).join("")}</div>
-      <div class="uj-sub" style="margin-top:4px">Soal tetap dari bank soal ini. Mode game berlaku untuk PG, PG Kompleks & Benar/Salah; soal jenis lain (isian, jodohkan, urutkan, uraian) tetap tampilan biasa. Kunci jawaban tetap aman.</div></div>
+      <div class="uj-sub" style="margin-top:4px">Soal tetap dari bank soal ini. Mode di atas berlaku untuk PG, PG Kompleks & Benar/Salah. Kunci jawaban tetap aman.</div></div>
+    ${(() => {
+      const ada = new Set((b.soal || []).filter((x) => (x.soal || []).length).map((x) => x.jenis));
+      const pilihan = { pg: [["labirin", "🏃 Labirin Kejar (dikejar hewan)"]], pgk: [["kolam", "🐟 Kolam Ikan"]], isian: [["balok", "🔤 Balok Huruf"]], jodoh: [["kartu", "🃏 Kartu Pasangan"], ["garis", "🔗 Tarik Garis"]], urut: [["kereta", "🚂 Gerbong Kereta"]] };
+      const nama = { pg: "Pilihan Ganda", pgk: "PG Kompleks", isian: "Isian Singkat", jodoh: "Menjodohkan", urut: "Mengurutkan" };
+      const baris = Object.keys(pilihan).filter((j) => ada.has(j));
+      if (!baris.length) return "";
+      return `<div class="field uj-game-per"><label class="form-label">🎮 Game Tiap Jenis Soal <small style="font-weight:500">(boleh dipilih sebagian)</small></label>
+        ${baris.map((j) => `<label class="uj-game-baris"><span>${nama[j]}</span><select class="input" data-gj="${j}"><option value="">📄 Biasa</option>${pilihan[j].map(([k, l]) => `<option value="${k}">${l}</option>`).join("")}</select></label>`).join("")}
+        <div class="uj-sub">Kalau "Tampilan untuk santri" di atas memakai Roket/Balon/Menara, PG & PG Kompleks mengikuti pilihan itu. Coba dulu lewat 🧪 Uji coba.</div></div>`;
+    })()}
     <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;margin:4px 0 10px"><input type="checkbox" id="uj-s-acak"> Acak urutan soal PG untuk tiap santri</label>
     <div class="uj-sub" style="margin-bottom:10px">Nilai dicatat untuk semester <b>${semester} ${ta}</b>.</div>
     <button class="btn btn-accent" style="width:100%" onclick="ujSimpanSesi('${b.id}')">Buka sekarang</button>`);
@@ -476,7 +486,10 @@ async function ujSimpanSesi(bankId) {
     const { data: baru, error } = await supa.from("ujian_sesi").insert(row).select("id").single();
     if (error) throw error;
     const gaya = document.querySelector('input[name="uj-s-gaya"]:checked')?.value || "biasa";
-    if (gaya !== "biasa" && baru?.id) await _ujSimpanGaya(baru.id, gaya);
+    // game per jenis soal (Labirin, Kolam Ikan, Balok Huruf, Kartu/Garis, Kereta) → { gaya, per }
+    const per = {}; document.querySelectorAll(".uj-game-per select[data-gj]").forEach((el) => { if (el.value) per[el.dataset.gj] = el.value; });
+    const nilaiGaya = Object.keys(per).length ? { gaya: gaya !== "biasa" ? gaya : null, per } : gaya;
+    if (nilaiGaya !== "biasa" && baru?.id) await _ujSimpanGaya(baru.id, nilaiGaya);
     closeModal(); toast(`Sesi dibuka untuk ${_ujNamaKelas(row.kelas_id)}${row.token ? " · token " + row.token : ""}`, "ok"); ujMuat();
   } catch (e) { toast(_ujPesan(e), "err"); }
 }

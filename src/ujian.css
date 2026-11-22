@@ -668,3 +668,4 @@ input.nt-baru{animation:ntKedip 1.2s ease 3;box-shadow:0 0 0 2px #22c55e inset}
 .uje-no{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--accent,#2563eb);color:#fff;font-size:10.5px;font-weight:800;margin-right:4px;vertical-align:1px}
 .uje-meta2 select:disabled{opacity:.6}
 @media (max-width:640px){.uje-meta2{grid-template-columns:1fr 1fr}}
+.uj-game-per{border:1.5px solid #c7d2fe;background:#f5f7ff;border-radius:12px;padding:10px 12px}.uj-game-baris{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0;font-size:13px;font-weight:600}.uj-game-baris select{max-width:62%}
