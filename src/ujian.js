@@ -98,14 +98,22 @@ async function ujKirimPinWa() {
   const teks = `🔐 *PIN UJIAN ONLINE*\n\nAssalamu'alaikum, Asatidz.\nPIN untuk membuat & mengubah soal di menu *Ujian Online*: *${pin}*\n\nCukup dimasukkan SEKALI di HP masing-masing, setelah itu tidak ditanya lagi.\nMohon PIN ini *tidak dibagikan ke santri* — PIN menjaga kunci jawaban.\n\nAplikasi: ${tautan}\nJazakumullahu khairan.`;
   window.open("https://wa.me/?text=" + encodeURIComponent(teks), "_blank", "noopener");
 }
+// Satu bank soal bisa dipakai beberapa kelas: kelas utama (b.tingkat) + kelasLain di kv "ujian:jenis".
+function _ujTingkatBank(b) {
+  if (!b) return [];
+  const x = (typeof UJ !== "undefined" && UJ.jenisNilai && UJ.jenisNilai[b.id]) || (typeof UA !== "undefined" && UA.jenis && UA.jenis[b.id]) || {};
+  const utama = String(b.tingkat || "").replace(/\D/g, "");
+  return [...new Set([utama, ...(x.kelasLain || []).map((t) => String(t).replace(/\D/g, ""))].filter(Boolean))].sort((p, q) => +p - +q);
+}
+const _ujLabelKelasBank = (b) => { const t = _ujTingkatBank(b); return t.length ? t.join(" & ") : String(b.tingkat || "-"); };
 // Hak ubah/hapus bank soal: admin semua; guru = soal buatannya sendiri atau mapel yang ia ampu di kelas itu.
 function _ujBolehKelola(b) {
   if (!b) return false;
   if (isAdmin()) return true;
   const saya = STATE.guruId; if (!saya) return false;
   if (b.dibuat_oleh === saya) return true;
-  const tingkat = parseInt(String(b.tingkat || "").replace(/\D/g, ""), 10);
-  return (UJ.ajarSaya || []).some((a) => a.mapel_id === b.mapel_id && (!tingkat || parseInt(String(_ujNamaKelas(a.kelas_id)).replace(/\D/g, ""), 10) === tingkat));
+  const tingkat = _ujTingkatBank(b).map(Number);
+  return (UJ.ajarSaya || []).some((a) => a.mapel_id === b.mapel_id && (!tingkat.length || tingkat.includes(parseInt(String(_ujNamaKelas(a.kelas_id)).replace(/\D/g, ""), 10))));
 }
 function _ujTolakBukanMilik(b) {
   const pembuat = (LOOKUP.guruAll || []).find((g) => g.id === b?.dibuat_oleh);
@@ -233,12 +241,12 @@ function _ujGambarBank() {
   if (!UJ.bank.length) { el.innerHTML = `<div class="uj-kosong">Belum ada bank soal. Tekan <b>✨ Buat soal baru</b> atau <b>📋 Tempel dari Word</b>.</div>`; return; }
   // penyaring kelas & mapel (diingat di perangkat)
   const pilihan = UJ.saring || (UJ.saring = (() => { try { return JSON.parse(localStorage.getItem("ujSaring") || "{}"); } catch (e) { return {}; } })());
-  const kelasAda = [...new Set(UJ.bank.map((b) => String(b.tingkat || "-")))].sort((a, b) => _ujKelasAngka(a) - _ujKelasAngka(b));
+  const kelasAda = [...new Set(UJ.bank.flatMap((b) => (_ujTingkatBank(b).length ? _ujTingkatBank(b) : [String(b.tingkat || "-")])))].sort((a, b) => _ujKelasAngka(a) - _ujKelasAngka(b));
   const mapelAda = [...new Set(UJ.bank.map(_ujNamaMapelTampil))].sort((a, b) => a.localeCompare(b, "id"));
-  const daftar = UJ.bank.filter((b) => (!pilihan.kelas || String(b.tingkat || "-") === pilihan.kelas) && (!pilihan.mapel || _ujNamaMapelTampil(b) === pilihan.mapel));
+  const daftar = UJ.bank.filter((b) => (!pilihan.kelas || String(b.tingkat || "-") === pilihan.kelas || _ujTingkatBank(b).includes(pilihan.kelas)) && (!pilihan.mapel || _ujNamaMapelTampil(b) === pilihan.mapel));
   const grup = new Map();
   daftar.slice().sort((a, b) => _ujKelasAngka(a.tingkat) - _ujKelasAngka(b.tingkat) || _ujNamaMapelTampil(a).localeCompare(_ujNamaMapelTampil(b), "id") || (a.bab || 0) - (b.bab || 0))
-    .forEach((b) => { const k = `Kelas ${b.tingkat || "-"} · ${_ujNamaMapelTampil(b)}`; if (!grup.has(k)) grup.set(k, []); grup.get(k).push(b); });
+    .forEach((b) => { const k = `Kelas ${_ujLabelKelasBank(b)} · ${_ujNamaMapelTampil(b)}`; if (!grup.has(k)) grup.set(k, []); grup.get(k).push(b); });
   const saringHtml = UJ.bank.length > 1 ? `<div class="uj-saring">
       <select onchange="UJ.saring.kelas=this.value;_ujSimpanSaring()"><option value="">🏫 Semua kelas</option>${kelasAda.map((k) => `<option value="${escapeHtml(k)}" ${pilihan.kelas === k ? "selected" : ""}>Kelas ${escapeHtml(k)}</option>`).join("")}</select>
       <select onchange="UJ.saring.mapel=this.value;_ujSimpanSaring()"><option value="">📘 Semua mapel</option>${mapelAda.map((m) => `<option ${pilihan.mapel === m ? "selected" : ""}>${escapeHtml(m)}</option>`).join("")}</select>
@@ -250,7 +258,7 @@ function _ujGambarBank() {
     <div class="uj-item">
       <div class="uj-ikon">📘</div>
       <div style="flex:1;min-width:0"><b>${escapeHtml(b.judul)}</b>
-        <div class="uj-sub">${escapeHtml(_ujNamaMapelTampil(b))} · Kelas ${escapeHtml(b.tingkat || "-")} · Bab ${b.bab} · ${_ujJumlahSoal(b.soal)} soal${adaGambar ? " · 🖼️ bergambar" : ""} · → ${escapeHtml(_ujLabelJenis(b))}${pembuat ? ` · oleh ${escapeHtml(typeof _namaSingkatTopbar === "function" ? _namaSingkatTopbar(pembuat.nama) : pembuat.nama)}` : ""}</div></div>
+        <div class="uj-sub">${escapeHtml(_ujNamaMapelTampil(b))} · Kelas ${escapeHtml(_ujLabelKelasBank(b))} · Bab ${b.bab} · ${_ujJumlahSoal(b.soal)} soal${adaGambar ? " · 🖼️ bergambar" : ""} · → ${escapeHtml(_ujLabelJenis(b))}${pembuat ? ` · oleh ${escapeHtml(typeof _namaSingkatTopbar === "function" ? _namaSingkatTopbar(pembuat.nama) : pembuat.nama)}` : ""}</div></div>
       <div class="uj-aksi">
         <button class="btn btn-accent btn-sm" onclick="ujBukaSesiModal('${b.id}')">▶ Buka sesi</button>
         ${_ujBolehKelola(b) ? `<button class="btn btn-sm uj-b-ungu" onclick="ujEditorBuka('${b.id}')" title="Ubah soal, kunci, gambar">✏️ Ubah</button>
@@ -426,10 +434,13 @@ async function ujLihatKunci(id) {
 // ── Buka sesi ──
 function ujBukaSesiModal(bankId) {
   const b = UJ.bank.find((x) => x.id === bankId); if (!b) return;
-  const cocok = LOOKUP.kelas.find((k) => b.tingkat && new RegExp(`\\b${String(b.tingkat).replace(/\D/g, "")}\\b`).test(k.nama_kelas));
+  // kelas yang memakai bank soal ini ditaruh paling atas (bisa lebih dari satu kelas)
+  const tk = _ujTingkatBank(b), angkaK = (k) => String(k.nama_kelas || "").replace(/\D/g, "");
+  const cocok = LOOKUP.kelas.find((k) => tk.includes(angkaK(k)));
+  const urutKelas = [...LOOKUP.kelas.filter((k) => tk.includes(angkaK(k))), ...LOOKUP.kelas.filter((k) => !tk.includes(angkaK(k)))];
   const { ta, semester } = _ujSemesterSekarang();
   openModal(`<h3>▶ Buka sesi · ${escapeHtml(b.judul)}</h3>
-    <div class="field"><label class="form-label">Kelas</label><select id="uj-s-kelas" class="input">${LOOKUP.kelas.map((k) => `<option value="${k.id}" ${cocok && cocok.id === k.id ? "selected" : ""}>${escapeHtml(k.nama_kelas)}</option>`).join("")}</select></div>
+    <div class="field"><label class="form-label">Kelas${tk.length > 1 ? ` <small style="font-weight:500">(soal ini dipakai Kelas ${escapeHtml(tk.join(" & "))} — buka sesi untuk tiap kelas)</small>` : ""}</label><select id="uj-s-kelas" class="input">${urutKelas.map((k) => `<option value="${k.id}" ${cocok && cocok.id === k.id ? "selected" : ""}>${escapeHtml(k.nama_kelas)}</option>`).join("")}</select></div>
     <div class="field"><label class="form-label">Jenis</label>
       <div class="uj-mode">
         <label><input type="radio" name="uj-s-mode" value="latihan" checked onchange="_ujModeBerubah()"> 🎯 <b>Latihan</b><span>Boleh diulang, nilai langsung keluar (PG saja). Tidak masuk rapor. Santri langsung melihat soal mana yang benar/belum tepat — jadi <b>jangan pakai bank soal yang sama untuk ujian</b>.</span></label>

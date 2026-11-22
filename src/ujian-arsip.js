@@ -115,7 +115,7 @@ function _uaBankCocok(j, mapelId, kelasId) {
   const jenisPerlu = j.jenis === "uts" ? ["uts"] : j.jenis === "uas" ? ["uas"] : ["uts", "uas"];
   const batas = new Date(_juTgl(j.mulai).getTime() - 150 * 86400000).toISOString();
   const sub = _uaSub(mapelId).toLowerCase();
-  return (UA.bank || []).filter((b) => b.mapel_id === _uaBase(mapelId) && _uaSubCocok(b, sub) && String(b.tingkat || "").replace(/\D/g, "") === angka && (b.updated_at || "") >= batas)
+  return (UA.bank || []).filter((b) => b.mapel_id === _uaBase(mapelId) && _uaSubCocok(b, sub) && (typeof _ujTingkatBank === "function" ? _ujTingkatBank(b).includes(angka) : String(b.tingkat || "").replace(/\D/g, "") === angka) && (b.updated_at || "") >= batas)
     .filter((b) => { const x = UA.jenis?.[b.id]; const jn = x?.jenis || (typeof _ujJenisNilai === "function" ? _ujJenisNilai(b).jenis : "uh"); return jenisPerlu.includes(jn); });
 }
 function _uaStatus(j, item) {
