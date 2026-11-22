@@ -170,3 +170,14 @@ body.mv-buka { overflow: hidden; }
 .mv-papan-saja .mv-stage { background: #fff; }
 /* tulisan petunjuk kecil di bagian bawah layar disembunyikan (mengganggu saat mengajar) */
 .mv-tip, .mv-presentasi .mv-tip { display: none !important; }
+/* ── Mode ↕ Gulir: halaman memanjang ke bawah seperti PDF ── */
+.mv-gulir .mv-stage { display: block; overflow-y: auto; overflow-x: auto; padding: 12px; scroll-behavior: auto; }
+.mv-gulir .mv-page, .mv-gulir .mv-next { display: none !important; }
+.mv-gulir.mv-presentasi .mv-stage { background: #0b0d10; }
+.mv-gulir-wadah { display: flex; flex-direction: column; align-items: center; gap: 14px; padding-bottom: 40vh; }
+.mv-gulir-hal { position: relative; background: #fff; box-shadow: 0 8px 28px rgba(0, 0, 0, .45); border-radius: 2px; flex: none; }
+.mv-gulir-hal canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.mv-gulir-hal .g-ink { pointer-events: none; }
+.mv-gulir-no { position: absolute; right: 8px; bottom: 8px; font-size: 11px; font-weight: 700; color: #fff; background: rgba(15, 17, 21, .55); padding: 2px 8px; border-radius: 999px; pointer-events: none; }
+.mv-gulir-btn { white-space: nowrap; }
+.mv-gulir-btn span { margin-left: 2px; }

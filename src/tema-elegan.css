@@ -971,3 +971,53 @@ html .dash-hero.br-hero.br-ada-foto .dash-hero-deco{display:none}
 .ark-ringkas-hp .ark-kode{font-size:11px}
 .ark-ringkas-hp tr.ark-l1 td,.ark-ringkas-hp tr.ark-l2 td,.ark-ringkas-hp tr.ark-l3 td{font-size:11.5px}
 #modal-panel.modal-lebar.ark-modal,#modal-panel.ark-modal{max-width:min(1180px,96vw)}
+/* ── Arsip ARKAS: tema "buku kas resmi" (biru tua + emas) ── */
+.ark{--ark-biru:#0f3d6e;--ark-biru2:#16578f;--ark-emas:#d4a63a;--ark-hijau:#1f8a5b}
+.ark-hero{position:relative;overflow:hidden;display:flex;gap:14px;align-items:flex-start;padding:18px 18px 16px;margin:-4px 0 12px;border-radius:16px;color:#fff;
+  background:radial-gradient(120% 140% at 0% 0%,#1d6aa8 0%,transparent 55%),linear-gradient(135deg,var(--ark-biru) 0%,#0b2c52 60%,#0a2442 100%);box-shadow:0 10px 28px rgba(15,61,110,.25)}
+.ark-hero::after{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;background:linear-gradient(90deg,var(--ark-emas),#f4d27a,var(--ark-emas))}
+.ark-hero-hias{position:absolute;right:0;top:0;height:100%;width:62%;color:#f4d27a;pointer-events:none}
+.ark-hero-ikon{flex:none;width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:rgba(255,255,255,.12);border:1px solid rgba(244,210,122,.55);color:#f4d27a}
+.ark-hero-ikon svg{width:26px;height:26px}
+.ark-hero-teks{position:relative;min-width:0}
+.ark-hero-label{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#f4d27a}
+.ark-hero h3{margin:2px 0 4px;font-size:22px;color:#fff;line-height:1.15}
+.ark-hero p{margin:0 0 10px;font-size:12.5px;line-height:1.5;color:rgba(255,255,255,.85);max-width:560px}
+.ark-hero p b{color:#fff}
+.ark-hero-chip{display:flex;flex-wrap:wrap;gap:6px}
+.ark-hero-chip>span{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);color:#fff;backdrop-filter:blur(4px)}
+.ark-hero-chip svg{width:14px;height:14px;color:#f4d27a}
+.ark-hero-chip b{color:#fff}
+.ark-hero-chip select{background:transparent;border:0;color:#fff;font:inherit;font-weight:700;padding:0 2px;cursor:pointer}
+.ark-hero-chip select option{color:#111}
+/* tab berbentuk pil dengan ikon */
+.ark-tab{display:flex;gap:6px;flex-wrap:wrap;padding:4px;border-radius:14px;background:#eef2f7;margin:0 0 12px}
+.ark-tab button{flex:1 1 auto;display:inline-flex;align-items:center;justify-content:center;gap:7px;border:0;background:transparent;color:#41536b;font:inherit;font-size:13px;font-weight:700;padding:9px 12px;border-radius:10px;cursor:pointer;transition:background .15s,color .15s}
+.ark-tab button svg{width:16px;height:16px}
+.ark-tab button:hover{background:rgba(255,255,255,.7)}
+.ark-tab button.aktif{background:#fff;color:var(--ark-biru);box-shadow:0 2px 8px rgba(15,61,110,.15)}
+.ark-tab button.aktif svg{color:var(--ark-emas)}
+/* kartu ringkasan berwarna */
+.ark-kartu{position:relative;overflow:hidden;border:1px solid #e3e8ef;border-radius:12px;padding:10px 14px 10px 18px;background:#fff}
+.ark-kartu>i{position:absolute;left:0;top:0;bottom:0;width:5px}
+.ark-kartu.k-pagu>i{background:var(--ark-biru2)}.ark-kartu.k-pagu b{color:var(--ark-biru)}
+.ark-kartu.k-belanja>i{background:var(--ark-hijau)}.ark-kartu.k-belanja b{color:var(--ark-hijau)}
+.ark-kartu.k-sisa>i{background:var(--ark-emas)}.ark-kartu.k-sisa b{color:#9a6b05}
+.ark-info{background:#f6f8fb;border:1px dashed #cdd6e2;border-radius:10px;padding:8px 12px}
+.ark-sub{background:#f6f8fb}
+.ark-judul-cetak b{color:var(--ark-biru)}
+.ark-t thead th{background:#e6edf5;color:#0f3d6e}
+.ark-t tfoot td{background:#e6edf5;color:#0f3d6e}
+.ark-bar{background:linear-gradient(90deg,var(--ark-biru2),var(--ark-hijau));opacity:1}
+.ark-bulan i.on{background:var(--ark-biru2)}
+.ark-atas select{border-color:#cdd6e2}
+@media(max-width:700px){
+  .ark-hero{padding:14px 14px 14px}
+  .ark-hero-ikon{width:40px;height:40px}
+  .ark-hero h3{font-size:19px}
+  .ark-hero-hias{width:100%;opacity:.5}
+  .ark-tab button span{font-size:12px}
+  .ark-tab button{padding:8px 6px}
+}
+#modal-panel.ark-modal #modal-close-btn{position:absolute;z-index:6;background:rgba(255,255,255,.92);color:#0f3d6e;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+@media(max-width:700px){.ark-tab{flex-wrap:nowrap;gap:3px}.ark-tab button{flex:1 1 0;min-width:0;gap:4px;padding:8px 4px}.ark-tab button span{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ark-tab button svg{flex:none;width:14px;height:14px}}

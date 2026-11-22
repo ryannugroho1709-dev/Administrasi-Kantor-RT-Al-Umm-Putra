@@ -39,10 +39,40 @@ async function bspArsipArkas(th) {
   } catch (e) { toast("Gagal memuat arsip: " + e.message, "err"); return; }
   finally { if (typeof setGlobalLoading === "function") setGlobalLoading(false); }
   if (!ARK.d) { openModal(`<h3>🗂 Arsip ARKAS</h3><p>Belum ada cetakan ARKAS yang diarsipkan.</p>`); return; }
-  openModal(`<div class="ark"><h3 style="margin:0 0 4px">🗂 Arsip ARKAS</h3>
-    <div class="ark-ket">Salinan cetakan resmi <b>Rincian Kertas Kerja Perbulan</b> dari ARKAS — disimpan supaya mudah dicari dan menjadi bahan belajar menyusun anggaran tahun berikutnya.</div>
-    <div class="ark-atas"><label>Tahun <select id="ark-th" onchange="bspArsipArkas(this.value)">${ARK.tahunAda.map((t) => `<option ${t === ARK.th ? "selected" : ""}>${t}</option>`).join("")}</select></label>
-    <div class="rg-tab ark-tab">${[["ringkas", "Ringkasan"], ["rinci", "Rincian Bulanan"], ["pola", "Pola Belanja"]].map(([k, n]) => `<button class="${ARK.tab === k ? "aktif" : ""}" onclick="ARK.tab='${k}';_arkGambar()">${n}</button>`).join("")}</div></div>
+  // statistik kecil untuk pita judul
+  const versiAda = ARK_VERSI.filter((v) => ARK.d[v] && Object.keys(ARK.d[v]).length);
+  const jmlCetak = versiAda.reduce((n, v) => n + Object.keys(ARK.d[v]).length, 0);
+  const pagu = (ARK.d.info && ARK.d.info.pagu) || 0;
+  const ik = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+  const IK = {
+    ringkas: ik('<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>'),
+    rinci: ik('<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>'),
+    pola: ik('<circle cx="12" cy="12" r="8"/><path d="M12 4v8l6 4"/>'),
+  };
+  openModal(`<div class="ark">
+    <div class="ark-hero">
+      <svg class="ark-hero-hias" viewBox="0 0 400 160" preserveAspectRatio="xMaxYMid slice" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="1.2" opacity=".5">
+          <circle cx="340" cy="20" r="70"/><circle cx="340" cy="20" r="46"/><circle cx="395" cy="140" r="38"/>
+          <path d="M210 150 L250 112 L282 128 L322 82 L360 98 L398 56"/>
+        </g>
+        <g fill="currentColor" opacity=".55"><circle cx="250" cy="112" r="3"/><circle cx="282" cy="128" r="3"/><circle cx="322" cy="82" r="3"/><circle cx="360" cy="98" r="3"/></g>
+        <g fill="none" stroke="currentColor" stroke-width="1.3" opacity=".35"><rect x="150" y="96" width="26" height="54" rx="3"/><rect x="182" y="70" width="26" height="80" rx="3"/></g>
+      </svg>
+      <div class="ark-hero-ikon">${ik('<path d="M4 4h11l5 5v11a1 1 0 0 1-1 1H4z"/><path d="M15 4v5h5"/><path d="M8 13h8M8 17h5"/><circle cx="17.5" cy="17.5" r="0"/>')}</div>
+      <div class="ark-hero-teks">
+        <span class="ark-hero-label">BOSP Kesetaraan · Kertas Kerja</span>
+        <h3>Arsip ARKAS</h3>
+        <p>Salinan cetakan resmi <b>Rincian Kertas Kerja Perbulan</b> — mudah dicari &amp; jadi bahan belajar menyusun anggaran tahun berikutnya.</p>
+        <div class="ark-hero-chip">
+          <span>${ik('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>')} Tahun
+            <select id="ark-th" onchange="bspArsipArkas(this.value)">${ARK.tahunAda.map((t) => `<option ${t === ARK.th ? "selected" : ""}>${t}</option>`).join("")}</select></span>
+          <span>${ik('<path d="M12 3v18M17 7H9.5a3 3 0 0 0 0 6h5a3 3 0 0 1 0 6H6"/>')} Pagu <b>Rp ${_arkRp(pagu)}</b></span>
+          <span>${ik('<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/>')} <b>${jmlCetak}</b> cetakan · ${versiAda.length} versi</span>
+        </div>
+      </div>
+    </div>
+    <div class="ark-tab">${[["ringkas", "Ringkasan"], ["rinci", "Rincian Bulanan"], ["pola", "Pola Belanja"]].map(([k, n]) => `<button class="${ARK.tab === k ? "aktif" : ""}" onclick="ARK.tab='${k}';_arkGambar()">${IK[k]}<span>${n}</span></button>`).join("")}</div>
     <div id="ark-isi"></div></div>`, { lebar: true });
   qs("modal-panel").classList.add("ark-modal");
   _arkGambar();
@@ -70,10 +100,10 @@ function _arkHtmlRingkas() {
     <td><button class="btn btn-sm btn-ghost" onclick="ARK.tab='rinci';ARK.bulan=${b.m};ARK.versi='Final';_arkGambar()">Rincian</button></td></tr>`).join("");
   const info = (d.info && d.info.versi) || {};
   return `<div class="ark-kartu-baris">
-      <div class="ark-kartu"><span>Pagu BOSP ${ARK.th}</span><b>Rp ${_arkRp(pagu)}</b></div>
-      <div class="ark-kartu"><span>Total Belanja (versi terakhir)</span><b>Rp ${_arkRp(totFinal)}</b></div>
-      <div class="ark-kartu"><span>${totFinal <= pagu ? "Sisa" : "Lebih dari pagu"}</span><b>Rp ${_arkRp(Math.abs(pagu - totFinal))}</b></div></div>
-    <div class="ark-ket" style="margin:10px 0">${versiAda.map((v) => `<div>• <b>${v}</b>: ${_arkE(info[v] || "")}</div>`).join("")}
+      <div class="ark-kartu k-pagu"><i></i><span>Pagu BOSP ${ARK.th}</span><b>Rp ${_arkRp(pagu)}</b></div>
+      <div class="ark-kartu k-belanja"><i></i><span>Total Belanja (versi terakhir)</span><b>Rp ${_arkRp(totFinal)}</b></div>
+      <div class="ark-kartu k-sisa"><i></i><span>${totFinal <= pagu ? "Sisa" : "Lebih dari pagu"}</span><b>Rp ${_arkRp(Math.abs(pagu - totFinal))}</b></div></div>
+    <div class="ark-ket ark-info" style="margin:10px 0">${versiAda.map((v) => `<div>• <b>${v}</b>: ${_arkE(info[v] || "")}</div>`).join("")}
       <div>• Kolom <b>Berlaku</b> = versi terakhir untuk bulan itu (Perubahan → Pergeseran → RKAS awal).</div></div>
     <div class="table-wrap"><table class="ark-t ark-ringkas"><thead><tr><th>Bulan</th>${versiAda.map((v) => `<th class="r${v !== "Murni" ? " ark-hp-x" : ""}">${v === "Murni" ? "RKAS Awal" : v}</th>`).join("")}<th class="r">Berlaku</th><th class="ark-bar-td"></th><th></th></tr></thead>
     <tbody>${sel}</tbody><tfoot><tr><td>Jumlah</td>${versiAda.map((v) => `<td class="r${v !== "Murni" ? " ark-hp-x" : ""}">${_arkRp(tot[v] || 0)}</td>`).join("")}<td class="r"><b>${_arkRp(totFinal)}</b></td><td class="ark-bar-td"></td><td></td></tr></tfoot></table></div>`;
