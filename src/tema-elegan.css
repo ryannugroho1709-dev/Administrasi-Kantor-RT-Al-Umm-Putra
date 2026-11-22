@@ -854,3 +854,18 @@ html .dash-hero.br-hero.br-ada-foto .dash-hero-deco{display:none}
 @media (max-width:560px){.dash-hero.br-hero{padding:16px}.br-hero .dash-hero-greeting{font-size:19px}.br-ganti span{display:none}.br-hero .dash-hero-clockwrap{text-align:left}}
 .br-hero .dash-hero-pill[data-br]:hover{background:rgba(255,255,255,.2)}
 
+
+/* ── Arsip Google Drive: bukti BOSP & dokumen guru ── */
+.ar-bukti{white-space:nowrap}
+.ar-chip{display:inline-flex;align-items:center;gap:3px;margin:2px 3px 2px 0;padding:2px 4px 2px 8px;border-radius:999px;font-size:11px;font-weight:700;background:var(--bg-soft,rgba(0,0,0,.05));color:var(--text-secondary);border:1px solid var(--border-soft,#e5e9f0)}
+.ar-chip.ada{background:color-mix(in srgb,#16a34a 12%,transparent);color:#15803d;border-color:color-mix(in srgb,#16a34a 35%,transparent)}
+.ar-chip.kurang{background:color-mix(in srgb,#dc2626 10%,transparent);color:#b91c1c;border-color:color-mix(in srgb,#dc2626 35%,transparent)}
+.ar-chip a{color:inherit;text-decoration:none}
+.ar-chip button{border:0;background:transparent;color:inherit;cursor:pointer;font-weight:800;padding:0 4px;border-radius:999px}
+.ar-chip button:hover{background:rgba(0,0,0,.08)}
+.ar-peringatan{margin:8px 0;padding:9px 12px;border-radius:12px;font-size:12px;background:color-mix(in srgb,#dc2626 9%,transparent);color:#b91c1c;border:1px solid color-mix(in srgb,#dc2626 25%,transparent)}
+.ar-dok-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;margin-bottom:12px}
+.ar-dok-item{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-radius:12px;border:1px dashed var(--border-soft,#d8dee8);font-size:12px}
+.ar-dok-item.ada{border-style:solid;border-color:color-mix(in srgb,#16a34a 40%,transparent);background:color-mix(in srgb,#16a34a 6%,transparent)}
+.ar-dok-item span{color:var(--text-secondary);font-size:11px}
+.ar-dok-item .btn{align-self:flex-start;border-radius:10px}
