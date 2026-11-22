@@ -195,26 +195,78 @@ function _arkHtmlPola() {
   const g = kelompok((r) => r.kode);
   return kepala + tabel("Kegiatan", g, (o) => `<b class="ark-kode">${o.k}</b> ${_arkE(nama[o.k] || "")}<br><small>${_arkE(nama[o.k.split(".")[0]] || _arkProgNama(o.k.split(".")[0]))}</small>`);
 }
+// ── Catatan Belajar: dibaca seperti "laporan keuangan sederhana" untuk orang awam ──
+const ARK_STANDAR_AWAM = {
+  "01": ["Kelulusan", "Kegiatan yang menunjang lulusan (bimbingan, pembinaan)"],
+  "02": ["Isi / Kurikulum", "Penyusunan kurikulum, perpustakaan & bahan bacaan"],
+  "03": ["Kegiatan Belajar", "Ekstrakurikuler, upah tutor kegiatan, transport lomba"],
+  "04": ["Pengembangan Guru", "Pelatihan, komunitas belajar, perjalanan dinas, konsumsi rapat guru"],
+  "05": ["Barang & Aset", "Laptop, tablet, printer, proyektor, buku, seragam — dibeli sekali, dipakai lama"],
+  "06": ["Operasional Sekolah", "Listrik, internet, ATK, kebersihan, honor TU & operator — biaya rutin"],
+  "07": ["Honor & Administrasi Keuangan", "Honor guru/tutor, materai, pelaporan keuangan"],
+  "08": ["Ujian & Penilaian", "Panitia ujian, konsumsi, spanduk, operator ujian"],
+};
+const ARK_WARNA_STANDAR = { "01": "#64748b", "02": "#0891b2", "03": "#7c3aed", "04": "#db2777", "05": "#2563eb", "06": "#16a34a", "07": "#d97706", "08": "#dc2626" };
 function _arkHtmlCatatan(semua, total, pagu, kelompok) {
-  const nama = ARK.d.nama || {};
-  const rutin = kelompok((r) => _arkNamaBarang(r.uraian) + "§" + r.kode).filter((o) => o.bulan.size >= 10);
-  const keg = kelompok((r) => r.kode).slice(0, 5);
+  const nama = ARK.d.nama || {}, rp = (n) => "Rp " + _arkRp(n), persen = (n, dari) => (dari ? ((n / dari) * 100).toFixed(1).replace(".", ",") : "0") + "%";
+  const bersih = (s) => String(s || "").replace(/\s*\(\d{8,}\)/, "").replace(/[-\s]+$/, "");
+  const honor = (r) => r.kode.startsWith("07.12") || /orang \/ bulan/.test(r.sat);
+  // 1. Ke mana uangnya?
   const prog = kelompok((r) => r.kode.split(".")[0]);
-  // Kode rekening belanja modal (5.2.x) di kegiatan yang bukan pengadaan aset → patut dicek
+  const bar = prog.map((o) => `<i style="width:${(o.n / total) * 100}%;background:${ARK_WARNA_STANDAR[o.k] || "#94a3b8"}" title="${_arkE((ARK_STANDAR_AWAM[o.k] || [o.k])[0])} ${persen(o.n, total)}"></i>`).join("");
+  const kartuStd = prog.map((o) => { const [n, ket] = ARK_STANDAR_AWAM[o.k] || [nama[o.k] || o.k, ""]; return `<div class="arkc-std" style="--w:${ARK_WARNA_STANDAR[o.k] || "#94a3b8"}">
+      <div class="arkc-std-atas"><span class="arkc-titik"></span><b>${_arkE(n)}</b><em>${persen(o.n, total)}</em></div>
+      <div class="arkc-uang">${rp(o.n)}</div><small>${_arkE(ket)}</small><div class="arkc-resmi">Standar ${o.k} · ${_arkE(nama[o.k] || _arkProgNama(o.k))}</div></div>`; }).join("");
+  // 2. Belanja terbesar
+  const besar = kelompok((r) => r.kode).slice(0, 5), maks = besar[0] ? besar[0].n : 1;
+  const sifat = (o) => o.bulan.size >= 10 ? `<span class="arkc-tag rutin">Rutin tiap bulan</span>` : o.bulan.size <= 2 ? `<span class="arkc-tag sekali">Sekali beli</span>` : `<span class="arkc-tag musim">${o.bulan.size} bulan</span>`;
+  const htmlBesar = besar.map((o, i) => `<div class="arkc-rank"><span class="arkc-no">${i + 1}</span><div class="arkc-rank-isi"><div class="arkc-rank-atas"><b>${_arkE(nama[o.k] || o.k)}</b><span>${rp(o.n)}</span></div>
+      <div class="arkc-batang"><i style="width:${(o.n / maks) * 100}%"></i></div><small>Kegiatan ${o.k} · ${persen(o.n, total)} dari seluruh belanja ${sifat(o)}</small></div></div>`).join("");
+  // 3. Belanja rutin (≥ 10 bulan) → biaya tetap per bulan
+  const rutin = kelompok((r) => bersih(_arkNamaBarang(r.uraian)) + "§" + r.kode).filter((o) => o.bulan.size >= 10);
+  const perBulan = (o) => Math.round(o.n / o.bulan.size);
+  const grupR = [["Operasional & Kegiatan", rutin.filter((o) => !honor(o.baris[0]))], ["Honor & Upah Orang", rutin.filter((o) => honor(o.baris[0]))]];
+  const totRutinBulan = rutin.reduce((a, o) => a + perBulan(o), 0), totRutinTahun = rutin.reduce((a, o) => a + o.n, 0);
+  const tabelRutin = grupR.filter(([, d]) => d.length).map(([judul, d]) => `<tr class="arkc-grup"><td colspan="3">${judul}</td></tr>` + d.map((o) => { const [n, k] = o.k.split("§"); return `<tr><td>${_arkE(n)}<small>${k} · ${_arkE(nama[k] || "")}</small></td><td class="r">${_arkRp(perBulan(o))}</td><td class="r">${_arkRp(o.n)}</td></tr>`; }).join("")
+    + `<tr class="arkc-sub"><td>Jumlah ${judul}</td><td class="r">${_arkRp(d.reduce((a, o) => a + perBulan(o), 0))}</td><td class="r">${_arkRp(d.reduce((a, o) => a + o.n, 0))}</td></tr>`).join("");
+  // 4. Sekali beli / musiman (≤ 3 bulan)
+  const sekali = kelompok((r) => bersih(_arkNamaBarang(r.uraian)) + "§" + r.kode).filter((o) => o.bulan.size <= 3).slice(0, 12);
+  const htmlSekali = sekali.map((o) => { const [n, k] = o.k.split("§"); return `<tr><td>${_arkE(n)}<small>${k} · ${_arkE(nama[k] || "")}</small></td><td>${[...o.bulan].sort((a, b) => a - b).map((m) => ARK_BLN[m - 1].slice(0, 3)).join(", ")}</td><td class="r">${_arkRp(o.n)}</td></tr>`; }).join("");
+  // 5. Rumus sederhana tahun depan
+  const sisa = pagu - totRutinTahun;
+  // 6. Perlu dicek Bendahara
   const curiga = semua.filter((r) => /^5\.2\.04/.test(r.rek) || (/^5\.2\./.test(r.rek) && !/^05\./.test(r.kode)));
-  const rekBeda = {}; semua.forEach((r) => { if (!/orang \/ bulan/.test(r.sat)) return; const k = r.kode; (rekBeda[k] = rekBeda[k] || new Set()).add(r.rek); });
+  const rekBeda = {}; semua.forEach((r) => { if (!/orang \/ bulan/.test(r.sat)) return; (rekBeda[r.kode] = rekBeda[r.kode] || new Set()).add(r.rek); });
   const ganda = Object.entries(rekBeda).filter(([, s]) => s.size > 1);
-  const unik = (arr) => { const s = new Set(); return arr.filter((r) => { const k = r.rek + r.kode + r.uraian; if (s.has(k)) return false; s.add(k); return true; }); };
-  return `<div class="ark-catatan">
-    <h4>Pembagian per Standar</h4><ul>${prog.map((o) => `<li><b>${o.k}. ${_arkE(nama[o.k] || _arkProgNama(o.k))}</b> — Rp ${_arkRp(o.n)} (${((o.n / total) * 100).toFixed(1)}%)</li>`).join("")}</ul>
-    <h4>5 Kegiatan Terbesar</h4><ol>${keg.map((o) => `<li>${o.k} ${_arkE(nama[o.k] || "")} — Rp ${_arkRp(o.n)}</li>`).join("")}</ol>
-    <h4>Belanja Rutin (muncul ≥ 10 bulan) — hampir pasti dianggarkan lagi tahun depan</h4>
-    <ul>${rutin.map((o) => { const [n, k] = o.k.split("§"); return `<li>${_arkE(n.replace(/\s*\(\d{8,}\)/, ""))} <small>(${k}, ${o.bulan.size} bulan, Rp ${_arkRp(o.n)})</small></li>`; }).join("") || "<li>-</li>"}</ul>
-    <h4>Perlu Dicek Bendahara</h4><ul>
-      ${unik(curiga).map((r) => `<li>Kode rekening <b>${r.rek}</b> (belanja modal) dipakai untuk "${_arkE(r.uraian)}" di kegiatan ${r.kode} ${_arkE(nama[r.kode] || "")}. ${/^5\.2\.04/.test(r.rek) ? "Kode 5.2.04 adalah belanja modal jaringan (aset), padahal kegiatannya pembayaran rutin; pastikan kodenya sesuai." : "Belanja modal (aset) biasanya ditaruh di Standar Sarana dan Prasarana (05); pastikan kegiatannya sesuai."}</li>`).join("")}
-      ${ganda.map(([k, s]) => `<li>Kegiatan ${k} ${_arkE(nama[k] || "")} memakai beberapa kode rekening untuk honor/upah: ${[...s].join(", ")}. Pastikan memang berbeda jenisnya.</li>`).join("")}
-      ${!curiga.length && !ganda.length ? "<li>Tidak ada temuan.</li>" : ""}</ul>
-    <div class="ark-ket">Total belanja setahun (versi berlaku) Rp ${_arkRp(total)} dari pagu Rp ${_arkRp(pagu)}.</div></div>`;
+  const unik = (arr) => { const s = new Set(); return arr.filter((r) => { const k = r.rek + r.kode + _arkNamaBarang(r.uraian); if (s.has(k)) return false; s.add(k); return true; }); };
+  const cek = [
+    ...unik(curiga).map((r) => `<b>${_arkE(bersih(_arkNamaBarang(r.uraian)))}</b> memakai kode rekening <code>${r.rek}</code> (belanja modal/aset) di kegiatan ${r.kode} ${_arkE(nama[r.kode] || "")}. ${/^5\.2\.04/.test(r.rek) ? "Padahal ini pembayaran rutin — tanyakan kode yang benar ke Dinas." : "Pastikan memang dicatat sebagai aset."}`),
+    ...ganda.map(([k, s]) => `Kegiatan ${k} ${_arkE(nama[k] || "")} memakai ${s.size} kode rekening berbeda untuk honor/upah: ${[...s].map((x) => `<code>${x}</code>`).join(" & ")}. Pastikan jenisnya memang berbeda.`),
+  ];
+  return `<div class="arkc">
+    <section><h4><span>1</span> Ke mana uang BOSP ${ARK.th} dipakai?</h4>
+      <p class="arkc-ket">Total belanja setahun <b>${rp(total)}</b> dari pagu <b>${rp(pagu)}</b>. Batang di bawah = 100% belanja, dibagi menurut <b>Standar</b> (kelompok kegiatan resmi ARKAS).</p>
+      <div class="arkc-bar">${bar}</div>
+      <div class="arkc-std-grid">${kartuStd}</div></section>
+    <section><h4><span>2</span> 5 belanja terbesar</h4>
+      <p class="arkc-ket">Belanja yang paling banyak menyerap dana. <span class="arkc-tag sekali">Sekali beli</span> = pengadaan barang; <span class="arkc-tag rutin">Rutin tiap bulan</span> = biaya tetap.</p>
+      ${htmlBesar}</section>
+    <section><h4><span>3</span> Biaya rutin tiap bulan <small>(muncul ≥ 10 bulan — hampir pasti dianggarkan lagi tahun depan)</small></h4>
+      <div class="table-wrap"><table class="ark-t arkc-t"><thead><tr><th>Uraian</th><th class="r">Per Bulan</th><th class="r">Setahun</th></tr></thead>
+      <tbody>${tabelRutin}</tbody><tfoot><tr><td>Total Biaya Rutin</td><td class="r">${_arkRp(totRutinBulan)}</td><td class="r">${_arkRp(totRutinTahun)}</td></tr></tfoot></table></div></section>
+    <section><h4><span>4</span> Rumus sederhana menyusun anggaran tahun depan</h4>
+      <div class="arkc-rumus">
+        <div><small>Pagu ${ARK.th}</small><b>${rp(pagu)}</b></div><em>−</em>
+        <div><small>Biaya rutin setahun (${rp(totRutinBulan)} × 12)</small><b>${rp(totRutinTahun)}</b></div><em>=</em>
+        <div class="hasil"><small>Sisa untuk kegiatan &amp; pembelian barang</small><b>${rp(sisa)}</b></div>
+      </div>
+      <p class="arkc-ket">Artinya: sekitar <b>${persen(totRutinTahun, pagu)}</b> dana sudah "terpakai" untuk biaya rutin. Sisanya (<b>${persen(sisa, pagu)}</b>) yang bisa dibagi untuk pengadaan barang, pelatihan guru, ujian, dan kegiatan lain. Kalau pagu tahun depan berubah, hitung ulang dengan rumus yang sama.</p></section>
+    ${sekali.length ? `<section><h4><span>5</span> Belanja sekali / musiman <small>(muncul ≤ 3 bulan)</small></h4>
+      <div class="table-wrap"><table class="ark-t arkc-t"><thead><tr><th>Uraian</th><th>Bulan</th><th class="r">Jumlah</th></tr></thead><tbody>${htmlSekali}</tbody></table></div></section>` : ""}
+    <section><h4><span>${sekali.length ? 6 : 5}</span> Perlu dicek Bendahara</h4>
+      ${cek.length ? cek.map((t) => `<div class="arkc-cek">⚠️ <div>${t}</div></div>`).join("") : `<div class="arkc-cek ok">✅ <div>Tidak ada temuan.</div></div>`}
+      <p class="arkc-ket">Tanyakan ke Dinas bila ragu — kode rekening harus mengikuti aturan resmi.</p></section>
+  </div>`;
 }
 
 // Tombol "Arsip ARKAS" di sebelah Laporan Bulanan

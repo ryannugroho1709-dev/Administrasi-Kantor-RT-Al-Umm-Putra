@@ -1021,3 +1021,58 @@ html .dash-hero.br-hero.br-ada-foto .dash-hero-deco{display:none}
 }
 #modal-panel.ark-modal #modal-close-btn{position:absolute;z-index:6;background:rgba(255,255,255,.92);color:#0f3d6e;box-shadow:0 2px 8px rgba(0,0,0,.2)}
 @media(max-width:700px){.ark-tab{flex-wrap:nowrap;gap:3px}.ark-tab button{flex:1 1 0;min-width:0;gap:4px;padding:8px 4px}.ark-tab button span{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ark-tab button svg{flex:none;width:14px;height:14px}}
+/* ── Pengumuman: Isi Cepat ── */
+.pgi{border:1px solid #c7d7fe;background:linear-gradient(180deg,#f5f8ff,#fff);border-radius:12px;padding:10px 12px;margin-bottom:10px}
+.pgi-judul{font-weight:800;font-size:13px;margin-bottom:8px;color:#1e3a8a}
+.pgi-judul small{font-weight:500;color:var(--text-secondary)}
+.pgi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.pgi-grid label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;min-width:0}
+.pgi-grid label small{font-weight:500;color:var(--text-secondary)}
+.pgi-grid .pgi-lebar{grid-column:span 2}
+.pgi-grid .pgi-penuh{grid-column:1 / -1}
+.pgi-grid .input{padding:7px 9px;font-size:13px}
+@media(max-width:640px){.pgi-grid{grid-template-columns:1fr 1fr}.pgi-grid .pgi-lebar{grid-column:1 / -1}}
+/* ── Arsip ARKAS · Catatan Belajar (laporan sederhana untuk orang awam) ── */
+.arkc{display:flex;flex-direction:column;gap:14px}
+.arkc section{border:1px solid #e3e8ef;border-radius:14px;padding:14px 16px;background:#fff}
+.arkc h4{display:flex;align-items:center;gap:10px;margin:0 0 6px;font-size:15px;color:#0f3d6e;flex-wrap:wrap}
+.arkc h4>span{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:#0f3d6e;color:#f4d27a;font-size:13px}
+.arkc h4 small{font-weight:500;font-size:11.5px;color:var(--text-secondary)}
+.arkc-ket{font-size:12.5px;line-height:1.6;color:#475569;margin:0 0 10px}
+.arkc-bar{display:flex;height:18px;border-radius:9px;overflow:hidden;margin:4px 0 12px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.05)}
+.arkc-bar i{display:block;height:100%}
+.arkc-std-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.arkc-std{border:1px solid #e8edf3;border-left:5px solid var(--w);border-radius:10px;padding:9px 11px;background:#fcfdff}
+.arkc-std-atas{display:flex;align-items:center;gap:6px}
+.arkc-std-atas b{flex:1;font-size:13px;color:#1e293b}
+.arkc-std-atas em{font-style:normal;font-weight:800;font-size:12px;color:var(--w);background:color-mix(in srgb,var(--w) 12%,#fff);padding:1px 8px;border-radius:999px}
+.arkc-titik{width:9px;height:9px;border-radius:50%;background:var(--w)}
+.arkc-uang{font-size:16px;font-weight:800;color:#0f172a;margin:3px 0 2px;font-variant-numeric:tabular-nums}
+.arkc-std small{display:block;font-size:11.5px;line-height:1.45;color:#475569}
+.arkc-resmi{font-size:10.5px;color:#94a3b8;margin-top:4px}
+.arkc-rank{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px dashed #e3e8ef}
+.arkc-rank:first-of-type{border-top:0}
+.arkc-no{flex:none;width:28px;height:28px;border-radius:9px;display:grid;place-items:center;font-weight:800;background:#fdf6e3;color:#9a6b05;border:1px solid #f1dfa8}
+.arkc-rank-isi{flex:1;min-width:0}
+.arkc-rank-atas{display:flex;gap:10px;align-items:baseline}
+.arkc-rank-atas b{flex:1;font-size:13px;line-height:1.4;color:#1e293b}
+.arkc-rank-atas span{font-weight:800;white-space:nowrap;color:#0f3d6e;font-variant-numeric:tabular-nums}
+.arkc-batang{height:7px;border-radius:4px;background:#eef2f7;margin:5px 0 4px;overflow:hidden}
+.arkc-batang i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,#16578f,#1f8a5b)}
+.arkc-rank small{font-size:11.5px;color:#64748b}
+.arkc-tag{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 8px;border-radius:999px;margin-left:4px;white-space:nowrap}
+.arkc-tag.rutin{background:#dcfce7;color:#166534}.arkc-tag.sekali{background:#dbeafe;color:#1e40af}.arkc-tag.musim{background:#fef3c7;color:#92400e}
+.arkc-t td small{display:block;font-size:10.5px;color:#94a3b8;font-weight:400;margin-top:1px}
+.arkc-t tr.arkc-grup td{background:#f1f5f9;font-weight:800;color:#0f3d6e;font-size:12px;letter-spacing:.2px}
+.arkc-t tr.arkc-sub td{background:#fafbfc;font-weight:700;font-style:italic}
+.arkc-rumus{display:flex;align-items:stretch;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.arkc-rumus>div{flex:1 1 160px;border:1px solid #e3e8ef;border-radius:12px;padding:10px 12px;background:#f8fafc}
+.arkc-rumus>div small{display:block;font-size:11.5px;color:#64748b;line-height:1.4}
+.arkc-rumus>div b{display:block;font-size:17px;color:#0f172a;margin-top:2px;font-variant-numeric:tabular-nums}
+.arkc-rumus>div.hasil{background:#ecfdf5;border-color:#a7f3d0}.arkc-rumus>div.hasil b{color:#15803d}
+.arkc-rumus>em{align-self:center;font-style:normal;font-size:22px;font-weight:800;color:#94a3b8}
+.arkc-cek{display:flex;gap:8px;font-size:12.5px;line-height:1.55;padding:9px 12px;border-radius:10px;background:#fff7ed;border:1px solid #fed7aa;margin-bottom:6px;color:#7c2d12}
+.arkc-cek.ok{background:#f0fdf4;border-color:#bbf7d0;color:#14532d}
+.arkc-cek code{font-family:ui-monospace,Consolas,monospace;font-size:11.5px;background:#fff;padding:0 4px;border-radius:4px}
+@media(max-width:640px){.arkc section{padding:12px}.arkc-rumus>em{display:none}.arkc-std-grid{grid-template-columns:1fr}}
+.arkc-t td:nth-child(2):not(.r){white-space:nowrap}
