@@ -215,3 +215,23 @@ async function arsipUnggahDok(guruId, jenis) {
   } catch (e) { toast("Gagal mengunggah: " + e.message, "err"); }
   finally { if (typeof setGlobalLoading === "function") setGlobalLoading(false); }
 }
+
+// ============================================================
+//  MODUL AJAR → buku PDF disimpan di Drive "11 Modul Ajar/<jenjang>" (bukan Supabase 1 GB).
+//  Dibuka lewat perantara /buku/<id> (functions/buku) yang disimpan di cache Cloudflare.
+//  Berlaku bila Arsip Drive sudah tersambung; bila belum, tetap ke Supabase seperti biasa.
+//  PPT/PPTX tetap ke Supabase (penampil Office butuh alamat publik langsung).
+// ============================================================
+(function () {
+  if (typeof apiUploadFoto !== "function") return;
+  const asli = apiUploadFoto;
+  apiUploadFoto = async function (file, folder) {
+    const pdf = file && (/pdf/i.test(file.type || "") || /\.pdf$/i.test(file.name || ""));
+    if (folder === "modul-ajar/file" && pdf && (await arsipMuat()) && !/^(localhost|127\.)/.test(location.hostname)) {
+      const ruang = typeof rgNamaPendek === "function" ? rgNamaPendek(STATE.ruang) : (STATE.ruang || "Umum");
+      const h = await arsipUnggah(file, { jalur: ["11 Modul Ajar", ruang], nama: file.name, ket: "Buku Modul Ajar" });
+      return `/buku/${h.id}/${encodeURIComponent(h.nama)}`;
+    }
+    return asli.apply(this, arguments);
+  };
+})();
