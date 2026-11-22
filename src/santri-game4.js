@@ -70,6 +70,29 @@ function g4Peti(warna, gelap, terbuka) {
     : { rows: ["................", "................", "................", "...oooooooooo...", "..oaaaaaaaaaao..", "..oaaaaaaaaaao..", "..oddddddddddo..", "..oooookkoooooo.", "..oaaaakkaaaao..", "..oaaaakkaaaao..", "..oddddddddddo..", "..oaaaaaaaaaao..", "..oaaaaaaaaaao..", "..oooooooooooo..", "...ssssssssss...", "................"], w };
 }
 
+// Hewan piksel (dua bingkai: diam & melangkah), menghadap kanan
+const G4_HEWAN = (() => {
+  const buat = (rows, w) => rows.map((r) => ({ rows: r, w }));
+  const kaki2 = (r, a, b) => r.slice(0, 13).concat([a, b, "................"]);
+  const sapi = ["................", "................", "................", ".............hh.", "..wwwwwwwwwwwhhh", ".wwkkwwwwkkwwwww", ".wwkkwwwwkkwwpne", ".wwwwwwkkwwwwppp", ".wwwwwwkkwwwww..", ".wwwwwwwwwwwww..", "..wwwwwwwwwww...", "..ww.ww..ww.ww..", "..kk.kk..kk.kk..", "..kk.kk..kk.kk..", "................", "................"];
+  const kambing = ["................", "................", "............rr..", "...........r.r..", "..........gggg..", "..ggggggggggggg.", ".ggggggggggggeg.", ".gggggggggggggn.", ".ggggggggggggg..", "..gggggggggg.d..", "..gggggggggg....", "..gg.gg..gg.gg..", "..kk.kk..kk.kk..", "..kk.kk..kk.kk..", "................", "................"];
+  const ayam = ["................", "................", "................", "..........rr....", ".........rwwr...", ".........wwew...", "........wwwwbb..", "..ww...wwwwwb...", ".wwwwwwwwwwww...", ".wwwwwwwwwwww...", "..wwwwwwwwww....", "...wwwwwwww.....", ".....y..y.......", ".....y..y.......", "....yy.yy.......", "................"];
+  const bebek = ["................", "................", "................", "..........yyy...", ".........yyyyy..", ".........yyeyy..", ".........yyyyoo.", "..yy.....yyyy...", ".yyyyyyyyyyyy...", ".yyyyyyyyyyyy...", "..yyyyyyyyyy....", "...yyyyyyyy.....", ".....o..o.......", ".....o..o.......", "....oo.oo.......", "................"];
+  const kucing = ["................", "................", "................", "...........o.o..", "...........oooo.", "..........ooeoe.", "..........ooopo.", ".o........oooo..", ".o.ooooooooooo..", "..oooooooooooo..", "..oooooooooooo..", "..oo.oo..oo.oo..", "..oo.oo..oo.oo..", "................", "................", "................"];
+  const langkah = (r) => kaki2(r, r[13] ? r[13].replace(/^..(..).(..)..(..).(..)/, "...$1.$2.$3$4.") : r[13], r[14] || "................");
+  const wSapi = { w: "#fafafa", k: "#1f2937", h: "#e5e7eb", p: "#f9a8d4", n: "#1f2937", e: "#111827" };
+  const wKambing = { g: "#e7e5e4", r: "#78716c", e: "#111827", n: "#a8a29e", d: "#d6d3d1", k: "#57534e" };
+  const wAyam = { w: "#ffffff", r: "#ef4444", e: "#111827", b: "#f59e0b", y: "#f59e0b" };
+  const wBebek = { y: "#fde047", e: "#111827", o: "#f97316" };
+  const wKucing = { o: "#fb923c", e: "#14532d", p: "#f9a8d4" };
+  return {
+    sapi: buat([sapi, langkah(sapi)], wSapi), kambing: buat([kambing, langkah(kambing)], wKambing),
+    ayam: buat([ayam, ayam.slice(0, 12).concat(["....y....y......", "....y....y......", "...yy...yy......", "................"])], wAyam),
+    bebek: buat([bebek, bebek.slice(0, 12).concat(["....o....o......", "....o....o......", "...oo...oo......", "................"])], wBebek),
+    kucing: buat([kucing, langkah(kucing)], wKucing),
+  };
+})();
+
 const G2_MAIN_PETI = function (isi, s) {
   const kartu = isi.closest(".kartu-soal"); kartu.classList.add("g4-mode");
   kartu.querySelector("textarea#uraian")?.remove(); // kotak tulis pindah ke dalam peti
@@ -118,10 +141,96 @@ const G2_MAIN_PETI = function (isi, s) {
   const terkunci = (k) => typeof g3Terkunci === "function" && g3Terkunci(uraian[k].s);
   function skor() { const n = uraian.filter((_, k) => dijawab(k)).length; const el = isi.querySelector("#g4-skor"); if (el) el.innerHTML = `🗝️ <b>${n}</b>/${uraian.length} peti terjawab`; }
   function pesan(t, ms) { const el = isi.querySelector("#g4-pesan"); if (!el) return; el.innerHTML = t; el.classList.add("on"); clearTimeout(pesan.t); pesan.t = setTimeout(() => el.classList.remove("on"), ms || 1400); }
+  // ── HEWAN: berkeliaran, tidak bisa ditembus; bila terganggu (ditabrak) ada yang kabur, ada yang mengejar ──
+  if (!st.hewan) {
+    const jenis = ["sapi", "ayam", "kambing", "bebek", "kucing", "ayam", "sapi"], acakH = g2Acak(sesiKey + ":hewan"), hewan = [];
+    let coba = 0;
+    while (hewan.length < jenis.length && coba++ < 500) {
+      const x = 2 + Math.floor(acakH() * (W - 4)), y = 2 + Math.floor(acakH() * (H - 4));
+      if (!bisa(x, y) || g[y][x] === 4 || Math.abs(x - peta.mulai[0]) + Math.abs(y - peta.mulai[1]) < 4 || peti.some((p) => p[0] === x && p[1] === y) || jebakan.some((p) => p[0] === x && p[1] === y) || hewan.some((h) => h.x === x && h.y === y)) continue;
+      const j = jenis[hewan.length];
+      hewan.push({ j, x, y, tx: x, ty: y, balik: 1, tunggu: 0.5 + acakH() * 2, marah: 0, kabur: 0, reda: 0, cepat: 1.5, kaki: 0 });
+    }
+    st.hewan = hewan;
+  }
+  const hewan = st.hewan;
+  hewan.forEach((h) => { h.x = h.tx = Math.round(h.x); h.y = h.ty = Math.round(h.y); });
+  const HEWAN_SIFAT = { sapi: { nama: "Sapi", galak: true, bunyi: "Mooo!" }, kambing: { nama: "Kambing", galak: true, bunyi: "Mbeee!" }, kucing: { nama: "Kucing", galak: true, bunyi: "Meong!" }, ayam: { nama: "Ayam", galak: false, bunyi: "Petok!" }, bebek: { nama: "Bebek", galak: false, bunyi: "Kwek!" } };
+  const tanahHewan = (x, y) => bisa(x, y) && g[y][x] !== 4 || (g[y] && g[y][x] === 4);
+  // petak yang sedang dipakai / dituju (tidak boleh saling tembus)
+  const dipakaiHewan = (x, y, kecuali) => hewan.some((h) => h !== kecuali && ((h.x === x && h.y === y) || (h.tx === x && h.ty === y) || (Math.round(h.x) === x && Math.round(h.y) === y)));
+  const dipakaiPemain = (x, y) => (Math.round(P.x) === x && Math.round(P.y) === y) || (P.tx === x && P.ty === y);
+  const bisaHewan = (x, y, h) => tanahHewan(x, y) && !peti.some((p) => p[0] === x && p[1] === y) && !jebakan.some((p) => p[0] === x && p[1] === y) && !dipakaiHewan(x, y, h) && !dipakaiPemain(x, y);
+  let tabrakTerakhir = 0;
+  function ganggu(h) {
+    const now = performance.now(); if (now - tabrakTerakhir < 900 || h.reda > 0) return; tabrakTerakhir = now;
+    const sifat = HEWAN_SIFAT[h.j];
+    if (sifat.galak) { h.marah = 6; h.kabur = 0; h.ancang = 0.8; pesan(`😠 ${sifat.nama} terganggu dan mengejarmu! "${sifat.bunyi}" Lari!`, 1800); }
+    else { h.kabur = 3; h.marah = 0; pesan(`💨 ${sifat.nama} kaget dan kabur! "${sifat.bunyi}"`, 1300); }
+    try { navigator.vibrate && navigator.vibrate(60); } catch (e) {}
+  }
+  function seruduk(h) {
+    const sifat = HEWAN_SIFAT[h.j];
+    h.marah = 0; h.reda = 5;  // tenang dulu, tidak langsung marah lagi
+    // tokoh terpental 2 petak menjauh dari hewan (ke petak kosong terdekat)
+    const arah = [Math.sign(P.x - h.x), Math.sign(P.y - h.y)];
+    let tuju = [Math.round(P.x), Math.round(P.y)];
+    for (let i = 0; i < 2; i++) { const nx = tuju[0] + arah[0], ny = tuju[1] + arah[1]; if (lantai(nx, ny) && !dipakaiHewan(nx, ny)) tuju = [nx, ny]; else break; }
+    P.jalur = []; P.mau = [0, 0]; P.dir = [0, 0]; P.x = P.tx = tuju[0]; P.y = P.ty = tuju[1];
+    jatuh = 0.9; cv.classList.remove("goyang"); void cv.offsetWidth; cv.classList.add("goyang");
+    pesan(`💥 Aduh! Diseruduk ${sifat.nama}! Hati-hati jangan mengganggu hewan.`, 1800); try { navigator.vibrate && navigator.vibrate([80, 40, 80]); } catch (e) {}
+  }
+  function jalurHewan(h, tujuanX, tujuanY, menjauh) {
+    // satu langkah: mendekat (kejar) atau menjauh (kabur) dari tokoh, lewat petak yang boleh
+    const pilihan = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => [h.x + dx, h.y + dy]).filter(([x, y]) => bisaHewan(x, y, h));
+    if (!pilihan.length) return null;
+    if (!menjauh) {
+      // kejar: pakai jarak jalan (BFS dari tokoh) supaya tidak tersangkut pohon
+      const d = Array.from({ length: H }, () => Array(W).fill(-1)), q = [[tujuanX, tujuanY]]; d[tujuanY][tujuanX] = 0;
+      for (let i = 0; i < q.length; i++) { const [x, y] = q[i]; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, ny = y + dy; if (tanahHewan(nx, ny) && d[ny][nx] < 0) { d[ny][nx] = d[y][x] + 1; q.push([nx, ny]); } } }
+      pilihan.sort((a, b) => (d[a[1]][a[0]] < 0 ? 999 : d[a[1]][a[0]]) - (d[b[1]][b[0]] < 0 ? 999 : d[b[1]][b[0]]));
+      return pilihan[0];
+    }
+    pilihan.sort((a, b) => Math.hypot(b[0] - tujuanX, b[1] - tujuanY) - Math.hypot(a[0] - tujuanX, a[1] - tujuanY));
+    return pilihan[0];
+  }
+  function gerakHewan(dt) {
+    hewan.forEach((h) => {
+      if (h.reda > 0) h.reda -= dt;
+      if (h.marah > 0) h.marah -= dt; if (h.kabur > 0) h.kabur -= dt;
+      const dx = h.tx - h.x, dy = h.ty - h.y, jauh = Math.abs(dx) + Math.abs(dy);
+      const cepat = h.marah > 0 ? 3.3 : h.kabur > 0 ? 3.6 : 1.4;
+      if (jauh > 1e-6) { const g2 = Math.min(cepat * dt, jauh); h.x += Math.sign(dx) * g2; h.y += Math.sign(dy) * g2; h.kaki += g2; return; }
+      h.x = h.tx; h.y = h.ty;
+      const px = Math.round(P.x), py = Math.round(P.y);
+      if (h.marah > 0 && jatuh <= 0) {
+        if (h.ancang > 0) { h.ancang -= dt; return; } // ancang-ancang: santri sempat lari
+        if (Math.abs(h.x - px) + Math.abs(h.y - py) <= 1) { seruduk(h); return; }
+        const l = jalurHewan(h, px, py, false); if (l) { h.tx = l[0]; h.ty = l[1]; if (l[0] !== h.x) h.balik = l[0] > h.x ? 1 : -1; }
+        return;
+      }
+      if (h.kabur > 0) { const l = jalurHewan(h, px, py, true); if (l) { h.tx = l[0]; h.ty = l[1]; if (l[0] !== h.x) h.balik = l[0] > h.x ? 1 : -1; } return; }
+      h.tunggu -= dt; if (h.tunggu > 0) return;
+      h.tunggu = 1 + Math.random() * 2.5;
+      const arah = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([ax, ay]) => bisaHewan(h.x + ax, h.y + ay, h));
+      if (!arah.length) return;
+      const [ax, ay] = arah[Math.floor(Math.random() * arah.length)]; h.tx = h.x + ax; h.ty = h.y + ay; if (ax) h.balik = ax;
+    });
+  }
+  function gambarHewan(now) {
+    hewan.forEach((h) => {
+      const gerak = Math.abs(h.tx - h.x) + Math.abs(h.ty - h.y) > 1e-6, X = h.x * T, Y = h.y * T - (gerak ? Math.abs(Math.sin(h.kaki * Math.PI)) * T * 0.07 : 0);
+      ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.beginPath(); ctx.ellipse(X + T / 2, h.y * T + T * 0.9, T * 0.32, T * 0.09, 0, 0, 7); ctx.fill();
+      ctx.save(); if (h.balik < 0) { ctx.translate(X + T / 2, 0); ctx.scale(-1, 1); ctx.translate(-(X + T / 2), 0); }
+      g4Kotak(ctx, T, X, Y, G4_HEWAN[h.j][gerak && Math.floor(h.kaki * 3) % 2 ? 1 : 0]); ctx.restore();
+      if (h.marah > 0 || h.kabur > 0) { ctx.font = `900 ${Math.round(T * 0.5)}px system-ui,Arial`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = h.marah > 0 ? "#dc2626" : "#2563eb"; ctx.fillText(h.marah > 0 ? "!" : "?", X + T / 2, Y - T * 0.15 + Math.sin(now / 120) * 2); }
+    });
+  }
+
   // jalan otomatis (ketuk tujuan): cari jalur terpendek di petak yang bisa dilewati
-  function cariJalur(tx, ty) {
+  function cariJalur(tx, ty, hindariHewan) {
     const asal = [Math.round(P.x), Math.round(P.y)], kunci = (x, y) => x + "," + y, dari = { [kunci(...asal)]: null }, q = [asal];
-    for (let i = 0; i < q.length; i++) { const [x, y] = q[i]; if (x === tx && y === ty) break; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, ny = y + dy; if (lantai(nx, ny) && !(kunci(nx, ny) in dari)) { dari[kunci(nx, ny)] = [x, y]; q.push([nx, ny]); } } }
+    for (let i = 0; i < q.length; i++) { const [x, y] = q[i]; if (x === tx && y === ty) break; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, ny = y + dy; if (lantai(nx, ny) && !(hindariHewan && dipakaiHewan(nx, ny)) && !(kunci(nx, ny) in dari)) { dari[kunci(nx, ny)] = [x, y]; q.push([nx, ny]); } } }
     if (!(kunci(tx, ty) in dari)) return [];
     const j = []; let c = [tx, ty]; while (c && !(c[0] === asal[0] && c[1] === asal[1])) { j.unshift(c); c = dari[kunci(...c)]; }
     return j;
@@ -134,8 +243,20 @@ const G2_MAIN_PETI = function (isi, s) {
       if (jauh < 1e-6) {
         P.x = P.tx; P.y = P.ty;
         if (tiba()) return;
-        let [mx, my] = P.mau;
-        if (P.jalur.length) { const [nx, ny] = P.jalur.shift(); mx = nx - P.x; my = ny - P.y; }
+        let [mx, my] = P.mau, otomatis = false;
+        if (P.jalur.length) { const [nx, ny] = P.jalur[0]; mx = nx - P.x; my = ny - P.y; otomatis = true; }
+        // hewan menghalangi: jalan otomatis menunggu; jalan sendiri = menabrak (hewan terganggu)
+        const hDepan = (mx || my) ? hewan.find((h) => (Math.round(h.x) === P.x + mx && Math.round(h.y) === P.y + my) || (h.tx === P.x + mx && h.ty === P.y + my)) : null;
+        if (hDepan) {
+          P.dir = [0, 0];
+          if (!otomatis) { ganggu(hDepan); return; }
+          // jalan otomatis terhalang hewan → tunggu sebentar, lalu cari jalan memutar
+          P.tungguH = (P.tungguH || 0) + dt;
+          if (P.tungguH > 0.6 && P.tujuan) { P.tungguH = 0; P.jalur = cariJalur(P.tujuan[0], P.tujuan[1], true); if (!P.jalur.length) P.tujuan = null; }
+          return;
+        }
+        P.tungguH = 0;
+        if (otomatis) P.jalur.shift();
         if ((mx || my) && lantai(P.x + mx, P.y + my)) P.dir = [mx, my];
         else if (!(P.dir[0] || P.dir[1]) || !lantai(P.x + P.dir[0], P.y + P.dir[1]) || P.jalur.length === 0 && !(P.mau[0] || P.mau[1])) { P.dir = [0, 0]; return; }
         P.tx = P.x + P.dir[0]; P.ty = P.y + P.dir[1];
@@ -159,6 +280,8 @@ const G2_MAIN_PETI = function (isi, s) {
     const k = peti.findIndex((p) => p[0] === P.x && p[1] === P.y);
     if (k < 0) { terakhirPeti = null; return false; }
     if (terakhirPeti === k) return false;
+    // jalan otomatis melewati peti lain → tidak dibuka (hanya peti tujuan)
+    if (P.jalur.length && P.tujuan && (P.tujuan[0] !== P.x || P.tujuan[1] !== P.y)) { terakhirPeti = k; return false; }
     terakhirPeti = k; P.jalur = []; P.mau = [0, 0]; P.dir = [0, 0];
     bukaPeti(k); return true;
   }
@@ -204,6 +327,7 @@ const G2_MAIN_PETI = function (isi, s) {
       const label = ok ? "✓" : String(k + 1); ctx.lineWidth = 3; ctx.strokeStyle = w2; ctx.strokeText(label, x * T + T / 2, y * T - T * 0.18 + naik); ctx.fillText(label, x * T + T / 2, y * T - T * 0.18 + naik);
       if (!ok && Math.floor(now / 260 + k) % 6 === 0) { ctx.fillStyle = "#fef08a"; ctx.fillRect(x * T + T * 0.75, y * T + T * 0.2 + naik, T / 8, T / 8); }
     });
+    gambarHewan(now);
     // tokoh santri
     const gerak = (P.dir[0] || P.dir[1]) && jatuh <= 0, bingkai = gerak && Math.floor(langkahT * 3) % 2 ? tokoh.jalan : P.hadap === "belakang" ? tokoh.belakang : tokoh.depan;
     const X = P.x * T, Y = P.y * T - (gerak ? Math.abs(Math.sin(langkahT * Math.PI)) * T * 0.08 : 0);
@@ -218,7 +342,7 @@ const G2_MAIN_PETI = function (isi, s) {
   function putar(now) {
     if (!cv.isConnected) return;
     const dt = Math.min(0.05, (now - lalu) / 1000); lalu = now;
-    if (!document.hidden && !document.getElementById("g4-panel")) langkah(dt);
+    if (!document.hidden && !document.getElementById("g4-panel")) { langkah(dt); gerakHewan(dt); }
     gambar(now);
     G2.raf = requestAnimationFrame(putar);
   }
@@ -230,19 +354,19 @@ const G2_MAIN_PETI = function (isi, s) {
     const kePeti = peti.findIndex((p) => p[0] === x && p[1] === y);
     if (kePeti >= 0 && Math.round(P.x) === x && Math.round(P.y) === y) { bukaPeti(kePeti); return; }
     if (!lantai(x, y)) return;
-    P.mau = [0, 0]; P.jalur = cariJalur(x, y); terakhirPeti = null;
+    P.mau = [0, 0]; P.jalur = cariJalur(x, y); P.tujuan = P.jalur.length ? [x, y] : null;
   };
   let awal = null, geser = false;
   g2Dengar(cv, "pointerdown", (e) => { awal = [e.clientX, e.clientY]; geser = false; });
-  g2Dengar(cv, "pointermove", (e) => { if (!awal) return; const dx = e.clientX - awal[0], dy = e.clientY - awal[1]; if (Math.max(Math.abs(dx), Math.abs(dy)) > 18) { geser = true; P.jalur = []; P.mau = Math.abs(dx) > Math.abs(dy) ? [Math.sign(dx), 0] : [0, Math.sign(dy)]; awal = [e.clientX, e.clientY]; terakhirPeti = null; } });
+  g2Dengar(cv, "pointermove", (e) => { if (!awal) return; const dx = e.clientX - awal[0], dy = e.clientY - awal[1]; if (Math.max(Math.abs(dx), Math.abs(dy)) > 18) { geser = true; P.jalur = []; P.mau = Math.abs(dx) > Math.abs(dy) ? [Math.sign(dx), 0] : [0, Math.sign(dy)]; awal = [e.clientX, e.clientY]; } });
   g2Dengar(cv, "pointerup", (e) => { if (!geser) keTujuan(e); else P.mau = [0, 0]; awal = null; });
   isi.querySelectorAll(".g4-dpad button").forEach((b) => {
     const d = b.dataset.d.split(",").map(Number);
-    g2Dengar(b, "pointerdown", (e) => { e.preventDefault(); P.jalur = []; P.mau = d; terakhirPeti = null; });
+    g2Dengar(b, "pointerdown", (e) => { e.preventDefault(); P.jalur = []; P.mau = d; });
     ["pointerup", "pointerleave", "pointercancel"].forEach((ev) => g2Dengar(b, ev, () => { if (P.mau[0] === d[0] && P.mau[1] === d[1]) P.mau = [0, 0]; }));
   });
   const peta2 = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
-  g2Dengar(document, "keydown", (e) => { const d = peta2[e.key]; if (!d || (e.target && e.target.matches && e.target.matches("input,textarea,select"))) return; e.preventDefault(); P.jalur = []; P.mau = d; terakhirPeti = null; }, true);
+  g2Dengar(document, "keydown", (e) => { const d = peta2[e.key]; if (!d || (e.target && e.target.matches && e.target.matches("input,textarea,select"))) return; e.preventDefault(); P.jalur = []; P.mau = d; }, true);
   g2Dengar(document, "keyup", (e) => { const d = peta2[e.key]; if (d && P.mau[0] === d[0] && P.mau[1] === d[1]) P.mau = [0, 0]; }, true);
   g2Dengar(window, "resize", ukur);
   // peti yang sedang dibuka sebelum digambar ulang (mis. setelah menyalakan keyboard Arab) dibuka lagi
