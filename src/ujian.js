@@ -284,12 +284,18 @@ function _ujGambarSesi() {
         · ${new Date(s.created_at).toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "short" })}</div>
         ${st ? `<div class="uj-langsung"><span class="kerja">⏳ ${nKerja} mengerjakan</span><span class="kirim">✅ ${nKirim} sudah kirim</span></div>` : ""}</div>
       <div class="uj-aksi">
-        ${(() => { const g = UJ.gaya && UJ.gaya[s.id]; const k = g && typeof g === "object" ? g.kelas : null; return k ? `<button class="btn btn-sm uj-b-papan" onclick="window.open('santri.html?papan=${s.id}','_blank')" title="Buka papan permainan untuk proyektor/TV kelas">📺 Layar ${k === "menara" ? "Perang Menara" : "Balap Pelangi"}</button>` : ""; })()}
+        ${(() => { const g = UJ.gaya && UJ.gaya[s.id]; const k = g && typeof g === "object" ? g.kelas : null; return k ? `<button class="btn btn-sm uj-b-papan" onclick="window.open('santri.html?papan=${s.id}','_blank')" title="Buka papan permainan untuk proyektor/TV kelas">📺 Layar ${k === "menara" ? "Perang Menara" : k === "arena" ? "Arena Juara" : "Balap Pelangi"}</button><button class="btn btn-sm ${g.layarHp ? "uj-b-hijau" : "btn-ghost"}" onclick="ujSaklarLayarHp('${s.id}')" title="Santri bisa menonton papan kelas langsung dari HP masing-masing">📱 Papan di HP: ${g.layarHp ? "Aktif" : "Mati"}</button>` : ""; })()}
         <button class="btn btn-accent btn-sm" onclick="ujBukaRekap('${s.id}')">📊 Rekap</button>
         <button class="btn btn-ghost btn-sm" onclick="ujToggleSesi('${s.id}')">${s.dibuka ? "⏹ Tutup" : "▶ Buka lagi"}</button>
         ${_ujBolehSesi(s) ? `<button class="btn btn-sm uj-b-merah" onclick="ujHapusSesi('${s.id}')" title="Hapus sesi beserta semua jawaban & nilainya (perlu PIN)">🗑️</button>` : ""}
       </div>
     </div>`; }).join("")}</div>`;
+}
+// Saklar guru: tampilkan papan game kelas di HP santri (dibaca santri tiap ±12 detik)
+async function ujSaklarLayarHp(id) {
+  const g = (UJ.gaya || {})[id]; if (!g || typeof g !== "object") return;
+  try { UJ.gaya = await _kvGabung("ujian:tampilan", { [id]: { ...g, layarHp: !g.layarHp } }); toast(!g.layarHp ? "📱 Papan kelas sekarang bisa ditonton dari HP santri" : "Papan di HP santri dimatikan", "ok"); _ujGambarSesi(); }
+  catch (e) { toast(_ujPesan(e), "err"); }
 }
 const _ujBolehSesi = (s) => isAdmin() || !s.guru_id || s.guru_id === STATE.guruId;
 // Hapus sesi: semua jawaban & nilai santri di sesi itu ikut terhapus permanen (PIN wajib)
@@ -456,11 +462,11 @@ function ujBukaSesiModal(bankId) {
       <div class="uj-sub" style="margin-top:4px">Soal tetap dari bank soal ini. Mode di atas berlaku untuk PG, PG Kompleks & Benar/Salah. Kunci jawaban tetap aman.</div></div>
     ${(() => {
       const ada = new Set((b.soal || []).filter((x) => (x.soal || []).length).map((x) => x.jenis));
-      const pilihan = { pg: [["labirin", "🏃 Labirin Kejar (dikejar hewan)"]], pgk: [["kolam", "🐟 Kolam Ikan"]], isian: [["balok", "🔤 Balok Huruf"]], jodoh: [["kartu", "🃏 Kartu Pasangan"], ["garis", "🔗 Tarik Garis"]], urut: [["kereta", "🚂 Gerbong Kereta"]] };
-      const nama = { pg: "Pilihan Ganda", pgk: "PG Kompleks", isian: "Isian Singkat", jodoh: "Menjodohkan", urut: "Mengurutkan" };
+      const pilihan = { pg: [["labirin", "🏃 Labirin Kejar (dikejar hewan)"]], pgk: [["kolam", "🐟 Kolam Ikan"]], isian: [["balok", "🔤 Balok Huruf"]], jodoh: [["kartu", "🃏 Kartu Pasangan"], ["garis", "🔗 Tarik Garis"]], urut: [["kereta", "🚂 Gerbong Kereta"]], uraian: [["pohon", "🌳 Pohon Ilmu"], ["perkamen", "📜 Surat Perkamen"]] };
+      const nama = { pg: "Pilihan Ganda", pgk: "PG Kompleks", isian: "Isian Singkat", jodoh: "Menjodohkan", urut: "Mengurutkan", uraian: "Uraian" };
       const baris = Object.keys(pilihan).filter((j) => ada.has(j));
       const kelasGame = `<div class="field uj-game-kelas"><label class="form-label">🏆 Game Bersama Satu Kelas <small style="font-weight:500">(tampil di proyektor, semua jenis soal)</small></label>
-        <div class="uj-gk-pilih">${[["", "🚫", "Tidak", "Santri mengerjakan sendiri-sendiri"], ["menara", "🏰", "Perang Menara Tim", "Kelas dibagi Tim Biru & Merah. Tiap jawaban benar menembakkan meriam ke menara lawan"], ["pelangi", "🌈", "Balap Pelangi", "Tiap santri punya karakter; maju di jalur pelangi sesuai jawaban benar — tanpa dadu"]].map(([k, i, n, d], x) => `<label><input type="radio" name="uj-s-gk" value="${k}" ${x === 0 ? "checked" : ""}><span class="ik">${i}</span><b>${n}</b><small>${d}</small></label>`).join("")}</div>
+        <div class="uj-gk-pilih">${[["", "🚫", "Tidak", "Santri mengerjakan sendiri-sendiri"], ["menara", "🏰", "Perang Menara Tim", "Kelas dibagi Tim Biru & Merah. Tiap jawaban benar menembakkan meriam ke menara lawan"], ["arena", "⚔️", "Arena Juara", "Perorangan: saling serang & rebut podium 1-2-3, ada upacara juara"], ["pelangi", "🌈", "Balap Pelangi", "Tiap santri punya karakter; maju di jalur pelangi sesuai jawaban benar — tanpa dadu"]].map(([k, i, n, d], x) => `<label><input type="radio" name="uj-s-gk" value="${k}" ${x === 0 ? "checked" : ""}><span class="ik">${i}</span><b>${n}</b><small>${d}</small></label>`).join("")}</div>
         <div class="uj-sub">Santri menekan <b>🔒 Kunci Jawaban</b> tiap soal → langsung tahu benar/belum (kunci tidak diperlihatkan) dan jawaban tidak bisa diganti lagi. Buka papannya lewat tombol <b>📺 Layar</b> di kartu sesi. Perlu <b>SQL_UJIAN_SANTRI_6_GAME_KELAS.sql</b>.</div></div>`;
       if (!baris.length) return kelasGame;
       return kelasGame + `<div class="field uj-game-per"><label class="form-label">🎮 Game Tiap Jenis Soal <small style="font-weight:500">(boleh dipilih sebagian)</small></label>

@@ -63,7 +63,8 @@ async function g3Poll() {
         const t = G3_TIM[g3TimDari(S.siswa || [], S.murid.id)];
         kartu.insertAdjacentHTML("afterbegin", `<div class="g3-intro" style="background:linear-gradient(135deg,${t.warna},#0f172a)"><div style="font-size:44px">🏰</div><h3>Perang Menara Tim</h3><p>Kamu masuk <b>Tim ${t.nama} ${t.ikon}</b>. Setiap jawaban benar menembakkan meriam ke menara lawan! Tekan <b>🔒 Kunci Jawaban</b> di setiap soal.</p></div>`);
       } else {
-        kartu.insertAdjacentHTML("afterbegin", `<div class="g3-intro" style="background:linear-gradient(135deg,#ec4899,#f59e0b,#22c55e,#3b82f6,#8b5cf6)"><div style="font-size:44px">🌈</div><h3>Balap Pelangi</h3><p>Pilih karaktermu! Setiap jawaban benar membuat karaktermu maju di jalur pelangi. Tanpa dadu — yang menentukan hanya ilmumu. 😊</p>
+        const arena = mode === "arena";
+        kartu.insertAdjacentHTML("afterbegin", `<div class="g3-intro" style="background:${arena ? "linear-gradient(135deg,#7c2d12,#b91c1c,#f59e0b)" : "linear-gradient(135deg,#ec4899,#f59e0b,#22c55e,#3b82f6,#8b5cf6)"}"><div style="font-size:44px">${arena ? "⚔️" : "🌈"}</div><h3>${arena ? "Arena Juara" : "Balap Pelangi"}</h3><p>${arena ? "Pilih jagoanmu! Setiap jawaban benar = serangan ke lawan di atasmu. Rebut <b>podium 1, 2, 3</b>! Tanpa undian — yang menentukan hanya ilmumu. 😊" : "Pilih karaktermu! Setiap jawaban benar membuat karaktermu maju di jalur pelangi. Tanpa dadu — yang menentukan hanya ilmumu. 😊"}</p>
           <div class="g3-kar">${G3_KAR.map((k) => `<button class="${G3.kar === k ? "on" : ""}" data-k="${k}">${k}</button>`).join("")}</div></div>`);
         kartu.querySelectorAll(".g3-kar button").forEach((b) => b.addEventListener("click", async () => {
           G3.kar = b.dataset.k; kartu.querySelectorAll(".g3-kar button").forEach((x) => x.classList.toggle("on", x === b));
@@ -77,7 +78,7 @@ async function g3Poll() {
   if (typeof kerjaAsli === "function") window.mulaiKerja = function () {
     if (g3Mode()) S.gayaSelesai = true; // game kelas aktif → mode Roket/Balon/Menara lama tidak dipakai
     if (g3Mode() && !G3.siap) { g3Siapkan().then(() => kerjaAsli.apply(this, arguments)); return; }
-    if (g3Mode() && G3.versi && !G3.kar && g3Mode() === "pelangi") { G3.kar = G3_KAR[Math.abs([...S.murid.id].reduce((a, c) => a + c.charCodeAt(0), 0)) % G3_KAR.length]; rpc("ujian_game_profil", { p_sesi: S.sesi.id, p_siswa: S.murid.id, p_kar: G3.kar }).catch(() => {}); }
+    if (g3Mode() && G3.versi && !G3.kar && g3Mode() !== "menara") { G3.kar = G3_KAR[Math.abs([...S.murid.id].reduce((a, c) => a + c.charCodeAt(0), 0)) % G3_KAR.length]; rpc("ujian_game_profil", { p_sesi: S.sesi.id, p_siswa: S.murid.id, p_kar: G3.kar }).catch(() => {}); }
     return kerjaAsli.apply(this, arguments);
   };
 })();
@@ -90,12 +91,18 @@ function g3HudHTML() {
     return `<div class="g3-hud menara"><span class="t" style="--w:${G3_TIM[0].warna}">🏰 Biru</span>
       <div class="bar"><i style="width:${Math.round(tim[0].nyawa * 100)}%;background:${G3_TIM[0].warna}"></i></div><b class="vs">VS</b>
       <div class="bar kanan"><i style="width:${Math.round(tim[1].nyawa * 100)}%;background:${G3_TIM[1].warna}"></i></div><span class="t" style="--w:${G3_TIM[1].warna}">Merah 🏰</span>
-      <small>Timmu: <b style="color:${G3_TIM[saya].warna}">${G3_TIM[saya].nama}</b> · nyawa menara</small></div>`;
+      <small>Timmu: <b style="color:${G3_TIM[saya].warna}">${G3_TIM[saya].nama}</b> · nyawa menara</small>${G3.layarHp ? `<button class="g3-tonton" onclick="g3Tonton()">📺 Tonton Papan Kelas</button>` : ""}</div>`;
   }
   const semua = Object.entries(p.santri || {}).map(([id, st]) => ({ id, st, k: g3Kemajuan(st, p) })).sort((a, b) => b.k - a.k || String(a.st.t || "9").localeCompare(String(b.st.t || "9")));
   const ke = semua.findIndex((x) => x.id === S.murid.id) + 1, saya = semua.find((x) => x.id === S.murid.id);
+  const tonton = G3.layarHp ? `<button class="g3-tonton" onclick="g3Tonton()">📺 Tonton Papan Kelas</button>` : "";
+  if (mode === "arena") {
+    const atas = semua[ke - 2];
+    return `<div class="g3-hud arena"><div class="podium-mini">${[1, 0, 2].map((i) => semua[i] ? `<span class="j${i + 1} ${semua[i].id === S.murid.id ? "saya" : ""}"><b>${esc((semua[i].id === S.murid.id ? G3.kar : semua[i].st.kar) || "🙂")}</b><i>${i + 1}</i></span>` : `<span class="j${i + 1} kosong"><b>❔</b><i>${i + 1}</i></span>`).join("")}</div>
+      <small>${ke ? `Kamu peringkat <b>${ke}</b> dari ${semua.length}${ke > 1 && atas ? ` · kejar ${esc(atas.st.kar || "🙂")} di atasmu!` : " · 👑 pertahankan!"}` : "Jawab & kunci soal pertama untuk masuk arena"} · kekuatan <b>${Math.round((saya ? saya.k : 0) * 100)}%</b></small>${tonton}</div>`;
+  }
   return `<div class="g3-hud pelangi"><div class="lintas">${semua.slice(0, 12).map((x) => `<span class="lain ${x.id === S.murid.id ? "saya" : ""}" style="left:${4 + x.k * 88}%">${esc((x.id === S.murid.id ? G3.kar : x.st.kar) || "🙂")}</span>`).join("")}<span class="finis">🏁</span></div>
-    <small>${ke ? `Peringkat <b>${ke}</b> dari ${semua.length}` : "Belum ada yang maju"} · kemajuanmu <b>${Math.round((saya ? saya.k : 0) * 100)}%</b></small></div>`;
+    <small>${ke ? `Peringkat <b>${ke}</b> dari ${semua.length}` : "Belum ada yang maju"} · kemajuanmu <b>${Math.round((saya ? saya.k : 0) * 100)}%</b></small>${tonton}</div>`;
 }
 function g3PerbaruiHud() { const el = document.getElementById("g3-hud"); if (el) el.innerHTML = g3HudHTML(); }
 (function () {
@@ -111,7 +118,7 @@ function g3PerbaruiHud() { const el = document.getElementById("g3-hud"); if (el)
       const t = { benar: ["✅", "Benar!", "#16a34a"], sebagian: ["🌗", "Sebagian benar", "#d97706"], salah: ["❌", "Belum tepat", "#dc2626"], uraian: ["📝", "Terkirim — dinilai ustadz", "#2563eb"] }[x.st] || ["🔒", "Terkunci", "#64748b"];
       kartu.insertAdjacentHTML("beforeend", `<div class="g3-hasil" style="--w:${t[2]}"><span>${t[0]}</span><b>${t[1]}</b>${x.st !== "uraian" ? `<em>+${Number(x.d || 0)} poin</em>` : ""}<small>Jawaban sudah dikunci</small></div>`);
     } else {
-      kartu.insertAdjacentHTML("beforeend", `<button class="g3-tombol ${mode}" onclick="g3Kunci()">🔒 Kunci Jawaban & ${mode === "menara" ? "Tembak Meriam! 💥" : "Maju! 🌈"}</button>`);
+      kartu.insertAdjacentHTML("beforeend", `<button class="g3-tombol ${mode}" onclick="g3Kunci()">🔒 Kunci Jawaban & ${mode === "menara" ? "Tembak Meriam! 💥" : mode === "arena" ? "Serang! ⚔️" : "Maju! 🌈"}</button>`);
     }
     return h;
   };
@@ -148,8 +155,8 @@ function g3Berikutnya() {
 }
 function g3Efek(r) {
   const mode = g3Mode(), e = document.createElement("div"); e.className = "g3-efek " + r.st;
-  const besar = r.st === "benar" ? (mode === "menara" ? "💥" : "🌈") : r.st === "sebagian" ? "🌗" : r.st === "uraian" ? "📝" : "💨";
-  const teks = r.st === "benar" ? (mode === "menara" ? "Meriam mengenai menara lawan!" : "Karaktermu melompat maju!") : r.st === "sebagian" ? "Sebagian benar — tetap maju sedikit" : r.st === "uraian" ? "Jawaban terkirim, dinilai ustadz" : "Belum tepat — semangat di soal berikutnya!";
+  const besar = r.st === "benar" ? (mode === "menara" ? "💥" : mode === "arena" ? "⚔️" : "🌈") : r.st === "sebagian" ? "🌗" : r.st === "uraian" ? "📝" : "💨";
+  const teks = r.st === "benar" ? (mode === "menara" ? "Meriam mengenai menara lawan!" : mode === "arena" ? "Seranganmu kena! Naik peringkat!" : "Karaktermu melompat maju!") : r.st === "sebagian" ? "Sebagian benar — tetap maju sedikit" : r.st === "uraian" ? "Jawaban terkirim, dinilai ustadz" : "Belum tepat — semangat di soal berikutnya!";
   e.innerHTML = `<div class="b">${besar}</div><div class="t">${teks}</div>${r.st !== "uraian" ? `<div class="p">+${Number(r.d || 0)} poin</div>` : ""}`;
   document.body.appendChild(e); setTimeout(() => e.remove(), 1500);
   try { navigator.vibrate && navigator.vibrate(r.st === "benar" ? [40, 30, 40] : 60); } catch (er) {}
@@ -184,13 +191,13 @@ async function papanPoll() {
 }
 const p3Nama = (s) => String(s.nama || "").split(/\s+/)[0];
 function papanGambarKerangka() {
-  const se = P3.sesi, menara = P3.mode === "menara";
-  render(`<div class="p3 ${menara ? "p3-menara" : "p3-pelangi"}">
-    <div class="p3-atas"><div><b>${menara ? "🏰 Perang Menara Tim" : "🌈 Balap Pelangi"}</b><small>${esc(se.bank?.judul || "")} · ${esc(se.kelas?.nama_kelas || "")} · ${se.mode === "ujian" ? "Ujian" : "Latihan"}</small></div>
+  const se = P3.sesi, menara = P3.mode === "menara", arena = P3.mode === "arena", tonton = _QS.has("tonton");
+  render(`<div class="p3 p3-${P3.mode} ${tonton ? "p3-tonton" : ""}">
+    <div class="p3-atas"><div><b>${menara ? "🏰 Perang Menara Tim" : arena ? "⚔️ Arena Juara" : "🌈 Balap Pelangi"}</b><small>${esc(se.bank?.judul || "")} · ${esc(se.kelas?.nama_kelas || "")} · ${se.mode === "ujian" ? "Ujian" : "Latihan"}</small></div>
       <span id="p3-info" class="p3-info">Menunggu santri…</span>
-      <button onclick="document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen()">⛶ Layar Penuh</button>
-      <button onclick="papanAkhiri()">🏁 Akhiri & Umumkan</button></div>
-    <div class="p3-panggung" id="p3-panggung">${menara ? papanMenaraKerangka() : papanPelangiKerangka()}</div>
+      ${tonton ? "" : `<button onclick="document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen()">⛶ Layar Penuh</button>
+      <button onclick="papanAkhiri()">🏁 Akhiri & Umumkan</button>`}</div>
+    <div class="p3-panggung" id="p3-panggung">${menara ? papanMenaraKerangka() : arena ? papanArenaKerangka() : papanPelangiKerangka()}</div>
     <div class="p3-samping" id="p3-samping"></div>
   </div>`);
 }
@@ -277,7 +284,7 @@ function papanPerbarui(d) {
   P3.data = d;
   const ikut = Object.keys(d.santri || {}).length, kirim = Object.values(d.santri || {}).filter((x) => x.st !== "mengerjakan").length;
   const info = document.getElementById("p3-info"); if (info) info.textContent = `${ikut}/${P3.siswa.length} santri bergabung · ${kirim} sudah kirim`;
-  if (P3.mode === "menara") papanMenara(d); else papanPelangi(d);
+  if (P3.mode === "menara") papanMenara(d); else if (P3.mode === "arena") papanArena(d); else papanPelangi(d);
   P3.lama = JSON.parse(JSON.stringify(d.santri || {}));
 }
 function papanSorak(teks, el) {
@@ -293,6 +300,7 @@ function papanAkhiri() {
       <p>Barakallahu fiikum — nilai resmi tetap dari ustadz.</p><div class="navi"><button class="tombol" onclick="tutupDialog()">Tutup</button></div></div>`);
   } else {
     const urut = P3.siswa.filter((s) => d.santri[s.id]).map((s) => ({ ...s, st: d.santri[s.id], k: g3Kemajuan(d.santri[s.id], d) })).sort((a, b) => b.k - a.k || String(a.st.t || "9").localeCompare(String(b.st.t || "9")));
+    return papanUpacaraJuara(urut, P3.mode === "arena" ? "⚔️ Juara Arena" : "🌈 Juara Balap Pelangi");
     dialog(`<div class="p3-menang" style="--w:#8b5cf6"><div class="b">🌈</div><h2>Juara Balap Pelangi</h2>
       <div class="podium">${[1, 0, 2].map((i) => urut[i] ? `<div class="pd p${i + 1}"><span class="e">${esc(urut[i].st.kar || "🙂")}</span><b>${esc(urut[i].nama)}</b><em>${Math.round(urut[i].k * 100)}%</em><i>${i + 1}</i></div>` : "").join("")}</div>
       <p>Barakallahu fiikum — nilai resmi tetap dari ustadz.</p><div class="navi"><button class="tombol" onclick="tutupDialog()">Tutup</button></div></div>`);
@@ -391,6 +399,206 @@ function papanAkhiri() {
   .podium i{display:grid;place-items:center;width:100%;font-style:normal;font-weight:900;font-size:26px;color:#fff;border-radius:10px 10px 0 0;background:linear-gradient(180deg,#a78bfa,#7c3aed)}
   .podium .p1 i{height:110px;background:linear-gradient(180deg,#fde047,#ca8a04)}.podium .p2 i{height:80px;background:linear-gradient(180deg,#e2e8f0,#94a3b8)}.podium .p3 i{height:60px;background:linear-gradient(180deg,#fdba74,#c2410c)}
   @media (max-width:900px){.p3{grid-template-columns:1fr;grid-template-rows:auto 1fr 34%}.p3-pion .e{font-size:26px}.p3-petak{font-size:16px}}
+  `;
+  const st = document.createElement("style"); st.textContent = css; document.head.appendChild(st);
+})();
+
+// ============================================================
+//  ⚔️ ARENA JUARA (perorangan) — rebut podium 1, 2, 3
+//  Tiap jawaban benar = serangan ke lawan tepat di atas peringkatnya (juara 1 menyerang juara 2).
+//  Peringkat murni dari nilai sendiri (tanpa undian) → serangan hanya animasi, tidak mengurangi nilai teman.
+// ============================================================
+const P3_SPOT_PODIUM = [[50, 30], [33, 40], [67, 44]];
+function p3SpotArena(ke, total) {
+  if (ke < 3) return P3_SPOT_PODIUM[ke];
+  // sisanya melingkar di tribun bawah (setengah elips), urut kiri → kanan
+  const n = Math.max(1, total - 3), i = ke - 3, sudut = Math.PI * (0.08 + 0.84 * (n === 1 ? 0.5 : i / (n - 1)));
+  return [50 - Math.cos(sudut) * 42, 70 + Math.sin(sudut) * 16];
+}
+function papanArenaKerangka() {
+  return `<div class="p3-koloseum"><div class="sorot s1"></div><div class="sorot s2"></div><div class="tribun"></div><div class="lantai"></div>
+      <div class="p3-podium"><div class="ped j2" data-j="1"><i>2</i></div><div class="ped j1" data-j="0"><i>1</i></div><div class="ped j3" data-j="2"><i>3</i></div></div></div>
+    <div id="p3-pejuang"></div><div id="p3-peluru"></div><div id="p3-salip" class="p3-salip"></div>`;
+}
+function p3UrutPeringkat(d) {
+  return P3.siswa.filter((s) => d.santri[s.id]).map((s) => ({ ...s, st: d.santri[s.id], k: g3Kemajuan(d.santri[s.id], d) }))
+    .sort((a, b) => b.k - a.k || String(a.st.t || "9").localeCompare(String(b.st.t || "9")) || a.nama.localeCompare(b.nama, "id"));
+}
+function papanArena(d) {
+  const wadah = document.getElementById("p3-pejuang"); if (!wadah) return;
+  const urut = p3UrutPeringkat(d), lamaUrut = P3.urutLama || [];
+  const panggung = document.getElementById("p3-panggung"), P = panggung.getBoundingClientRect();
+  const spot = (ke) => { const ped = ke < 3 && document.querySelector(`.p3-podium .ped[data-j="${ke}"]`); if (!ped || !P.width) return p3SpotArena(ke, urut.length); const r = ped.getBoundingClientRect(); return [((r.left + r.width / 2 - P.left) / P.width) * 100, ((r.top - P.top) / P.height) * 100 + 1]; };
+  urut.forEach((s, ke) => {
+    let el = wadah.querySelector(`[data-id="${s.id}"]`);
+    if (!el) { el = document.createElement("div"); el.className = "p3-pejuang"; el.dataset.id = s.id; wadah.appendChild(el); }
+    const [x, y] = spot(ke);
+    el.style.left = x + "%"; el.style.top = y + "%"; el.style.zIndex = ke < 3 ? 20 - ke : 5;
+    el.classList.toggle("podium", ke < 3); el.classList.toggle("raja", ke === 0);
+    el.innerHTML = `${ke === 0 ? '<span class="mahkota">👑</span>' : ""}<span class="e">${esc(s.st.kar || "🙂")}</span><span class="n">${esc(p3Nama(s))}</span><span class="kuat"><i style="width:${Math.round(s.k * 100)}%"></i></span>`;
+  });
+  // serangan: santri yang poinnya bertambah menyerang lawan tepat di atasnya (urutan sebelum pembaruan)
+  let antre = 0;
+  urut.forEach((s, ke) => {
+    const lama = P3.lama[s.id]; if (!lama || (s.st.sk || 0) <= (lama.sk || 0)) return;
+    const posLama = lamaUrut.indexOf(s.id), sasaran = posLama > 0 ? lamaUrut[posLama - 1] : lamaUrut[1] || urut[1]?.id;
+    const nama = p3Nama(s), poin = (s.st.sk || 0) - (lama.sk || 0), kar = s.st.kar || "🙂";
+    setTimeout(() => papanSerang(s.id, sasaran, kar, nama, poin), antre++ * 380);
+    if (posLama > ke && posLama >= 0) {
+      const disalip = urut[ke + 1];
+      if (disalip) setTimeout(() => p3Salip(`🔥 ${esc(nama)} menyalip ${esc(p3Nama(disalip))}${ke < 3 ? ` — naik ke podium ${ke + 1}!` : "!"}`), antre * 380 + 600);
+    }
+  });
+  P3.urutLama = urut.map((s) => s.id);
+  document.getElementById("p3-samping").innerHTML = `<h4>🏆 Peringkat Arena</h4>${urut.slice(0, 15).map((s, i) => `<div class="p3-klas"><span class="no">${["🥇", "🥈", "🥉"][i] || i + 1}</span><span class="e">${esc(s.st.kar || "🙂")}</span><span class="nm">${esc(s.nama)}</span><span class="pr"><i style="width:${Math.round(s.k * 100)}%"></i></span><b>${Math.round(s.k * 100)}%</b></div>`).join("") || "<p>Belum ada santri yang bergabung.</p>"}`;
+}
+function papanSerang(dariId, keId, kar, nama, poin) {
+  const panggung = document.getElementById("p3-panggung"), wadah = document.getElementById("p3-peluru"); if (!panggung || !wadah) return;
+  const a = document.querySelector(`.p3-pejuang[data-id="${dariId}"]`), b = keId && keId !== dariId ? document.querySelector(`.p3-pejuang[data-id="${keId}"]`) : null;
+  if (!a) return;
+  const P = panggung.getBoundingClientRect(), ra = a.getBoundingClientRect(), x0 = ra.left + ra.width / 2 - P.left, y0 = ra.top + ra.height / 3 - P.top;
+  a.classList.remove("serang"); void a.offsetWidth; a.classList.add("serang");
+  const label = document.createElement("div"); label.className = "p3-label"; label.style.color = "#b45309"; label.textContent = `+${poin} ${nama}`; label.style.left = x0 + "px"; label.style.top = y0 - 50 + "px"; wadah.appendChild(label); setTimeout(() => label.remove(), 1600);
+  if (!b) return;
+  const rb = b.getBoundingClientRect(), x1 = rb.left + rb.width / 2 - P.left, y1 = rb.top + rb.height / 3 - P.top;
+  const bola = document.createElement("div"); bola.className = "p3-sihir"; bola.textContent = ["⚡", "🔥", "✨", "💫", "🌟"][Math.abs([...dariId].reduce((t, c) => t + c.charCodeAt(0), 0)) % 5]; wadah.appendChild(bola);
+  const tinggi = Math.max(60, Math.abs(x1 - x0) * 0.35);
+  const anim = bola.animate(Array.from({ length: 21 }, (_, i) => { const t = i / 20; return { transform: `translate(${x0 + (x1 - x0) * t}px,${y0 + (y1 - y0) * t - Math.sin(Math.PI * t) * tinggi}px) rotate(${t * 540}deg) scale(${1 + Math.sin(Math.PI * t) * 0.4})` }; }), { duration: 900, easing: "ease-in-out" });
+  anim.onfinish = () => {
+    bola.remove(); b.classList.remove("kena"); void b.offsetWidth; b.classList.add("kena");
+    const l = document.createElement("div"); l.className = "p3-ledak"; l.textContent = "💥"; l.style.left = x1 + "px"; l.style.top = y1 + "px"; l.style.fontSize = "56px"; wadah.appendChild(l); setTimeout(() => l.remove(), 800);
+  };
+}
+function p3Salip(teks) {
+  const el = document.getElementById("p3-salip"); if (!el) return;
+  el.innerHTML = teks; el.classList.remove("on"); void el.offsetWidth; el.classList.add("on");
+}
+
+// ============================================================
+//  🏆 UPACARA JUARA — juara 3, lalu 2, lalu 1 diumumkan bergantian dengan sorot lampu, mahkota & kembang api
+// ============================================================
+function papanUpacaraJuara(urut, judul) {
+  document.getElementById("p3-upacara")?.remove();
+  const el = document.createElement("div"); el.id = "p3-upacara"; el.className = "p3-upacara";
+  const kolom = [1, 0, 2].map((i) => { const s = urut[i]; return `<div class="kol k${i + 1}" data-i="${i}">${s ? `<div class="tokoh"><span class="mahkota">${i === 0 ? "👑" : ""}</span><span class="e">${esc(s.st.kar || "🙂")}</span><b>${esc(s.nama)}</b><em>${Math.round(s.k * 100)}% · ${s.st.b || 0} benar</em></div>` : `<div class="tokoh kosong"><span class="e">—</span></div>`}<div class="alas"><span>${["🥇", "🥈", "🥉"][i]}</span><i>${i + 1}</i></div></div>`; }).join("");
+  el.innerHTML = `<div class="sorot s1"></div><div class="sorot s2"></div><div class="sorot s3"></div>
+    <h1>${judul}</h1><div class="hitung" id="p3-hitung">Siapakah juaranya…? 🥁</div>
+    <div class="panggung-juara">${kolom}</div>
+    <div class="lain">${urut.slice(3, 10).map((s, i) => `<span>${i + 4}. ${esc(s.st.kar || "🙂")} ${esc(p3Nama(s))}</span>`).join("")}</div>
+    <p class="doa">Barakallahu fiikum — semoga ilmunya bermanfaat. Nilai resmi tetap dari ustadz.</p>
+    <button onclick="document.getElementById('p3-upacara').remove()">Tutup</button>`;
+  document.body.appendChild(el);
+  const hitung = el.querySelector("#p3-hitung");
+  const tampil = (i, teks, jeda) => setTimeout(() => {
+    hitung.textContent = teks; hitung.classList.remove("denyut"); void hitung.offsetWidth; hitung.classList.add("denyut");
+    const k = el.querySelector(`.kol[data-i="${i}"]`); if (!k) return; k.classList.add("naik");
+    if (typeof g2Konfeti === "function") setTimeout(() => g2Konfeti(k), 500);
+    if (i === 0) { el.classList.add("puncak"); setTimeout(() => p3KembangApi(el), 700); setTimeout(() => p3KembangApi(el), 1600); setTimeout(() => p3KembangApi(el), 2600); }
+  }, jeda);
+  tampil(2, urut[2] ? `🥉 Juara 3: ${urut[2].nama}` : "🥉 Juara 3", 1600);
+  tampil(1, urut[1] ? `🥈 Juara 2: ${urut[1].nama}` : "🥈 Juara 2", 3700);
+  tampil(0, urut[0] ? `🏆 JUARA 1: ${urut[0].nama}!` : "🏆 Juara 1", 6200);
+}
+function p3KembangApi(wadah) {
+  const W = innerWidth, H = innerHeight, x = W * (0.2 + Math.random() * 0.6), y = H * (0.15 + Math.random() * 0.3);
+  const warna = ["#facc15", "#f472b6", "#60a5fa", "#4ade80", "#fb923c", "#c084fc"];
+  for (let i = 0; i < 36; i++) {
+    const p = document.createElement("i"); p.className = "p3-api"; const a = (i / 36) * Math.PI * 2, r = 90 + Math.random() * 80;
+    p.style.cssText = `left:${x}px;top:${y}px;background:${warna[i % warna.length]};--dx:${Math.cos(a) * r}px;--dy:${Math.sin(a) * r}px`;
+    wadah.appendChild(p); setTimeout(() => p.remove(), 1400);
+  }
+}
+
+// ============================================================
+//  📺 PAPAN DI HP SANTRI (diaktifkan guru) — santri bisa menonton papan kelas langsung dari HP-nya
+// ============================================================
+async function g3CekLayar() {
+  try {
+    const { data } = await supa.from("kuliah_pengaturan").select("nilai").eq("kunci", "ujian:tampilan").maybeSingle();
+    const v = data && data.nilai && data.nilai[S.sesi.id], baru = !!(v && typeof v === "object" && v.layarHp);
+    if (baru !== !!G3.layarHp) { G3.layarHp = baru; g3PerbaruiHud(); }
+  } catch (e) {}
+}
+function g3Tonton() {
+  document.getElementById("g3-tonton-lapis")?.remove();
+  const el = document.createElement("div"); el.id = "g3-tonton-lapis"; el.className = "g3-tonton-lapis";
+  el.innerHTML = `<div class="atas"><b>📺 Papan Kelas (langsung)</b><button onclick="document.getElementById('g3-tonton-lapis').remove()">✕ Tutup</button></div><iframe src="santri.html?papan=${encodeURIComponent(S.sesi.id)}&tonton=1" title="Papan kelas"></iframe>`;
+  document.body.appendChild(el);
+}
+(function () {
+  // cek saklar guru tiap ±12 detik selama mengerjakan
+  const pollAsli = window.g3Poll;
+  window.g3Poll = async function () { G3.nCek = (G3.nCek || 0) + 1; if (g3Aktif() && G3.nCek % 3 === 1) await g3CekLayar(); return pollAsli.apply(this, arguments); };
+  // halaman hasil: tombol tonton bila guru mengaktifkan papan di HP
+  const hasilAsli = window.tampilHasil;
+  if (typeof hasilAsli === "function") window.tampilHasil = async function () {
+    const h = await hasilAsli.apply(this, arguments);
+    if (g3Mode() && G3.versi) { await g3CekLayar(); if (G3.layarHp) document.querySelector("#akar .wadah")?.insertAdjacentHTML("afterbegin", `<button class="g3-tonton besar" onclick="g3Tonton()">📺 Tonton Papan Kelas — lihat siapa juaranya!</button>`); }
+    return h;
+  };
+})();
+(function () {
+  const css = `
+  .p3-koloseum{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 120%,#7c2d12,#1c0a05 70%)}
+  .p3-koloseum .tribun{position:absolute;left:-10%;right:-10%;bottom:-30%;height:75%;border-radius:50% 50% 0 0;background:repeating-radial-gradient(ellipse at 50% 100%,#44403c 0 18px,#292524 18px 36px);opacity:.75}
+  .p3-koloseum .lantai{position:absolute;left:12%;right:12%;bottom:-8%;height:46%;border-radius:50%;background:radial-gradient(ellipse,#d6a35c,#a16207 70%);box-shadow:inset 0 0 60px rgba(0,0,0,.45)}
+  .p3-koloseum .sorot,.p3-upacara .sorot{position:absolute;top:-10%;width:30%;height:120%;background:linear-gradient(180deg,rgba(255,255,220,.35),transparent 75%);clip-path:polygon(45% 0,55% 0,100% 100%,0 100%);animation:p3-sorot 6s ease-in-out infinite alternate;pointer-events:none}
+  .sorot.s1{left:10%;transform-origin:50% 0}.sorot.s2{right:10%;animation-delay:-3s!important}.sorot.s3{left:35%;animation-delay:-1.5s!important}
+  @keyframes p3-sorot{from{transform:rotate(-14deg)}to{transform:rotate(14deg)}}
+  .p3-podium{position:absolute;left:50%;top:36%;transform:translateX(-50%);display:flex;align-items:flex-end;gap:6px;width:46%}
+  .p3-podium .ped{flex:1;display:grid;place-items:center;border-radius:10px 10px 0 0;color:#fff;font-weight:900;font-size:clamp(18px,3vw,34px);box-shadow:inset 0 4px 0 rgba(255,255,255,.35),0 10px 20px rgba(0,0,0,.4)}
+  .p3-podium .j1{height:20vh;background:linear-gradient(180deg,#fde047,#ca8a04)}.p3-podium .j2{height:14vh;background:linear-gradient(180deg,#e5e7eb,#9ca3af)}.p3-podium .j3{height:10vh;background:linear-gradient(180deg,#fdba74,#c2410c)}
+  .p3-podium .ped i{font-style:normal}
+  .p3-pejuang{position:absolute;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;transition:left 1.4s cubic-bezier(.4,1.3,.4,1),top 1.4s cubic-bezier(.4,1.3,.4,1)}
+  .p3-pejuang .e{font-size:clamp(28px,3.4vw,46px);line-height:1;filter:drop-shadow(0 6px 4px rgba(0,0,0,.45))}
+  .p3-pejuang.podium .e{font-size:clamp(40px,5vw,70px)}
+  .p3-pejuang .n{background:rgba(0,0,0,.7);color:#fff;font-size:11px;font-weight:800;border-radius:99px;padding:1px 8px;white-space:nowrap}
+  .p3-pejuang.podium .n{background:#fff;color:#1c1917;font-size:13px}
+  .p3-pejuang .kuat{width:46px;height:5px;border-radius:99px;background:rgba(255,255,255,.25);overflow:hidden;margin-top:2px}.p3-pejuang .kuat i{display:block;height:100%;background:linear-gradient(90deg,#f59e0b,#ef4444)}
+  .p3-pejuang .mahkota{font-size:30px;margin-bottom:-8px;animation:p3-mahkota 1.6s ease-in-out infinite}
+  @keyframes p3-mahkota{50%{transform:translateY(-6px) rotate(-8deg)}}
+  .p3-pejuang.serang .e{animation:p3-serang .5s ease}@keyframes p3-serang{40%{transform:scale(1.3) rotate(-12deg)}}
+  .p3-pejuang.kena .e{animation:p3-kena .5s ease}@keyframes p3-kena{20%{transform:translateX(-8px) rotate(-10deg)}50%{transform:translateX(7px) rotate(8deg);filter:brightness(2)}80%{transform:translateX(-3px)}}
+  .p3-sihir{position:absolute;left:0;top:0;font-size:34px;margin:-17px 0 0 -17px;z-index:40;filter:drop-shadow(0 0 10px #fde047)}
+  .p3-salip{position:absolute;left:50%;top:6%;transform:translate(-50%,-30px);opacity:0;background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;font-weight:900;font-size:clamp(14px,2vw,24px);padding:8px 18px;border-radius:99px;box-shadow:0 10px 30px rgba(0,0,0,.4);z-index:45;white-space:nowrap;pointer-events:none}
+  .p3-salip.on{animation:p3-salip 2.6s ease forwards}
+  @keyframes p3-salip{12%{opacity:1;transform:translate(-50%,0) scale(1.05)}20%{transform:translate(-50%,0) scale(1)}85%{opacity:1}100%{opacity:0;transform:translate(-50%,-20px)}}
+  /* upacara juara */
+  .p3-upacara{position:fixed;inset:0;z-index:200;background:radial-gradient(ellipse at 50% 30%,#312e81,#0b0820 70%);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:3vh;overflow:hidden;text-align:center}
+  .p3-upacara h1{margin:0;font-size:clamp(26px,4.5vw,56px);background:linear-gradient(90deg,#fde047,#f472b6,#60a5fa);-webkit-background-clip:text;background-clip:text;color:transparent;z-index:2}
+  .p3-upacara .hitung{margin:1.5vh 0;font-size:clamp(18px,3vw,36px);font-weight:900;min-height:1.4em;z-index:2}
+  .p3-upacara .hitung.denyut{animation:p3-denyutJ .8s ease}@keyframes p3-denyutJ{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.12);opacity:1}}
+  .panggung-juara{display:flex;align-items:flex-end;gap:2vw;margin-top:auto;margin-bottom:2vh;z-index:2}
+  .panggung-juara .kol{display:flex;flex-direction:column;align-items:center;width:clamp(110px,20vw,260px)}
+  .panggung-juara .tokoh{display:flex;flex-direction:column;align-items:center;opacity:0;transform:translateY(40px) scale(.5);transition:1s cubic-bezier(.3,1.5,.5,1)}
+  .panggung-juara .kol.naik .tokoh{opacity:1;transform:none}
+  .panggung-juara .tokoh .e{font-size:clamp(54px,8vw,110px);line-height:1;filter:drop-shadow(0 10px 10px rgba(0,0,0,.5))}
+  .panggung-juara .tokoh b{font-size:clamp(14px,2vw,24px);margin-top:4px}.panggung-juara .tokoh em{font-style:normal;opacity:.85;font-size:clamp(11px,1.4vw,16px)}
+  .panggung-juara .mahkota{font-size:clamp(36px,5vw,64px);height:1em;margin-bottom:-.2em;opacity:0;transform:translateY(-200px)}
+  .p3-upacara.puncak .k1 .mahkota{opacity:1;transform:none;transition:transform 1s 1s cubic-bezier(.3,1.6,.5,1),opacity .3s 1s}
+  .panggung-juara .alas{width:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:8px;border-radius:14px 14px 0 0;font-weight:900;transform:scaleY(0);transform-origin:bottom;transition:transform .9s cubic-bezier(.3,1.3,.5,1)}
+  .panggung-juara .kol.naik .alas{transform:scaleY(1)}
+  .panggung-juara .alas span{font-size:clamp(28px,4vw,48px)}.panggung-juara .alas i{font-style:normal;font-size:clamp(30px,5vw,64px);color:rgba(255,255,255,.9)}
+  .k1 .alas{height:22vh;background:linear-gradient(180deg,#fde047,#a16207)}.k2 .alas{height:16vh;background:linear-gradient(180deg,#f1f5f9,#64748b)}.k3 .alas{height:11vh;background:linear-gradient(180deg,#fdba74,#9a3412)}
+  .p3-upacara .lain{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 14px;font-size:clamp(11px,1.4vw,16px);opacity:.85;max-width:90vw;z-index:2}
+  .p3-upacara .doa{opacity:.75;font-size:clamp(11px,1.3vw,15px);margin:1vh 0;z-index:2}
+  .p3-upacara>button{margin-bottom:2vh;border:0;border-radius:99px;padding:10px 26px;font-weight:900;background:rgba(255,255,255,.15);color:#fff;cursor:pointer;z-index:2}
+  .p3-api{position:absolute;width:7px;height:7px;border-radius:50%;z-index:3;animation:p3-api 1.3s ease-out forwards;box-shadow:0 0 8px currentColor}
+  @keyframes p3-api{to{transform:translate(var(--dx),calc(var(--dy) + 60px));opacity:0}}
+  /* tonton dari HP */
+  .g3-tonton{display:block;width:100%;margin-top:8px;border:0;border-radius:12px;padding:8px;font-weight:800;color:#0f172a;background:#fde047;cursor:pointer}
+  .g3-tonton.besar{margin:12px 0;padding:12px;font-size:15px}
+  .g3-tonton-lapis{position:fixed;inset:0;z-index:150;background:#0b1020;display:flex;flex-direction:column}
+  .g3-tonton-lapis .atas{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;color:#fff}
+  .g3-tonton-lapis .atas button{border:0;border-radius:99px;padding:6px 14px;font-weight:800;background:rgba(255,255,255,.15);color:#fff}
+  .g3-tonton-lapis iframe{flex:1;border:0;width:100%}
+  .p3-tonton .p3-atas small{display:none}
+  .g3-hud.arena .podium-mini{display:flex;justify-content:center;align-items:flex-end;gap:6px}
+  .g3-hud.arena .podium-mini span{display:flex;flex-direction:column;align-items:center;width:64px}
+  .g3-hud.arena .podium-mini b{font-size:24px}.g3-hud.arena .podium-mini span.saya b{filter:drop-shadow(0 0 8px #fde047)}
+  .g3-hud.arena .podium-mini i{display:grid;place-items:center;width:100%;font-style:normal;font-weight:900;border-radius:8px 8px 0 0;color:#fff}
+  .g3-hud.arena .j1 i{height:30px;background:#ca8a04}.g3-hud.arena .j2 i{height:22px;background:#94a3b8}.g3-hud.arena .j3 i{height:16px;background:#c2410c}
+  .g3-hud.arena small{display:block;text-align:center;margin-top:6px;font-size:11.5px}
   `;
   const st = document.createElement("style"); st.textContent = css; document.head.appendChild(st);
 })();

@@ -18,6 +18,7 @@ const G2_NAMA = {
   isian: { balok: ["🔤", "Balok Huruf"] },
   jodoh: { kartu: ["🃏", "Kartu Pasangan"], garis: ["🔗", "Tarik Garis"] },
   urut: { kereta: ["🚂", "Gerbong Kereta"] },
+  uraian: { pohon: ["🌳", "Pohon Ilmu"], perkamen: ["📜", "Surat Perkamen"] },
 };
 const G2_WARNA = ["#ef4444", "#2563eb", "#16a34a", "#f59e0b", "#9333ea", "#0891b2", "#db2777", "#65a30d", "#ea580c", "#4f46e5"];
 
@@ -44,6 +45,7 @@ function g2Untuk(s) {
   if (!s || G2.mati.has(s.jenis + "-" + s.no)) return null;
   if (typeof g3Terkunci === "function" && g3Terkunci(s)) return null;
   if (s.jenis === "pgk" && s.bs) return null; // Benar/Salah tetap tampilan biasa
+  if (s.jenis === "uraian" && s.rek) return null; // uraian rekaman suara tetap biasa
   if (s.jenis === "isian" && typeof soalArab === "function" && soalArab(s)) return null; // isian bahasa Arab → keyboard Arab biasa
   const p = g2Per()[s.jenis];
   return p && G2_NAMA[s.jenis] && G2_NAMA[s.jenis][p] ? p : null;
@@ -483,7 +485,73 @@ const G2_MAIN_KERETA = function (isi, s) {
     if (a.length === (s.o || []).length) g2Sorak("🚂 Tuut tuut!");
   });
 };
-const G2_MAIN = { labirin: G2_MAIN_LABIRIN, kolam: G2_MAIN_KOLAM, balok: G2_MAIN_BALOK, kartu: G2_MAIN_KARTU, garis: G2_MAIN_GARIS, kereta: G2_MAIN_KERETA };
+
+// ============================================================
+//  6. 🌳 POHON ILMU & 📜 SURAT PERKAMEN (Uraian)
+//  Kotak tulis asli (#uraian) dipindah ke dalam adegan game → simpan otomatis & keyboard Arab tetap jalan.
+//  Game tidak menilai isi: pohon tumbuh mengikuti panjang tulisan (semakin lengkap semakin rimbun).
+// ============================================================
+function g2AmbilTulis(isi) {
+  const kartu = isi.closest(".kartu-soal"), ta = kartu && kartu.querySelector("textarea#uraian");
+  const kb = kartu && kartu.querySelector(":scope > .kb-saklar");
+  return { ta, kb };
+}
+const g2HitungKata = (t) => (String(t || "").trim() ? String(t).trim().split(/\s+/).length : 0);
+const G2_MAIN_POHON = function (isi, s) {
+  const { ta, kb } = g2AmbilTulis(isi); if (!ta) throw new Error("tanpa kotak uraian");
+  const buah = Array.from({ length: 9 }, (_, i) => { const a = (i / 9) * Math.PI * 2, r = 30 + (i % 3) * 10; return [100 + Math.cos(a) * r, 78 + Math.sin(a) * r * 0.7]; });
+  isi.innerHTML = `<div class="g2-pohon"><svg viewBox="0 0 200 170" class="g2-pohon-svg">
+      <circle cx="172" cy="26" r="14" fill="#fde047"/><g class="awan"><ellipse cx="40" cy="28" rx="20" ry="8" fill="#fff"/><ellipse cx="52" cy="24" rx="12" ry="8" fill="#fff"/></g>
+      <rect x="0" y="146" width="200" height="24" fill="#65a30d"/><ellipse cx="100" cy="148" rx="34" ry="6" fill="#4d7c0f"/>
+      <text class="biji" x="100" y="146" font-size="16" text-anchor="middle">🌰</text>
+      <g class="batang"><rect x="94" y="96" width="12" height="52" rx="4" fill="#92400e"/><path d="M100 118 L78 100 M100 110 L122 92" stroke="#92400e" stroke-width="5" stroke-linecap="round"/></g>
+      <g class="daun"><circle cx="100" cy="74" r="40" fill="#16a34a"/><circle cx="70" cy="88" r="26" fill="#22c55e"/><circle cx="130" cy="88" r="26" fill="#22c55e"/><circle cx="100" cy="52" r="26" fill="#4ade80"/></g>
+      <g class="buah">${buah.map(([x, y], i) => `<text x="${x}" y="${y}" font-size="11" text-anchor="middle" style="--i:${i}">🍎</text>`).join("")}</g>
+      <text class="burung" x="150" y="60" font-size="14">🐦</text>
+    </svg><div class="g2-pohon-tahap"></div></div>
+    <div class="g2-pohon-tulis"></div>
+    <p class="g2-tip">Tulis jawabanmu selengkap mungkin — setiap kata membuat pohonmu tumbuh. Jawaban tersimpan otomatis dan dinilai ustadz.</p>`;
+  const tempat = isi.querySelector(".g2-pohon-tulis"); tempat.appendChild(ta); if (kb) tempat.appendChild(kb);
+  ta.placeholder = "✍️ Tulis jawabanmu di sini… pohonmu akan tumbuh";
+  const svg = isi.querySelector(".g2-pohon-svg"), tahap = isi.querySelector(".g2-pohon-tahap");
+  let lalu = -1;
+  const perbarui = () => {
+    const n = g2HitungKata(ta.value), p = Math.min(1, n / 80);
+    svg.style.setProperty("--tumbuh", p.toFixed(3));
+    svg.classList.toggle("bertunas", n > 0); svg.classList.toggle("berbuah", n >= 50); svg.classList.toggle("burung-datang", n >= 80);
+    const [ikon, teks] = n === 0 ? ["🌰", "Benih siap ditanam"] : n < 10 ? ["🌱", "Tunas mulai tumbuh"] : n < 25 ? ["🌿", "Tanaman muda"] : n < 50 ? ["🌳", "Pohon mulai rimbun"] : n < 80 ? ["🍎", "Pohonmu berbuah!"] : ["🐦", "Pohon ilmu yang rindang!"];
+    tahap.innerHTML = `<b>${ikon} ${teks}</b><span>${n} kata</span>`;
+    if (lalu >= 0 && Math.floor(n / 25) > Math.floor(lalu / 25)) { tahap.classList.remove("naik"); void tahap.offsetWidth; tahap.classList.add("naik"); }
+    lalu = n;
+  };
+  g2Dengar(ta, "input", perbarui); perbarui();
+};
+const G2_MAIN_PERKAMEN = function (isi, s) {
+  const { ta, kb } = g2AmbilTulis(isi); if (!ta) throw new Error("tanpa kotak uraian");
+  isi.innerHTML = `<div class="g2-perkamen"><div class="gulung gul-a"></div><div class="kertas"><span class="pena">🪶</span><div class="g2-perkamen-tulis"></div><div class="tinta"></div></div><div class="gulung gul-b"></div></div>
+    <div class="g2-segel-baris"><span class="g2-perkamen-hitung"></span><button class="g2-segel" type="button">🔴 Segel Surat</button></div>
+    <p class="g2-tip">Tulis jawabanmu seperti menulis surat. Tekan <b>Segel Surat</b> bila sudah selesai (masih bisa dibuka & diubah sebelum dikirim).</p>`;
+  const tempat = isi.querySelector(".g2-perkamen-tulis"); tempat.appendChild(ta); if (kb) isi.querySelector(".g2-segel-baris").after(kb);
+  ta.placeholder = "Bismillah… tulis jawabanmu di sini";
+  const kertas = isi.querySelector(".kertas"), hitung = isi.querySelector(".g2-perkamen-hitung"), segel = isi.querySelector(".g2-segel");
+  let t = 0;
+  const perbarui = () => {
+    const n = g2HitungKata(ta.value); hitung.textContent = `✒️ ${n} kata`;
+    kertas.classList.add("menulis"); clearTimeout(t); t = setTimeout(() => kertas.classList.remove("menulis"), 700);
+    kertas.classList.remove("tersegel"); segel.textContent = "🔴 Segel Surat";
+  };
+  const kunciSegel = s.jenis + "-" + s.no; G2.segel = G2.segel || {};
+  g2Dengar(ta, "input", perbarui); perbarui(); kertas.classList.remove("menulis");
+  if (G2.segel[kunciSegel] === ta.value && ta.value) { kertas.classList.add("tersegel"); segel.textContent = "✅ Tersegel"; }
+  g2Dengar(segel, "click", () => {
+    if (!g2HitungKata(ta.value)) { ta.focus(); return; }
+    kertas.classList.add("tersegel"); segel.textContent = "✅ Tersegel"; G2.segel[kunciSegel] = ta.value;
+    const cap = document.createElement("span"); cap.className = "g2-cap"; cap.textContent = "🔴"; kertas.appendChild(cap); setTimeout(() => cap.remove(), 900);
+    if (typeof g3Aktif === "function" && g3Aktif()) setTimeout(() => g3Kunci(), 700); else g2Lanjut(1100);
+  });
+};
+
+const G2_MAIN = { pohon: G2_MAIN_POHON, perkamen: G2_MAIN_PERKAMEN, labirin: G2_MAIN_LABIRIN, kolam: G2_MAIN_KOLAM, balok: G2_MAIN_BALOK, kartu: G2_MAIN_KARTU, garis: G2_MAIN_GARIS, kereta: G2_MAIN_KERETA };
 
 // ── Uji coba guru: pilih game di layar petunjuk untuk mencoba semuanya ──
 (function () {
@@ -508,7 +576,7 @@ const G2_MAIN = { labirin: G2_MAIN_LABIRIN, kolam: G2_MAIN_KOLAM, balok: G2_MAIN
 // ── Gaya ──
 (function () {
   const css = `
-  .g2-aktif>.petunjuk,.g2-aktif>.pg,.g2-aktif>.pgk,.g2-aktif>.isian-satu,.g2-aktif>.kb-saklar,.g2-aktif>.jodoh-kanan,.g2-aktif>.jodoh-baris,.g2-aktif>.urut-hasil,.g2-aktif>.urut-pilih,.g2-aktif>.urut-ulang{display:none!important}
+  .g2-aktif>.hitung-kata,.g2-aktif>.petunjuk,.g2-aktif>.pg,.g2-aktif>.pgk,.g2-aktif>.isian-satu,.g2-aktif>.kb-saklar,.g2-aktif>.jodoh-kanan,.g2-aktif>.jodoh-baris,.g2-aktif>.urut-hasil,.g2-aktif>.urut-pilih,.g2-aktif>.urut-ulang{display:none!important}
   .g2-wadah{margin-top:12px;border-radius:18px;overflow:hidden;border:1.5px solid rgba(0,0,0,.06);background:#fff}
   .g2-judul{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;font-weight:800;font-size:13.5px;color:#fff;background:linear-gradient(135deg,#0f766e,#2563eb)}
   .g2w-labirin .g2-judul{background:linear-gradient(135deg,#15803d,#65a30d)}.g2w-kolam .g2-judul{background:linear-gradient(135deg,#0369a1,#06b6d4)}
@@ -631,6 +699,38 @@ const G2_MAIN = { labirin: G2_MAIN_LABIRIN, kolam: G2_MAIN_KOLAM, balok: G2_MAIN
   .g2-stasiun{display:flex;flex-wrap:wrap;gap:14px 8px;align-items:flex-start;margin-top:10px;padding:10px 10px 16px;border-radius:14px;background:#fef9c3;border:2px dashed #eab308}
   .g2-stasiun .lbl{width:100%;font-weight:800;font-size:12.5px;color:#854d0e}.g2-stasiun small{color:#a16207}
   .g2-ulang{margin-top:8px;border:0;background:none;color:#64748b;font-weight:700;text-decoration:underline;cursor:pointer}
+
+  /* pohon ilmu */
+  .g2w-pohon .g2-judul{background:linear-gradient(135deg,#15803d,#84cc16)}.g2w-perkamen .g2-judul{background:linear-gradient(135deg,#78350f,#b45309)}
+  .g2-pohon{position:relative;border-radius:16px;overflow:hidden;background:linear-gradient(180deg,#bae6fd,#e0f2fe 70%)}
+  .g2-pohon-svg{display:block;width:100%;max-height:230px;--tumbuh:0}
+  .g2-pohon-svg .awan{animation:g2-awan2 18s linear infinite}@keyframes g2-awan2{from{transform:translateX(-60px)}to{transform:translateX(220px)}}
+  .g2-pohon-svg .batang{transform-origin:100px 148px;transform:scaleY(calc(.05 + var(--tumbuh) * .95));transition:transform 1s cubic-bezier(.3,1.4,.5,1);opacity:0}
+  .g2-pohon-svg .daun{transform-origin:100px 100px;transform:scale(var(--tumbuh));transition:transform 1s cubic-bezier(.3,1.4,.5,1);opacity:0}
+  .g2-pohon-svg.bertunas .batang,.g2-pohon-svg.bertunas .daun{opacity:1}.g2-pohon-svg.bertunas .biji{opacity:0}
+  .g2-pohon-svg .biji{transition:opacity .4s}
+  .g2-pohon-svg .buah text{opacity:0;transform:scale(0);transform-box:fill-box;transform-origin:center;transition:.5s calc(var(--i) * 80ms) cubic-bezier(.3,1.6,.5,1)}
+  .g2-pohon-svg.berbuah .buah text{opacity:1;transform:scale(1)}
+  .g2-pohon-svg .burung{opacity:0;transition:1s}.g2-pohon-svg.burung-datang .burung{opacity:1;animation:g2-kepak 1.2s ease-in-out infinite}
+  @keyframes g2-kepak{50%{transform:translateY(-4px)}}
+  .g2-pohon-tahap{position:absolute;left:8px;top:8px;display:flex;gap:6px;align-items:center;background:rgba(255,255,255,.9);border-radius:99px;padding:4px 10px;font-size:12px;box-shadow:0 4px 10px rgba(0,0,0,.1)}
+  .g2-pohon-tahap span{color:#15803d;font-weight:800}.g2-pohon-tahap.naik{animation:g2-denyut .6s 2}
+  .g2-pohon-tulis textarea,.g2-perkamen-tulis textarea{width:100%;min-height:150px;margin-top:10px}
+  /* surat perkamen */
+  .g2-perkamen{position:relative;margin-top:4px}
+  .g2-perkamen .gulung{height:18px;border-radius:9px;background:linear-gradient(180deg,#a16207,#713f12 60%,#a16207);box-shadow:0 4px 8px rgba(0,0,0,.25);margin:0 -4px;position:relative;z-index:2}
+  .g2-perkamen .kertas{position:relative;margin:-6px 6px;padding:18px 14px 14px;background:radial-gradient(circle at 20% 10%,#fff7e6,#fde9c4 60%,#f5d49a);box-shadow:inset 0 0 30px rgba(146,64,14,.25)}
+  .g2-perkamen .kertas textarea{background:repeating-linear-gradient(180deg,transparent 0 27px,rgba(146,64,14,.22) 27px 28px);border:0;box-shadow:none;font-family:Georgia,"Times New Roman",Amiri,serif;font-size:16px;line-height:28px;color:#3b2106;padding:0 4px;min-height:200px;resize:vertical}
+  .g2-perkamen .kertas textarea:focus{outline:none}
+  .g2-perkamen .pena{position:absolute;right:8px;top:-4px;font-size:30px;transform:rotate(20deg);transition:.3s}
+  .g2-perkamen .kertas.menulis .pena{animation:g2-pena .35s ease-in-out infinite alternate}
+  @keyframes g2-pena{from{transform:rotate(10deg) translate(0,0)}to{transform:rotate(30deg) translate(-6px,4px)}}
+  .g2-perkamen .kertas.tersegel::after{content:"🔴";position:absolute;right:16px;bottom:10px;font-size:38px;filter:drop-shadow(0 3px 2px rgba(0,0,0,.3))}
+  .g2-cap{position:absolute;right:16px;bottom:10px;font-size:38px;animation:g2-cap .9s ease}
+  @keyframes g2-cap{0%{transform:translateY(-80px) scale(2);opacity:0}60%{transform:none;opacity:1}75%{transform:scale(1.15)}}
+  .g2-segel-baris{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px}
+  .g2-perkamen-hitung{font-weight:800;color:#92400e;font-size:13px}
+  .g2-segel{border:0;border-radius:99px;padding:9px 16px;font-weight:900;color:#fff;background:linear-gradient(135deg,#b91c1c,#7f1d1d);box-shadow:0 4px 0 #450a0a;cursor:pointer}
   /* pilihan game saat uji coba */
   .g2-pilih-coba{margin-top:12px;display:grid;gap:6px;border:1.5px dashed #0891b2;background:#ecfeff;border-radius:14px;padding:10px 12px;font-size:13px}
   .g2-pilih-coba label{display:flex;justify-content:space-between;align-items:center;gap:8px}
