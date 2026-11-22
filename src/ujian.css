@@ -660,3 +660,4 @@ input.nt-baru{animation:ntKedip 1.2s ease 3;box-shadow:0 0 0 2px #22c55e inset}
 .lipat-siap.terlipat>.ju2-kolom-h small{display:none}
 .lipat-siap.terlipat>:not(.ju2-kolom-h){display:none!important}
 .ujs-pil.utama{border-color:#16a34a;background:#f0fdf4;color:#166534;cursor:default}.ujs-pil.utama small{background:#dcfce7;color:#166534}
+.ujk-soal{display:flex;gap:10px;align-items:center;border:1.5px solid #bfdbfe;background:#eff6ff;border-radius:12px;padding:10px 12px;margin:0 0 12px}.ujk-soal>span{font-size:22px}.ujk-soal small{display:block;font-size:11px;color:#64748b}.ujk-soal b{display:block;font-size:15px;color:#1e3a8a;line-height:1.3}.ujk-soal em{font-style:normal;font-size:12px;color:#475569}

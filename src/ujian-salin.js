@@ -15,7 +15,8 @@ function ujAturKelasBank(bankId) {
   if (!_ujBolehKelola(b)) { _ujTolakBukanMilik(b); return; }
   const utama = String(b.tingkat || "").replace(/\D/g, ""), dipakai = _ujTingkatBank(b);
   openModal(`<h3>🏫 Kelas yang Memakai Soal Ini</h3>
-    <div class="uj-sub" style="margin:-4px 0 12px"><b>${escapeHtml(b.judul)}</b> · ${_ujJumlahSoal(b.soal)} soal · ${escapeHtml(_ujLabelJenis(b))}</div>
+    <div class="ujk-soal"><span>📘</span><div><small>Soal yang diatur</small><b>${escapeHtml(b.judul)}</b><em>${escapeHtml(_ujNamaMapelTampil(b))} · ${_ujJumlahSoal(b.soal)} soal · ${escapeHtml(_ujLabelJenis(b))}</em></div></div>
+    <div class="form-label" style="margin:2px 0 6px">Centang kelas lain yang juga mengerjakan soal ini:</div>
     <div class="ujs-kelas">${_ujkTingkatAda().map((t) => `<label class="ujs-pil ${t === utama ? "utama" : ""}"><input type="checkbox" value="${t}" ${dipakai.includes(t) ? "checked" : ""} ${t === utama ? "disabled" : ""}><span>Kelas ${t}</span>${t === utama ? "<small>kelas utama</small>" : ""}</label>`).join("")}</div>
     <div class="ujs-catatan" style="margin-top:12px">✔️ Soalnya <b>tetap satu</b> — tidak digandakan. Ubah soal/kunci sekali, berlaku untuk semua kelas yang dicentang.<br>✔️ Saat ujian, tekan <b>▶ Buka sesi</b> lalu pilih kelasnya (buka satu sesi untuk tiap kelas). Nilai tetap tercatat per kelas.<br>✔️ Pengumpulan Soal di Jadwal Ujian otomatis tercentang untuk kelas yang dicentang.</div>
     <button class="btn btn-accent" style="width:100%;margin-top:12px" id="ujk-ok">💾 Simpan</button>`);
@@ -25,6 +26,7 @@ function ujAturKelasBank(bankId) {
     try {
       UJ.jenisNilai = await _kvGabung("ujian:jenis", { [b.id]: { kelasLain, t: new Date().toISOString() } });
       if (typeof UA !== "undefined") UA.jenis = UJ.jenisNilai;
+      if (typeof _SW_DASBOR !== "undefined") _SW_DASBOR.t = 0; // kartu "Kumpulkan Soal" di Dashboard langsung diperbarui
       closeModal();
       toast(kelasLain.length ? `Soal ini sekarang dipakai Kelas ${[utama, ...kelasLain].join(" & ")} ✓` : `Soal ini hanya untuk Kelas ${utama}`, "ok");
       _ujGambarBank();
