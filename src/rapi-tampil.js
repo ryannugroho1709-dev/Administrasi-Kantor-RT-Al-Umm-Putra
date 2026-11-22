@@ -144,3 +144,28 @@ if (typeof akKirimDaftar === "function") akKirimDaftar = async function () {
     setTimeout(() => _akTawarkanWa(g, email, true), 1200);
   } catch (e) { t.disabled = false; t.textContent = "Daftar"; _akPesan(e.message || "Gagal mendaftar"); }
 };
+
+// ── Modul Ajar: setelah unggah / edit / hapus buku, posisi gulir TETAP (tidak melompat ke atas) ──
+// renderModulAjar() mengganti isi rak dengan kerangka "memuat" → tinggi halaman menyusut → browser
+// memaksa gulir ke atas. Tahan tingginya selama memuat, lalu kembalikan posisi gulir semula.
+(function () {
+  if (typeof renderModulAjar !== "function") return;
+  const asli = renderModulAjar;
+  const penggulir = (el) => {
+    const daftar = [document.scrollingElement || document.documentElement];
+    for (let p = el && el.parentElement; p; p = p.parentElement) { const s = getComputedStyle(p).overflowY; if ((s === "auto" || s === "scroll") && p.scrollHeight > p.clientHeight) daftar.push(p); }
+    return daftar.map((x) => [x, x.scrollTop]);
+  };
+  window.renderModulAjar = async function () {
+    const rak = document.getElementById("modul-ajar-rak");
+    const segarkan = rak && rak.children.length && rak.offsetHeight > 200;
+    if (!segarkan) return asli.apply(this, arguments);
+    const posisi = penggulir(rak), tinggiLama = rak.style.minHeight;
+    rak.style.minHeight = rak.offsetHeight + "px";
+    try { return await asli.apply(this, arguments); }
+    finally {
+      const pulih = () => posisi.forEach(([x, t]) => { x.scrollTop = t; });
+      pulih(); setTimeout(() => { rak.style.minHeight = tinggiLama; pulih(); }, 80);
+    }
+  };
+})();
