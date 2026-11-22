@@ -24,7 +24,8 @@ export async function onRequestGet({ params, request }) {
     return new Response("Buku tidak bisa diambil dari Google Drive. Pastikan folder '11 Modul Ajar' dibagikan: Siapa saja yang memiliki link → Pelihat.", { status: asal.ok ? 403 : asal.status });
   }
   const kepala = new Headers();
-  kepala.set("Content-Type", /pdf/.test(jenis) ? "application/pdf" : jenis || "application/octet-stream");
+  const pdf = /pdf/.test(jenis) || /.pdf$/i.test(bagian[bagian.length - 1] || "");
+  kepala.set("Content-Type", pdf ? "application/pdf" : jenis || "application/octet-stream");
   kepala.set("Cache-Control", `public, max-age=${SETAHUN}, immutable`);
   kepala.set("Access-Control-Allow-Origin", "*");
   const panjang = asal.headers.get("content-length"); if (panjang) kepala.set("Content-Length", panjang);
