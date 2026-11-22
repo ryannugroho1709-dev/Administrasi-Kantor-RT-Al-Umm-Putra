@@ -284,6 +284,7 @@ function _ujGambarSesi() {
         · ${new Date(s.created_at).toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "short" })}</div>
         ${st ? `<div class="uj-langsung"><span class="kerja">⏳ ${nKerja} mengerjakan</span><span class="kirim">✅ ${nKirim} sudah kirim</span></div>` : ""}</div>
       <div class="uj-aksi">
+        ${(() => { const g = UJ.gaya && UJ.gaya[s.id]; const k = g && typeof g === "object" ? g.kelas : null; return k ? `<button class="btn btn-sm uj-b-papan" onclick="window.open('santri.html?papan=${s.id}','_blank')" title="Buka papan permainan untuk proyektor/TV kelas">📺 Layar ${k === "menara" ? "Perang Menara" : "Balap Pelangi"}</button>` : ""; })()}
         <button class="btn btn-accent btn-sm" onclick="ujBukaRekap('${s.id}')">📊 Rekap</button>
         <button class="btn btn-ghost btn-sm" onclick="ujToggleSesi('${s.id}')">${s.dibuka ? "⏹ Tutup" : "▶ Buka lagi"}</button>
         ${_ujBolehSesi(s) ? `<button class="btn btn-sm uj-b-merah" onclick="ujHapusSesi('${s.id}')" title="Hapus sesi beserta semua jawaban & nilainya (perlu PIN)">🗑️</button>` : ""}
@@ -458,8 +459,11 @@ function ujBukaSesiModal(bankId) {
       const pilihan = { pg: [["labirin", "🏃 Labirin Kejar (dikejar hewan)"]], pgk: [["kolam", "🐟 Kolam Ikan"]], isian: [["balok", "🔤 Balok Huruf"]], jodoh: [["kartu", "🃏 Kartu Pasangan"], ["garis", "🔗 Tarik Garis"]], urut: [["kereta", "🚂 Gerbong Kereta"]] };
       const nama = { pg: "Pilihan Ganda", pgk: "PG Kompleks", isian: "Isian Singkat", jodoh: "Menjodohkan", urut: "Mengurutkan" };
       const baris = Object.keys(pilihan).filter((j) => ada.has(j));
-      if (!baris.length) return "";
-      return `<div class="field uj-game-per"><label class="form-label">🎮 Game Tiap Jenis Soal <small style="font-weight:500">(boleh dipilih sebagian)</small></label>
+      const kelasGame = `<div class="field uj-game-kelas"><label class="form-label">🏆 Game Bersama Satu Kelas <small style="font-weight:500">(tampil di proyektor, semua jenis soal)</small></label>
+        <div class="uj-gk-pilih">${[["", "🚫", "Tidak", "Santri mengerjakan sendiri-sendiri"], ["menara", "🏰", "Perang Menara Tim", "Kelas dibagi Tim Biru & Merah. Tiap jawaban benar menembakkan meriam ke menara lawan"], ["pelangi", "🌈", "Balap Pelangi", "Tiap santri punya karakter; maju di jalur pelangi sesuai jawaban benar — tanpa dadu"]].map(([k, i, n, d], x) => `<label><input type="radio" name="uj-s-gk" value="${k}" ${x === 0 ? "checked" : ""}><span class="ik">${i}</span><b>${n}</b><small>${d}</small></label>`).join("")}</div>
+        <div class="uj-sub">Santri menekan <b>🔒 Kunci Jawaban</b> tiap soal → langsung tahu benar/belum (kunci tidak diperlihatkan) dan jawaban tidak bisa diganti lagi. Buka papannya lewat tombol <b>📺 Layar</b> di kartu sesi. Perlu <b>SQL_UJIAN_SANTRI_6_GAME_KELAS.sql</b>.</div></div>`;
+      if (!baris.length) return kelasGame;
+      return kelasGame + `<div class="field uj-game-per"><label class="form-label">🎮 Game Tiap Jenis Soal <small style="font-weight:500">(boleh dipilih sebagian)</small></label>
         ${baris.map((j) => `<label class="uj-game-baris"><span>${nama[j]}</span><select class="input" data-gj="${j}"><option value="">📄 Biasa</option>${pilihan[j].map(([k, l]) => `<option value="${k}">${l}</option>`).join("")}</select></label>`).join("")}
         <div class="uj-sub">Kalau "Tampilan untuk santri" di atas memakai Roket/Balon/Menara, PG & PG Kompleks mengikuti pilihan itu. Coba dulu lewat 🧪 Uji coba.</div></div>`;
     })()}
@@ -488,7 +492,8 @@ async function ujSimpanSesi(bankId) {
     const gaya = document.querySelector('input[name="uj-s-gaya"]:checked')?.value || "biasa";
     // game per jenis soal (Labirin, Kolam Ikan, Balok Huruf, Kartu/Garis, Kereta) → { gaya, per }
     const per = {}; document.querySelectorAll(".uj-game-per select[data-gj]").forEach((el) => { if (el.value) per[el.dataset.gj] = el.value; });
-    const nilaiGaya = Object.keys(per).length ? { gaya: gaya !== "biasa" ? gaya : null, per } : gaya;
+    const kelasGame = document.querySelector('input[name="uj-s-gk"]:checked')?.value || "";
+    const nilaiGaya = Object.keys(per).length || kelasGame ? { gaya: gaya !== "biasa" ? gaya : null, per, ...(kelasGame ? { kelas: kelasGame } : {}) } : gaya;
     if (nilaiGaya !== "biasa" && baru?.id) await _ujSimpanGaya(baru.id, nilaiGaya);
     closeModal(); toast(`Sesi dibuka untuk ${_ujNamaKelas(row.kelas_id)}${row.token ? " · token " + row.token : ""}`, "ok"); ujMuat();
   } catch (e) { toast(_ujPesan(e), "err"); }

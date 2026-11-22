@@ -30,7 +30,7 @@ const G2_WARNA = ["#ef4444", "#2563eb", "#16a34a", "#f59e0b", "#9333ea", "#0891b
       S.gaya2Map = S.gaya2Map || {};
       Object.keys(peta || {}).forEach((k) => {
         const v = peta[k];
-        if (v && typeof v === "object") { S.gaya2Map[k] = v.per || {}; peta[k] = v.gaya || null; }
+        if (v && typeof v === "object") { S.gaya2Map[k] = v.per || {}; (S.gameKelasMap = S.gameKelasMap || {})[k] = v.kelas || null; peta[k] = v.gaya || null; }
       });
       return peta;
     };
@@ -42,6 +42,7 @@ function g2Per() {
 }
 function g2Untuk(s) {
   if (!s || G2.mati.has(s.jenis + "-" + s.no)) return null;
+  if (typeof g3Terkunci === "function" && g3Terkunci(s)) return null;
   if (s.jenis === "pgk" && s.bs) return null; // Benar/Salah tetap tampilan biasa
   if (s.jenis === "isian" && typeof soalArab === "function" && soalArab(s)) return null; // isian bahasa Arab → keyboard Arab biasa
   const p = g2Per()[s.jenis];
@@ -69,6 +70,7 @@ const g2Huruf = (s, k) => (soalArab(s) ? HURUF_AR : HURUF)[k];
 // lanjut ke soal berikutnya setelah menjawab (bila ada)
 function g2Lanjut(jeda) {
   const idx = S.idx;
+  if (typeof g3Aktif === "function" && g3Aktif()) { setTimeout(() => { if (S.idx === idx) g3Kunci(); }, 700); return; }
   setTimeout(() => { if (S.idx !== idx || !document.querySelector(".g2-wadah")) return; if (S.idx < S.soal.length - 1) geser(1); else tampilSoal(); }, jeda || 900);
 }
 
