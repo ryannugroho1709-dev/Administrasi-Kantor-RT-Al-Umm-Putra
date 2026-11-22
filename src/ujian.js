@@ -338,27 +338,35 @@ async function ujImporBank(ev) {
   try { j = JSON.parse(await f.text()); } catch (e) { toast("File bukan JSON yang valid", "err"); return; }
   const err = _ujValidasiBank(j);
   if (err.length) { openModal(`<h3>⚠️ Bank soal belum valid</h3><ul style="font-size:12.5px;line-height:1.7">${err.slice(0, 15).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>`); return; }
-  const mapelCocok = LOOKUP.mapel.find((m) => m.nama_mapel.toLowerCase().trim() === String(j.mapel || "").toLowerCase().trim());
+  const mapelCocok = LOOKUP.mapel.find((m) => m.id === j.mapel_id) || LOOKUP.mapel.find((m) => m.nama_mapel.toLowerCase().trim() === String(j.mapel || "").toLowerCase().trim());
+  const subPilihan = (id) => (id && typeof subMapel === "function" ? subMapel(id) : []);
+  const pilihSub = (id) => { const s = subPilihan(id); return s.length ? `<option value="">— pilih —</option>${s.map((x) => `<option ${String(x).toLowerCase() === String(j.sub || "").toLowerCase() ? "selected" : ""}>${escapeHtml(x)}</option>`).join("")}` : ""; };
+  const jenisAwal = UJ_JENIS_NILAI[j.jenis_nilai] ? j.jenis_nilai : "uh";
   const cek = (j.bagian || []).flatMap((b) => (b.soal || []).filter((s) => s.cek).map((s) => `${UJ_LABEL[b.jenis]} no ${s.no}`));
   openModal(`<h3>⬆️ Impor bank soal</h3>
     <div style="font-size:12.5px;color:var(--text-secondary);margin-bottom:12px"><b>${escapeHtml(j.judul || f.name)}</b><br>${(j.bagian || []).map((b) => `${UJ_LABEL[b.jenis]}: ${(b.soal || []).length} soal × ${b.poin} poin`).join(" · ")}</div>
     <div class="field"><label class="form-label">Kode unik</label><input id="uj-i-kode" class="input" value="${escapeHtml(j.id || f.name.replace(/\.json$/i, ""))}"></div>
     <div class="field"><label class="form-label">Judul</label><input id="uj-i-judul" class="input" value="${escapeHtml(j.judul || "")}"></div>
     <div class="field"><label class="form-label">Mapel</label><select id="uj-i-mapel" class="input">${LOOKUP.mapel.map((m) => `<option value="${m.id}" ${mapelCocok && mapelCocok.id === m.id ? "selected" : ""}>${escapeHtml(m.nama_mapel)}</option>`).join("")}</select></div>
-    <div style="display:flex;gap:10px">
-      <div class="field" style="flex:1"><label class="form-label">Kelas (tingkat)</label><input id="uj-i-tingkat" class="input" value="${escapeHtml(j.kelas || "")}"></div>
-      <div class="field" style="flex:1"><label class="form-label">Bab → Ulangan Harian ke-</label><input id="uj-i-bab" type="number" min="1" class="input" value="${Number(j.bab) || 1}"></div>
+    <div class="field" id="uj-i-sub-w" style="${subPilihan(mapelCocok && mapelCocok.id).length ? "" : "display:none"}"><label class="form-label">🔀 Untuk Mapel</label><select id="uj-i-sub" class="input">${pilihSub(mapelCocok && mapelCocok.id)}</select></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <div class="field" style="flex:1;min-width:110px"><label class="form-label">Kelas (Tingkat)</label><input id="uj-i-tingkat" class="input" value="${escapeHtml(j.kelas || "")}"></div>
+      <div class="field" style="flex:1;min-width:110px"><label class="form-label">Jenis Nilai</label><select id="uj-i-jenis" class="input">${Object.entries(UJ_JENIS_NILAI).map(([k, v]) => `<option value="${k}" ${k === jenisAwal ? "selected" : ""}>${escapeHtml(v)}</option>`).join("")}</select></div>
+      <div class="field" style="flex:1;min-width:80px"><label class="form-label">Ke-</label><input id="uj-i-bab" type="number" min="1" class="input" value="${Number(j.bab) || 1}"></div>
     </div>
     ${cek.length ? `<div class="uj-peringatan">🔎 ${cek.length} kunci ditandai perlu dicek guru: ${escapeHtml(cek.join(", "))}. Periksa lewat tombol 🔑 setelah impor.</div>` : ""}
     <button class="btn btn-accent" style="width:100%;margin-top:8px" id="uj-i-ok">Simpan bank soal</button>`);
+  qs("uj-i-mapel").onchange = (e) => { const h = pilihSub(e.target.value); qs("uj-i-sub").innerHTML = h; qs("uj-i-sub-w").style.display = h ? "" : "none"; };
   qs("uj-i-ok").onclick = async () => {
-    const isian = { kode: qs("uj-i-kode").value.trim(), judul: qs("uj-i-judul").value.trim(), mapel: qs("uj-i-mapel").value, tingkat: qs("uj-i-tingkat").value.trim(), bab: Number(qs("uj-i-bab").value) || 1 };
+    const isian = { kode: qs("uj-i-kode").value.trim(), judul: qs("uj-i-judul").value.trim(), mapel: qs("uj-i-mapel").value, tingkat: qs("uj-i-tingkat").value.trim(), bab: Number(qs("uj-i-bab").value) || 1, jenis: qs("uj-i-jenis").value, sub: qs("uj-i-sub").value };
     if (!isian.kode || !isian.judul) { toast("Kode & judul wajib diisi", "err"); return; }
+    if (subPilihan(isian.mapel).length && !isian.sub) { toast("Pilih dulu “Untuk Mapel” (mis. Geografi / Ekonomi)", "err"); return; }
     try {
       const pin = await _ujPin("PIN untuk menyimpan kunci"); if (!pin) return;
       const { publik, kunci } = _ujPisahKunci(j);
-      await _ujRpc("ujian_bank_simpan", { p_pin: pin, p_kode: isian.kode, p_mapel_id: isian.mapel, p_tingkat: isian.tingkat, p_bab: isian.bab, p_judul: isian.judul, p_soal: publik, p_kunci: kunci, p_skor_maksimal: j.skor_maksimal || 100, p_guru: STATE.guruId || null });
-      toast("Bank soal tersimpan", "ok"); closeModal(); ujMuat();
+      const bankId = await _ujRpc("ujian_bank_simpan", { p_pin: pin, p_kode: isian.kode, p_mapel_id: isian.mapel, p_tingkat: isian.tingkat, p_bab: isian.bab, p_judul: isian.judul, p_soal: publik, p_kunci: kunci, p_skor_maksimal: j.skor_maksimal || 100, p_guru: STATE.guruId || null });
+      if (bankId && typeof _ujSimpanJenis === "function") await _ujSimpanJenis(bankId, isian.jenis, isian.bab, { mapel_id: isian.mapel, tingkat: isian.tingkat, guru_id: STATE.guruId || null, ...(isian.sub ? { sub: isian.sub } : {}) });
+      toast(isian.jenis === "uas" ? "Bank soal tersimpan sebagai UAS — otomatis tercatat di Pengumpulan Soal" : "Bank soal tersimpan", "ok"); closeModal(); ujMuat();
     } catch (e) { toast(_ujPesan(e), "err"); }
   };
 }
