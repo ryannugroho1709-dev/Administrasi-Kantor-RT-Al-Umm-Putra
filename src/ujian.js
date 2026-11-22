@@ -462,7 +462,7 @@ function ujBukaSesiModal(bankId) {
       <div class="uj-sub" style="margin-top:4px">Soal tetap dari bank soal ini. Mode di atas berlaku untuk PG, PG Kompleks & Benar/Salah. Kunci jawaban tetap aman.</div></div>
     ${(() => {
       const ada = new Set((b.soal || []).filter((x) => (x.soal || []).length).map((x) => x.jenis));
-      const pilihan = { pg: [["labirin", "🏃 Labirin Kejar (dikejar hewan)"]], pgk: [["kolam", "🐟 Kolam Ikan"]], isian: [["balok", "🔤 Balok Huruf"]], jodoh: [["kartu", "🃏 Kartu Pasangan"], ["garis", "🔗 Tarik Garis"]], urut: [["kereta", "🚂 Gerbong Kereta"]], uraian: [["pohon", "🌳 Pohon Ilmu"], ["perkamen", "📜 Surat Perkamen"]] };
+      const pilihan = { pg: [["labirin", "🏃 Labirin Kejar (dikejar hewan)"]], pgk: [["kolam", "🐟 Kolam Ikan"]], isian: [["balok", "🔤 Balok Huruf"]], jodoh: [["kartu", "🃏 Kartu Pasangan"], ["garis", "🔗 Tarik Garis"]], urut: [["kereta", "🚂 Gerbong Kereta"]], uraian: [["peti", "🗺️ Berburu Peti (peta, cari peti soal, ada jebakan)"], ["pohon", "🌳 Pohon Ilmu"], ["perkamen", "📜 Surat Perkamen"]] };
       const nama = { pg: "Pilihan Ganda", pgk: "PG Kompleks", isian: "Isian Singkat", jodoh: "Menjodohkan", urut: "Mengurutkan", uraian: "Uraian" };
       const baris = Object.keys(pilihan).filter((j) => ada.has(j));
       const kelasGame = `<div class="field uj-game-kelas"><label class="form-label">🏆 Game Bersama Satu Kelas <small style="font-weight:500">(tampil di proyektor, semua jenis soal)</small></label>
