@@ -1,0 +1,188 @@
+// ============================================================
+//  ARSIP ARKAS — cetakan resmi "Rincian Kertas Kerja Perbulan" dari ARKAS disimpan per tahun
+//  • Data tiap baris (kode rekening, kode program, uraian, volume, satuan, tarif, jumlah) disimpan di
+//    kv "bosp:arkas:<tahun>" (ruang "*"): { info, nama:{kode→nama kegiatan}, Murni:{bulan:{…}},
+//    Pergeseran:{…}, Perubahan:{…} }. Baris: [rek, kode, uraian, vol, satuan, tarif, jumlah].
+//  • PDF aslinya disimpan di Arsip Drive "03 BOSP/<tahun>/ARKAS/<versi>" (tautan di field pdf).
+//  • Tampilan: Ringkasan per bulan, Rincian per bulan (bisa dibandingkan dengan RKAS awal),
+//    Pola Belanja (kegiatan/rekening/barang yang sering dipakai) → bahan belajar tahun berikutnya.
+// ============================================================
+const ARK = { th: null, d: null, tahunAda: [], tab: "ringkas", versi: "Final", bulan: 1, pola: "kegiatan" };
+const ARK_VERSI = ["Murni", "Pergeseran", "Perubahan"];
+const ARK_BLN = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+const _arkE = (s) => (typeof escapeHtml === "function" ? escapeHtml(String(s ?? "")) : String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]));
+const _arkRp = (n) => Number(n || 0).toLocaleString("id-ID");
+const _arkProgNama = (k) => (typeof BSP_PROGRAM_ARKAS !== "undefined" && BSP_PROGRAM_ARKAS[k]) || "";
+
+async function _arkMuat(th) {
+  const r = await supaSemua.from("kuliah_pengaturan").select("kunci,nilai").eq("ruang_id", "*").like("kunci", "bosp:arkas:%");
+  if (r.error) throw r.error;
+  const semua = {};
+  (r.data || []).forEach((x) => { const t = x.kunci.split(":")[2]; if (/^\d{4}$/.test(t)) semua[t] = x.nilai || {}; });
+  ARK.tahunAda = Object.keys(semua).sort().reverse();
+  ARK.th = th && semua[th] ? String(th) : ARK.tahunAda[0] || null;
+  ARK.d = ARK.th ? semua[ARK.th] : null;
+}
+// Versi terakhir yang berlaku untuk bulan m (Perubahan > Pergeseran > Murni)
+function _arkVersiAkhir(m) { for (const v of ["Perubahan", "Pergeseran", "Murni"]) if (ARK.d && ARK.d[v] && ARK.d[v][m]) return v; return null; }
+function _arkData(versi, m) {
+  if (!ARK.d) return null;
+  const v = versi === "Final" ? _arkVersiAkhir(m) : versi;
+  return v && ARK.d[v] && ARK.d[v][m] ? { versi: v, ...ARK.d[v][m] } : null;
+}
+const _arkBaris = (b) => ({ rek: b[0], kode: b[1], uraian: b[2], vol: b[3], sat: b[4], tarif: b[5], jumlah: b[6] });
+
+async function bspArsipArkas(th) {
+  try {
+    if (typeof setGlobalLoading === "function") setGlobalLoading(true, "Membuka Arsip ARKAS…");
+    await _arkMuat(th || ARK.th || (typeof BSP !== "undefined" && BSP.th));
+  } catch (e) { toast("Gagal memuat arsip: " + e.message, "err"); return; }
+  finally { if (typeof setGlobalLoading === "function") setGlobalLoading(false); }
+  if (!ARK.d) { openModal(`<h3>🗂 Arsip ARKAS</h3><p>Belum ada cetakan ARKAS yang diarsipkan.</p>`); return; }
+  openModal(`<div class="ark"><h3 style="margin:0 0 4px">🗂 Arsip ARKAS</h3>
+    <div class="ark-ket">Salinan cetakan resmi <b>Rincian Kertas Kerja Perbulan</b> dari ARKAS — disimpan supaya mudah dicari dan menjadi bahan belajar menyusun anggaran tahun berikutnya.</div>
+    <div class="ark-atas"><label>Tahun <select id="ark-th" onchange="bspArsipArkas(this.value)">${ARK.tahunAda.map((t) => `<option ${t === ARK.th ? "selected" : ""}>${t}</option>`).join("")}</select></label>
+    <div class="rg-tab ark-tab">${[["ringkas", "Ringkasan"], ["rinci", "Rincian Bulanan"], ["pola", "Pola Belanja"]].map(([k, n]) => `<button class="${ARK.tab === k ? "aktif" : ""}" onclick="ARK.tab='${k}';_arkGambar()">${n}</button>`).join("")}</div></div>
+    <div id="ark-isi"></div></div>`, { lebar: true });
+  _arkGambar();
+}
+
+function _arkGambar() {
+  document.querySelectorAll(".ark-tab button").forEach((b, i) => b.classList.toggle("aktif", ["ringkas", "rinci", "pola"][i] === ARK.tab));
+  const el = qs("ark-isi"); if (!el) return;
+  el.innerHTML = ARK.tab === "rinci" ? _arkHtmlRinci() : ARK.tab === "pola" ? _arkHtmlPola() : _arkHtmlRingkas();
+}
+
+// ── 1. Ringkasan per bulan ──
+function _arkHtmlRingkas() {
+  const d = ARK.d, pagu = (d.info && d.info.pagu) || 0;
+  const versiAda = ARK_VERSI.filter((v) => d[v] && Object.keys(d[v]).length);
+  let totFinal = 0; const tot = {}; let maks = 1;
+  const baris = ARK_BLN.map((nm, i) => {
+    const m = i + 1, akhir = _arkData("Final", m);
+    const f = akhir ? akhir.jumlah : 0; totFinal += f; maks = Math.max(maks, f);
+    return { m, nm, akhir, f };
+  });
+  const sel = baris.map((b) => `<tr><td>${b.nm}</td>${versiAda.map((v) => { const x = d[v][b.m]; if (x) tot[v] = (tot[v] || 0) + x.jumlah; return `<td class="r${v !== "Murni" ? " ark-hp-x" : ""}">${x ? _arkRp(x.jumlah) : `<span class="ark-redup">—</span>`}</td>`; }).join("")}
+    <td class="r"><b>${_arkRp(b.f)}</b>${b.akhir && b.akhir.versi !== "Murni" ? ` <span class="ark-chip">${b.akhir.versi}</span>` : ""}</td>
+    <td class="ark-bar-td"><div class="ark-bar" style="width:${Math.round((b.f / maks) * 100)}%"></div></td>
+    <td><button class="btn btn-sm btn-ghost" onclick="ARK.tab='rinci';ARK.bulan=${b.m};ARK.versi='Final';_arkGambar()">Rincian</button></td></tr>`).join("");
+  const info = (d.info && d.info.versi) || {};
+  return `<div class="ark-kartu-baris">
+      <div class="ark-kartu"><span>Pagu BOSP ${ARK.th}</span><b>Rp ${_arkRp(pagu)}</b></div>
+      <div class="ark-kartu"><span>Total Belanja (versi terakhir)</span><b>Rp ${_arkRp(totFinal)}</b></div>
+      <div class="ark-kartu"><span>${totFinal <= pagu ? "Sisa" : "Lebih dari pagu"}</span><b>Rp ${_arkRp(Math.abs(pagu - totFinal))}</b></div></div>
+    <div class="ark-ket" style="margin:10px 0">${versiAda.map((v) => `<div>• <b>${v}</b>: ${_arkE(info[v] || "")}</div>`).join("")}
+      <div>• Kolom <b>Berlaku</b> = versi terakhir untuk bulan itu (Perubahan → Pergeseran → RKAS awal).</div></div>
+    <div class="table-wrap"><table class="table ark-t"><thead><tr><th>Bulan</th>${versiAda.map((v) => `<th class="r${v !== "Murni" ? " ark-hp-x" : ""}">${v === "Murni" ? "RKAS Awal" : v}</th>`).join("")}<th class="r">Berlaku</th><th class="ark-bar-td"></th><th></th></tr></thead>
+    <tbody>${sel}</tbody><tfoot><tr><td>Jumlah</td>${versiAda.map((v) => `<td class="r${v !== "Murni" ? " ark-hp-x" : ""}">${_arkRp(tot[v] || 0)}</td>`).join("")}<td class="r"><b>${_arkRp(totFinal)}</b></td><td class="ark-bar-td"></td><td></td></tr></tfoot></table></div>`;
+}
+
+// ── 2. Rincian satu bulan (struktur Program → Sub Program → Kegiatan seperti cetakan ARKAS) ──
+function _arkHtmlRinci() {
+  const m = ARK.bulan, x = _arkData(ARK.versi, m);
+  const pilihVersi = ["Final", ...ARK_VERSI.filter((v) => ARK.d[v] && ARK.d[v][m])];
+  const kepala = `<div class="ark-atas">
+    <label>Bulan <select onchange="ARK.bulan=+this.value;_arkGambar()">${ARK_BLN.map((n, i) => `<option value="${i + 1}" ${i + 1 === m ? "selected" : ""}>${n}</option>`).join("")}</select></label>
+    <label>Versi <select onchange="ARK.versi=this.value;_arkGambar()">${pilihVersi.map((v) => `<option value="${v}" ${v === ARK.versi ? "selected" : ""}>${v === "Final" ? "Berlaku (terakhir)" : v === "Murni" ? "RKAS Awal" : v}</option>`).join("")}</select></label>
+    ${x && x.pdf ? `<button class="btn btn-sm btn-outline" onclick="_arkBukaPdf('${x.versi}',${m})">📄 Buka PDF Asli</button>` : ""}</div>`;
+  if (!x) return kepala + `<p class="ark-redup">Tidak ada cetakan untuk bulan ini.</p>`;
+  const rows = x.rows.map(_arkBaris);
+  const murni = x.versi !== "Murni" && ARK.d.Murni && ARK.d.Murni[m] ? ARK.d.Murni[m].rows.map(_arkBaris) : null;
+  const kunci = (r) => r.kode + "|" + r.rek + "|" + r.uraian;
+  const petaMurni = {}; (murni || []).forEach((r) => { (petaMurni[kunci(r)] = petaMurni[kunci(r)] || []).push(r); });
+  const nama = ARK.d.nama || {};
+  const jumlahKode = (pref) => rows.filter((r) => r.kode === pref || r.kode.startsWith(pref + ".")).reduce((a, r) => a + r.jumlah, 0);
+  const html = []; let l1 = "", l2 = "", l3 = "";
+  rows.forEach((r) => {
+    const [a, b] = r.kode.split(".");
+    if (a !== l1) { l1 = a; l2 = l3 = ""; html.push(`<tr class="ark-l1"><td></td><td>${a}</td><td colspan="4">${_arkE(nama[a] || _arkProgNama(a))}</td><td class="r">${_arkRp(jumlahKode(a))}</td></tr>`); }
+    if (a + "." + b !== l2) { l2 = a + "." + b; l3 = ""; html.push(`<tr class="ark-l2"><td></td><td>${l2}</td><td colspan="4">${_arkE(nama[l2] || "")}</td><td class="r">${_arkRp(jumlahKode(l2))}</td></tr>`); }
+    if (r.kode !== l3) { l3 = r.kode; html.push(`<tr class="ark-l3"><td></td><td>${l3}</td><td colspan="4">${_arkE(nama[l3] || "")}</td><td class="r">${_arkRp(jumlahKode(l3))}</td></tr>`); }
+    let tanda = "";
+    if (murni) { const p = petaMurni[kunci(r)]; const sama = p && p.findIndex((q) => q.jumlah === r.jumlah); if (!p || !p.length) tanda = `<span class="ark-chip baru">Baru</span>`; else if (sama >= 0) p.splice(sama, 1); else { tanda = `<span class="ark-chip ubah" title="RKAS awal: ${_arkRp(p[0].jumlah)}">Berubah</span>`; p.splice(0, 1); } }
+    html.push(`<tr class="ark-d"><td class="ark-rek">${r.rek}</td><td>${r.kode}</td><td>${_arkE(r.uraian)} ${tanda}</td><td class="r">${r.vol ?? ""}</td><td>${_arkE(r.sat)}</td><td class="r">${_arkRp(r.tarif)}</td><td class="r">${_arkRp(r.jumlah)}</td></tr>`);
+  });
+  const hilang = murni ? Object.values(petaMurni).flat() : [];
+  return kepala + `<div class="ark-ket">${x.versi === "Murni" ? "RKAS Awal" : x.versi} · dicetak ${_arkE(x.tgl || "-")} · ${rows.length} rincian belanja${murni ? " · tanda <b>Baru</b>/<b>Berubah</b> dibanding RKAS awal" : ""}</div>
+    <div class="table-wrap"><table class="table ark-t ark-rinci"><thead><tr><th>Kode Rekening</th><th>Kode Program</th><th>Uraian</th><th class="r">Volume</th><th>Satuan</th><th class="r">Tarif Harga</th><th class="r">Jumlah</th></tr></thead>
+    <tbody>${html.join("")}</tbody><tfoot><tr><td colspan="6">Jumlah</td><td class="r">${_arkRp(x.jumlah)}</td></tr></tfoot></table></div>
+    ${hilang.length ? `<div class="ark-hilang"><b>Dihapus dari RKAS awal (${hilang.length}):</b> ${hilang.map((r) => `${_arkE(r.uraian)} (${r.kode}, Rp ${_arkRp(r.jumlah)})`).join("; ")}</div>` : ""}`;
+}
+async function _arkBukaPdf(versi, m) {
+  const x = ARK.d && ARK.d[versi] && ARK.d[versi][m];
+  if (!x || !x.pdf) { toast("PDF belum diarsipkan", "err"); return; }
+  if (typeof arsipLihat === "function") arsipLihat(x.pdf); else window.open(x.pdf.url, "_blank");
+}
+
+// ── 3. Pola belanja setahun (versi yang berlaku tiap bulan) ──
+function _arkSemuaBarisFinal() {
+  const out = [];
+  for (let m = 1; m <= 12; m++) { const x = _arkData("Final", m); if (x) x.rows.forEach((b) => out.push({ ..._arkBaris(b), m })); }
+  return out;
+}
+const _arkNamaBarang = (u) => String(u || "").split("-")[0].trim() || u;
+function _arkHtmlPola() {
+  const semua = _arkSemuaBarisFinal(), nama = ARK.d.nama || {}, pagu = (ARK.d.info && ARK.d.info.pagu) || 0;
+  const total = semua.reduce((a, r) => a + r.jumlah, 0) || 1;
+  const kelompok = (fn) => { const g = {}; semua.forEach((r) => { const k = fn(r); if (!k) return; const o = (g[k] = g[k] || { k, n: 0, bulan: new Set(), baris: [] }); o.n += r.jumlah; o.bulan.add(r.m); o.baris.push(r); }); return Object.values(g).sort((a, b) => b.n - a.n); };
+  const pilihan = [["kegiatan", "Per Kegiatan"], ["rekening", "Per Kode Rekening"], ["barang", "Per Barang/Jasa"], ["honor", "Honor & Upah Orang"], ["catatan", "Catatan Belajar"]];
+  const kepala = `<div class="rg-tab ark-sub">${pilihan.map(([k, n]) => `<button class="${ARK.pola === k ? "aktif" : ""}" onclick="ARK.pola='${k}';_arkGambar()">${n}</button>`).join("")}</div>`;
+  const pita = (s) => `<span class="ark-bulan">${ARK_BLN.map((n, i) => `<i class="${s.has(i + 1) ? "on" : ""}" title="${n}">${n[0]}</i>`).join("")}</span>`;
+  const tabel = (judul, data, kolNama) => `<div class="table-wrap"><table class="table ark-t ark-pola"><thead><tr><th>${judul}</th><th>Bulan Muncul</th><th class="r">Total Setahun</th><th class="r">% Belanja</th></tr></thead><tbody>${data.map((o) => `<tr><td>${kolNama(o)}</td><td>${pita(o.bulan)} <small>${o.bulan.size}×</small></td><td class="r">${_arkRp(o.n)}</td><td class="r">${((o.n / total) * 100).toFixed(1)}%</td></tr>`).join("")}</tbody></table></div>`;
+  if (ARK.pola === "rekening") {
+    const g = kelompok((r) => r.rek);
+    const namaRek = (k) => { const ref = typeof BSP_REK !== "undefined" ? BSP_REK.find((x) => x.kode === k) : null; return (ref && ref.nama) || _arkNamaBarang(g.find((o) => o.k === k).baris[0].uraian); };
+    return kepala + tabel("Kode Rekening", g, (o) => `<b class="ark-rek">${o.k}</b><br><small>${_arkE(namaRek(o.k))}</small>`);
+  }
+  if (ARK.pola === "barang") {
+    const g = kelompok((r) => (r.kode.startsWith("07.12") ? null : _arkNamaBarang(r.uraian)));
+    return kepala + `<div class="ark-ket">Barang/jasa dikelompokkan dari nama sebelum tanda "-" pada uraian ARKAS. Honor per orang ada di tab Honor & Upah Orang.</div>` +
+      tabel("Barang / Jasa", g, (o) => { const vol = o.baris.reduce((a, r) => a + (r.vol || 0), 0), sat = o.baris[0].sat, tarif = [...new Set(o.baris.map((r) => r.tarif))]; return `<b>${_arkE(o.k)}</b><br><small>${vol} ${_arkE(sat)} · harga ${tarif.slice(0, 3).map(_arkRp).join(" / ")}${tarif.length > 3 ? "…" : ""}</small>`; });
+  }
+  if (ARK.pola === "honor") {
+    const g = kelompok((r) => (r.kode.startsWith("07.12") || /orang \/ bulan/.test(r.sat) ? r.uraian.replace(/\s*\(\d{8,}\)\s*/, "") + "§" + r.kode : null));
+    return kepala + `<div class="ark-ket">Semua baris dengan satuan "orang / bulan" dan kegiatan 07.12 (Pembayaran Honor).</div>` +
+      tabel("Nama / Uraian", g, (o) => { const [n, k] = o.k.split("§"); const per = [...new Set(o.baris.map((r) => r.jumlah))]; return `<b>${_arkE(n)}</b><br><small>${k} ${_arkE(nama[k] || "")} · ${per.map(_arkRp).join(" / ")} per bulan</small>`; });
+  }
+  if (ARK.pola === "catatan") return kepala + _arkHtmlCatatan(semua, total, pagu, kelompok);
+  const g = kelompok((r) => r.kode);
+  return kepala + tabel("Kegiatan", g, (o) => `<b>${o.k}</b> ${_arkE(nama[o.k] || "")}<br><small>${_arkE(nama[o.k.split(".")[0]] || _arkProgNama(o.k.split(".")[0]))}</small>`);
+}
+function _arkHtmlCatatan(semua, total, pagu, kelompok) {
+  const nama = ARK.d.nama || {};
+  const rutin = kelompok((r) => _arkNamaBarang(r.uraian) + "§" + r.kode).filter((o) => o.bulan.size >= 10);
+  const keg = kelompok((r) => r.kode).slice(0, 5);
+  const prog = kelompok((r) => r.kode.split(".")[0]);
+  // Kode rekening belanja modal (5.2.x) di kegiatan yang bukan pengadaan aset → patut dicek
+  const curiga = semua.filter((r) => /^5\.2\.04/.test(r.rek) || (/^5\.2\./.test(r.rek) && !/^05\./.test(r.kode)));
+  const rekBeda = {}; semua.forEach((r) => { if (!/orang \/ bulan/.test(r.sat)) return; const k = r.kode; (rekBeda[k] = rekBeda[k] || new Set()).add(r.rek); });
+  const ganda = Object.entries(rekBeda).filter(([, s]) => s.size > 1);
+  const unik = (arr) => { const s = new Set(); return arr.filter((r) => { const k = r.rek + r.kode + r.uraian; if (s.has(k)) return false; s.add(k); return true; }); };
+  return `<div class="ark-catatan">
+    <h4>Pembagian per Standar</h4><ul>${prog.map((o) => `<li><b>${o.k}. ${_arkE(nama[o.k] || _arkProgNama(o.k))}</b> — Rp ${_arkRp(o.n)} (${((o.n / total) * 100).toFixed(1)}%)</li>`).join("")}</ul>
+    <h4>5 Kegiatan Terbesar</h4><ol>${keg.map((o) => `<li>${o.k} ${_arkE(nama[o.k] || "")} — Rp ${_arkRp(o.n)}</li>`).join("")}</ol>
+    <h4>Belanja Rutin (muncul ≥ 10 bulan) — hampir pasti dianggarkan lagi tahun depan</h4>
+    <ul>${rutin.map((o) => { const [n, k] = o.k.split("§"); return `<li>${_arkE(n.replace(/\s*\(\d{8,}\)/, ""))} <small>(${k}, ${o.bulan.size} bulan, Rp ${_arkRp(o.n)})</small></li>`; }).join("") || "<li>-</li>"}</ul>
+    <h4>Perlu Dicek Bendahara</h4><ul>
+      ${unik(curiga).map((r) => `<li>Kode rekening <b>${r.rek}</b> (belanja modal) dipakai untuk "${_arkE(r.uraian)}" di kegiatan ${r.kode} ${_arkE(nama[r.kode] || "")}. ${/^5\.2\.04/.test(r.rek) ? "Kode 5.2.04 adalah belanja modal jaringan (aset), padahal kegiatannya pembayaran rutin; pastikan kodenya sesuai." : "Belanja modal (aset) biasanya ditaruh di Standar Sarana dan Prasarana (05); pastikan kegiatannya sesuai."}</li>`).join("")}
+      ${ganda.map(([k, s]) => `<li>Kegiatan ${k} ${_arkE(nama[k] || "")} memakai beberapa kode rekening untuk honor/upah: ${[...s].join(", ")}. Pastikan memang berbeda jenisnya.</li>`).join("")}
+      ${!curiga.length && !ganda.length ? "<li>Tidak ada temuan.</li>" : ""}</ul>
+    <div class="ark-ket">Total belanja setahun (versi berlaku) Rp ${_arkRp(total)} dari pagu Rp ${_arkRp(pagu)}.</div></div>`;
+}
+
+// Tombol "Arsip ARKAS" di sebelah Laporan Bulanan
+(function pasangTombolArkas() {
+  const pasang = () => {
+    const kotak = document.querySelector("#page-rg .bsp-tombol");
+    if (!kotak || kotak.querySelector(".bsp-ark") || (typeof BSP !== "undefined" && BSP.mode === "review")) return;
+    const lap = kotak.querySelector(".bsp-lap");
+    const html = `<button class="btn btn-outline bsp-ark" onclick="bspArsipArkas()" title="Cetakan ARKAS tahun-tahun sebelumnya & pola belanja">🗂 Arsip ARKAS</button>`;
+    if (lap) lap.insertAdjacentHTML("afterend", html); else kotak.insertAdjacentHTML("afterbegin", html);
+  };
+  for (const nama of ["_bspGambar", "_bspGambarGab"]) {
+    const asli = window[nama];
+    if (typeof asli !== "function") continue;
+    window[nama] = function () { const h = asli.apply(this, arguments); try { pasang(); } catch (e) {} return h; };
+  }
+})();
