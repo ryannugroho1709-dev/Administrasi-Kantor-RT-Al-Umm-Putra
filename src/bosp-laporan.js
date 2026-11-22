@@ -23,9 +23,23 @@ async function _bspIdentitas() {
   } catch (e) { return {}; }
 }
 
+// Kepala Sekolah di laporan = guru yang SEKARANG memegang jabatan "Kepala PKBM" di Data Guru
+// (diutamakan yang ditandai utama; cadangan: jabatan "Kepala Sekolah"). Ganti orangnya cukup di Data Guru.
+function _bspKepalaPkbm() {
+  if (typeof LOOKUP === "undefined") return null;
+  for (const kode of ["kepala_pkbm", "kepala_sekolah"]) {
+    const kandidat = (LOOKUP.guruJabatan || []).filter((j) => j.jabatan_master?.kode === kode)
+      .map((j) => ({ j, g: (LOOKUP.guruAll || []).find((x) => x.id === j.guru_id) })).filter((x) => x.g && x.g.aktif !== false);
+    if (kandidat.length) return (kandidat.find((x) => x.j.is_utama) || kandidat[0]).g;
+  }
+  return null;
+}
+
 async function bspLaporanBulanan() {
   const th = BSP.th || _bspTahunAwal();
   const id = await _bspIdentitas();
+  const kepala = _bspKepalaPkbm();
+  if (kepala) id.kepsek = kepala.nama;
   const bendNama = (BSP.bend || []).map((g) => ((LOOKUP.guruAll || []).find((x) => x.id === g) || {}).nama).filter(Boolean)[0] || "";
   const bolehUbah = typeof bspBendahara === "function" && bspBendahara();
   const hariIni = new Date().toISOString().slice(0, 10);
@@ -41,7 +55,7 @@ async function bspLaporanBulanan() {
       <div class="bl-grid">
         ${f("npsn", "NPSN", id.npsn, "P99…")}${f("nama", "Nama Sekolah", id.nama || "PKBM AL UMM BARABAI")}${f("alamat", "Alamat", id.alamat)}
         ${f("kab", "Kabupaten", id.kab, "Kab. …")}${f("prov", "Provinsi", id.prov, "Prov. …")}${f("tempat", "Tempat Tanda Tangan", id.tempat, "Kec. …")}
-        ${f("kepsek", "Kepala Sekolah", id.kepsek)}${f("nipKepsek", "NIP Kepala Sekolah", id.nipKepsek, "boleh kosong")}
+        ${kepala ? `<label class="bsp-f"><span>Kepala Sekolah</span><input id="bl-kepsek" class="input" value="${_bspE(kepala.nama)}" disabled title="Otomatis dari Data Guru"><small class="bsp-ket">Otomatis dari Data Guru (jabatan Kepala PKBM). Kalau Kepala PKBM berganti, ubah jabatannya di Data Guru.</small></label>` : f("kepsek", "Kepala Sekolah", id.kepsek, "Belum ada guru berjabatan Kepala PKBM")}${f("nipKepsek", "NIP Kepala Sekolah", id.nipKepsek, "boleh kosong")}
         ${f("bend", "Bendahara Sekolah", id.bend || bendNama)}${f("nipBend", "NIP Bendahara", id.nipBend, "boleh kosong")}
       </div></details>
     <div id="bl-pesan"></div>
@@ -51,7 +65,7 @@ async function bspLaporanBulanan() {
 async function _bspLaporanBuat() {
   const v = (k) => (qs("bl-" + k)?.value || "").trim();
   const m = +v("bulan"), cakup = v("cakup"), th = BSP.th || _bspTahunAwal();
-  const id = { npsn: v("npsn"), nama: v("nama"), alamat: v("alamat"), kab: v("kab"), prov: v("prov"), tempat: v("tempat"), kepsek: v("kepsek"), nipKepsek: v("nipKepsek"), bend: v("bend"), nipBend: v("nipBend") };
+  const id = { npsn: v("npsn"), nama: v("nama"), alamat: v("alamat"), kab: v("kab"), prov: v("prov"), tempat: v("tempat"), kepsek: (_bspKepalaPkbm() || {}).nama || v("kepsek"), nipKepsek: v("nipKepsek"), bend: v("bend"), nipBend: v("nipBend") };
   const tombol = document.querySelector("#modal-panel .bsp-hitam"); if (tombol) { tombol.disabled = true; tombol.textContent = "Menyiapkan…"; }
   // jendela dibuka dulu (sebelum menunggu data) supaya tidak diblokir browser
   const w = window.open("", "_blank");
