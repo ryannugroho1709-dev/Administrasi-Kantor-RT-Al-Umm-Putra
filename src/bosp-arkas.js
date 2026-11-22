@@ -44,6 +44,7 @@ async function bspArsipArkas(th) {
     <div class="ark-atas"><label>Tahun <select id="ark-th" onchange="bspArsipArkas(this.value)">${ARK.tahunAda.map((t) => `<option ${t === ARK.th ? "selected" : ""}>${t}</option>`).join("")}</select></label>
     <div class="rg-tab ark-tab">${[["ringkas", "Ringkasan"], ["rinci", "Rincian Bulanan"], ["pola", "Pola Belanja"]].map(([k, n]) => `<button class="${ARK.tab === k ? "aktif" : ""}" onclick="ARK.tab='${k}';_arkGambar()">${n}</button>`).join("")}</div></div>
     <div id="ark-isi"></div></div>`, { lebar: true });
+  qs("modal-panel").classList.add("ark-modal");
   _arkGambar();
 }
 
@@ -74,7 +75,7 @@ function _arkHtmlRingkas() {
       <div class="ark-kartu"><span>${totFinal <= pagu ? "Sisa" : "Lebih dari pagu"}</span><b>Rp ${_arkRp(Math.abs(pagu - totFinal))}</b></div></div>
     <div class="ark-ket" style="margin:10px 0">${versiAda.map((v) => `<div>• <b>${v}</b>: ${_arkE(info[v] || "")}</div>`).join("")}
       <div>• Kolom <b>Berlaku</b> = versi terakhir untuk bulan itu (Perubahan → Pergeseran → RKAS awal).</div></div>
-    <div class="table-wrap"><table class="table ark-t"><thead><tr><th>Bulan</th>${versiAda.map((v) => `<th class="r${v !== "Murni" ? " ark-hp-x" : ""}">${v === "Murni" ? "RKAS Awal" : v}</th>`).join("")}<th class="r">Berlaku</th><th class="ark-bar-td"></th><th></th></tr></thead>
+    <div class="table-wrap"><table class="ark-t ark-ringkas"><thead><tr><th>Bulan</th>${versiAda.map((v) => `<th class="r${v !== "Murni" ? " ark-hp-x" : ""}">${v === "Murni" ? "RKAS Awal" : v}</th>`).join("")}<th class="r">Berlaku</th><th class="ark-bar-td"></th><th></th></tr></thead>
     <tbody>${sel}</tbody><tfoot><tr><td>Jumlah</td>${versiAda.map((v) => `<td class="r${v !== "Murni" ? " ark-hp-x" : ""}">${_arkRp(tot[v] || 0)}</td>`).join("")}<td class="r"><b>${_arkRp(totFinal)}</b></td><td class="ark-bar-td"></td><td></td></tr></tfoot></table></div>`;
 }
 
@@ -93,20 +94,35 @@ function _arkHtmlRinci() {
   const petaMurni = {}; (murni || []).forEach((r) => { (petaMurni[kunci(r)] = petaMurni[kunci(r)] || []).push(r); });
   const nama = ARK.d.nama || {};
   const jumlahKode = (pref) => rows.filter((r) => r.kode === pref || r.kode.startsWith(pref + ".")).reduce((a, r) => a + r.jumlah, 0);
-  const html = []; let l1 = "", l2 = "", l3 = "";
+  // LEBAR (≥ 860 px): 8 kolom persis cetakan ARKAS — No | Kode Rekening | Kode Program | Uraian | Volume | Satuan | Tarif | Jumlah.
+  // RINGKAS (HP / layar kecil): 3 kolom — Kode (program + rekening) | Uraian (+ volume × tarif) | Jumlah. Tanpa geser ke kanan.
+  const lebar = (qs("ark-isi")?.clientWidth || 900) >= 860;
+  ARK._lebar = lebar;
+  const titik = (k) => String(k).split(".").map((x) => x + ".").join(" ");
+  const html = []; let l1 = "", l2 = "", l3 = "", no = 0;
+  const judul = (kelas, kode, teks, n) => lebar
+    ? `<tr class="${kelas}"><td class="ark-no">${++no}.</td><td></td><td class="ark-kode">${titik(kode)}</td><td colspan="4">${_arkE(teks)}</td><td class="r">${_arkRp(n)}</td></tr>`
+    : `<tr class="${kelas}"><td class="ark-kode">${titik(kode)}</td><td>${_arkE(teks)}</td><td class="r">${_arkRp(n)}</td></tr>`;
   rows.forEach((r) => {
     const [a, b] = r.kode.split(".");
-    if (a !== l1) { l1 = a; l2 = l3 = ""; html.push(`<tr class="ark-l1"><td></td><td>${a}</td><td colspan="4">${_arkE(nama[a] || _arkProgNama(a))}</td><td class="r">${_arkRp(jumlahKode(a))}</td></tr>`); }
-    if (a + "." + b !== l2) { l2 = a + "." + b; l3 = ""; html.push(`<tr class="ark-l2"><td></td><td>${l2}</td><td colspan="4">${_arkE(nama[l2] || "")}</td><td class="r">${_arkRp(jumlahKode(l2))}</td></tr>`); }
-    if (r.kode !== l3) { l3 = r.kode; html.push(`<tr class="ark-l3"><td></td><td>${l3}</td><td colspan="4">${_arkE(nama[l3] || "")}</td><td class="r">${_arkRp(jumlahKode(l3))}</td></tr>`); }
+    if (a !== l1) { l1 = a; l2 = l3 = ""; html.push(judul("ark-l1", a, nama[a] || _arkProgNama(a), jumlahKode(a))); }
+    if (a + "." + b !== l2) { l2 = a + "." + b; l3 = ""; html.push(judul("ark-l2", l2, nama[l2] || "", jumlahKode(l2))); }
+    if (r.kode !== l3) { l3 = r.kode; html.push(judul("ark-l3", l3, nama[l3] || "", jumlahKode(l3))); }
     let tanda = "";
-    if (murni) { const p = petaMurni[kunci(r)]; const sama = p && p.findIndex((q) => q.jumlah === r.jumlah); if (!p || !p.length) tanda = `<span class="ark-chip baru">Baru</span>`; else if (sama >= 0) p.splice(sama, 1); else { tanda = `<span class="ark-chip ubah" title="RKAS awal: ${_arkRp(p[0].jumlah)}">Berubah</span>`; p.splice(0, 1); } }
-    html.push(`<tr class="ark-d"><td class="ark-rek">${r.rek}</td><td>${r.kode}</td><td>${_arkE(r.uraian)} ${tanda}</td><td class="r">${r.vol ?? ""}</td><td>${_arkE(r.sat)}</td><td class="r">${_arkRp(r.tarif)}</td><td class="r">${_arkRp(r.jumlah)}</td></tr>`);
+    if (murni) { const p = petaMurni[kunci(r)]; const sama = p && p.findIndex((q) => q.jumlah === r.jumlah); if (!p || !p.length) tanda = ` <span class="ark-chip baru">Baru</span>`; else if (sama >= 0) p.splice(sama, 1); else { tanda = ` <span class="ark-chip ubah" title="RKAS awal: ${_arkRp(p[0].jumlah)}">Berubah dari ${_arkRp(p[0].jumlah)}</span>`; p.splice(0, 1); } }
+    html.push(lebar
+      ? `<tr class="ark-d"><td class="ark-no">${++no}.</td><td class="ark-rek">${r.rek}</td><td class="ark-kode">${titik(r.kode)}</td><td>${_arkE(r.uraian)}${tanda}</td><td class="r">${r.vol ?? ""}</td><td>${_arkE(r.sat)}</td><td class="r">${_arkRp(r.tarif)}</td><td class="r">${_arkRp(r.jumlah)}</td></tr>`
+      : `<tr class="ark-d"><td class="ark-kode">${titik(r.kode)}<div class="ark-rek-kecil">${r.rek}</div></td><td>${_arkE(r.uraian)}${tanda}<div class="ark-hitung">${r.vol ?? ""} ${_arkE(r.sat)} × ${_arkRp(r.tarif)}</div></td><td class="r">${_arkRp(r.jumlah)}</td></tr>`);
   });
   const hilang = murni ? Object.values(petaMurni).flat() : [];
-  return kepala + `<div class="ark-ket">${x.versi === "Murni" ? "RKAS Awal" : x.versi} · dicetak ${_arkE(x.tgl || "-")} · ${rows.length} rincian belanja${murni ? " · tanda <b>Baru</b>/<b>Berubah</b> dibanding RKAS awal" : ""}</div>
-    <div class="table-wrap"><table class="table ark-t ark-rinci"><thead><tr><th>Kode Rekening</th><th>Kode Program</th><th>Uraian</th><th class="r">Volume</th><th>Satuan</th><th class="r">Tarif Harga</th><th class="r">Jumlah</th></tr></thead>
-    <tbody>${html.join("")}</tbody><tfoot><tr><td colspan="6">Jumlah</td><td class="r">${_arkRp(x.jumlah)}</td></tr></tfoot></table></div>
+  const kepalaTabel = lebar
+    ? `<thead><tr><th rowspan="2" style="width:38px">No.<br>Urut</th><th rowspan="2" style="width:132px">Kode Rekening</th><th rowspan="2" style="width:88px">Kode Program</th><th rowspan="2">Uraian</th><th colspan="3">Rincian Perhitungan</th><th rowspan="2" style="width:104px">Jumlah</th></tr>
+      <tr><th style="width:56px">Volume</th><th style="width:100px">Satuan</th><th style="width:92px">Tarif Harga</th></tr></thead>`
+    : `<thead><tr><th style="width:92px">Kode Program<br><small>Kode Rekening</small></th><th>Uraian<br><small>Volume Satuan × Tarif</small></th><th style="width:92px">Jumlah</th></tr></thead>`;
+  return kepala + `<div class="ark-judul-cetak"><b>RINCIAN KERTAS KERJA PERBULAN</b>Bulan ${ARK_BLN[m - 1]} ${ARK.th} · ${x.versi === "Murni" ? "RKAS Awal" : x.versi} · dicetak ${_arkE(x.tgl || "-")}</div>
+    ${murni ? `<div class="ark-ket" style="margin-bottom:6px">Tanda <span class="ark-chip baru">Baru</span> / <span class="ark-chip ubah">Berubah</span> = dibanding RKAS awal bulan ini.</div>` : ""}
+    <div class="table-wrap"><table class="ark-t ark-rinci ${lebar ? "ark-lebar" : "ark-ringkas-hp"}">${kepalaTabel}
+    <tbody>${html.join("")}</tbody><tfoot><tr><td colspan="${lebar ? 7 : 2}" class="c">Jumlah</td><td class="r">${_arkRp(x.jumlah)}</td></tr></tfoot></table></div>
     ${hilang.length ? `<div class="ark-hilang"><b>Dihapus dari RKAS awal (${hilang.length}):</b> ${hilang.map((r) => `${_arkE(r.uraian)} (${r.kode}, Rp ${_arkRp(r.jumlah)})`).join("; ")}</div>` : ""}`;
 }
 async function _arkBukaPdf(versi, m) {
@@ -129,7 +145,7 @@ function _arkHtmlPola() {
   const pilihan = [["kegiatan", "Per Kegiatan"], ["rekening", "Per Kode Rekening"], ["barang", "Per Barang/Jasa"], ["honor", "Honor & Upah Orang"], ["catatan", "Catatan Belajar"]];
   const kepala = `<div class="rg-tab ark-sub">${pilihan.map(([k, n]) => `<button class="${ARK.pola === k ? "aktif" : ""}" onclick="ARK.pola='${k}';_arkGambar()">${n}</button>`).join("")}</div>`;
   const pita = (s) => `<span class="ark-bulan">${ARK_BLN.map((n, i) => `<i class="${s.has(i + 1) ? "on" : ""}" title="${n}">${n[0]}</i>`).join("")}</span>`;
-  const tabel = (judul, data, kolNama) => `<div class="table-wrap"><table class="table ark-t ark-pola"><thead><tr><th>${judul}</th><th>Bulan Muncul</th><th class="r">Total Setahun</th><th class="r">% Belanja</th></tr></thead><tbody>${data.map((o) => `<tr><td>${kolNama(o)}</td><td>${pita(o.bulan)} <small>${o.bulan.size}×</small></td><td class="r">${_arkRp(o.n)}</td><td class="r">${((o.n / total) * 100).toFixed(1)}%</td></tr>`).join("")}</tbody></table></div>`;
+  const tabel = (judul, data, kolNama) => `<div class="table-wrap"><table class="ark-t ark-pola"><thead><tr><th style="width:34px">No.</th><th>${judul}</th><th>Bulan Muncul</th><th class="r">Total Setahun</th><th class="r ark-hp-x">% Belanja</th></tr></thead><tbody>${data.map((o, i) => `<tr><td class="c">${i + 1}.</td><td>${kolNama(o)}</td><td class="c" style="white-space:nowrap">${pita(o.bulan)} <small>${o.bulan.size} bln</small></td><td class="r">${_arkRp(o.n)}</td><td class="r ark-hp-x">${((o.n / total) * 100).toFixed(1)}%</td></tr>`).join("")}</tbody></table></div>`;
   if (ARK.pola === "rekening") {
     const g = kelompok((r) => r.rek);
     const namaRek = (k) => { const ref = typeof BSP_REK !== "undefined" ? BSP_REK.find((x) => x.kode === k) : null; return (ref && ref.nama) || _arkNamaBarang(g.find((o) => o.k === k).baris[0].uraian); };
@@ -147,7 +163,7 @@ function _arkHtmlPola() {
   }
   if (ARK.pola === "catatan") return kepala + _arkHtmlCatatan(semua, total, pagu, kelompok);
   const g = kelompok((r) => r.kode);
-  return kepala + tabel("Kegiatan", g, (o) => `<b>${o.k}</b> ${_arkE(nama[o.k] || "")}<br><small>${_arkE(nama[o.k.split(".")[0]] || _arkProgNama(o.k.split(".")[0]))}</small>`);
+  return kepala + tabel("Kegiatan", g, (o) => `<b class="ark-kode">${o.k}</b> ${_arkE(nama[o.k] || "")}<br><small>${_arkE(nama[o.k.split(".")[0]] || _arkProgNama(o.k.split(".")[0]))}</small>`);
 }
 function _arkHtmlCatatan(semua, total, pagu, kelompok) {
   const nama = ARK.d.nama || {};
@@ -184,5 +200,18 @@ function _arkHtmlCatatan(semua, total, pagu, kelompok) {
     const asli = window[nama];
     if (typeof asli !== "function") continue;
     window[nama] = function () { const h = asli.apply(this, arguments); try { pasang(); } catch (e) {} return h; };
+  }
+})();
+
+window.addEventListener("resize", () => {
+  clearTimeout(ARK._rz);
+  ARK._rz = setTimeout(() => { const el = qs("ark-isi"); if (el && ARK.tab === "rinci" && (el.clientWidth >= 860) !== ARK._lebar) _arkGambar(); }, 150);
+});
+
+// Modal Arsip ARKAS lebih lebar (seperti kertas landscape); kelasnya dilepas saat modal lain dibuka/ditutup
+(function () {
+  for (const nama of ["openModal", "closeModal"]) {
+    const asli = window[nama]; if (typeof asli !== "function") continue;
+    window[nama] = function () { const p = qs("modal-panel"); if (p) p.classList.remove("ark-modal"); return asli.apply(this, arguments); };
   }
 })();
