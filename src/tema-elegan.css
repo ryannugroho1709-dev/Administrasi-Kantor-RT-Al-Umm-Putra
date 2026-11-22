@@ -876,3 +876,34 @@ html .dash-hero.br-hero.br-ada-foto .dash-hero-deco{display:none}
 .ma-belum-pdf .ma-book-cover{filter:grayscale(.55);}
 .ma-belum-pdf .ma-book-cover .ma-pita-belum{filter:none;}
 .ma-belum-pdf .ma-book-buka{opacity:.5;}
+
+/* Kertas Kerja BOSP — tulisan tidak terpotong & tampilan kartu di HP */
+.bsp-prog{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;min-width:130px;max-width:190px!important;line-height:1.35}
+.bsp-tabel td{overflow-wrap:anywhere}
+.bsp-langkah span.selesai{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
+.bsp-langkah span.selesai:hover{filter:brightness(.95)}
+.bsp-aksi-bawah .bsp-mundur{margin-right:auto}
+@media(max-width:760px){
+  .bsp-tabel-wrap,.bsp-rv-prog .table-wrap{overflow:visible!important;background:none!important;border:0!important}
+  table.bsp-tabel,table.bsp-tabel tbody{display:block;width:100%}
+  table.bsp-tabel thead{display:none}
+  table.bsp-tabel tr{display:grid;grid-template-columns:1fr 1fr;gap:0 10px;background:var(--surface);border:1px solid var(--border-soft);border-radius:12px;padding:10px 12px;margin:0 0 10px;box-shadow:0 1px 4px rgba(15,23,42,.05)}
+  table.bsp-tabel td{display:block;max-width:none!important;min-width:0;border:0!important;padding:4px 0!important;font-size:12.5px;background:none}
+  table.bsp-tabel td[data-label]::before{content:attr(data-label);display:block;font-size:10px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.3px;margin-bottom:1px}
+  table.bsp-tabel td[data-label="No"]{display:none}
+  table.bsp-tabel td[data-label="Program Kegiatan"],table.bsp-tabel td[data-label="Kegiatan"],table.bsp-tabel td[data-label="Rekening Belanja"],table.bsp-tabel td[data-label="Uraian"]{grid-column:1/-1}
+  table.bsp-tabel td.bsp-prog{background:var(--pw)!important;border-radius:8px;padding:5px 8px!important;max-width:none!important;font-weight:700}
+  table.bsp-tabel td.bsp-prog::before{color:#475569}
+  table.bsp-tabel td.bsp-uraian{border-radius:8px;padding:5px 8px!important;background:color-mix(in srgb,#dcfce7 55%,transparent)}
+  table.bsp-tabel td[data-label="Total"]{font-size:14px}
+  table.bsp-tabel td[data-label="Aksi"]{display:flex;align-items:flex-end;justify-content:flex-end}
+  table.bsp-tabel td[data-label="Aksi"]::before{display:none}
+  table.bsp-tabel tr.otomatis{background:color-mix(in srgb,#fef3c7 55%,var(--surface))}
+  table.bsp-tabel tr.otomatis td{background:none}
+  table.bsp-tabel tr.sisip{box-shadow:inset 4px 0 0 #facc15}
+  table.bsp-tabel td[colspan]{grid-column:1/-1;text-align:center}
+  .bsp-tombol{display:grid;grid-template-columns:1fr 1fr;width:100%}
+  .bsp-tombol .btn{width:100%;justify-content:center}
+  .bsp-ringkas{width:100%}
+  .bsp-modal .bsp-langkah{flex-wrap:wrap}
+}
