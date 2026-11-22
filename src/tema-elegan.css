@@ -869,3 +869,10 @@ html .dash-hero.br-hero.br-ada-foto .dash-hero-deco{display:none}
 .ar-dok-item.ada{border-style:solid;border-color:color-mix(in srgb,#16a34a 40%,transparent);background:color-mix(in srgb,#16a34a 6%,transparent)}
 .ar-dok-item span{color:var(--text-secondary);font-size:11px}
 .ar-dok-item .btn{align-self:flex-start;border-radius:10px}
+
+/* Modul Ajar — pita buku belum lengkap */
+.ma-pita-belum{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:2px;padding:4px;pointer-events:none;}
+.ma-pita-belum span{display:block;text-align:center;font-size:9.5px;font-weight:800;letter-spacing:.2px;color:#fff;background:rgba(220,38,38,.92);border-radius:6px;padding:3px 4px;box-shadow:0 1px 4px rgba(0,0,0,.25);}
+.ma-belum-pdf .ma-book-cover{filter:grayscale(.55);}
+.ma-belum-pdf .ma-book-cover .ma-pita-belum{filter:none;}
+.ma-belum-pdf .ma-book-buka{opacity:.5;}
