@@ -907,3 +907,9 @@ html .dash-hero.br-hero.br-ada-foto .dash-hero-deco{display:none}
   .bsp-ringkas{width:100%}
   .bsp-modal .bsp-langkah{flex-wrap:wrap}
 }
+
+/* Laporan Bulanan BOSP (dialog) */
+.bl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px 12px;margin-bottom:10px}
+.bl-identitas{border:1px solid var(--border-soft);border-radius:10px;padding:8px 12px;margin-bottom:10px}
+.bl-identitas summary{cursor:pointer;font-weight:700;font-size:13px;margin-bottom:6px}
+.bl-identitas summary small{font-weight:400;color:var(--text-secondary)}

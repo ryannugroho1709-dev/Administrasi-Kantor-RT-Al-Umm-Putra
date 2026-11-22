@@ -343,10 +343,14 @@ const BSP_ATURAN = {
 // Rekening belanja — 3 kategori resmi ARKAS. Nama rekening di bawah adalah yang umum dipakai di ARKAS;
 // KODE rekening lengkap diisi Bendahara/Admin ARKAS (mengikuti daftar di aplikasi ARKAS yang dimutakhirkan Dinas).
 // Kode yang tercantum resmi di laman Kemendikdasmen: 5.1.02.02.01.0013 (honor) & 5.2.02.05.02.0001 (modal mebel).
+// Kode 0026, 0027, 0029, 0030, 0063 dan 5.1.02.01.01.0052 diambil dari cetakan ARKAS PKBM Al-Umm sendiri
+// (Rincian Kertas Kerja Perbulan, Januari 2026).
 const BSP_REK = [
   { jenis: "pegawai", nama: "Belanja Jasa Tenaga Pendidikan (Honorarium Guru/Tutor)", kode: "5.1.02.02.01.0013" },
-  { jenis: "barang", nama: "Belanja Jasa Tenaga Administrasi" },
-  { jenis: "barang", nama: "Belanja Jasa Tenaga Kebersihan" },
+  { jenis: "barang", nama: "Belanja Jasa Tenaga Administrasi", kode: "5.1.02.02.01.0026" },
+  { jenis: "barang", nama: "Belanja Jasa Tenaga Kebersihan", kode: "5.1.02.02.01.0030" }
+  ,{ jenis: "barang", nama: "Belanja Jasa Tenaga Operator (Upah Operator Teknis Aplikasi/Dapodik)", kode: "5.1.02.02.01.0027" }
+  ,{ jenis: "barang", nama: "Upah Tutor (Ekstrakurikuler/Kegiatan)", kode: "5.1.02.02.01.0029" },
   { jenis: "barang", nama: "Belanja Jasa Tenaga Keamanan" },
   { jenis: "barang", nama: "Honorarium Narasumber / Pembahas / Moderator / Panitia" },
   { jenis: "barang", nama: "Belanja Alat/Bahan untuk Kegiatan Kantor - Alat Tulis Kantor" },
@@ -360,7 +364,7 @@ const BSP_REK = [
   { jenis: "barang", nama: "Belanja Bahan Praktik / Bahan Pendukung Pembelajaran" },
   { jenis: "barang", nama: "Belanja Bahan Kebersihan dan Sanitasi" },
   { jenis: "barang", nama: "Belanja Obat-Obatan dan Bahan Kesehatan" },
-  { jenis: "barang", nama: "Belanja Makanan dan Minuman Rapat" },
+  { jenis: "barang", nama: "Belanja Makanan dan Minuman Rapat", kode: "5.1.02.01.01.0052" },
   { jenis: "barang", nama: "Belanja Makanan dan Minuman Jamuan Tamu" },
   { jenis: "barang", nama: "Belanja Makanan dan Minuman pada Fasilitas Pelayanan Urusan Pendidikan" },
   { jenis: "barang", nama: "Belanja Makanan dan Minuman Aktivitas Lapangan" },
@@ -370,7 +374,7 @@ const BSP_REK = [
   { jenis: "barang", nama: "Belanja Tagihan Listrik" },
   { jenis: "barang", nama: "Belanja Tagihan Air" },
   { jenis: "barang", nama: "Belanja Tagihan Telepon" },
-  { jenis: "barang", nama: "Belanja Kawat/Faksimili/Internet/TV Berlangganan" },
+  { jenis: "barang", nama: "Belanja Kawat/Faksimili/Internet/TV Berlangganan", kode: "5.1.02.02.01.0063" },
   { jenis: "barang", nama: "Belanja Paket/Pengiriman" },
   { jenis: "barang", nama: "Belanja Sewa Gedung/Kantor/Tempat" },
   { jenis: "barang", nama: "Belanja Sewa Kendaraan" },
