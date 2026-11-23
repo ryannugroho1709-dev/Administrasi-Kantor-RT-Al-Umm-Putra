@@ -404,20 +404,59 @@ async function swProses(aksi) {
     const a = document.createElement("a"); a.href = URL.createObjectURL(hasil.blob); a.download = namaFile;
     document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
     if (aksi === "kumpul") {
-      const kunci = _uaKunci(mapelId, kelasId);
-      const berkas = new File([hasil.blob], namaFile, { type: hasil.blob.type });
-      setGlobalLoading(true, "Mengumpulkan soal ke arsip…");
-      const url = await apiUploadFoto(berkas, "soal-ujian");
-      UA.data = await _kvGabung("ujian:soal:" + j.id, { [kunci]: { file_url: url, nama_file: namaFile, oleh: STATE.guruNama || "", t: new Date().toISOString(), teks, sumber: "tempel" } });
-      if (typeof _SW_DASBOR !== "undefined") _SW_DASBOR.t = 0;
-      try { localStorage.removeItem(_swKunciDraf()); } catch (e) {}
-      closeModal();
-      toast(`📤 Soal ${_juNamaMapel(mapelId)} Kelas ${_juAngkaKelas(kelasId)} terkumpul di arsip ✓ (file Word juga terunduh)`, "ok");
-      if (UA.segarkan) UA.segarkan(); else if (qs("ju-wadah")?.querySelector(".ua-ringkas")) _uaGambar();
+      // Mengumpulkan berjalan di LATAR BELAKANG: jendela langsung tertutup, guru bisa lanjut bekerja.
+      // (Unggah Word + simpan ke arsip bisa lama di internet HP yang lambat.)
+      setGlobalLoading(false); closeModal();
+      _swKumpulLatar({ jadwalId: j.id, kunci: _uaKunci(mapelId, kelasId), blob: hasil.blob, namaFile, teks, label: `${_juNamaMapel(mapelId)} Kelas ${_juAngkaKelas(kelasId)}`, draf: _swKunciDraf() });
     } else toast("⬇️ File Word terunduh" + (hasil.kop.cadangan ? " (memakai kop PAS karena kop UTS belum diunggah)" : ""), "ok");
   } catch (err) { console.error(err); toast("Gagal: " + (typeof _diagnosaErrorUploadFoto === "function" && /storage|bucket|upload/i.test(err.message) ? _diagnosaErrorUploadFoto(err.message) : err.message || err), "err"); }
   finally { setGlobalLoading(false); }
 }
+// ── Kumpul di latar belakang: pita kecil di bawah layar (⏳ → ✓ / ⚠️ Coba Lagi) ──
+const SW_ANTRI = new Map();
+function _swPita() {
+  let el = document.getElementById("sw-pita");
+  if (!el) { el = document.createElement("div"); el.id = "sw-pita"; document.body.appendChild(el); }
+  const isi = [...SW_ANTRI.values()];
+  el.innerHTML = isi.map((x) => `<div class="sw-pita-i ${x.st}"><span class="sw-pita-ik">${x.st === "jalan" ? '<i class="sw-putar"></i>' : x.st === "ok" ? "✅" : "⚠️"}</span><span class="sw-pita-t"><b>${_uaEsc(x.label)}</b><small>${x.st === "jalan" ? (x.lama ? "Internet lambat — masih mengunggah, jangan tutup aplikasi…" : "Mengumpulkan ke arsip… boleh lanjut bekerja") : x.st === "ok" ? "Terkumpul di arsip ✓" : _uaEsc(x.galat || "Gagal mengumpulkan")}</small></span>${x.st === "gagal" ? `<button onclick="_swKumpulLatar(SW_ANTRI.get('${x.id}'))">Coba Lagi</button><button class="x" onclick="SW_ANTRI.delete('${x.id}');_swPita()">✕</button>` : ""}</div>`).join("");
+  el.style.display = isi.length ? "" : "none";
+}
+async function _swKumpulLatar(t) {
+  t.id = t.id || t.jadwalId + "|" + t.kunci; t.st = "jalan"; t.lama = false; t.galat = ""; SW_ANTRI.set(t.id, t); _swPita();
+  const tLama = setTimeout(() => { t.lama = true; _swPita(); }, 12000);
+  const batas = (p, ms, pesan) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error(pesan)), ms))]);
+  try {
+    const t0 = performance.now();
+    // unggah sekali saja — bila "Coba Lagi" setelah unggah berhasil, alamat lama dipakai
+    if (!t.url) t.url = await batas(apiUploadFoto(new File([t.blob], t.namaFile, { type: t.blob.type }), "soal-ujian"), 120000, "Unggah terlalu lama (lebih dari 2 menit) — periksa internet lalu Coba Lagi");
+    const t1 = performance.now();
+    UA.data = await batas(_kvGabung("ujian:soal:" + t.jadwalId, { [t.kunci]: { file_url: t.url, nama_file: t.namaFile, oleh: STATE.guruNama || "", t: new Date().toISOString(), teks: t.teks, sumber: "tempel" } }), 90000, "Menyimpan ke arsip terlalu lama — Coba Lagi");
+    console.info(`[Kumpul soal] unggah ${Math.round(t1 - t0)} ms · simpan arsip ${Math.round(performance.now() - t1)} ms`);
+    if (typeof _SW_DASBOR !== "undefined") _SW_DASBOR.t = 0;
+    try { localStorage.removeItem(t.draf); } catch (e) {}
+    t.st = "ok"; t.blob = null; _swPita();
+    toast(`📤 Soal ${t.label} terkumpul di arsip ✓`, "ok");
+    if (UA.segarkan) UA.segarkan(); else if (qs("ju-wadah")?.querySelector(".ua-ringkas")) _uaGambar();
+    setTimeout(() => { if (SW_ANTRI.get(t.id) === t && t.st === "ok") { SW_ANTRI.delete(t.id); _swPita(); } }, 4000);
+  } catch (err) {
+    console.error(err);
+    t.st = "gagal"; t.galat = typeof _diagnosaErrorUploadFoto === "function" && /storage|bucket|upload/i.test(err.message || "") ? _diagnosaErrorUploadFoto(err.message) : err.message || String(err); _swPita();
+    toast(`Soal ${t.label} belum terkumpul — tekan Coba Lagi di bawah layar`, "err");
+  } finally { clearTimeout(tLama); }
+}
+// jangan sampai aplikasi tertutup saat masih mengumpulkan
+window.addEventListener("beforeunload", (e) => { if ([...SW_ANTRI.values()].some((x) => x.st === "jalan")) { e.preventDefault(); e.returnValue = ""; } });
+(function () {
+  const st = document.createElement("style");
+  st.textContent = `#sw-pita{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:9000;display:flex;flex-direction:column;gap:6px;width:min(440px,calc(100vw - 24px));pointer-events:none}
+  .sw-pita-i{pointer-events:auto;display:flex;align-items:center;gap:10px;background:#0f172a;color:#fff;border-radius:14px;padding:10px 12px;box-shadow:0 10px 30px rgba(0,0,0,.3);animation:swPitaMasuk .3s cubic-bezier(.3,1.3,.5,1)}
+  .sw-pita-i.ok{background:#166534}.sw-pita-i.gagal{background:#991b1b}
+  .sw-pita-ik{flex:none;width:22px;display:grid;place-items:center}.sw-pita-t{flex:1;min-width:0;display:flex;flex-direction:column}.sw-pita-t b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sw-pita-t small{font-size:11.5px;opacity:.85}
+  .sw-pita-i button{flex:none;border:0;border-radius:10px;padding:7px 10px;font:inherit;font-size:12px;font-weight:800;background:#fff;color:#991b1b;cursor:pointer}.sw-pita-i button.x{background:rgba(255,255,255,.15);color:#fff}
+  .sw-putar{width:16px;height:16px;border-radius:50%;border:2.5px solid rgba(255,255,255,.25);border-top-color:#fff;animation:swPutar .7s linear infinite}
+  @keyframes swPutar{to{transform:rotate(360deg)}}@keyframes swPitaMasuk{from{opacity:0;transform:translateY(16px)}}`;
+  document.head.appendChild(st);
+})();
 // Cetak langsung dari peramban (tata letak sama: kop, identitas, soal)
 async function _swCetak(j, mapelId, kelasId, urai, info) {
   const w = window.open("", "_blank");
