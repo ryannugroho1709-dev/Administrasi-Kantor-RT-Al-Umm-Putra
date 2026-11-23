@@ -25,7 +25,9 @@ const _rkAngka = (s) => { s = String(s == null ? "" : s).trim(); if (!s) return 
 const _rkTampil = (n) => (n ? (Number.isInteger(n) ? n.toLocaleString("id-ID") : String(n).replace(".", ",")) : "");
 const _rkId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const _rkBoleh = () => typeof bspBolehSusun === "function" && bspBolehSusun();
-const _rkBolehLihatSemua = () => typeof bspBendahara === "function" && bspBendahara();
+// Kepala PKBM (jabatan kepala_pkbm / kepala_sekolah) juga boleh memantau ketiga jenjang
+const rkKepalaPkbm = () => { try { const k = typeof _bspKepalaPkbm === "function" ? _bspKepalaPkbm() : null; return !!(k && k.id === STATE.guruId); } catch (e) { return false; } };
+const _rkBolehLihatSemua = () => (typeof bspBendahara === "function" && bspBendahara()) || rkKepalaPkbm();
 
 // ── Data ──
 const _rkKel = () => Object.entries((RK.data && RK.data.kel) || {}).filter(([, k]) => k && !k.dihapus).map(([id, k]) => ({ id, ...k })).sort((a, b) => (a.u ?? a.t ?? 0) - (b.u ?? b.t ?? 0));
@@ -60,6 +62,7 @@ async function _rkMuat() {
   if (r.error) throw r.error;
   RK.data = (r.data && r.data.nilai) || {}; RK.data.kel = RK.data.kel || {}; RK.data.item = RK.data.item || {};
   try { if (typeof _bspMuatUmum === "function") { await _bspMuatUmum(RK.th); RK.pagu = Number((((BSP.umum || {}).pagu) || {})[RK.ruang]) || 0; } } catch (e) { RK.pagu = 0; }
+  if (typeof _rkMuatReal === "function") { try { await _rkMuatReal(); } catch (e) { console.warn("Realisasi:", e); } }
 }
 function _rkTandaSimpan(teks) { RK.simpan = teks; const el = qs("rkx-simpan"); if (el) { el.textContent = teks; el.classList.toggle("proses", /Menyimpan/.test(teks)); el.classList.toggle("gagal", /Gagal/.test(teks)); } }
 async function _rkTulis(potongan) {
@@ -122,9 +125,9 @@ function _rkGambar() {
       <button class="btn btn-outline btn-sm" onclick="rkUnduh()">📤 Unduh Excel</button>
       ${RK.baca ? `<span class="rkx-baca">👁️ Mode lihat — disusun oleh ruang ${_rkE(nm)}</span>` : `<span id="rkx-simpan" class="rkx-simpan">${_rkE(RK.simpan || "✓ Tersimpan otomatis")}</span>`}
     </div>
-    <div class="rkx-tab">${[["rinci", "📋", "Rincian Kebutuhan"], ["jadwal", "📅", "Jadwal Bulanan"], ["ringkas", "📊", "Ringkasan"]].map(([k, i, n]) => `<button class="${RK.tab === k ? "aktif" : ""}" onclick="RK.tab='${k}';_rkGambar()"><span>${i}</span>${n}</button>`).join("")}</div>
-    <div class="rkx-isi">${RK.tab === "jadwal" ? _rkHtmlJadwal(s) : RK.tab === "ringkas" ? _rkHtmlRingkas(s) : _rkHtmlRinci()}</div>
-    ${RK.tab === "jadwal" ? "" : _rkHtmlKaki(s)}
+    <div class="rkx-tab">${[["rinci", "📋", "Rincian Kebutuhan"], ["jadwal", "📅", "Jadwal Bulanan"], ["real", "✅", "Realisasi"], ["ringkas", "📊", "Ringkasan"]].map(([k, i, n]) => `<button class="${RK.tab === k ? "aktif" : ""}" onclick="RK.tab='${k}';_rkGambar()"><span>${i}</span>${n}</button>`).join("")}</div>
+    <div class="rkx-isi">${RK.tab === "jadwal" ? _rkHtmlJadwal(s) : RK.tab === "real" && typeof _rkHtmlReal === "function" ? _rkHtmlReal(s) : RK.tab === "ringkas" ? _rkHtmlRingkas(s) : _rkHtmlRinci()}</div>
+    ${RK.tab === "jadwal" || RK.tab === "real" ? "" : _rkHtmlKaki(s)}
   </div>`;
 }
 function _rkHtmlKaki(s) {
