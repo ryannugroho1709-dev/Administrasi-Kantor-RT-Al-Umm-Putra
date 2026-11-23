@@ -428,9 +428,9 @@ async function _swKumpulLatar(t) {
   try {
     const t0 = performance.now();
     // unggah sekali saja — bila "Coba Lagi" setelah unggah berhasil, alamat lama dipakai
-    if (!t.url) t.url = await batas(apiUploadFoto(new File([t.blob], t.namaFile, { type: t.blob.type }), "soal-ujian"), 120000, "Unggah terlalu lama (lebih dari 2 menit) — periksa internet lalu Coba Lagi");
+    if (!t.url) { const bk = await batas(uaSimpanBerkasSoal(new File([t.blob], t.namaFile, { type: t.blob.type }), JU.daftar.find((x) => x.id === t.jadwalId), "Soal " + t.label + " · " + (STATE.guruNama || "")), 120000, "Unggah terlalu lama (lebih dari 2 menit) — periksa internet lalu Coba Lagi"); t.url = bk.url; t.driveId = bk.drive_id || null; }
     const t1 = performance.now();
-    UA.data = await batas(_kvGabung("ujian:soal:" + t.jadwalId, { [t.kunci]: { file_url: t.url, nama_file: t.namaFile, oleh: STATE.guruNama || "", t: new Date().toISOString(), teks: t.teks, sumber: "tempel" } }), 90000, "Menyimpan ke arsip terlalu lama — Coba Lagi");
+    UA.data = await batas(_kvGabung("ujian:soal:" + t.jadwalId, { [t.kunci]: { file_url: t.url, drive_id: t.driveId || null, nama_file: t.namaFile, oleh: STATE.guruNama || "", t: new Date().toISOString(), teks: t.teks, sumber: "tempel" } }), 90000, "Menyimpan ke arsip terlalu lama — Coba Lagi");
     console.info(`[Kumpul soal] unggah ${Math.round(t1 - t0)} ms · simpan arsip ${Math.round(performance.now() - t1)} ms`);
     if (typeof _SW_DASBOR !== "undefined") _SW_DASBOR.t = 0;
     try { localStorage.removeItem(t.draf); } catch (e) {}

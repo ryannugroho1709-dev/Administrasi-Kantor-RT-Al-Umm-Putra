@@ -163,19 +163,36 @@ function _uaGambar() {
         return `<div class="ua-baris ${x.st.length ? "ok" : ""}" style="--kw:${_juWarnaKelas(x.kelasId)}">
           <div class="ua-mapel"><b>${e(_juNamaMapel(x.mapelId))}</b><small>Kelas ${e(_juAngkaKelas(x.kelasId))}</small></div>
           <div class="ua-st">${x.st.map((s) => s.k === "online" ? `<button class="ua-chip on" onclick="ujCetakSoal('${s.bank[0].id}')" title="${e(s.bank.map((b) => b.judul).join(" · "))}">${s.label}</button>`
-            : s.k === "file" ? `<a class="ua-chip on" href="${e(s.url)}" target="_blank" rel="noopener" title="Unduh / buka berkas">${s.label}</a>${UA.data[kunci]?.sumber === "tempel" && boleh ? `<button class="ua-chip" onclick="uaBuatWord('${j.id}','${x.mapelId}','${x.kelasId}')" title="Ubah teks soal & buat ulang Word">✏️</button>` : ""}` : `<span class="ua-chip on" title="${e(s.oleh || "")}">${s.label}</span>`).join("") || `<span class="ua-chip belum">⏳ Belum</span>`}</div>
+            : s.k === "file" ? `<a class="ua-chip on" href="${e(s.url)}" target="_blank" rel="noopener" title="Unduh / buka berkas"${uaAtributBerkas(UA.data[kunci])}>${s.label}</a>${UA.data[kunci]?.sumber === "tempel" && boleh ? `<button class="ua-chip" onclick="uaBuatWord('${j.id}','${x.mapelId}','${x.kelasId}')" title="Ubah teks soal & buat ulang Word">✏️</button>` : ""}` : `<span class="ua-chip on" title="${e(s.oleh || "")}">${s.label}</span>`).join("") || `<span class="ua-chip belum">⏳ Belum</span>`}</div>
           <div class="ua-aksi">${boleh ? `<label class="btn btn-ghost btn-sm" title="Unggah berkas soal (Word/PDF)">⬆️<input type="file" hidden accept=".doc,.docx,.pdf,image/*" onchange="uaUnggah('${kunci}',this)"></label>` : ""}
             ${atur ? `<button class="btn btn-ghost btn-sm" onclick="uaToggleFisik('${kunci}')" title="Tandai soal kertas sudah diterima">${UA.data[kunci]?.fisik ? "↩️" : "📦"}</button>` : ""}</div>
         </div>`; }).join("")}</div>`).join("") || `<div class="card empty-state">${atur ? "Belum ada mapel di jadwal ini." : "Antum tidak punya mapel yang wajib mengumpulkan soal di ujian ini."}</div>`}`;
 }
 async function _uaSimpan() { await _kvSimpan("ujian:soal:" + UA.jadwal.id, UA.data); }
+// Berkas soal → Arsip Google Drive (folder "06 Soal Ujian/<jadwal>/<ruang>"); bila Drive belum tersambung / gagal → Supabase.
+// Hasil: { url, drive_id? }
+async function uaSimpanBerkasSoal(file, jadwal, ket) {
+  try {
+    if (typeof arsipUnggah === "function" && (await arsipMuat()) && (await _arsipToken())) {
+      const ruang = typeof rgNamaPendek === "function" ? rgNamaPendek(STATE.ruang) : STATE.ruang || "Umum";
+      const h = await arsipUnggah(file, { jalur: ["06 Soal Ujian", String((jadwal && (jadwal.judul || jadwal.id)) || "Ujian"), ruang], nama: file.name, ket: ket || "Soal ujian" });
+      if (h && h.url) return { url: h.url, drive_id: h.id };
+    }
+  } catch (e) { console.warn("Arsip Drive gagal, soal disimpan ke Supabase:", e); }
+  return { url: await apiUploadFoto(file, "soal-ujian") };
+}
+// tautan berkas soal di Drive dibuka lewat skrip arsip (pengunggah) / Google Drive (admin)
+function uaAtributBerkas(d) {
+  if (!d || !d.drive_id) return "";
+  return ` onclick="event.preventDefault();arsipLihat({id:'${String(d.drive_id).replace(/[^\w-]/g, "")}',url:this.href})"`;
+}
 async function uaUnggah(kunci, input) {
   const f = input.files && input.files[0]; input.value = ""; if (!f) return;
   if (f.size > 10 * 1024 * 1024) { toast("Berkas maksimal 10 MB", "err"); return; }
   try {
     setGlobalLoading(true, "Mengunggah soal…");
-    const url = await apiUploadFoto(f, "soal-ujian");
-    UA.data = await _kvGabung("ujian:soal:" + UA.jadwal.id, { [kunci]: { file_url: url, nama_file: f.name, oleh: STATE.guruNama || "", t: new Date().toISOString(), sumber: "unggah" } }); toast("📄 Soal terunggah ✓ — admin bisa langsung melihatnya", "ok"); UA.terakhir = { kunci, url, nama: f.name }; UA.segarkan ? UA.segarkan() : _uaGambar();
+    const bk = await uaSimpanBerkasSoal(f, UA.jadwal, "Unggahan soal " + (STATE.guruNama || ""));
+    UA.data = await _kvGabung("ujian:soal:" + UA.jadwal.id, { [kunci]: { file_url: bk.url, drive_id: bk.drive_id || null, nama_file: f.name, oleh: STATE.guruNama || "", t: new Date().toISOString(), sumber: "unggah" } }); toast("📄 Soal terunggah ✓ — admin bisa langsung melihatnya", "ok"); UA.terakhir = { kunci, url, nama: f.name }; UA.segarkan ? UA.segarkan() : _uaGambar();
   } catch (e) { toast("Gagal mengunggah: " + (typeof _diagnosaErrorUploadFoto === "function" ? _diagnosaErrorUploadFoto(e.message) : e.message), "err"); }
   finally { setGlobalLoading(false); }
 }
@@ -248,7 +265,7 @@ async function uaKumpulkan(jadwalId, mapelId, kelasId) {
   openModal(`<h3>📤 Kumpulkan Soal</h3>
     <div class="ua-m-info" style="--kw:${_juWarnaKelas(kelasId)}"><span class="ju-kls">${e(_juAngkaKelas(kelasId))}</span><div><b>${e(_juNamaMapel(mapelId))} · Kelas ${e(_juAngkaKelas(kelasId))}</b><small>${e(j.judul)}${kapan.length ? "<br>📅 " + kapan.map(e).join("<br>📅 ") : ""}</small></div></div>
     <div class="ua-m-status">${st.length ? st.map((s) => s.k === "online" ? `<button class="ua-chip on" onclick="ujCetakSoal('${s.bank[0].id}')" title="Lihat / cetak naskah">${s.label} · ${e(s.bank[0].judul)}</button>`
-      : s.k === "file" ? `<a class="ua-chip on" href="${e(s.url)}" target="_blank" rel="noopener">${s.label} · ${e(s.nama || "berkas")}</a>` : `<span class="ua-chip on">${s.label} ${s.oleh ? "· " + e(s.oleh) : ""}</span>`).join("") : `<span class="ua-chip belum">⏳ Belum Ada Soal yang Terkumpul</span>`}</div>
+      : s.k === "file" ? `<a class="ua-chip on" href="${e(s.url)}" target="_blank" rel="noopener"${uaAtributBerkas(d)}>${s.label} · ${e(s.nama || "berkas")}</a>` : `<span class="ua-chip on">${s.label} ${s.oleh ? "· " + e(s.oleh) : ""}</span>`).join("") : `<span class="ua-chip belum">⏳ Belum Ada Soal yang Terkumpul</span>`}</div>
     <div class="ua-m-pilih">
       <button class="ua-m-utama" onclick="closeModal();uaBuatWord('${j.id}','${mapelId}','${kelasId}')"><span>📝</span><b>Tempel Teks → Word Berkop</b><small>Copas teks soal, otomatis jadi Word dengan kop ${j.jenis === "uts" ? "UTS" : "PAS"} semester ini & langsung terkumpul di arsip.</small></button>
       <button onclick="uaBuatOnline('${mapelId}','${kelasId}','${j.jenis}')"><span>💻</span><b>Buat di Ujian Online</b><small>Ketik / tempel / unggah Word·PDF. Otomatis tercatat terkumpul & bisa dikerjakan santri di HP.</small></button>
