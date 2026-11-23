@@ -421,7 +421,7 @@ Kunci: masa peralihan antarmusim</pre>
 ١. اذكر شروط الصلاة!
 الجواب: الإسلام والعقل</pre>
       <div class="uj-sub">Nomor ١ ٢ ٣, pilihan أ ب ج د هـ, dan "الجواب:" dikenali. Soal Arab tampil kanan-ke-kiri di layar santri; soal Indonesia/Inggris kiri-ke-kanan.</div></details>
-    <div class="uj-sub" style="margin:6px 0">Kunci juga boleh ditandai dengan bintang di depan pilihan (<b>*b. fakta</b>). Soal tanpa pilihan otomatis jadi uraian. <b>Soal tanpa kunci tetap masuk</b> — kuncinya ditandai setelahnya (ditandai ⚠️).</div>
+    <div class="uj-sub" style="margin:6px 0">Kunci juga boleh ditandai dengan bintang di depan pilihan (<b>*b. fakta</b>). Soal tanpa pilihan otomatis jadi uraian. <b>Soal tanpa kunci tetap masuk</b> — kuncinya ditandai setelahnya (ditandai ⚠️).<br>📑 <b>Kunci boleh ditulis terpisah</b> di bawah semua soal: tempel soal 1–10, lalu jawaban 1–10 — otomatis dipasangkan sesuai nomor (jawaban panjang berbaris-baris tetap utuh).</div>
     <textarea id="uje-tempel" dir="auto" class="input" rows="12" placeholder="Tempel di sini…"></textarea>
     <div id="uje-tempel-info" class="uj-sub" style="margin-top:6px"></div>
     <div style="display:flex;gap:10px;margin-top:10px"><button class="btn btn-outline" style="flex:1" onclick="_ujeGambar()">‹ Kembali</button><button class="btn btn-accent" style="flex:1" onclick="ujeTempelProses()">✨ Masukkan soal</button></div>`, { lebar: true });
@@ -791,7 +791,7 @@ const _ujeKunciArab = (v) => (/^[\s,،وهـأاإبجدزح.*]+$/.test(v) ? v.s
 // Pengurai teks bebas → { pg:[], pgk:[], isian:[], jodoh:[], urut:[], uraian:[], tanpaKunci, gambar }
 function _ujeUraiTeks(teks, tanpaLewati) {
   const hasil = { pg: [], pgk: [], isian: [], jodoh: [], urut: [], uraian: [], tanpaKunci: 0, gambar: 0 };
-  const baris = _ujeSusunPilihanKolom(String(teks || "").replace(/\r/g, "").replace(/\t/g, "  ").split("\n"));
+  const baris = _ujeGabungKunciTerpisah(_ujeSusunPilihanKolom(String(teks || "").replace(/\r/g, "").replace(/\t/g, "  ").split("\n")));
   let bagian = null, bersama = null, cur = null, bacaan = [], jodohKini = null, gambarTunda = "";
   const RE_JUDUL = /^\s*(?:[A-H]|[IVX]{1,4})?\s*[.)]?\s*(soal\s+)?(pilihan\s+ganda\s+kompleks|pg\s*kompleks|pilihan\s+ganda|isian(\s+singkat)?|isilah|lengkapilah|melengkapi|menjodohkan|jodohkanlah|jodohkan|pasangkanlah|mengurutkan|urutkanlah|urutkan|menyusun|susunlah|uraian|essay|esai)\b/i;
   const RE_NO = /^\s*(\d{1,3})\s*[.)]\s*(.*)$/;
@@ -829,7 +829,7 @@ function _ujeUraiTeks(teks, tanpaLewati) {
       const kt = cur.kunci != null ? (n > 1 ? cur.kunci.split(/\s*[;|]\s*/) : [cur.kunci.trim()]) : [];
       while (kt.length < n) kt.push("");
       s = { ..._ujeDasar(), t: cur.t.trim(), g, stimulus: stim, kt: kt.slice(0, n) };
-    } else s = { ..._ujeDasar(), t: cur.t.trim(), g, stimulus: stim, kunci: (cur.kunci || "").trim(), poin_kunci: [], rek: false };
+    } else s = { ..._ujeDasar(), t: cur.t.trim(), g, stimulus: stim, kunci: (cur.kunci || "").replace(/\uE000/g, "\n").trim(), poin_kunci: [], rek: false };
     if (!_ujeAdaKunci(jenis, s)) hasil.tanpaKunci++;
     hasil[jenis].push(s); cur = null;
   };
@@ -866,7 +866,7 @@ function _ujeUraiTeks(teks, tanpaLewati) {
       jodohKini = null; bacaan = []; nomorAkhir = 0; continue;
     }
     const kn = l.match(RE_KUNCI);
-    if (kn && cur) { cur.kunci = kn[4]; continue; }
+    if (kn && cur) { cur.kunci = bagian === "uraian" || !bagian ? kn[4] : kn[4].replace(/\uE000/g, " "); continue; }
     let no = l.match(RE_NO);
     // daftar bernomor DI DALAM soal ("Perhatikan pernyataan berikut! 1. … 2. …") bukan soal baru:
     // nomor soal harus melanjutkan urutan (nomor terakhir + 1…5); selain itu jadi bagian teks soal
@@ -901,6 +901,47 @@ function _ujeUraiTeks(teks, tanpaLewati) {
   // petunjuk tidak diikuti judul bagian sehingga semua terlewati → baca ulang tanpa melewati
   if (pernahLewati && !UJE_JENIS.some((j) => hasil[j].length)) return _ujeUraiTeks(teks, true);
   return hasil;
+}
+// Kunci ditulis terpisah di bawah semua soal: "1. soal … 10. soal" lalu "1. jawaban … 10. jawaban"
+// (boleh diselingi judul "Kunci Jawaban" / "الأجوبة"). Jawaban dipasangkan ke soal bernomor sama sebagai "Kunci:".
+// Jawaban yang lebih dari satu baris tetap utuh (baris disambung dengan pemisah khusus, dikembalikan jadi baris baru).
+function _ujeGabungKunciTerpisah(baris) {
+  const NO = /^\s*\(?([0-9٠-٩۰-۹]{1,3})\s*[.)\-–]\s*(.*)$/;
+  const OPSI = /^\s*\*?\(?(?:[a-hA-H]|هـ|[أبجد])\s*[.)\-–]\s/;
+  const KUNCI = /^\s*(?:kunci|jawaban|jwb|الجواب|الإجابة|مفتاح)[^:：=]{0,20}[:：=]\s*\S/i;
+  const JUDUL_KUNCI = /^\s*(?:[A-H]\s*[.)]\s*)?(?:kunci(?:\s+jawaban)?|jawaban(?:nya)?|pembahasan|الأجوبة|الإجابات|الإجابة|الجواب|مفتاح\s+(?:الإجابة|الأجوبة))\s*[:：]?\s*$/i;
+  const RE_JUDUL = /^\s*(?:[A-H]|[IVX]{1,4})?\s*[.)]?\s*(soal\s+)?(pilihan\s+ganda|isian|isilah|lengkapilah|menjodohkan|jodohkan|mengurutkan|urutkan|uraian|essay|esai)\b/i;
+  const judul = (l) => { const n = _ujeNormalArab(l); return n.trim().length < 70 && !/^\s*\d{1,3}\.\s/.test(n) && (RE_JUDUL.test(n) || /^(Pilihan Ganda|Isian Singkat|Menjodohkan|Mengurutkan|Uraian)/.test(n.trim())); };
+  const nomor = (l) => { const m = l.match(NO); return m ? Number(_ujeAngkaLatin(m[1])) : 0; };
+  // ikuti urutan 1,2,3… mulai baris i; berhenti di nomor tak berurutan / judul bagian
+  const ikuti = (i) => {
+    const awal = []; let n = 0, j = i;
+    for (; j < baris.length; j++) {
+      const l = baris[j], x = nomor(l);
+      if (x) { if (x !== n + 1) break; n = x; awal.push(j); continue; }
+      if (j > i && (judul(l) || JUDUL_KUNCI.test(l))) break;
+    }
+    return { awal, akhir: j };
+  };
+  const out = []; let i = 0;
+  while (i < baris.length) {
+    if (nomor(baris[i]) !== 1) { out.push(baris[i]); i++; continue; }
+    const s = ikuti(i), N = s.awal.length;
+    let t = s.akhir;
+    while (t < baris.length && (!baris[t].trim() || JUDUL_KUNCI.test(baris[t]))) t++;
+    const bersih = N >= 2 && !baris.slice(i, s.akhir).some((l) => OPSI.test(l) || KUNCI.test(l));
+    const k = bersih && nomor(baris[t]) === 1 ? ikuti(t) : null;
+    if (!k || k.awal.length !== N) { out.push(...baris.slice(i, s.akhir)); i = s.akhir; continue; }
+    for (let x = 0; x < N; x++) {
+      const qA = s.awal[x], qB = x + 1 < N ? s.awal[x + 1] : s.akhir;
+      const aA = k.awal[x], aB = x + 1 < N ? k.awal[x + 1] : k.akhir;
+      out.push(...baris.slice(qA, qB).filter((l) => l.trim() && !JUDUL_KUNCI.test(l)));
+      const jwb = baris.slice(aA, aB).map((l, y) => (y ? l : (l.match(NO)[2] || ""))).map((l) => l.trim()).filter(Boolean);
+      out.push("Kunci: " + jwb.join("\uE000"));
+    }
+    i = k.akhir;
+  }
+  return out;
 }
 // Pilihan dua/tiga kolom dari PDF ("a. …   d. …" / "b. …   e. …" / "c. …") → satu pilihan per baris, urut huruf
 function _ujeSusunPilihanKolom(baris) {
