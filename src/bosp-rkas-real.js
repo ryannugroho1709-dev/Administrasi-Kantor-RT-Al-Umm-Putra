@@ -88,11 +88,12 @@ function rkrLapor(id, m) {
     <div class="rkx-jd-info"><b>${_rkE(x.uraian || x.kelNama)}</b><span>${_rkE(x.kelNama)} · ${RK_BLN_PANJANG[m - 1]} ${RK.th} · rencana <b>Rp ${_rkRp(x.rencana)}</b></span></div>
     <div class="rkr-pilih">${["sudah", "tunda", "batal"].map((s) => `<label class="${RKR.edit.status === s ? "on" : ""}" style="--st:${RKR_STATUS[s][2]}"><input type="radio" name="rkr-st" value="${s}" ${RKR.edit.status === s ? "checked" : ""} onchange="RKR.edit.status=this.value;document.querySelectorAll('.rkr-pilih label').forEach(l=>l.classList.toggle('on',l.querySelector('input').checked));document.getElementById('rkr-sudah').style.display=this.value==='sudah'?'':'none'">${RKR_STATUS[s][0]} ${RKR_STATUS[s][1]}</label>`).join("")}</div>
     <div id="rkr-sudah" style="${RKR.edit.status === "sudah" ? "" : "display:none"}">
-      <div class="rkr-dua"><div class="field"><label>Nominal Realisasi (Rp)</label><input id="rkr-rp" class="input" inputmode="numeric" value="${_rkTampil(Math.round(Number(r.rp) || x.rencana))}" onblur="this.value=_rkTampil(_rkAngka(this.value))"></div>
+      <div class="rkr-dua"><div class="field"><label>Nominal Realisasi (Rp)</label><input id="rkr-rp" class="input" inputmode="numeric" oninput="_rkFormatKetik(this)" value="${_rkTampil(Math.round(Number(r.rp) || x.rencana))}" onblur="this.value=_rkTampil(_rkAngka(this.value))"></div>
         <div class="field"><label>Tanggal</label><input id="rkr-tgl" class="input" type="date" value="${_rkE(tgl)}"></div></div>
     </div>
     <div class="field"><label>Keterangan <small>(toko, no. nota, alasan ditunda, dll.)</small></label><input id="rkr-ket" class="input" value="${_rkE(r.ket || "")}" placeholder="mis. Toko Barokah, nota no. 123 / ditunda ke bulan depan"></div>
     <div class="rkr-unggah" id="rkr-unggah">${_rkrHtmlUnggah()}</div>
+    <div id="rkr-awas" class="rkr-awas" style="display:none">⚠️ <b>Nota / kwitansi belum diunggah.</b> Tekan <b>Simpan Laporan</b> sekali lagi untuk tetap menyimpan — kegiatan akan ditandai "nota belum lengkap".</div>
     <div style="display:flex;gap:10px;margin-top:14px"><button class="btn btn-outline" style="flex:1" onclick="closeModal()">Batal</button><button class="btn btn-accent" style="flex:1" onclick="rkrSimpan()">💾 Simpan Laporan</button></div></div>`);
 }
 function _rkrHtmlUnggah() {
@@ -124,7 +125,8 @@ async function rkrSimpan() {
   if (E.status === "sudah") {
     isi.rp = _rkAngka(qs("rkr-rp").value); isi.tgl = qs("rkr-tgl").value || null;
     if (!isi.rp) { toast("Isi nominal realisasi", "warn"); return; }
-    if (!(E.bukti.nota || []).length && !confirm("Nota / kwitansi belum diunggah. Simpan dulu tanpa nota?\n(Kegiatan akan ditandai \"nota belum lengkap\")")) return;
+    // tanpa nota: peringatan di dalam jendela; tekan Simpan sekali lagi untuk tetap menyimpan
+    if (!(E.bukti.nota || []).length && !E.tanpaNotaOk) { E.tanpaNotaOk = true; const w = document.getElementById("rkr-awas"); if (w) { w.style.display = ""; w.scrollIntoView({ block: "nearest", behavior: "smooth" }); } return; }
   }
   try {
     await _kvGabung(_rkrKunci(RK.th), { [E.k]: isi });
@@ -151,7 +153,7 @@ function rkrLihatDaftar(k, jenis) {
 async function rkrCek(k, status) {
   if (!_rkBolehLihatSemua()) return;
   let catatan = "";
-  if (status === "perbaiki") { catatan = prompt("Apa yang perlu diperbaiki? (mis. nota buram, nominal tidak sesuai)") || ""; if (!catatan.trim()) return; }
+  if (status === "perbaiki") { catatan = (await promptTema("Apa yang perlu diperbaiki? (mis. nota buram, nominal tidak sesuai)", "", { judul: "Perlu Perbaikan", ikon: "⚠️", teksOk: "Kirim Catatan" })) || ""; if (!catatan.trim()) return; }
   const kunci = RK.ruang + ":" + k, isi = { status, catatan: catatan.trim(), oleh: STATE.guruNama || "", t: Date.now() };
   try { await _bspGabungUmum(_rkrKunciCek(RK.th), { [kunci]: isi }); RK.cek[kunci] = isi; _rkGambar(); toast(status === "ok" ? "Ditandai sudah diperiksa ✔️" : "Catatan perbaikan dikirim ⚠️", "ok"); }
   catch (e) { toast("Gagal: " + (e.message || e), "err"); }

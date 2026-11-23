@@ -30,9 +30,32 @@ const rkKepalaPkbm = () => { try { const k = typeof _bspKepalaPkbm === "function
 const _rkBolehLihatSemua = () => (typeof bspBendahara === "function" && bspBendahara()) || rkKepalaPkbm();
 
 // ── Data ──
-const _rkKel = () => Object.entries((RK.data && RK.data.kel) || {}).filter(([, k]) => k && !k.dihapus).map(([id, k]) => ({ id, ...k })).sort((a, b) => (a.u ?? a.t ?? 0) - (b.u ?? b.t ?? 0));
-const _rkItem = (kel) => Object.entries((RK.data && RK.data.item) || {}).filter(([, x]) => x && !x.dihapus && (!kel || x.kel === kel)).map(([id, x]) => ({ id, ...x })).sort((a, b) => (a.u ?? a.t ?? 0) - (b.u ?? b.t ?? 0));
-const rkJumlah = (x) => (x.coret ? 0 : (Number(x.vol) || 0) * (Number(x.harga) || 0) * (x.frek == null || x.frek === "" ? 1 : Number(x.frek) || 0));
+// Honor Pengelola PKBM bagian jenjang ini — diisi Bendahara di ruang Pengelola (sama seperti di Kertas Kerja), ikut dihitung otomatis
+function _rkHonorPengelola() {
+  try {
+    if (typeof _bspPengelola !== "function" || !_bspPengelola().length || !RK.ruang || RK.ruang === "Pg" || typeof bspBagiPengelola !== "function") return null;
+    const bulanRp = {}; let tot = 0;
+    for (let m = 1; m <= 12; m++) { const v = bspBagiPengelola(m)[RK.ruang] || 0; if (v) { bulanRp[m] = v; tot += v; } }
+    if (!tot) return null;
+    const cara = ((BSP.umum || {}).bagi_pengelola === "rata") ? "dibagi rata" : "sebanding pagu";
+    return { id: "__pg-honor", kel: "__pg", uraian: `Honor Pengelola PKBM — bagian jenjang ini (${cara})`, vol: 1, sat: "tahun", harga: tot, frek: 1, manual: true, bulanRp, otomatis: true, u: 1 };
+  } catch (e) { return null; }
+}
+const _rkKel = () => { const d = Object.entries((RK.data && RK.data.kel) || {}).filter(([, k]) => k && !k.dihapus).map(([id, k]) => ({ id, ...k })).sort((a, b) => (a.u ?? a.t ?? 0) - (b.u ?? b.t ?? 0)); if (_rkHonorPengelola()) d.push({ id: "__pg", nama: "Honor Pengelola PKBM (otomatis dari Bendahara)", otomatis: true }); return d; };
+const _rkItem = (kel) => { const d = Object.entries((RK.data && RK.data.item) || {}).filter(([, x]) => x && !x.dihapus && (!kel || x.kel === kel)).map(([id, x]) => ({ id, ...x })).sort((a, b) => (a.u ?? a.t ?? 0) - (b.u ?? b.t ?? 0)); if (!kel || kel === "__pg") { const h = _rkHonorPengelola(); if (h) d.push(h); } return d; };
+// "× Kali" otomatis mengikuti jumlah bulan di jadwal (mis. listrik tiap bulan → 12 kali) bila harga yang ditulis adalah harga per bulan / per kegiatan
+const rkIkutBulan = (x) => !x.manual && (x.jadwal || []).length > 0 && (x.ikutBulan === true || (x.ikutBulan == null && (x.jadwal || []).length > 1 && Number(x.frek ?? 1) === x.jadwal.length));
+const rkKali = (x) => (rkIkutBulan(x) ? x.jadwal.length : x.frek == null || x.frek === "" ? 1 : Number(x.frek) || 0);
+const rkJumlah = (x) => (x.otomatis ? Number(x.harga) || 0 : x.coret ? 0 : (Number(x.vol) || 0) * (Number(x.harga) || 0) * rkKali(x));
+// tulis angka bertitik ribuan saat mengetik (kursor tetap di tempatnya)
+function _rkFormatKetik(el) {
+  if (!el || /,/.test(el.value)) return;
+  const v = el.value, pos = el.selectionStart ?? v.length, sesudah = v.slice(pos).replace(/\D/g, "").length;
+  const n = v.replace(/\D/g, ""), f = n ? Number(n).toLocaleString("id-ID") : "";
+  if (f === v) return;
+  el.value = f; let q = f.length, c = 0; while (q > 0 && c < sesudah) { q--; if (/\d/.test(f[q])) c++; }
+  try { el.setSelectionRange(q, q); } catch (e) {}
+}
 // rupiah per bulan: dibagi rata ke bulan terpilih (sisa pembulatan ke bulan terakhir) atau nominal yang diatur sendiri
 function rkBulan(x) {
   const out = {}; if (x.coret) return out;
@@ -146,11 +169,11 @@ function _rkHtmlRinci() {
     kel.map((k, i) => {
       const item = _rkItem(k.id);
       return `<section class="rkx-kel">
-        <header><i class="rkx-no">${i + 1}</i><input class="rkx-kel-nama" value="${_rkE(k.nama)}" placeholder="Nama kelompok" ${dis} oninput="rkUbahKel('${k.id}',this.value)">
+        <header><i class="rkx-no">${i + 1}</i><input class="rkx-kel-nama" value="${_rkE(k.nama)}" placeholder="Nama kelompok" ${k.otomatis ? "disabled" : dis} oninput="rkUbahKel('${k.id}',this.value)">
           <b class="rkx-sub" data-rk-kel="${k.id}">Rp ${_rkRp(_rkSubtotal(k.id))}</b>
-          ${RK.baca ? "" : `<button class="rkx-ikon" title="Menu kelompok" onclick="rkMenuKel(event,'${k.id}')">⋯</button>`}</header>
+          ${RK.baca || k.otomatis ? "" : `<button class="rkx-ikon" title="Menu kelompok" onclick="rkMenuKel(event,'${k.id}')">⋯</button>`}</header>
         ${item.map((x) => _rkHtmlBaris(x)).join("")}
-        ${RK.baca ? "" : `<button class="rkx-tambah" onclick="rkTambahItem('${k.id}')">＋ Rincian</button>`}
+        ${RK.baca || k.otomatis ? "" : `<button class="rkx-tambah" onclick="rkTambahItem('${k.id}')">＋ Rincian</button>`}
       </section>`;
     }).join("");
 }
@@ -162,13 +185,17 @@ function _rkPil(x) {
   return `<span class="rkx-pil ${sel ? "selisih" : "ok"}" title="${sel ? "Selisih Rp " + _rkRp(sel) : ""}">${sel ? "⚠️ " : ""}${teks}</span>`;
 }
 function _rkHtmlBaris(x) {
-  const dis = RK.baca ? "disabled" : "", ub = (f, num) => `oninput="rkUbahItem('${x.id}','${f}',this.value${num ? ",1" : ""})"`;
+  if (x.otomatis) return `<div class="rkx-baris otomatis" data-id="${x.id}"><input class="rkx-uraian" value="${_rkE(x.uraian)}" disabled>
+    <label class="rkx-f vol"><small>Volume</small><input value="1" disabled></label><label class="rkx-f sat"><small>Satuan</small><input value="tahun" disabled></label>
+    <label class="rkx-f harga"><small>Harga Satuan</small><input value="${_rkTampil(Math.round(x.harga))}" disabled></label><label class="rkx-f kali"><small>× Kali</small><input value="1" disabled></label>
+    <b class="rkx-jml">Rp ${_rkRp(rkJumlah(x))}</b><span class="rkx-jadwal">${_rkPil(x)}</span><span title="Diatur Bendahara di ruang Pengelola → Rancangan BOSP">🔒</span></div>`;
+  const dis = RK.baca ? "disabled" : "", ub = (f, num) => `oninput="${num && f !== "frek" ? "_rkFormatKetik(this);" : ""}rkUbahItem('${x.id}','${f}',this.value${num ? ",1" : ""})"`, ikut = rkIkutBulan(x);
   return `<div class="rkx-baris ${x.coret ? "coret" : ""}" data-id="${x.id}">
     <input class="rkx-uraian" value="${_rkE(x.uraian)}" placeholder="Uraian (mis. Snack)" ${dis} ${ub("uraian")}>
     <label class="rkx-f vol"><small>Volume</small><input inputmode="decimal" value="${_rkTampil(Number(x.vol) || 0)}" placeholder="0" ${dis} ${ub("vol", 1)}></label>
     <label class="rkx-f sat"><small>Satuan</small><input value="${_rkE(x.sat || "")}" placeholder="pcs" list="rkx-satuan" ${dis} ${ub("sat")}></label>
-    <label class="rkx-f harga"><small>Harga Satuan</small><input inputmode="numeric" value="${_rkTampil(Number(x.harga) || 0)}" placeholder="0" ${dis} ${ub("harga", 1)} onblur="this.value=_rkTampil(_rkAngka(this.value))"></label>
-    <label class="rkx-f kali"><small>× Kali</small><input inputmode="decimal" value="${x.frek == null || x.frek === "" ? 1 : _rkTampil(Number(x.frek))}" title="Berapa kali dalam setahun (mis. snack 4 kali, listrik 12 bulan)" ${dis} ${ub("frek", 1)}></label>
+    <label class="rkx-f harga"><small>Harga Satuan</small><input inputmode="numeric" value="${_rkTampil(Number(x.harga) || 0)}" placeholder="0" ${dis} ${ub("harga", 1)} ></label>
+    <label class="rkx-f kali ${ikut ? "oto" : ""}"><small>× Kali${ikut ? " (otomatis)" : ""}</small><input inputmode="decimal" value="${_rkTampil(rkKali(x))}" title="${ikut ? "Otomatis = jumlah bulan di jadwal. Ubah lewat tombol jadwal." : "Berapa kali dalam setahun (mis. snack 4 kali). Bila dijadwalkan per bulan, terisi otomatis."}" ${ikut ? "disabled" : dis} ${ub("frek", 1)}></label>
     <b class="rkx-jml" data-rk-item="${x.id}">Rp ${_rkRp(rkJumlah(x))}</b>
     <button class="rkx-jadwal" onclick="rkAturJadwal('${x.id}')" data-rk-pil="${x.id}">${_rkPil(x)}</button>
     ${RK.baca ? "<span></span>" : `<button class="rkx-ikon hapus" title="Hapus rincian" onclick="rkHapusItem('${x.id}')">🗑</button>`}
@@ -180,6 +207,7 @@ function _rkSegarkanAngka() {
   qsa("[data-rk-item]").forEach((el) => { const x = RK.data.item[el.dataset.rkItem]; if (x) el.textContent = "Rp " + _rkRp(rkJumlah(x)); });
   qsa("[data-rk-pil]").forEach((el) => { const x = RK.data.item[el.dataset.rkPil]; if (x) el.innerHTML = _rkPil({ id: el.dataset.rkPil, ...x }); });
   qsa("[data-rk-kel]").forEach((el) => { el.textContent = "Rp " + _rkRp(_rkSubtotal(el.dataset.rkKel)); });
+  qsa(".rkx-baris").forEach((b) => { const x = RK.data.item[b.dataset.id], k = b.querySelector(".rkx-f.kali input"); if (x && k && rkIkutBulan(x)) k.value = _rkTampil(rkKali(x)); });
   qsa('[data-rk="total"]').forEach((el) => { el.textContent = "Rp " + _rkRp(s.total); });
   qsa('[data-rk="sisa"]').forEach((el) => { el.textContent = "Rp " + _rkRp(Math.abs(s.sisa)); });
   qsa('[data-rk="persen"]').forEach((el) => { el.textContent = s.dana ? Math.round((s.total / s.dana) * 1000) / 10 + "% dari dana" : "—"; });
@@ -195,19 +223,19 @@ function rkUbahKel(id, v) { const k = RK.data.kel[id]; if (!k) return; k.nama = 
 function _rkUrutBaru(daftar) { return daftar.reduce((a, x) => Math.max(a, Number(x.u ?? 0)), 0) + 1; }
 function rkTambahKel() {
   const id = _rkId(), k = { nama: "", u: _rkUrutBaru(_rkKel()), t: Date.now() };
-  RK.data.kel[id] = k; const iid = _rkId(); RK.data.item[iid] = { kel: id, uraian: "", vol: 1, sat: "", harga: 0, frek: 1, jadwal: [], u: 1, t: Date.now() };
+  RK.data.kel[id] = k; const iid = _rkId(); RK.data.item[iid] = { kel: id, uraian: "", vol: 1, sat: "", harga: 0, frek: 1, ikutBulan: true, jadwal: [], u: 1, t: Date.now() };
   RK.tab = "rinci"; _rkGambar(); _rkTulis({ kel: { [id]: k }, item: { [iid]: RK.data.item[iid] } });
   setTimeout(() => { const el = [...qsa(".rkx-kel-nama")].pop(); if (el) { el.focus(); el.scrollIntoView({ block: "center", behavior: "smooth" }); } }, 30);
 }
 function rkTambahItem(kel) {
   const id = _rkId(), sebelum = _rkItem(kel).pop();
-  RK.data.item[id] = { kel, uraian: "", vol: 1, sat: sebelum ? sebelum.sat || "" : "", harga: 0, frek: 1, jadwal: sebelum && !sebelum.manual ? (sebelum.jadwal || []).slice() : [], u: _rkUrutBaru(_rkItem(kel)), t: Date.now() };
+  RK.data.item[id] = { kel, uraian: "", vol: 1, sat: sebelum ? sebelum.sat || "" : "", harga: 0, frek: 1, ikutBulan: true, jadwal: sebelum && !sebelum.manual ? (sebelum.jadwal || []).slice() : [], u: _rkUrutBaru(_rkItem(kel)), t: Date.now() };
   _rkGambar(); _rkTulis({ item: { [id]: RK.data.item[id] } });
   setTimeout(() => { const el = document.querySelector(`.rkx-baris[data-id="${id}"] .rkx-uraian`); if (el) el.focus(); }, 30);
 }
 async function rkHapusItem(id) {
   const x = RK.data.item[id]; if (!x) return;
-  if ((x.uraian || rkJumlah(x)) && !confirm(`Hapus rincian "${x.uraian || "tanpa nama"}"?`)) return;
+  if ((x.uraian || rkJumlah(x)) && !(await konfirmasiTema(`Hapus rincian <b>${_rkE(x.uraian || "tanpa nama")}</b>${rkJumlah(x) ? ` (Rp ${_rkRp(rkJumlah(x))})` : ""}?`, { ikon: "🗑️", judul: "Hapus Rincian", teksYa: "Ya, Hapus" }))) return;
   x.dihapus = true; _rkGambar(); _rkTulis({ item: { [id]: x } });
 }
 function rkMenuKel(ev, id) {
@@ -226,9 +254,9 @@ function rkGeserKel(id, arah) {
   kel.forEach((k, n) => { RK.data.kel[k.id].u = n + 1; }); RK.data.kel[kel[i].id].u = j + 1; RK.data.kel[kel[j].id].u = i + 1;
   _rkGambar(); _rkTulis({ kel: Object.fromEntries(kel.map((k) => [k.id, RK.data.kel[k.id]])) });
 }
-function rkHapusKel(id) {
+async function rkHapusKel(id) {
   const k = RK.data.kel[id], item = _rkItem(id); if (!k) return;
-  if (!confirm(`Hapus kelompok "${k.nama || "tanpa nama"}" beserta ${item.length} rinciannya?`)) return;
+  if (!(await konfirmasiTema(`Hapus kelompok <b>${_rkE(k.nama || "tanpa nama")}</b> beserta ${item.length} rinciannya?`, { ikon: "🗑️", judul: "Hapus Kelompok", teksYa: "Ya, Hapus" }))) return;
   k.dihapus = true; item.forEach((x) => { RK.data.item[x.id].dihapus = true; });
   _rkGambar(); _rkTulis({ kel: { [id]: k }, item: Object.fromEntries(item.map((x) => [x.id, RK.data.item[x.id]])) });
 }
@@ -236,7 +264,7 @@ function rkUbahDana() {
   const s = rkRingkas();
   openModal(`<h3>💰 Dana Anggaran ${RK.th}</h3>
     <div class="uj-sub" style="margin-bottom:10px">Dana yang tersedia untuk ${_rkE(typeof _bspNamaRuang === "function" ? _bspNamaRuang(RK.ruang) : RK.ruang)} tahun ini. ${RK.pagu ? `Pagu dari Bendahara: <b>Rp ${_rkRp(RK.pagu)}</b> (dipakai bila kolom ini dikosongkan).` : ""}</div>
-    <div class="field"><label>Dana Anggaran (Rp)</label><input id="rkx-dana" class="input" inputmode="numeric" value="${Number(RK.data.dana) ? _rkTampil(Math.round(RK.data.dana)) : ""}" placeholder="${RK.pagu ? _rkTampil(RK.pagu) : "mis. 89.129.256"}"></div>
+    <div class="field"><label>Dana Anggaran (Rp)</label><input id="rkx-dana" class="input" inputmode="numeric" oninput="_rkFormatKetik(this)" value="${Number(RK.data.dana) ? _rkTampil(Math.round(RK.data.dana)) : ""}" placeholder="${RK.pagu ? _rkTampil(RK.pagu) : "mis. 89.129.256"}"></div>
     <div class="field"><label>Bagian Tahap 1 (%) — sisanya Tahap 2</label><input id="rk-t1" class="input" inputmode="numeric" value="${Number(RK.data.tahap1) || 50}"></div>
     <div class="uj-sub">Saat ini kebutuhan <b>Rp ${_rkRp(s.total)}</b>.</div>
     <div style="display:flex;gap:10px;margin-top:12px"><button class="btn btn-outline" style="flex:1" onclick="closeModal()">Batal</button><button class="btn btn-accent" style="flex:1" onclick="rkSimpanDana()">Simpan</button></div>`);
@@ -249,28 +277,29 @@ function rkSimpanDana() {
 
 // ── Atur jadwal satu rincian ──
 function rkAturJadwal(id) {
-  const x = RK.data.item[id]; if (!x) return;
-  RK.jd = { id, jadwal: (x.manual ? Object.keys(x.bulanRp || {}).filter((m) => Number(x.bulanRp[m])).map(Number) : (x.jadwal || []).slice()), manual: !!x.manual, rp: { ...(x.bulanRp || {}) }, coret: !!x.coret };
+  const x = RK.data.item[id]; if (!x) { if (String(id).startsWith("__pg")) toast("Honor Pengelola diatur Bendahara di ruang Pengelola → Rancangan BOSP", "warn"); return; }
+  RK.jd = { ikut: x.ikutBulan ?? (Number(x.frek ?? 1) === 1 || Number(x.frek) === (x.jadwal || []).length), id, jadwal: (x.manual ? Object.keys(x.bulanRp || {}).filter((m) => Number(x.bulanRp[m])).map(Number) : (x.jadwal || []).slice()), manual: !!x.manual, rp: { ...(x.bulanRp || {}) }, coret: !!x.coret };
   _rkGambarJadwal();
 }
 function _rkGambarJadwal() {
-  const J = RK.jd, x = RK.data.item[J.id], jml = Math.round(rkJumlah({ ...x, coret: false })), dis = RK.baca ? "disabled" : "";
-  const contoh = { ...x, coret: false, manual: J.manual, jadwal: J.jadwal, bulanRp: J.rp }, rp = rkBulan(contoh), terj = Object.values(rp).reduce((a, v) => a + v, 0);
+  const J = RK.jd, x = RK.data.item[J.id], dis = RK.baca ? "disabled" : "";
+  const contoh = { ...x, coret: false, manual: J.manual, jadwal: J.jadwal, bulanRp: J.rp, ikutBulan: J.ikut }, jml = Math.round(rkJumlah(contoh)), rp = rkBulan(contoh), terj = Object.values(rp).reduce((a, v) => a + v, 0);
   const chip = (m) => `<button class="rkx-bln ${J.jadwal.includes(m) ? "on" : ""}" ${dis} onclick="rkTogBulan(${m})"><b>${RK_BLN[m - 1]}</b><small>${J.jadwal.includes(m) ? _rkSingkat(rp[m] || 0) : "—"}</small></button>`;
   openModal(`<div class="rkx-jd"><h3>📅 Jadwal Belanja</h3>
-    <div class="rkx-jd-info"><b>${_rkE(x.uraian || "Rincian")}</b><span>${_rkTampil(Number(x.vol) || 0)} ${_rkE(x.sat || "")} × Rp ${_rkRp(x.harga)}${Number(x.frek ?? 1) !== 1 ? ` × ${_rkTampil(Number(x.frek))} kali` : ""} = <b>Rp ${_rkRp(jml)}</b></span></div>
+    <div class="rkx-jd-info"><b>${_rkE(x.uraian || "Rincian")}</b><span>${_rkTampil(Number(x.vol) || 0)} ${_rkE(x.sat || "")} × Rp ${_rkRp(x.harga)}${rkKali(contoh) !== 1 ? ` × ${_rkTampil(rkKali(contoh))} kali` : ""} = <b>Rp ${_rkRp(jml)}</b></span></div>
+    ${RK.baca ? "" : `<label class="rkx-jd-saklar"><input type="checkbox" ${J.ikut ? "checked" : ""} onchange="RK.jd.ikut=this.checked;_rkGambarJadwal()"> <b>× Kali otomatis = jumlah bulan terpilih</b> <small>(harga di atas adalah harga per bulan / per kegiatan, mis. listrik, internet, honor bulanan)</small></label>`}
     ${RK.baca ? "" : `<div class="rkx-jd-cepat"><button onclick="rkJadwalCepat('semua')">Tiap Bulan</button><button onclick="rkJadwalCepat('t1')">Tahap 1 (Jan–Jun)</button><button onclick="rkJadwalCepat('t2')">Tahap 2 (Jul–Des)</button>${Number(x.frek) > 1 && Number(x.frek) < 12 ? `<button onclick="rkJadwalCepat('rata')">${_rkTampil(Number(x.frek))} kali menyebar</button>` : ""}<button onclick="rkJadwalCepat('kosong')">Kosongkan</button></div>`}
     <div class="rkx-jd-tahap t1"><span>Tahap 1</span><div>${[1, 2, 3, 4, 5, 6].map(chip).join("")}</div></div>
     <div class="rkx-jd-tahap t2"><span>Tahap 2</span><div>${[7, 8, 9, 10, 11, 12].map(chip).join("")}</div></div>
     <label class="rkx-jd-saklar"><input type="checkbox" ${J.manual ? "checked" : ""} ${dis} onchange="RK.jd.manual=this.checked;if(this.checked){const r=rkBulan({...RK.data.item[RK.jd.id],coret:false,manual:false,jadwal:RK.jd.jadwal});RK.jd.rp=r}_rkGambarJadwal()"> Atur nominal tiap bulan sendiri <small>(bila tidak dicentang: dibagi rata otomatis)</small></label>
-    ${J.manual ? `<div class="rkx-jd-manual">${J.jadwal.slice().sort((a, b) => a - b).map((m) => `<label><span>${RK_BLN_PANJANG[m - 1]}</span><input inputmode="numeric" value="${_rkTampil(Number(J.rp[m]) || 0)}" ${dis} oninput="RK.jd.rp[${m}]=_rkAngka(this.value);_rkJdSelisih()"></label>`).join("") || "<em>Pilih bulannya dulu di atas.</em>"}</div>` : ""}
+    ${J.manual ? `<div class="rkx-jd-manual">${J.jadwal.slice().sort((a, b) => a - b).map((m) => `<label><span>${RK_BLN_PANJANG[m - 1]}</span><input inputmode="numeric" value="${_rkTampil(Number(J.rp[m]) || 0)}" ${dis} oninput="_rkFormatKetik(this);RK.jd.rp[${m}]=_rkAngka(this.value);_rkJdSelisih()"></label>`).join("") || "<em>Pilih bulannya dulu di atas.</em>"}</div>` : ""}
     <div id="rkx-jd-sel" class="rkx-jd-sel ${terj === jml ? "pas" : ""}">${_rkTeksSelisih(jml, terj)}</div>
     <label class="rkx-jd-saklar coret"><input type="checkbox" ${J.coret ? "checked" : ""} ${dis} onchange="RK.jd.coret=this.checked"> Dicoret / tidak dipakai <small>(tetap tercatat, tidak dihitung)</small></label>
     <div style="display:flex;gap:10px;margin-top:12px"><button class="btn btn-outline" style="flex:1" onclick="closeModal()">${RK.baca ? "Tutup" : "Batal"}</button>${RK.baca ? "" : `<button class="btn btn-accent" style="flex:1" onclick="rkSimpanJadwal()">Simpan Jadwal</button>`}</div></div>`);
 }
 const _rkTeksSelisih = (jml, terj) => terj === jml ? `✅ Terjadwal penuh: Rp ${_rkRp(terj)}` : terj < jml ? `⚠️ Baru terjadwal Rp ${_rkRp(terj)} — kurang <b>Rp ${_rkRp(jml - terj)}</b>` : `⚠️ Terjadwal Rp ${_rkRp(terj)} — lebih <b>Rp ${_rkRp(terj - jml)}</b> dari jumlah`;
 function _rkJdSelisih() {
-  const J = RK.jd, x = RK.data.item[J.id], jml = Math.round(rkJumlah({ ...x, coret: false }));
+  const J = RK.jd, x = RK.data.item[J.id], jml = Math.round(rkJumlah({ ...x, coret: false, manual: J.manual, jadwal: J.jadwal, ikutBulan: J.ikut }));
   const terj = J.jadwal.reduce((a, m) => a + (Number(J.rp[m]) || 0), 0), el = qs("rkx-jd-sel");
   if (el) { el.innerHTML = _rkTeksSelisih(jml, terj); el.classList.toggle("pas", terj === jml); }
 }
@@ -286,7 +315,8 @@ function rkJadwalCepat(jenis) {
 }
 function rkSimpanJadwal() {
   const J = RK.jd, x = RK.data.item[J.id];
-  x.coret = J.coret; x.manual = J.manual; x.jadwal = J.jadwal.slice().sort((a, b) => a - b);
+  x.coret = J.coret; x.manual = J.manual; x.jadwal = J.jadwal.slice().sort((a, b) => a - b); x.ikutBulan = !!J.ikut;
+  if (J.ikut && !J.manual && x.jadwal.length) x.frek = x.jadwal.length;
   x.bulanRp = J.manual ? Object.fromEntries(x.jadwal.map((m) => [m, Number(J.rp[m]) || 0])) : null;
   closeModal(); _rkGambar(); _rkTulis({ item: { [J.id]: x } });
 }
@@ -365,7 +395,7 @@ async function rkImpor(inp) {
     const lama = _rkItem().length;
     const nItem = h.kel.reduce((a, k) => a + k.item.length, 0), terj = h.kel.reduce((a, k) => a + k.item.filter((x) => (x.jadwal && x.jadwal.length) || x.manual).length, 0);
     const total = h.kel.reduce((a, k) => a + k.item.reduce((b, x) => b + rkJumlah(x), 0), 0);
-    if (!confirm(`Sheet "${nama}" terbaca:\n• ${h.kel.length} kelompok, ${nItem} rincian\n• Total kebutuhan Rp ${_rkRp(total)}\n• ${terj} rincian ikut jadwal bulanannya\n${h.dana ? `• Dana anggaran Rp ${_rkRp(h.dana)}\n` : ""}${lama ? `\n⚠️ ${lama} rincian yang sudah ada di Draft RKAS ${RK.th} akan DIGANTI.` : ""}\n\nLanjutkan?`)) return;
+    if (!(await konfirmasiTema(`Sheet "${_rkE(nama)}" terbaca:\n• ${h.kel.length} kelompok, ${nItem} rincian\n• Total kebutuhan Rp ${_rkRp(total)}\n• ${terj} rincian ikut jadwal bulanannya\n${h.dana ? `• Dana anggaran Rp ${_rkRp(h.dana)}\n` : ""}${lama ? `\n⚠️ ${lama} rincian yang sudah ada di Draft RKAS ${RK.th} akan DIGANTI.` : ""}`, { ikon: "📥", judul: "Impor Excel", teksYa: "Impor Sekarang" }))) return;
     const kelPot = {}, itemPot = {};
     _rkKel().forEach((k) => { kelPot[k.id] = { ...RK.data.kel[k.id], dihapus: true }; });
     _rkItem().forEach((x) => { itemPot[x.id] = { ...RK.data.item[x.id], dihapus: true }; });
@@ -435,6 +465,7 @@ function _rkBacaLembar(ws) {
       x.jadwal = bl;
       const rata = rkBulan({ ...x, manual: false, jadwal: bl });
       if (bl.every((m) => Math.abs((rata[m] || 0) - x.bulanRp[m]) <= 1)) { x.manual = false; x.bulanRp = null; }
+      x.ikutBulan = !x.manual && bl.length > 1 && Math.round(Number(x.frek) || 1) === bl.length;
     });
   }
   return { kel: kel.filter((k) => k.item.length), dana };
@@ -463,7 +494,7 @@ async function rkUnduh() {
     const rA = r;
     item.forEach((x) => {
       const row = ws.getRow(r);
-      row.getCell(2).value = (x.coret ? "(dicoret) " : "- ") + (x.uraian || ""); row.getCell(3).value = Number(x.vol) || 0; row.getCell(4).value = x.sat || ""; row.getCell(5).value = Number(x.harga) || 0; row.getCell(6).value = x.frek == null ? 1 : Number(x.frek) || 0;
+      row.getCell(2).value = (x.coret ? "(dicoret) " : "- ") + (x.uraian || ""); row.getCell(3).value = Number(x.vol) || 0; row.getCell(4).value = x.sat || ""; row.getCell(5).value = Number(x.harga) || 0; row.getCell(6).value = rkKali(x);
       row.getCell(7).value = x.coret ? 0 : { formula: `C${r}*E${r}*F${r}`, result: rkJumlah(x) };
       if (x.coret) row.font = { strike: true, color: { argb: "FF94A3B8" } };
       for (let c = 1; c <= 8; c++) row.getCell(c).border = garis;

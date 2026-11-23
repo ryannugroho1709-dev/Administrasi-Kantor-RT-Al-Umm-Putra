@@ -20,7 +20,7 @@
 <!-- Tema elegan + pilihan palet (menu ✨ di topbar). "klasik" = tampilan hijau lama. Dipasang
      sedini mungkin supaya tidak sempat "berkedip" tampilan lain dulu. Disimpan per perangkat. -->
 <link rel="stylesheet" href="src/tema-elegan.css?v=46">
-<link rel="stylesheet" href="src/bosp-rkas.css?v=2">
+<link rel="stylesheet" href="src/bosp-rkas.css?v=3">
 <link rel="stylesheet" href="src/kas.css?v=6">
 <link rel="stylesheet" href="src/hp.css?v=3">
 <link rel="stylesheet" href="src/kuliah.css?v=6">
@@ -8369,7 +8369,11 @@ async function _gabungRiwayatDenganJadwal(rowsAsli, dari, sampai, guruIdFilter) 
     }
     d.setDate(d.getDate() + 1);
   }
-  return [...rowsAsli, ...virtual];
+  // Hari LIBUR KBM (kaldik libur / masa ujian) & Minggu yang diblokir: baris tanpa absen (Alpha / Belum Absen) tidak ditampilkan —
+  // hari itu memang tidak ada kewajiban mengajar. Baris yang benar-benar diisi (hadir, izin, sakit) tetap tampil.
+  const kosong = (r) => !r.jam_masuk && !r.jam_pulang && ["alpha", "belum_absen", "", null, undefined].includes(r.status_kehadiran);
+  const hariLibur = (iso) => liburSet.has(iso) || (blokirMinggu && hariIniIndo(new Date(iso + "T00:00:00")) === "Minggu");
+  return [...rowsAsli.filter((r) => !(hariLibur(r.tanggal) && kosong(r))), ...virtual];
 }
 // pakaiCache=true → dipanggil dari chip filter: pakai data yang sudah dimuat (tanpa unduh ulang)
 let _RA_PJ_SET = null;
@@ -16172,8 +16176,8 @@ async function handleImportSiswa(evt) {
 <script src="src/nilai-tempel.js?v=3"></script>
 <script src="src/dapodik.js?v=2"></script>
 <script src="src/modul-urut.js?v=1"></script>
-<script src="src/ruang.js?v=15"></script>
-<script src="src/akun.js?v=7"></script>
+<script src="src/ruang.js?v=16"></script>
+<script src="src/akun.js?v=8"></script>
 <script src="src/keamanan-admin.js?v=2"></script>
 <script src="src/siswa-tampil.js?v=4"></script>
 <script src="src/pengelola.js?v=4"></script>
@@ -16188,7 +16192,7 @@ async function handleImportSiswa(evt) {
 <script src="src/bosp-hp.js?v=1"></script>
 <script src="src/bosp-laporan.js?v=2"></script>
 <script src="src/bosp-arkas.js?v=5"></script>
-<script src="src/bosp-rkas.js?v=2"></script>
-<script src="src/bosp-rkas-real.js?v=1"></script>
+<script src="src/bosp-rkas.js?v=3"></script>
+<script src="src/bosp-rkas-real.js?v=2"></script>
 </body>
 </html>

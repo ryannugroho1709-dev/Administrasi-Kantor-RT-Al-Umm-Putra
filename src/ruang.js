@@ -878,3 +878,24 @@ isKepsek = function () {
   if (typeof RG !== "undefined" && RG.siap && (RG.penyelenggara || []).includes(STATE.guruId) && !isAdmin()) return true;
   return _rgKepsekAsli();
 };
+
+// ── 21. Insentif & Insentif Musyrif: guru dari ruang lain (Mode Lihat) tidak boleh melihat insentif guru jenjang ini ──
+["renderInsentifInit", "renderInsentifMusyrifInit"].forEach((nama) => {
+  if (typeof window[nama] !== "function") return;
+  const asli = window[nama];
+  window[nama] = async function () {
+    const page = qs(nama === "renderInsentifInit" ? "page-insentif" : "page-insentif-musyrif");
+    const terkunci = STATE.modeLihat && !(typeof isAdmin === "function" && isAdmin());
+    if (page) {
+      [...page.children].forEach((c) => { if (c.id !== "rg-insentif-kunci") c.style.display = terkunci ? "none" : ""; });
+      page.querySelector("#rg-insentif-kunci")?.remove();
+      if (terkunci) {
+        const el = document.createElement("div"); el.id = "rg-insentif-kunci"; el.className = "card empty-state";
+        el.innerHTML = `<div style="font-size:34px;margin-bottom:6px">🔒</div><div style="font-weight:800;margin-bottom:4px">Insentif hanya untuk guru ${escapeHtml(rgRuang().nama)}</div><div style="font-size:12.5px;color:var(--text-secondary)">Antum sedang membuka ruang ini dalam <b>Mode Lihat</b>. Data insentif guru jenjang lain bersifat pribadi.</div>`;
+        page.prepend(el);
+      }
+    }
+    if (terkunci) return;
+    return asli.apply(this, arguments);
+  };
+});

@@ -289,7 +289,28 @@ const _akPilihAsli = openPilihGuru;
 openPilihGuru = function () {
   if (AK.pulih) return;
   if (AK.wajib && !isAdmin() && !akAdalahAdminAkun()) return akTampilMasuk();
-  return _akPilihAsli();
+  const h = _akPilihAsli();
+  // Sudah masuk dengan akun guru (bukan admin) → hanya boleh memakai NAMA SENDIRI, tidak bisa memilih nama guru lain
+  try {
+    if (AK.guru && !AK.guru.admin) {
+      const sel = qs("pilih-guru-select");
+      if (sel) {
+        [...sel.options].forEach((o) => { if (o.value && o.value !== AK.guru.id) o.remove(); });
+        if ([...sel.options].some((o) => o.value === AK.guru.id)) sel.value = AK.guru.id;
+        const cat = document.createElement("div"); cat.className = "uj-sub"; cat.style.margin = "6px 0 0";
+        cat.innerHTML = `🔐 Masuk dengan akun <b>${escapeHtml(AK.guru.nama || "")}</b> — hanya nama sendiri yang bisa dipakai. Untuk memakai nama lain, keluar dari akun dulu.`;
+        sel.closest(".field")?.appendChild(cat);
+      }
+    }
+  } catch (e) {}
+  return h;
+};
+// Pengaman kedua: akun guru (bukan admin) tidak bisa memilih nama guru lain walau daftar diubah lewat konsol
+const _akKonfirmasiPilihAsli = konfirmasiPilihGuru;
+konfirmasiPilihGuru = function () {
+  const sel = qs("pilih-guru-select");
+  if (AK.guru && !AK.guru.admin && sel && sel.value && sel.value !== AK.guru.id) { toast(`Akun ini milik ${AK.guru.nama || "guru lain"} — tidak bisa memakai nama guru lain.`, "err"); return; }
+  return _akKonfirmasiPilihAsli.apply(this, arguments);
 };
 // Admin yang sudah masuk dengan akun tidak perlu PIN admin lagi untuk akunnya sendiri
 const _akPinAsli = mintaPinAdminUntukLogin;
