@@ -25,7 +25,15 @@ const BSP_RUANG = ["A", "Pa", "Pi"];
 // ── Hak akses ──
 // penyusun inti: Admin utama, Admin Pendamping, Penyelenggara ruang ini
 const bspPenyusunInti = () => typeof STATE !== "undefined" && STATE.ruang && STATE.ruang !== "Pg" &&
-  ((typeof isAdmin === "function" && isAdmin()) || (typeof rgPendamping === "function" && rgPendamping()) || ((typeof RG !== "undefined" && RG.penyelenggara) || []).includes(STATE.guruId));
+  ((typeof isAdmin === "function" && isAdmin()) || (typeof rgPendamping === "function" && rgPendamping()) || ((typeof RG !== "undefined" && RG.penyelenggara) || []).includes(STATE.guruId)
+    || bspPenyelenggaraJabatan());
+// guru berjabatan "Kepala Sekolah" (= Penyelenggara jenjang) di Data Guru ruang ini
+function bspPenyelenggaraJabatan() {
+  try {
+    if (STATE.modeLihat || (typeof rgAkses === "function" && rgAkses(STATE.ruang) !== "U")) return false;
+    return typeof _jabatanGuru === "function" && _jabatanGuru(STATE.guruId).some((j) => j.kode === "kepala_sekolah");
+  } catch (e) { return false; }
+}
 const bspBolehSusun = () => !!(bspPenyusunInti() || bspAdminJenjang("bsp-kk") || bspBendaharaJenjang());
 // Bendahara jenjang (jabatan "Bendahara" di Data Guru ruang ini, anggota ruang, bukan Mode Lihat) —
 // ikut menyusun & melaporkan keuangan jenjangnya (Kertas Kerja BOSP & Draft RKAS).

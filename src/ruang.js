@@ -599,8 +599,21 @@ showPage = function (key, ...sisa) {
 const _rgTAsli = t;
 t = function (k, ...a) {
   if (STATE.ruang === "A" && k === "jpPaketB") return "JP Paket A";
-  return _rgTAsli(k, ...a);
+  const h = _rgTAsli(k, ...a);
+  // di PKBM, "Kepala Sekolah" ruang jenjang = Penyelenggara jenjang itu
+  if (typeof h === "string" && ["A", "Pa", "Pi"].includes(STATE.ruang) && h.includes("Kepala Sekolah")) return h.replace(/Kepala Sekolah/g, "Penyelenggara");
+  return h;
 };
+
+// ── 12b. Bendahara jenjang hanya untuk jenjangnya sendiri: di ruang lain (Mode Lihat / bukan anggota) tidak dianggap Bendahara ──
+if (typeof isBendahara === "function") {
+  const _rgBendAsli = isBendahara;
+  isBendahara = function () {
+    if (typeof isAdmin === "function" && isAdmin()) return true;
+    if (RG.siap && STATE.ruang && STATE.ruang !== "Pg" && (STATE.modeLihat || rgAkses(STATE.ruang) !== "U")) return false;
+    return _rgBendAsli();
+  };
+}
 
 
 // ── 13. Pengaturan per jenjang = bagian ABSEN saja; pengaturan utama (kop, logo, nama lembaga, tahun ajaran,

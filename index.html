@@ -15131,6 +15131,13 @@ function _jabatanBawaanDariTeks(teks) {
 //   mode "bawaan": key = nama jabatan (tabel master belum terisi → hanya teks guru.jabatan,
 //                  supaya jabatan lama tidak pernah tertimpa kosong)
 let GF_JAB = { mode: "master", keys: [], utama: null };
+// Di ruang jenjang (Paket A / B&C Putra / B&C Putri), jabatan "Kepala Sekolah" disebut "Penyelenggara <jenjang>".
+// Hanya tampilan — nama yang tersimpan di data tidak berubah.
+function namaJabatanTampil(nama) {
+  const r = STATE.ruang, label = { A: "Paket A", Pa: "B&C Putra", Pi: "B&C Putri" }[r];
+  if (!label || !/^kepala sekolah$/i.test(String(nama || "").trim())) return nama;
+  return "Penyelenggara " + label;
+}
 function _gfJabNama(key) {
   if (GF_JAB.mode === "bawaan") return key;
   return (LOOKUP.jabatanMaster || []).find((j) => j.id === key)?.nama || "";
@@ -15161,7 +15168,7 @@ function _gfJabHtml() {
   const { keys, utama, mode } = GF_JAB;
   const chips = keys.length
     ? keys.map((k) => {
-        const nama = escapeHtml(_gfJabNama(k));
+        const nama = escapeHtml(namaJabatanTampil(_gfJabNama(k)));
         const isUtama = k === utama;
         return `<span class="jab-chip ${isUtama ? "utama" : ""}" data-key="${escapeHtml(k)}" title="${isUtama ? "Jabatan utama" : "Klik untuk jadikan jabatan utama"}" onclick="_gfJabUtama(this.dataset.key)">
           ${isUtama ? `<span class="jab-bintang">★</span>` : ""}${nama}
@@ -15174,7 +15181,7 @@ function _gfJabHtml() {
     <div class="jab-aksi">
       <select class="input" id="gf-jabatan-tambah" onchange="_gfJabTambah(this.value)">
         <option value="">＋ Tambah jabatan…</option>
-        ${sisa.map((p) => `<option value="${escapeHtml(p.key)}">${escapeHtml(p.nama)}</option>`).join("")}
+        ${sisa.map((p) => `<option value="${escapeHtml(p.key)}">${escapeHtml(namaJabatanTampil(p.nama))}</option>`).join("")}
         ${mode === "master" && isAdmin() ? `<option value="__baru">✎ Jabatan lain (buat baru)…</option>` : ""}
       </select>
     </div>
@@ -16199,13 +16206,13 @@ async function handleImportSiswa(evt) {
 <script src="src/nilai-tempel.js?v=3"></script>
 <script src="src/dapodik.js?v=2"></script>
 <script src="src/modul-urut.js?v=1"></script>
-<script src="src/ruang.js?v=17"></script>
+<script src="src/ruang.js?v=18"></script>
 <script src="src/akun.js?v=8"></script>
 <script src="src/keamanan-admin.js?v=2"></script>
 <script src="src/siswa-tampil.js?v=4"></script>
 <script src="src/pengelola.js?v=4"></script>
 <script src="src/bosp-data.js?v=2"></script>
-<script src="src/bosp.js?v=7"></script>
+<script src="src/bosp.js?v=8"></script>
 <script src="src/bosp-plus.js?v=1"></script>
 <script src="src/rapi-tampil.js?v=2"></script>
 <script src="src/wajib-profil.js?v=1"></script>
