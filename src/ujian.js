@@ -701,7 +701,7 @@ function ujNilaiUraian(jawabanId) {
     const nu = !rek && typeof NU !== "undefined" ? NU.nilai(jaw, ks, poin, so.t) : null;
     const saran = rek ? null : nu ? nu.skor : _ujSaranUraian(jaw, ks, poin);
     return `<div class="uj-uraian">
-      <div style="font-weight:700;font-size:13px">${ks.no}. ${escapeHtml(so.t || "")}</div>
+      <div style="font-weight:700;font-size:13px">${ks.no}. ${escapeHtml(so.t || "")}${(() => { const d = Number(((r.jawaban || {}).waktu || {})[ks.no]) || 0; return d ? ` <span class="uj-sub" title="Lama santri berada di peti soal ini (game Berburu Peti)">· ⏱️ ${d >= 60 ? Math.floor(d / 60) + " mnt " : ""}${d % 60} dtk</span>` : ""; })()}</div>
       <div class="uj-jawaban">${rek ? `🎤 Rekaman suara santri:<br><audio controls preload="none" src="${escapeHtml(rek)}" style="width:100%;margin-top:4px"></audio>` : jaw ? escapeHtml(jaw) : "<i style='color:var(--text-secondary)'>(tidak dijawab)</i>"}</div>
       <div class="uj-kunci-uraian"><b>Kunci:</b> ${escapeHtml(ks.kunci || "-")}${(ks.poin_kunci || []).length ? `<div class="uj-sub">Poin: ${ks.poin_kunci.map(escapeHtml).join(" · ")}</div>` : ""}</div>
       <div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap">

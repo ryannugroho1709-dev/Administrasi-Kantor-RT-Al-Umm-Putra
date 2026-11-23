@@ -52,7 +52,7 @@ function _ujeDariBank(b, kunci) {
     tujuan.soal = (bg.soal || []).map((s) => {
       const ks = kb.soal.find((x) => x.no === s.no) || {};
       const dasar = { t: s.t || "", g: s.g || "", au: s.au || "", stimulus: s.stimulus || "", penjelasan: ks.penjelasan || "" };
-      if (bg.jenis === "uraian") return { ...dasar, kunci: ks.kunci || "", poin_kunci: ks.poin_kunci || [], rek: !!s.rek, kisi: s.kisi || "" };
+      if (bg.jenis === "uraian") return { ...dasar, kunci: ks.kunci || "", poin_kunci: ks.poin_kunci || [], rek: !!s.rek, kisi: s.kisi || "", kandang: !!s.kandang };
       if (bg.jenis === "isian") { const kt = (ks.k || []).map((a) => [].concat(a).join(" / ")); return { ...dasar, kt: kt.length ? kt : Array(_ujeJumlahTitik(s.t)).fill("") }; }
       if (bg.jenis === "jodoh") {
         const k = ks.k || [], pakai = new Set(k);
@@ -248,6 +248,7 @@ function _ujeKartu(j, s, i) {
       <div class="uj-sub">🤖 Saran skor otomatis memakai poin ini. Bila kosong, poin diambil dari <b>baris-baris kunci</b> (- … / 1. … / ١. …) atau kalimat-kalimatnya. Isi dalam kurung ( ) dan kata <b>atau / أو</b> dihitung sebagai jawaban lain yang juga benar.</div>
       <label class="form-label" style="margin-top:6px">🗝️ Kisi-kisi tersembunyi <small style="font-weight:500">(khusus game Berburu Peti — boleh dikosongkan)</small></label>
       <input dir="auto" class="input" value="${escapeHtml(s.kisi || "")}" placeholder="Petunjuk yang MENGARAH ke jawaban, bukan jawabannya — mis. Ingat kisah di bukit Shafa" oninput="${S}.kisi=this.value">
+      <label class="uje-bs-pilih"><input type="checkbox" ${s.kandang ? "checked" : ""} onchange="${S}.kandang=this.checked"> 🔒 Peti ini <b>terkunci di kandang</b> pada game Berburu Peti (santri harus membeli 🪜 tangga dulu — cocok untuk soal yang mudah)</label>
       <label class="uje-bs-pilih"><input type="checkbox" ${s.rek ? "checked" : ""} onchange="${S}.rek=this.checked"> 🎤 Santri menjawab dengan <b>rekaman suara</b> (ujian speaking / hafalan / membaca)</label>`;
   else if (j === "isian") {
     const n = _ujeJumlahTitik(s.t), kt = (s.kt || []).slice(0, n); while (kt.length < n) kt.push("");
@@ -1003,7 +1004,7 @@ function _ujeKeBank() {
       const pj = s.penjelasan ? { penjelasan: s.penjelasan.trim() } : {};
       if (j === "uraian") {
         if (!String(s.kunci || "").trim()) galat.push(`${L}: kunci kosong`);
-        return { no, t, ...media, ...(s.rek ? { rek: true } : {}), ...(String(s.kisi || "").trim() ? { kisi: String(s.kisi).trim() } : {}), kunci: (s.kunci || "").trim(), poin_kunci: s.poin_kunci || [], ...pj };
+        return { no, t, ...media, ...(s.rek ? { rek: true } : {}), ...(String(s.kisi || "").trim() ? { kisi: String(s.kisi).trim() } : {}), ...(s.kandang ? { kandang: true } : {}), kunci: (s.kunci || "").trim(), poin_kunci: s.poin_kunci || [], ...pj };
       }
       if (j === "isian") {
         const n = _ujeJumlahTitik(s.t);

@@ -66,6 +66,14 @@ const G4_POHON = { rows: ["................", ".....gggggg.....", "...ggGGggggg.
 // Ustadz penunggu: peci putih, berjenggot, gamis putih, memegang kitab hijau
 const G4_USTADZ = { rows: ["................", ".....pppppp.....", "....pPppppPp....", "....kkkkkkkk....", "....kkhkkhkk....", "....kkkkkkkk....", "....jkkmmkkj....", ".....jjjjjj.....", "....wwwjjwww....", "...kwwwwwwwwk...", "...kwwwggwwwk...", "....wwwggwww....", "....wWwwwwWw....", "....wWwwwwWw....", ".....ss..ss.....", "................"],
   w: { p: "#ffffff", P: "#e2e8f0", k: "#e0ac69", h: "#111827", m: "#9a3412", j: "#3f3f46", w: "#f8fafc", W: "#cbd5e1", g: "#15803d", s: "#78350f" } };
+// Kios Toko Al Umm (atap belang hijau-putih, rak barang)
+const G4_TOKO = { rows: ["................", ".gwgwgwgwgwgwgw.", "gwgwgwgwgwgwgwgw", "gggggggggggggggg", ".p............p.", ".p..oo.yy.rr..p.", ".p..oo.yy.rr..p.", ".p............p.", ".bbbbbbbbbbbbbb.", ".bBBBBBBBBBBBBb.", ".bBBkkBBBBkkBBb.", ".bBBBBBBBBBBBBb.", ".bbbbbbbbbbbbbb.", ".d............d.", "................", "................"],
+  w: { g: "#16a34a", w: "#f8fafc", p: "#78350f", o: "#f97316", y: "#facc15", r: "#ef4444", b: "#713f12", B: "#a16207", k: "#fde68a", d: "rgba(0,0,0,.2)" } };
+// Burung Hudhud (jambul jingga berujung hitam, sayap belang)
+const G4_HUDHUD = { rows: ["................", "....o.o.o.......", "...oKoKoKo......", "....ooooo.......", "....oooeo.......", "....oooooKKK....", "...oooooo.......", "..ooooooo.......", ".wKwKwKooo......", ".KwKwKwooo......", "..KwKwKoo.......", "....kk..........", "....k.k.........", "................", "................", "................"],
+  w: { o: "#f59e0b", K: "#111827", e: "#111827", w: "#f8fafc", k: "#78350f" } };
+// keyboard Arab ikut tertutup saat peti ditutup
+function kbTutupG4() { try { if (typeof KB !== "undefined") { KB.target = null; KB.harakat = false; } if (typeof kbTampil === "function") kbTampil(); } catch (e) {} }
 // Gulungan kisi-kisi (kertas tua berpita merah)
 const G4_GULUNGAN = { rows: ["................", "................", "................", "...bbbbbbbbbb...", "..bccccccccccb..", "..bcyyyyyyyycb..", "...yyllllllyy...", "...yyyyyyyyyy...", "...yylllllyyy...", "...yyyyrryyyy...", "...yyllrrlyyy...", "..bcyyyyyyyycb..", "..bccccccccccb..", "...bbbbbbbbbb...", "................", "................"],
   w: { b: "#78350f", c: "#b45309", y: "#fde68a", l: "#a16207", r: "#dc2626" } };
@@ -110,23 +118,49 @@ const G2_MAIN_PETI = function (isi, s) {
   const nama = String((S.murid && S.murid.nama) || "Kamu").split(/\s+/)[0];
   // ── ingatan kecil di HP (tanpa server): peraturan sudah dibaca & kisi-kisi yang sudah ditemukan ──
   const LK = "g4:" + sesiKey, lokal = (() => { try { return JSON.parse(localStorage.getItem(LK) || "{}"); } catch (e) { return {}; } })();
-  const simpanLokal = () => { try { localStorage.setItem(LK, JSON.stringify({ atur: !!st.aturanOk, kisi: [...(st.kisiDapat || [])] })); } catch (e) {} };
+  const simpanLokal = () => { try { localStorage.setItem(LK, JSON.stringify({ atur: !!st.aturanOk, kisi: [...(st.kisiDapat || [])], dapat: [...st.dapat], belanja: st.belanja, inv: st.inv, pintu: !!st.pintuTangga, qurban: [...st.qurban] })); } catch (e) {} };
   if (lokal.atur) st.aturanOk = true;
   st.kisiDapat = st.kisiDapat || new Set(lokal.kisi || []);
+  // ── GOLD & barang Toko Al Umm (semua di HP, tanpa server) ──
+  st.dapat = st.dapat || new Set(lokal.dapat || []);           // soal yang sudah pernah terjawab → masing-masing 500 gold
+  st.belanja = st.belanja ?? (Number(lokal.belanja) || 0);
+  st.inv = st.inv || Object.assign({ tangga: 0, pedang: 0, pancing: 0, umpan: 0 }, lokal.inv || {});
+  st.pintuTangga = st.pintuTangga ?? !!lokal.pintu;
+  st.qurban = st.qurban || new Set(lokal.qurban || []);
+  const EMAS_PETI = 500, HARGA = { tangga: 1000, pedang: 1000, pancing: 500, umpan: 1000 };
+  const emas = () => st.dapat.size * EMAS_PETI - st.belanja;
+  // ── PETI TERTUTUP: 1–2 soal ditaruh di dalam kandang berpagar; pintunya berlubang → perlu 🪜 tangga ──
+  const PINTU = [6, 11], diPintu = (x, y) => x === PINTU[0] && y === PINTU[1];
+  const dalamKandang = (x, y) => x >= 4 && x <= 8 && y >= 12 && y <= 15;
+  const tertutup = (() => {
+    if (uraian.length < 3) return [];
+    const pilihGuru = uraian.map((x, k) => (x.s.kandang ? k : -1)).filter((k) => k >= 0);
+    if (pilihGuru.length) return pilihGuru.slice(0, 2);
+    if (uraian.length < 4) return [];
+    // tanpa pilihan guru: soal dengan kalimat paling pendek (biasanya paling mudah) dikunci di kandang
+    return uraian.map((x, k) => ({ k, p: String(x.s.t || "").length })).sort((a, b) => a.p - b.p).slice(0, uraian.length >= 7 ? 2 : 1).map((x) => x.k);
+  })();
+  [[5, 13], [7, 14]].forEach((pos, i) => { if (tertutup[i] != null) peti[tertutup[i]] = pos; });
   // ── jarak jalan dari titik mulai (untuk menaruh ustadz & kisi-kisi) ──
   const jarM = (() => { const d = Array.from({ length: H }, () => Array(W).fill(-1)), q = [peta.mulai]; d[peta.mulai[1]][peta.mulai[0]] = 0; for (let i = 0; i < q.length; i++) { const [x, y] = q[i]; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, ny = y + dy; if (bisa(nx, ny) && d[ny][nx] < 0) { d[ny][nx] = d[y][x] + 1; q.push([nx, ny]); } } } return d; })();
   const dipakaiPeta = (x, y) => peti.some((p) => p[0] === x && p[1] === y) || jebakan.some((p) => p[0] === x && p[1] === y);
   // ── USTADZ penunggu: berdiri di dekat titik mulai; datangi beliau untuk mengumpulkan jawaban ──
   const U = (() => { for (const jr of [2, 3, 1, 4]) for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) if (jarM[y][x] === jr && g[y][x] !== 4 && !dipakaiPeta(x, y)) return [x, y]; return [peta.mulai[0] + 1, peta.mulai[1] - 1]; })();
   const diUstadz = (x, y) => x === U[0] && y === U[1];
-  // ── KISI-KISI tersembunyi: satu gulungan untuk tiap soal yang diberi kisi oleh guru, disembunyikan dekat pohon ──
-  const adaKisi = uraian.map((x, k) => ({ k, no: x.s.no, teks: String(x.s.kisi || "").trim() })).filter((x) => x.teks);
+  // ── TOKO AL UMM: kios di dekat ustadz ──
+  const TK = (() => { for (const jr of [2, 3, 4, 1, 5]) for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) if (jarM[y][x] === jr && g[y][x] !== 4 && !dipakaiPeta(x, y) && !diUstadz(x, y) && Math.abs(x - U[0]) + Math.abs(y - U[1]) >= 2) return [x, y]; return [peta.mulai[0] - 1, peta.mulai[1] - 1]; })();
+  const diToko = (x, y) => x === TK[0] && y === TK[1];
+  // ── KISI-KISI tersembunyi: tiap soal yang diberi kisi oleh guru → GULUNGAN di dekat pohon, atau dipancing di KOLAM ──
+  const adaKisi = uraian.map((x, k) => ({ k, no: x.s.no, teks: String(x.s.kisi || "").trim() })).filter((x) => x.teks)
+    .map((x, i, a) => ({ ...x, cara: a.length >= 2 && i % 2 === 1 ? "kolam" : "gulungan" }));
+  const kisiKolam = adaKisi.filter((x) => x.cara === "kolam");
   const kisi = (() => {
-    if (!adaKisi.length) return [];
+    const gl = adaKisi.filter((x) => x.cara === "gulungan");
+    if (!gl.length) return [];
     const a = g2Acak(sesiKey + ":kisi"), dekatPohon = (x, y) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => g[y + dy] && g[y + dy][x + dx] === 1);
-    const calon = []; for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) if (jarM[y][x] >= 5 && (g[y][x] === 0 || g[y][x] === 5) && !dipakaiPeta(x, y) && !diUstadz(x, y)) calon.push({ x, y, n: (dekatPohon(x, y) ? 6 : 0) + jarM[y][x] * 0.15 + a() * 4 });
+    const calon = []; for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) if (jarM[y][x] >= 5 && (g[y][x] === 0 || g[y][x] === 5) && !dipakaiPeta(x, y) && !diUstadz(x, y) && !diToko(x, y)) calon.push({ x, y, n: (dekatPohon(x, y) ? 6 : 0) + jarM[y][x] * 0.15 + a() * 4 });
     const pilih = [];
-    adaKisi.forEach((it) => {
+    gl.forEach((it) => {
       calon.forEach((c) => { c.s = c.n + Math.min(8, ...pilih.map((p) => Math.abs(p.x - c.x) + Math.abs(p.y - c.y)).concat([8])) + Math.min(6, ...peti.map((p) => Math.abs(p[0] - c.x) + Math.abs(p[1] - c.y))); });
       calon.sort((p, q) => q.s - p.s); const c = calon.shift(); if (c) pilih.push({ ...it, x: c.x, y: c.y });
     });
@@ -135,8 +169,9 @@ const G2_MAIN_PETI = function (isi, s) {
   })();
   isi.innerHTML = `<div class="g4-hud"><span id="g4-skor"></span><span class="ket">Cari peti, buka, jawab. Selesai? Datangi 👳 Ustadz untuk mengumpulkan.</span></div>
     <div class="g4-layar"><canvas id="g4-cv"></canvas><div class="g4-pesan" id="g4-pesan"></div></div>
+    <div class="g4-aksibar" id="g4-aksibar"></div>
     <div class="g2-dpad g4-dpad"><button data-d="0,-1">▲</button><button data-d="-1,0">◀</button><button data-d="1,0">▶</button><button data-d="0,1">▼</button></div>
-    <p class="g2-tip">Ketuk peti di peta → tokohmu berjalan sendiri ke sana. Atau pakai tombol arah / geser layar. Waspada lubang jebakan tersembunyi! 🕳️</p>`;
+    <p class="g2-tip">Ketuk peti di peta → tokohmu berjalan sendiri ke sana. Tiap peti terjawab = 💰 ${EMAS_PETI} gold untuk belanja di 🏪 Toko Al Umm. Waspada lubang jebakan! 🕳️</p>`;
   const cv = isi.querySelector("#g4-cv"), ctx = cv.getContext("2d");
   const VW = 13, VH = 10;
   let T = 24, dpr = 1;
@@ -167,10 +202,22 @@ const G2_MAIN_PETI = function (isi, s) {
   let lalu = performance.now(), terakhirPeti = null, jatuh = 0, langkahT = 0;
   // berdiri di atas peti saat digambar ulang → jangan langsung terbuka lagi
   terakhirPeti = peti.findIndex((p) => p[0] === P.x && p[1] === P.y); if (terakhirPeti < 0) terakhirPeti = null;
-  const lantai = (x, y) => (bisa(x, y) && !diUstadz(x, y)) || peti.some((p) => p[0] === x && p[1] === y);
+  const lantai = (x, y) => (bisa(x, y) && !diUstadz(x, y) && !diToko(x, y) && !(diPintu(x, y) && !st.pintuTangga)) || peti.some((p) => p[0] === x && p[1] === y);
   const dijawab = (k) => String(S.jawab.uraian[uraian[k].s.no] || "").trim() !== "";
   const terkunci = (k) => typeof g3Terkunci === "function" && g3Terkunci(uraian[k].s);
-  function skor() { const n = uraian.filter((_, k) => dijawab(k)).length; const el = isi.querySelector("#g4-skor"); if (el) el.innerHTML = `🗝️ <b>${n}</b>/${uraian.length} peti terjawab${kisi.length ? ` · 📜 <b>${kisi.filter((x) => st.kisiDapat.has(x.no)).length}</b>/${kisi.length} kisi` : ""}`; }
+  uraian.forEach((x, k) => { if (dijawab(k)) st.dapat.add(x.s.no); });
+  function skor() {
+    const n = uraian.filter((_, k) => dijawab(k)).length, el = isi.querySelector("#g4-skor"); if (!el) return;
+    const inv = st.inv, brg = [inv.tangga && !st.pintuTangga ? `🪜${inv.tangga}` : "", inv.pedang ? `⚔️${inv.pedang}` : "", inv.pancing ? "🎣" : "", inv.umpan ? `🪱${inv.umpan}` : ""].filter(Boolean).join(" ");
+    el.innerHTML = `🗝️ <b>${n}</b>/${uraian.length} peti · <span class="g4-emas">💰 <b>${emas().toLocaleString("id-ID")}</b></span>${adaKisi.length ? ` · 📜 <b>${adaKisi.filter((x) => st.kisiDapat.has(x.no)).length}</b>/${adaKisi.length}` : ""}${brg ? ` · ${brg}` : ""}`;
+  }
+  // gold untuk peti yang baru pertama kali terjawab
+  function beriEmas(k) {
+    const no = uraian[k].s.no; if (!dijawab(k) || st.dapat.has(no)) return false;
+    st.dapat.add(no); simpanLokal(); skor();
+    setTimeout(() => pesan(`💰 +${EMAS_PETI} gold! Total ${emas().toLocaleString("id-ID")} — belanja di 🏪 Toko Al Umm`, 2200), 350);
+    return true;
+  }
   function pesan(t, ms) { const el = isi.querySelector("#g4-pesan"); if (!el) return; el.innerHTML = t; el.classList.add("on"); clearTimeout(pesan.t); pesan.t = setTimeout(() => el.classList.remove("on"), ms || 1400); }
   // ── HEWAN: berkeliaran, tidak bisa ditembus; bila terganggu (ditabrak) ada yang kabur, ada yang mengejar ──
   if (!st.hewan) {
@@ -178,11 +225,11 @@ const G2_MAIN_PETI = function (isi, s) {
     let coba = 0;
     while (hewan.length < jenis.length && coba++ < 500) {
       const x = 2 + Math.floor(acakH() * (W - 4)), y = 2 + Math.floor(acakH() * (H - 4));
-      if (!bisa(x, y) || g[y][x] === 4 || diUstadz(x, y) || Math.abs(x - peta.mulai[0]) + Math.abs(y - peta.mulai[1]) < 4 || peti.some((p) => p[0] === x && p[1] === y) || jebakan.some((p) => p[0] === x && p[1] === y) || hewan.some((h) => h.x === x && h.y === y)) continue;
+      if (!bisa(x, y) || g[y][x] === 4 || diUstadz(x, y) || diToko(x, y) || Math.abs(x - peta.mulai[0]) + Math.abs(y - peta.mulai[1]) < 4 || peti.some((p) => p[0] === x && p[1] === y) || jebakan.some((p) => p[0] === x && p[1] === y) || hewan.some((h) => h.x === x && h.y === y)) continue;
       const j = jenis[hewan.length];
-      hewan.push({ j, x, y, tx: x, ty: y, balik: 1, tunggu: 0.5 + acakH() * 2, marah: 0, kabur: 0, reda: 0, cepat: 1.5, kaki: 0 });
+      hewan.push({ idx: hewan.length, j, x, y, tx: x, ty: y, balik: 1, tunggu: 0.5 + acakH() * 2, marah: 0, kabur: 0, reda: 0, cepat: 1.5, kaki: 0 });
     }
-    st.hewan = hewan;
+    st.hewan = hewan.filter((h) => !st.qurban.has(h.idx));
   }
   const hewan = st.hewan;
   hewan.forEach((h) => { h.x = h.tx = Math.round(h.x); h.y = h.ty = Math.round(h.y); });
@@ -191,7 +238,7 @@ const G2_MAIN_PETI = function (isi, s) {
   // petak yang sedang dipakai / dituju (tidak boleh saling tembus)
   const dipakaiHewan = (x, y, kecuali) => hewan.some((h) => h !== kecuali && ((h.x === x && h.y === y) || (h.tx === x && h.ty === y) || (Math.round(h.x) === x && Math.round(h.y) === y)));
   const dipakaiPemain = (x, y) => (Math.round(P.x) === x && Math.round(P.y) === y) || (P.tx === x && P.ty === y);
-  const bisaHewan = (x, y, h) => tanahHewan(x, y) && !diUstadz(x, y) && !peti.some((p) => p[0] === x && p[1] === y) && !jebakan.some((p) => p[0] === x && p[1] === y) && !dipakaiHewan(x, y, h) && !dipakaiPemain(x, y);
+  const bisaHewan = (x, y, h) => tanahHewan(x, y) && !diUstadz(x, y) && !diToko(x, y) && !diPintu(x, y) && !peti.some((p) => p[0] === x && p[1] === y) && !jebakan.some((p) => p[0] === x && p[1] === y) && !dipakaiHewan(x, y, h) && !dipakaiPemain(x, y);
   let tabrakTerakhir = 0;
   function ganggu(h) {
     const now = performance.now(); if (now - tabrakTerakhir < 900 || h.reda > 0) return; tabrakTerakhir = now;
@@ -278,6 +325,8 @@ const G2_MAIN_PETI = function (isi, s) {
         if (P.jalur.length) { const [nx, ny] = P.jalur[0]; mx = nx - P.x; my = ny - P.y; otomatis = true; }
         // berjalan menabrak ustadz → menyapa beliau
         if (!otomatis && (mx || my) && diUstadz(P.x + mx, P.y + my)) { P.mau = [0, 0]; P.dir = [0, 0]; P.balik = mx || P.balik; bicaraUstadz(); return; }
+        if (!otomatis && (mx || my) && diToko(P.x + mx, P.y + my)) { P.mau = [0, 0]; P.dir = [0, 0]; bukaToko(); return; }
+        if ((mx || my) && diPintu(P.x + mx, P.y + my) && !st.pintuTangga) { P.mau = [0, 0]; P.dir = [0, 0]; P.jalur = []; pasangTangga(); return; }
         // hewan menghalangi: jalan otomatis menunggu; jalan sendiri = menabrak (hewan terganggu)
         const hDepan = (mx || my) ? hewan.find((h) => (Math.round(h.x) === P.x + mx && Math.round(h.y) === P.y + my) || (h.tx === P.x + mx && h.ty === P.y + my)) : null;
         if (hDepan) {
@@ -315,6 +364,8 @@ const G2_MAIN_PETI = function (isi, s) {
     if (ks) { temukanKisi(ks); return true; }
     // sampai di sebelah ustadz (jalan otomatis)
     if (P.keUstadz && !P.jalur.length) { P.keUstadz = false; if (Math.abs(P.x - U[0]) + Math.abs(P.y - U[1]) === 1) { P.dir = [0, 0]; P.mau = [0, 0]; P.balik = Math.sign(U[0] - P.x) || P.balik; bicaraUstadz(); return true; } }
+    if (P.keToko && !P.jalur.length) { P.keToko = false; if (Math.abs(P.x - TK[0]) + Math.abs(P.y - TK[1]) === 1) { P.dir = [0, 0]; P.mau = [0, 0]; bukaToko(); return true; } }
+    if (P.kePintu && !P.jalur.length) { P.kePintu = false; if (Math.abs(P.x - PINTU[0]) + Math.abs(P.y - PINTU[1]) === 1) { P.dir = [0, 0]; P.mau = [0, 0]; pasangTangga(); return true; } }
     const k = peti.findIndex((p) => p[0] === P.x && p[1] === P.y);
     if (k < 0) { terakhirPeti = null; return false; }
     if (terakhirPeti === k) return false;
@@ -337,16 +388,20 @@ const G2_MAIN_PETI = function (isi, s) {
       <div class="g4-bawah"><span class="g4-kata"></span>${kunci ? `<span class="g4-kunci">🔒 Sudah dikunci</span>` : ""}</div>
       ${soalArab(sx) || kbAktif(sx) ? kbSaklarHTML(sx) : ""}
       <div class="g4-aksi"><button class="g4-tinggal">🏃 Cari peti lain</button>${typeof g3Aktif === "function" && g3Aktif() && !kunci ? `<button class="g4-kunci-btn">🔒 Kunci jawaban peti</button>` : `<button class="g4-simpan">✅ Simpan & tutup</button>`}</div></div>`;
-    document.body.appendChild(el); G2.bersih.push(() => el.remove());
+    document.body.appendChild(el);
+    // ⏱️ waktu di peti ini (detik) — ikut tersimpan bersama jawaban, dilihat guru saat menilai
+    const t0 = performance.now(); let tercatat = false;
+    const catatWaktu = () => { if (tercatat) return; tercatat = true; const d = Math.round((performance.now() - t0) / 1000); if (d < 2) return; S.jawab.waktu = S.jawab.waktu || {}; S.jawab.waktu[sx.no] = (Number(S.jawab.waktu[sx.no]) || 0) + d; if (typeof berubah === "function") try { berubah(); } catch (e) {} };
+    G2.bersih.push(() => { catatWaktu(); el.remove(); kbTutupG4(); });
     const ta = el.querySelector("textarea"), kata = el.querySelector(".g4-kata");
     const hitung = () => { kata.textContent = `✒️ ${g2HitungKata(ta.value)} kata`; };
     ta.addEventListener("input", () => { if (S.idx !== i) S.idx = i; ketikUraian(ta.value); hitung(); skor(); });
     hitung();
-    const tutup = (pesanTeks) => { st.buka = null; el.classList.add("tutup"); setTimeout(() => el.remove(), 250); if (pesanTeks) pesan(pesanTeks, 1300); skor(); };
+    const tutup = (pesanTeks) => { st.buka = null; catatWaktu(); el.classList.add("tutup"); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); setTimeout(() => { el.remove(); kbTutupG4(); }, 250); kbTutupG4(); if (pesanTeks) pesan(pesanTeks, 1300); beriEmas(k); skor(); };
     el.querySelector(".g4-x").onclick = () => tutup("Peti ditinggal — jawabanmu tetap tersimpan 👍");
     el.querySelector(".g4-tinggal").onclick = () => tutup("Cari peti lain yang lebih mudah 🔎");
     el.querySelector(".g4-simpan")?.addEventListener("click", () => { tutup(dijawab(k) ? `✨ Peti ${k + 1} terisi!` : null); if (dijawab(k)) g2Konfeti(cv); if (uraian.every((_, x) => dijawab(x))) setTimeout(() => pesan("🎉 Semua peti terjawab! Datangi 👳 Ustadz untuk mengumpulkan.", 2800), 600); });
-    el.querySelector(".g4-kunci-btn")?.addEventListener("click", () => { if (!dijawab(k)) { ta.focus(); return; } el.remove(); st.buka = null; g3Kunci(); });
+    el.querySelector(".g4-kunci-btn")?.addEventListener("click", () => { if (!dijawab(k)) { ta.focus(); return; } catatWaktu(); el.remove(); kbTutupG4(); st.buka = null; beriEmas(k); g3Kunci(); });
     setTimeout(() => { if (!kunci) ta.focus({ preventScroll: true }); }, 350);
   }
   function gambar(now) {
@@ -379,6 +434,15 @@ const G2_MAIN_PETI = function (isi, s) {
     g4Kotak(ctx, T, U[0] * T, U[1] * T - T * 0.12, G4_USTADZ); ctx.restore();
     const semua = uraian.every((_, k) => dijawab(k));
     if (semua || st.ustadzPanggil) { const by = U[1] * T - T * 0.75 + Math.sin(now / 260) * T * 0.08; ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.ellipse(U[0] * T + T / 2, by, T * 0.32, T * 0.24, 0, 0, 7); ctx.fill(); ctx.fillStyle = "#fff"; ctx.fillRect(U[0] * T + T * 0.42, by + T * 0.15, T * 0.12, T * 0.14); ctx.font = `${Math.round(T * 0.32)}px system-ui`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(semua ? "📨" : "❗", U[0] * T + T / 2, by + 1); }
+    // pintu kandang: lubang (perlu tangga) atau tangga terpasang
+    { const X = PINTU[0] * T, Y = PINTU[1] * T;
+      if (st.pintuTangga) { ctx.fillStyle = "#1c1917"; ctx.fillRect(X + T * 0.1, Y + T * 0.15, T * 0.8, T * 0.7); ctx.fillStyle = "#a16207"; ctx.fillRect(X + T * 0.18, Y, T * 0.12, T); ctx.fillRect(X + T * 0.7, Y, T * 0.12, T); for (let r = 0; r < 4; r++) ctx.fillRect(X + T * 0.18, Y + T * (0.12 + r * 0.24), T * 0.64, T * 0.08); }
+      else { ctx.fillStyle = "#0c0a09"; ctx.beginPath(); ctx.ellipse(X + T / 2, Y + T / 2, T * 0.44, T * 0.32, 0, 0, 7); ctx.fill(); ctx.fillStyle = "#44403c"; ctx.fillRect(X + T * 0.12, Y + T * 0.78, T * 0.76, T * 0.06);
+        ctx.font = `${Math.round(T * 0.42)}px system-ui`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("🪜", X + T / 2, Y - T * 0.3 + Math.sin(now / 300) * T * 0.06); } }
+    // kios Toko Al Umm
+    g4Kotak(ctx, T, TK[0] * T, TK[1] * T - T * 0.1, G4_TOKO);
+    // pelampung pancing
+    if (pancingAktif) { const bx = pancingAktif.x * T + T / 2, by = pancingAktif.y * T + T / 2 + Math.sin(now / 160) * T * 0.08; ctx.strokeStyle = "rgba(255,255,255,.85)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(P.x * T + T * 0.7, P.y * T + T * 0.2); ctx.quadraticCurveTo((P.x * T + bx) / 2, Math.min(P.y * T, by) - T * 0.6, bx, by); ctx.stroke(); ctx.fillStyle = "#ef4444"; ctx.beginPath(); ctx.arc(bx, by, T * 0.12, Math.PI, 0); ctx.fill(); ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(bx, by, T * 0.12, 0, Math.PI); ctx.fill(); ctx.strokeStyle = "rgba(255,255,255,.5)"; ctx.beginPath(); ctx.ellipse(bx, by + T * 0.1, T * (0.2 + ((now / 600) % 1) * 0.25), T * 0.07, 0, 0, 7); ctx.stroke(); }
     gambarHewan(now);
     // tokoh santri
     const gerak = (P.dir[0] || P.dir[1]) && jatuh <= 0, bingkai = gerak && Math.floor(langkahT * 3) % 2 ? tokoh.jalan : P.hadap === "belakang" ? tokoh.belakang : tokoh.depan;
@@ -390,13 +454,17 @@ const G2_MAIN_PETI = function (isi, s) {
     g4Kotak(ctx, T, X, Y, bingkai); ctx.restore();
     ctx.font = `800 ${Math.max(9, Math.round(T * 0.36))}px system-ui,Arial`; const lebar = ctx.measureText(nama).width + 8;
     ctx.fillStyle = "rgba(15,23,42,.75)"; ctx.fillRect(P.x * T + T / 2 - lebar / 2, Y - T * 0.42, lebar, T * 0.42); ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(nama, P.x * T + T / 2, Y - T * 0.21);
+    // 🐦 Hudhud terbang mengikuti tokoh
+    { const tx = P.x - 0.55 * (P.balik || 1), ty = P.y - 0.75; HD.x += (tx - HD.x) * 0.06; HD.y += (ty - HD.y) * 0.06;
+      const kepak = Math.sin(now / 90) * T * 0.04, S2 = T * 0.62; ctx.save(); if (P.x < HD.x) { ctx.translate(HD.x * T + S2 / 2, 0); ctx.scale(-1, 1); ctx.translate(-(HD.x * T + S2 / 2), 0); } g4Kotak(ctx, S2, HD.x * T + T * 0.2, HD.y * T + kepak, G4_HUDHUD); ctx.restore(); }
+    { const lt = ctx.measureText("Toko").width + 8; ctx.fillStyle = "rgba(161,98,7,.9)"; ctx.fillRect(TK[0] * T + T / 2 - lt / 2, TK[1] * T - T * 0.5, lt, T * 0.4); ctx.fillStyle = "#fff"; ctx.fillText("Toko", TK[0] * T + T / 2, TK[1] * T - T * 0.3); }
     // papan nama ustadz
     const lu = ctx.measureText("Ustadz").width + 8; ctx.fillStyle = "rgba(22,101,52,.88)"; ctx.fillRect(U[0] * T + T / 2 - lu / 2, U[1] * T - T * 0.5, lu, T * 0.4); ctx.fillStyle = "#fef08a"; ctx.fillText("Ustadz", U[0] * T + T / 2, U[1] * T - T * 0.3);
   }
   // ============ DIALOG (ustadz, santri, gulungan) — permainan berhenti selama dialog terbuka ============
   const mapel = (S.sesi && S.sesi.bank && ((S.sesi.bank.mapel && S.sesi.bank.mapel.nama_mapel) || S.sesi.bank.judul)) || "ini";
   const potret = (spr) => { const c = document.createElement("canvas"); c.width = c.height = 64; const x = c.getContext("2d"); x.imageSmoothingEnabled = false; g4Kotak(x, 64, 0, 0, spr); return c.toDataURL(); };
-  const FOTO = { ustadz: potret(G4_USTADZ), santri: potret(tokoh.depan), gulungan: potret(G4_GULUNGAN) };
+  const FOTO = { ustadz: potret(G4_USTADZ), santri: potret(tokoh.depan), gulungan: potret(G4_GULUNGAN), toko: potret(G4_TOKO) };
   const NAMA_DLG = { ustadz: "Ustadz Pengawas", santri: nama, gulungan: "Gulungan Kisi-kisi" };
   function dialogG4(halaman, selesai) {
     document.getElementById("g4-dlg")?.remove();
@@ -425,7 +493,7 @@ const G2_MAIN_PETI = function (isi, s) {
   function aturanAwal() {
     dialogG4([
       { siapa: "ustadz", teks: `Assalamu'alaikum, ${nama}. Selamat datang di ujian ${mapel}. Sebelum mulai mencari peti, dengarkan dulu peraturannya ya.` },
-      { siapa: "ustadz", html: `<ol class="g4-aturan"><li>Kerjakan <b>sendiri</b> dan <b>jujur</b>.</li><li><b>Dilarang</b> membuka Google, AI, atau aplikasi lain. Setiap kali keluar dari halaman ujian <b>tercatat</b> dan dilaporkan ke ustadz.</li><li>Salin &amp; tempel soal maupun jawaban <b>tidak bisa</b> dipakai.</li><li>Jawaban di peti <b>tersimpan otomatis</b> — boleh ditinggal dan diubah lagi.</li>${kisi.length ? `<li>Ada <b>${kisi.length} gulungan kisi-kisi</b> tersembunyi. Siapa yang menemukannya mendapat petunjuk.</li>` : ""}<li>Kalau sudah selesai dan yakin, <b>datangi ana</b> di sini untuk mengumpulkan.</li></ol>` },
+      { siapa: "ustadz", html: `<ol class="g4-aturan"><li>Kerjakan <b>sendiri</b> dan <b>jujur</b>.</li><li><b>Dilarang</b> membuka Google, AI, atau aplikasi lain. Setiap kali keluar dari halaman ujian <b>tercatat</b> dan dilaporkan ke ustadz.</li><li>Salin &amp; tempel soal maupun jawaban <b>tidak bisa</b> dipakai.</li><li>Jawaban di peti <b>tersimpan otomatis</b> — boleh ditinggal dan diubah lagi.</li>${adaKisi.length ? `<li>Ada <b>${adaKisi.length} kisi-kisi</b> tersembunyi — ada yang berupa gulungan di peta, ada yang harus <b>dipancing di kolam</b>.</li>` : ""}<li>Tiap peti terjawab mendapat <b>💰 ${EMAS_PETI} gold</b> untuk belanja di <b>🏪 Toko Al Umm</b> (tangga, pedang qurban, pancing &amp; umpan). Gold tidak memengaruhi nilai.</li>${tertutup.length ? `<li>Ada peti yang <b>terkunci di kandang</b> — beli 🪜 tangga untuk menyeberangi lubang di pintunya.</li>` : ""}<li>Kalau sudah selesai dan yakin, <b>datangi ana</b> di sini untuk mengumpulkan.</li></ol>` },
       { siapa: "ustadz", html: `<div class="g4-dalil"><p class="ar">يَا أَيُّهَا الَّذِينَ آمَنُوا اتَّقُوا اللَّهَ وَكُونُوا مَعَ الصَّادِقِينَ</p><small>"Wahai orang-orang yang beriman, bertakwalah kepada Allah dan hendaklah kalian bersama orang-orang yang jujur." <i>(QS. At-Taubah: 119)</i></small>
         <p class="ar">مَنْ غَشَّنَا فَلَيْسَ مِنَّا</p><small>"Barang siapa berbuat curang kepada kami, maka ia bukan golongan kami." <i>(HR. Muslim)</i></small></div><p class="g4-janji">Nilai yang jujur lebih berkah daripada nilai tinggi hasil curang. Bismillah!</p>`,
         tombol: [{ teks: "🤝 Saya Berjanji Jujur — Mulai", utama: true, aksi: () => { st.aturanOk = true; simpanLokal(); } }] },
@@ -449,18 +517,125 @@ const G2_MAIN_PETI = function (isi, s) {
         : { siapa: "ustadz", html: `MasyaAllah, semua sudah antum jawab. Tapi… <b>apakah antum sudah yakin?</b> Sudah dikoreksi lagi belum? ${waktu}${keluar}<br><small>Setelah dikumpulkan, jawaban tidak bisa diubah.</small>`, tombol: [periksa, kumpul] },
     ]);
   }
-  function temukanKisi(x) {
+  function temukanKisi(x, dari) {
     st.kisiDapat.add(x.no); simpanLokal(); skor(); P.jalur = []; P.mau = [0, 0]; P.dir = [0, 0];
     g2Konfeti(cv); try { navigator.vibrate && navigator.vibrate([40, 30, 40]); } catch (e) {}
-    dialogG4([{ siapa: "gulungan", html: `<div class="g4-kisi-temu">✨ Kamu menemukan <b>kisi-kisi untuk Peti ${x.k + 1}</b>!<blockquote dir="auto">${esc(x.teks)}</blockquote><small>Kisi-kisi ini juga muncul saat Peti ${x.k + 1} dibuka.</small></div>` }]);
+    dialogG4([{ siapa: "gulungan", html: `<div class="g4-kisi-temu">✨ ${dari === "kolam" ? "Kailmu menarik sebuah botol berisi gulungan!" : ""} Kamu menemukan <b>kisi-kisi untuk Peti ${x.k + 1}</b>!<blockquote dir="auto">${esc(x.teks)}</blockquote><small>Kisi-kisi ini juga muncul saat Peti ${x.k + 1} dibuka.</small></div>` }]);
   }
+  // ============ TOKO AL UMM, TANGGA, QURBAN, MEMANCING ============
+  function pasangTangga() {
+    if (st.pintuTangga) return;
+    if (!st.inv.tangga) { pesan(`🕳️ Pintu kandang berlubang! Beli 🪜 Tangga di Toko Al Umm (${HARGA.tangga} gold)`, 2600); return; }
+    st.inv.tangga--; st.pintuTangga = true; simpanLokal(); skor();
+    pesan("🪜 Tangga dipasang di atas lubang — sekarang bisa masuk kandang!", 2400); try { navigator.vibrate && navigator.vibrate(40); } catch (e) {}
+  }
+  const BARANG = [
+    { id: "tangga", ik: "🪜", nama: "Tangga", ket: "Menyeberangi lubang di pintu kandang untuk mengambil peti yang tertutup." },
+    { id: "pedang", ik: "⚔️", nama: "Pedang Qurban", ket: "Mengqurbankan sapi / kambing yang mengamuk (sekali pakai)." },
+    { id: "pancing", ik: "🎣", nama: "Pancing", ket: "Untuk memancing di kolam. Cukup beli sekali." },
+    { id: "umpan", ik: "🪱", nama: "Umpan", ket: "1 umpan = 1 kali memancing. Di kolam tersembunyi kisi-kisi!" },
+  ];
+  function bukaToko() {
+    if (document.getElementById("g4-toko")) return;
+    P.jalur = []; P.mau = [0, 0]; P.dir = [0, 0];
+    const el = document.createElement("div"); el.id = "g4-toko"; el.className = "g4-dlg"; document.body.appendChild(el); G2.bersih.push(() => el.remove());
+    const gambarToko = () => {
+      const e = emas(), sisaKolam = kisiKolam.filter((x) => !st.kisiDapat.has(x.no)).length;
+      el.innerHTML = `<div class="g4-toko"><div class="g4-toko-atas"><img src="${FOTO.toko}" alt=""><div><b>🏪 Toko Al Umm</b><small>"Silakan, ${esc(nama)}… barang halal, harga bersahabat!"</small></div><span class="g4-toko-emas">💰 ${e.toLocaleString("id-ID")}</span></div>
+        ${BARANG.map((b) => {
+          let lbl = "", bisa2 = e >= HARGA[b.id];
+          if (b.id === "tangga") { if (!tertutup.length) lbl = "Tidak perlu"; else if (st.pintuTangga) lbl = "Sudah dipasang"; else if (st.inv.tangga) lbl = "Sudah punya"; }
+          if (b.id === "pancing" && st.inv.pancing) lbl = "Sudah punya";
+          if (b.id === "umpan" && !sisaKolam) lbl = kisiKolam.length ? "Kolam kosong" : "Tidak perlu";
+          if (!lbl && !bisa2) lbl = "Gold kurang";
+          const boleh = !lbl;
+          return `<div class="g4-barang ${boleh ? "" : "mati"}"><span class="ik">${b.ik}</span><div><b>${b.nama}${st.inv[b.id] && b.id !== "pancing" ? ` <em>×${st.inv[b.id]}</em>` : ""}</b><small>${b.ket}${b.id === "umpan" && kisiKolam.length ? ` (sisa ${sisaKolam} kisi di kolam)` : ""}</small></div><button data-b="${b.id}" ${boleh ? "" : "disabled"}>${boleh ? `💰 ${HARGA[b.id].toLocaleString("id-ID")}` : lbl}</button></div>`;
+        }).join("")}
+        <p class="g4-toko-ket">Tiap peti yang terjawab mendapat 💰 ${EMAS_PETI} gold. Gold hanya untuk permainan — tidak memengaruhi nilai.</p>
+        <div class="g4-dlg-tombol"><button class="utama" data-tutup="1">Selesai Belanja</button></div></div>`;
+      el.querySelectorAll("[data-b]").forEach((b) => b.onclick = () => {
+        const id = b.dataset.b; if (emas() < HARGA[id]) return;
+        st.belanja += HARGA[id]; st.inv[id] = (st.inv[id] || 0) + 1; simpanLokal(); skor(); gambarToko();
+        pesan(`🛍️ ${BARANG.find((x) => x.id === id).nama} dibeli!`, 1400);
+      });
+      el.querySelector("[data-tutup]").onclick = () => { el.classList.add("tutup"); setTimeout(() => el.remove(), 200); };
+    };
+    gambarToko();
+  }
+  const dekatAir = () => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => g[Math.round(P.y) + dy] && g[Math.round(P.y) + dy][Math.round(P.x) + dx] === 2);
+  let pancingAktif = null; // pelampung di air { x, y, t }
+  function mancing() {
+    if (pancingAktif) return;
+    if (!st.inv.pancing) { pesan(`🎣 Beli pancing di Toko Al Umm (${HARGA.pancing} gold)`, 2000); return; }
+    if (!dekatAir()) { pesan("🎣 Berdirilah di tepi kolam", 1600); return; }
+    const sisa = kisiKolam.filter((x) => !st.kisiDapat.has(x.no));
+    if (!sisa.length) { pesan(kisiKolam.length ? "🐟 Kisi-kisi di kolam sudah kamu temukan semua" : "🐟 Kolam ini tidak menyimpan kisi-kisi", 2000); return; }
+    if (!st.inv.umpan) { pesan(`🪱 Umpan habis — beli di Toko Al Umm (${HARGA.umpan} gold)`, 2000); return; }
+    st.inv.umpan--; simpanLokal(); skor(); aksiSebelum = "";
+    const air = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => [Math.round(P.x) + dx, Math.round(P.y) + dy]).find(([x, y]) => g[y] && g[y][x] === 2);
+    pancingAktif = { x: air[0], y: air[1], t: performance.now() };
+    pesan("🎣 Melempar kail… tunggu ikannya menyambar", 1800);
+    setTimeout(() => {
+      pancingAktif = null; if (!cv.isConnected) return;
+      temukanKisi(sisa[0], "kolam");
+    }, 2300);
+  }
+  function qurban(h) {
+    if (!st.inv.pedang || !(h.j === "sapi" || h.j === "kambing")) return;
+    st.inv.pedang--; st.qurban.add(h.idx);
+    const i = hewan.indexOf(h); if (i >= 0) hewan.splice(i, 1);
+    simpanLokal(); skor(); aksiSebelum = ""; g2Konfeti(cv); try { navigator.vibrate && navigator.vibrate([60, 40, 60]); } catch (e) {}
+    pesan(`🔪 Bismillah, Allahu Akbar! ${h.j === "sapi" ? "Sapi" : "Kambing"} diqurbankan — dagingnya dibagikan untuk yang membutuhkan 🥩`, 3000);
+  }
+  // tombol aksi di bawah peta (muncul sesuai keadaan)
+  let aksiSebelum = "";
+  function perbaruiAksi() {
+    const bar = isi.querySelector("#g4-aksibar"); if (!bar) return;
+    const px = Math.round(P.x), py = Math.round(P.y);
+    const hDekat = hewan.find((h) => (h.j === "sapi" || h.j === "kambing") && Math.abs(Math.round(h.x) - px) + Math.abs(Math.round(h.y) - py) <= 1);
+    const air = st.inv.pancing && dekatAir();
+    const kunci = [emas(), air ? 1 : 0, hDekat && st.inv.pedang ? hDekat.idx : -1, st.inv.umpan].join("|");
+    if (kunci === aksiSebelum) return; aksiSebelum = kunci;
+    bar.innerHTML = `<button data-a="toko">🏪 Toko Al Umm</button><button data-a="hudhud" class="hijau">🐦 Tanya Hudhud</button>${air ? `<button data-a="pancing" class="biru">🎣 Mancing${st.inv.umpan ? ` (🪱${st.inv.umpan})` : ""}</button>` : ""}${hDekat && st.inv.pedang ? `<button data-a="qurban" class="merah">⚔️ Qurbankan ${hDekat.j === "sapi" ? "Sapi" : "Kambing"}</button>` : ""}`;
+    bar.querySelector('[data-a="toko"]').onclick = () => {
+      const qx = Math.round(P.x), qy = Math.round(P.y);
+      if (Math.abs(qx - TK[0]) + Math.abs(qy - TK[1]) <= 1) { bukaToko(); return; }
+      const jl = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => [TK[0] + dx, TK[1] + dy]).filter(([a, b]) => lantai(a, b)).map(([a, b]) => cariJalur(a, b)).filter((j) => j.length).sort((p, q) => p.length - q.length)[0];
+      if (jl) { pesan("🏪 Menuju Toko Al Umm…", 1200); P.mau = [0, 0]; P.jalur = jl; P.tujuan = jl[jl.length - 1]; P.keToko = true; } else bukaToko();
+    };
+    bar.querySelector('[data-a="hudhud"]').onclick = () => { aksiTerakhir = performance.now(); hudhudBicara(); };
+    bar.querySelector('[data-a="pancing"]')?.addEventListener("click", mancing);
+    bar.querySelector('[data-a="qurban"]')?.addEventListener("click", () => { const h = hewan.find((x) => x.idx === hDekat.idx); if (h) qurban(h); });
+  }
+  // ============ 🐦 HUDHUD — teman bicara: petunjuk arah peti & semangat (muncul bila santri lama diam) ============
+  const HD = { x: P.x - 1, y: P.y, ke: 0 };
+  let aksiTerakhir = performance.now(), hudhudT = performance.now();
+  const arahNama = (dx, dy) => { const v = dy < -1 ? "utara" : dy > 1 ? "selatan" : "", h = dx > 1 ? "timur" : dx < -1 ? "barat" : ""; return v && h ? `${v}-${h}` : v || h || "dekat sini"; };
+  function nasihatHudhud() {
+    const px = Math.round(P.x), py = Math.round(P.y), belum = uraian.map((_, k) => k).filter((k) => !dijawab(k));
+    const pilihan = [];
+    if (!belum.length) pilihan.push("Semua peti sudah terjawab! MasyaAllah. Periksa lagi, lalu datangi Ustadz untuk mengumpulkan 📨");
+    else {
+      const k = belum.slice().sort((a, b) => (Math.abs(peti[a][0] - px) + Math.abs(peti[a][1] - py)) - (Math.abs(peti[b][0] - px) + Math.abs(peti[b][1] - py)))[0], [x, y] = peti[k];
+      const tempat = dalamKandang(x, y) ? "di dalam kandang" : [[1, 0], [-1, 0], [0, 1], [0, -1], [2, 0], [-2, 0], [0, 2], [0, -2]].some(([dx, dy]) => g[y + dy] && g[y + dy][x + dx] === 2) ? "dekat kolam" : "";
+      pilihan.push(`Peti ${k + 1} ada di arah ${arahNama(x - px, y - py)}${tempat ? ", " + tempat : ""}. Ayo ke sana!`);
+      if (belum.length <= 2) pilihan.push(`Tinggal ${belum.length} peti lagi, semangat! 💪`);
+    }
+    if (tertutup.some((k) => !dijawab(k)) && !st.pintuTangga) pilihan.push(emas() >= HARGA.tangga && !st.inv.tangga ? "Gold-mu sudah cukup untuk beli 🪜 tangga! Peti di kandang menunggumu." : st.inv.tangga ? "Kamu punya 🪜 tangga — pasang di lubang pintu kandang!" : "Ada peti terkunci di kandang. Kumpulkan gold dari peti lain untuk beli 🪜 tangga.");
+    const sisaKisi = adaKisi.filter((x) => !st.kisiDapat.has(x.no));
+    if (sisaKisi.some((x) => x.cara === "gulungan")) pilihan.push("Psst… ada gulungan kisi-kisi tersembunyi di dekat pepohonan 🌳");
+    if (sisaKisi.some((x) => x.cara === "kolam")) pilihan.push("Konon di kolam ada kisi-kisi. Bawa 🎣 pancing & 🪱 umpan!");
+    pilihan.push("Bismillah, pelan-pelan saja. Baca soalnya dua kali ya 📖", "Jawaban yang jujur insyaAllah lebih berkah 🤲", "Kalau ragu, kerjakan peti yang lebih mudah dulu 🙂");
+    return pilihan[HD.ke++ % pilihan.length];
+  }
+  function hudhudBicara() { hudhudT = performance.now(); pesan(`🐦 <b>Hudhud:</b> ${nasihatHudhud()}`, 4500); }
   // kembali dari aplikasi lain saat ujian → ustadz menegur (pindah halaman tetap tercatat oleh sistem ujian)
   let pindahTerakhir = S.pindahTab || 0;
   g2Dengar(document, "visibilitychange", () => {
     if (document.hidden || !ujianSungguhan()) return;
     setTimeout(() => {
       if ((S.pindahTab || 0) <= pindahTerakhir || !cv.isConnected) return; pindahTerakhir = S.pindahTab;
-      document.getElementById("g4-panel")?.remove(); st.buka = null;
+      document.getElementById("g4-panel")?.remove(); st.buka = null; kbTutupG4();
       dialogG4([{ siapa: "ustadz", html: `⚠️ <b>${esc(nama)}, antum tadi keluar dari halaman ujian.</b><br>Sudah tercatat <b>${S.pindahTab} kali</b> dan akan dilihat ustadz.<div class="g4-dalil kecil"><p class="ar">مَنْ غَشَّنَا فَلَيْسَ مِنَّا</p><small>"Barang siapa berbuat curang, ia bukan golongan kami." (HR. Muslim)</small></div>`, tombol: [{ teks: "Saya Mengerti", utama: true }] }]);
     }, 300);
   });
@@ -472,7 +647,9 @@ const G2_MAIN_PETI = function (isi, s) {
   function putar(now) {
     if (!cv.isConnected) return;
     const dt = Math.min(0.05, (now - lalu) / 1000); lalu = now;
-    if (!document.hidden && !document.getElementById("g4-panel") && !document.getElementById("g4-dlg")) { langkah(dt); gerakHewan(dt); }
+    const adaJendela = document.getElementById("g4-panel") || document.getElementById("g4-dlg") || document.getElementById("g4-toko");
+    if (!document.hidden && !adaJendela) { langkah(dt); gerakHewan(dt); }
+    if (!adaJendela) { perbaruiAksi(); if (st.aturanOk && now - aksiTerakhir > 22000 && now - hudhudT > 22000) hudhudBicara(); }
     gambar(now);
     G2.raf = requestAnimationFrame(putar);
   }
@@ -483,17 +660,32 @@ const G2_MAIN_PETI = function (isi, s) {
     const r = cv.getBoundingClientRect(), x = Math.floor(kam.x + ((e.clientX - r.left) / r.width) * VW), y = Math.floor(kam.y + ((e.clientY - r.top) / r.height) * VH);
     const kePeti = peti.findIndex((p) => p[0] === x && p[1] === y);
     if (kePeti >= 0 && Math.round(P.x) === x && Math.round(P.y) === y) { bukaPeti(kePeti); return; }
-    // ketuk ustadz → berjalan ke sebelah beliau lalu bercakap
-    if (diUstadz(x, y)) {
-      if (Math.abs(Math.round(P.x) - x) + Math.abs(Math.round(P.y) - y) === 1) { bicaraUstadz(); return; }
+    // ketuk ustadz / toko → berjalan ke sebelahnya lalu berinteraksi
+    const keSebelah = (x, y, tanda, aksi) => {
+      if (Math.abs(Math.round(P.x) - x) + Math.abs(Math.round(P.y) - y) === 1) { aksi(); return; }
       const jl = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => [x + dx, y + dy]).filter(([a, b]) => lantai(a, b)).map(([a, b]) => cariJalur(a, b)).filter((j) => j.length).sort((p, q) => p.length - q.length)[0];
-      if (jl) { P.mau = [0, 0]; P.jalur = jl; P.tujuan = jl[jl.length - 1]; P.keUstadz = true; }
+      if (jl) { P.mau = [0, 0]; P.jalur = jl; P.tujuan = jl[jl.length - 1]; P[tanda] = true; }
+    };
+    if (diUstadz(x, y)) { keSebelah(x, y, "keUstadz", bicaraUstadz); return; }
+    if (diToko(x, y)) { keSebelah(x, y, "keToko", bukaToko); return; }
+    // pintu kandang / peti di dalam kandang yang masih tertutup lubang
+    if (!st.pintuTangga && (diPintu(x, y) || dalamKandang(x, y))) {
+      if (!st.inv.tangga) { pesan(`🕳️ Pintu kandang berlubang! Beli 🪜 Tangga di Toko Al Umm (${HARGA.tangga} gold)`, 2600); return; }
+      if (Math.round(P.y) === PINTU[1] - 1 && Math.round(P.x) === PINTU[0]) { pasangTangga(); return; }
+      const jl = cariJalur(PINTU[0], PINTU[1] - 1); if (jl.length) { P.mau = [0, 0]; P.jalur = jl; P.tujuan = jl[jl.length - 1]; P.kePintu = true; }
       return;
     }
+    // ketuk air → memancing bila punya pancing & berdiri di tepi kolam
+    if (g[y] && g[y][x] === 2) { if (dekatAir()) mancing(); else pesan(st.inv.pancing ? "🎣 Berdirilah di tepi kolam untuk memancing" : `🎣 Beli pancing & umpan di Toko Al Umm untuk memancing kisi-kisi`, 2000); return; }
+    // ketuk sapi/kambing di sebelah saat membawa pedang → qurban
+    const hT = hewan.find((h) => Math.round(h.x) === x && Math.round(h.y) === y);
+    if (hT && (hT.j === "sapi" || hT.j === "kambing") && st.inv.pedang && Math.abs(Math.round(P.x) - x) + Math.abs(Math.round(P.y) - y) === 1) { qurban(hT); return; }
     if (!lantai(x, y)) return;
     P.mau = [0, 0]; P.jalur = cariJalur(x, y); P.tujuan = P.jalur.length ? [x, y] : null;
   };
   let awal = null, geser = false;
+  g2Dengar(isi, "pointerdown", () => { aksiTerakhir = performance.now(); }, true);
+  g2Dengar(document, "keydown", () => { aksiTerakhir = performance.now(); }, true);
   g2Dengar(cv, "pointerdown", (e) => { awal = [e.clientX, e.clientY]; geser = false; });
   g2Dengar(cv, "pointermove", (e) => { if (!awal) return; const dx = e.clientX - awal[0], dy = e.clientY - awal[1]; if (Math.max(Math.abs(dx), Math.abs(dy)) > 18) { geser = true; P.jalur = []; P.mau = Math.abs(dx) > Math.abs(dy) ? [Math.sign(dx), 0] : [0, Math.sign(dy)]; awal = [e.clientX, e.clientY]; } });
   g2Dengar(cv, "pointerup", (e) => { if (!geser) keTujuan(e); else P.mau = [0, 0]; awal = null; });
@@ -562,8 +754,44 @@ G2_MAIN.peti = G2_MAIN_PETI;
   .g4-catat{color:#b45309}
   .g4-kisi-temu blockquote{margin:8px 0;padding:10px 12px;border-radius:12px;background:#fef3c7;border-left:5px solid #b45309;font-size:15px;color:#78350f}
   .g4-kisi-temu small{color:#64748b}
+  .g4-emas{background:linear-gradient(135deg,#fde68a,#f59e0b);color:#78350f;border-radius:99px;padding:1px 8px}
+  .g4-aksibar{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:8px 0 2px}
+  .g4-aksibar button{border:0;border-radius:12px;padding:8px 12px;font:inherit;font-weight:800;font-size:13px;cursor:pointer;background:linear-gradient(180deg,#facc15,#d97706);color:#422006;box-shadow:0 3px 0 #92400e}
+  .g4-aksibar button.hijau{background:linear-gradient(180deg,#86efac,#16a34a);color:#052e16;box-shadow:0 3px 0 #14532d}
+  .g4-aksibar button.biru{background:linear-gradient(180deg,#7dd3fc,#0284c7);color:#fff;box-shadow:0 3px 0 #075985}
+  .g4-aksibar button.merah{background:linear-gradient(180deg,#fca5a5,#dc2626);color:#fff;box-shadow:0 3px 0 #7f1d1d}
+  .g4-aksibar button:active{transform:translateY(2px);box-shadow:none}
+  .g4-toko{width:min(560px,100%);max-height:86vh;overflow:auto;background:#fffbeb;border:4px solid #92400e;border-radius:18px;padding:12px;box-shadow:0 10px 0 rgba(146,64,14,.35),0 20px 50px rgba(0,0,0,.35);animation:g4-naik .3s cubic-bezier(.3,1.3,.5,1)}
+  .g4-toko-atas{display:flex;align-items:center;gap:10px;margin-bottom:10px}.g4-toko-atas img{width:56px;height:56px;image-rendering:pixelated;background:#dcfce7;border:3px solid #92400e;border-radius:12px}
+  .g4-toko-atas>div{flex:1;min-width:0}.g4-toko-atas b{display:block;font-size:17px;color:#78350f}.g4-toko-atas small{color:#92400e;font-size:12.5px}
+  .g4-toko-emas{flex:none;background:linear-gradient(135deg,#fde68a,#f59e0b);color:#78350f;font-weight:900;border-radius:99px;padding:6px 12px;font-size:14px}
+  .g4-barang{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid #fde68a;border-radius:14px;padding:9px 10px;margin-bottom:7px}
+  .g4-barang .ik{font-size:28px;flex:none;width:40px;text-align:center}.g4-barang>div{flex:1;min-width:0}.g4-barang b{font-size:14.5px;color:#1f2937}.g4-barang b em{font-style:normal;color:#16a34a}.g4-barang small{display:block;font-size:12px;color:#64748b;line-height:1.4}
+  .g4-barang button{flex:none;border:0;border-radius:11px;padding:9px 11px;font:inherit;font-weight:900;font-size:13px;cursor:pointer;background:linear-gradient(180deg,#facc15,#d97706);color:#422006;box-shadow:0 3px 0 #92400e;min-width:84px}
+  .g4-barang.mati{opacity:.7}.g4-barang button:disabled{background:#e5e7eb;color:#6b7280;box-shadow:none;cursor:default;font-weight:700}
+  .g4-toko-ket{font-size:12px;color:#92400e;margin:6px 2px}
+  .g4-lencana{display:flex;align-items:center;gap:10px;margin:12px auto 0;width:fit-content;max-width:100%;padding:8px 14px 8px 8px;border-radius:16px;background:linear-gradient(135deg,rgba(253,230,138,.95),rgba(245,158,11,.95));color:#422006;box-shadow:0 6px 20px rgba(245,158,11,.35);animation:g4-lencana 1s cubic-bezier(.3,1.6,.5,1)}
+  .g4-lencana .med{font-size:30px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.25))}.g4-lencana b{display:block;font-size:14px}.g4-lencana small{font-size:11.5px}
+  @keyframes g4-lencana{from{transform:scale(.4) rotate(-8deg);opacity:0}}
   `;
   const st = document.createElement("style"); st.textContent = css; document.head.appendChild(st);
 })();
 // uji coba: layar petunjuk sudah tergambar sebelum file ini termuat → gambar ulang supaya pilihan "Berburu Peti" muncul
+(function () {
+  if (typeof window.tampilHasil !== "function") return;
+  const asli = window.tampilHasil;
+  window.tampilHasil = async function () {
+    const pindah = S.pindahTab || 0, ujian = S.sesi && (S.sesi.mode === "ujian" || S.coba);
+    const h = await asli.apply(this, arguments);
+    try {
+      if (ujian && !pindah && !document.querySelector(".g4-lencana")) {
+        const kp = document.querySelector(".h4-hero .h4-kepala"); if (!kp) return h;
+        const el = document.createElement("div"); el.className = "g4-lencana";
+        el.innerHTML = `<span class="med">🏅</span><span><b>Lencana Jujur</b><small>Tidak sekali pun keluar dari halaman ujian. Barakallahu fiik!</small></span>`;
+        kp.after(el);
+      }
+    } catch (e) {}
+    return h;
+  };
+})();
 if (typeof S !== "undefined" && S.coba && !document.querySelector(".kartu-soal") && document.querySelector(".g2-pilih-coba")) { document.querySelector(".g2-pilih-coba").remove(); window.tampilPetunjuk({}); }

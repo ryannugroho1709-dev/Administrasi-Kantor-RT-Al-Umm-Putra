@@ -142,10 +142,12 @@ const G2_MAIN_LABIRIN = function (isi, s) {
   const kandidat = [];
   for (let y = 1; y < H; y += 2) for (let x = 1; x < W; x += 2) if (jar[y][x] >= 5) kandidat.push([x, y]);
   const pos = [];
+  // huruf jawaban sebisa mungkin di UJUNG JALAN BUNTU → tidak terlewati saat berlari menuju huruf lain
+  const buntu = (x, y) => [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dy]) => g[y + dy] && g[y + dy][x + dx] === 0).length === 1;
   kandidat.sort((a, b) => jar[b[1]][b[0]] - jar[a[1]][a[0]]);
   while (pos.length < n && kandidat.length) {
     let terbaik = 0, skor = -1;
-    kandidat.forEach((c, i) => { const m = pos.length ? Math.min(...pos.map((p) => Math.abs(p[0] - c[0]) + Math.abs(p[1] - c[1]))) : 99; const sk = m * 3 + jar[c[1]][c[0]]; if (sk > skor) { skor = sk; terbaik = i; } });
+    kandidat.forEach((c, i) => { const m = pos.length ? Math.min(...pos.map((p) => Math.abs(p[0] - c[0]) + Math.abs(p[1] - c[1]))) : 99; const sk = Math.min(m, 8) * 3 + jar[c[1]][c[0]] + (buntu(c[0], c[1]) ? 80 : 0); if (sk > skor) { skor = sk; terbaik = i; } });
     pos.push(kandidat.splice(terbaik, 1)[0]);
   }
   const hewan = G2_HEWAN[(s.no + (S.idx || 0)) % G2_HEWAN.length];
@@ -190,6 +192,9 @@ const G2_MAIN_LABIRIN = function (isi, s) {
         // di tengah petak: pilih arah (arah yang diinginkan dulu, kalau terhalang lanjut arah lama)
         P.x = P.tx; P.y = P.ty;
         cekSampai(); if (selesai) return;
+        // huruf di jalan tembus: tokoh BERHENTI di atasnya (kecuali sedang menahan arah) → pilih dengan diam sebentar
+        const kH = pos.findIndex((p) => p[0] === P.x && p[1] === P.y);
+        if (kH >= 0 && !(P.mau[0] || P.mau[1])) { if (P.dir[0] || P.dir[1]) pesan(`Diam sebentar untuk memilih <b>${g2Huruf(s, kH)}</b> · geser untuk lewat`, 1200); P.dir = [0, 0]; return; }
         const [mx, my] = P.mau, [cx, cy] = P.dir;
         if ((mx || my) && buka(P.x + mx, P.y + my)) P.dir = [mx, my];
         else if (!((cx || cy) && buka(P.x + cx, P.y + cy))) { P.dir = [0, 0]; return; }
@@ -220,6 +225,11 @@ const G2_MAIN_LABIRIN = function (isi, s) {
   }
   function cekSampai() {
     const k = pos.findIndex((p) => p[0] === P.x && p[1] === P.y); if (k < 0) return;
+    if (!buntu(P.x, P.y)) return; // jalan tembus → dipilih lewat diam sebentar (lihat putar)
+    pilihHuruf(k);
+  }
+  let diamT = 0;
+  function pilihHuruf(k) {
     const asli = s.urutanOpsi[k];
     selesai = true; S.jawab.pg[s.no] = asli; berubah();
     isi.querySelectorAll(".g2-lab-opsi > div").forEach((el, i) => el.classList.toggle("on", i === k));
@@ -247,6 +257,8 @@ const G2_MAIN_LABIRIN = function (isi, s) {
       ctx.save(); ctx.translate(x * T + T / 2, y * T + T / 2 - lompat); ctx.scale(-hadap, 1);
       ctx.globalAlpha = 1; ctx.fillStyle = "#000"; ctx.font = `${Math.round(T * 0.95)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(e, 0, 0); ctx.restore();
     };
+    // cincin pengisi saat diam di atas huruf
+    if (diamT > 0) { ctx.strokeStyle = "#fde047"; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(P.x * T + T / 2, P.y * T + T / 2, T * 0.62, -Math.PI / 2, -Math.PI / 2 + (diamT / 0.6) * Math.PI * 2); ctx.stroke(); }
     const gerakP = P.dir[0] || P.dir[1] ? Math.abs(Math.sin(now / 90)) * T * 0.12 : 0;
     ctx.fillStyle = "rgba(0,0,0,.18)"; ctx.beginPath(); ctx.ellipse(A.x * T + T / 2, A.y * T + T * 0.85, T * 0.32, T * 0.1, 0, 0, 7); ctx.ellipse(P.x * T + T / 2, P.y * T + T * 0.85, T * 0.3, T * 0.1, 0, 0, 7); ctx.fill();
     if (jeda <= 0 || Math.floor(now / 200) % 2) emoji(hewan, A.x, A.y, A.hadap, Math.abs(Math.sin(now / 110)) * T * 0.1);
@@ -270,7 +282,10 @@ const G2_MAIN_LABIRIN = function (isi, s) {
         langkahHewan(dt);
       }
       langkahPemain(dt);
-      if (jeda <= 0 && Math.hypot(A.x - P.x, A.y - P.y) < 0.62) tertangkap();
+      // berdiri diam di atas huruf (jalan tembus) selama 0,6 detik → huruf itu dipilih
+      const kD = !selesai && !(P.dir[0] || P.dir[1]) && !(P.mau[0] || P.mau[1]) ? pos.findIndex((p) => p[0] === P.x && p[1] === P.y) : -1;
+      if (kD >= 0) { diamT += dt; if (diamT >= 0.6) { diamT = 0; pilihHuruf(kD); } } else diamT = 0;
+      if (!selesai && jeda <= 0 && Math.hypot(A.x - P.x, A.y - P.y) < 0.62) tertangkap();
     }
     gambar(now);
     G2.raf = requestAnimationFrame(putar);
