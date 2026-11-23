@@ -19,36 +19,93 @@ function kaCek() {
   const terakhir = +(_kaLS.get("kaAktif") || 0);
   if (!terakhir || Date.now() - terakhir > KA.menitKunci * 60000) kaKunci(terakhir ? "diam" : "baru");
 }
+// ── Tampilan layar kunci: latar berwarna bergerak + panel kaca buram, gembok beranimasi, jam & sapaan ──
+const KA_GEMBOK = `<svg class="ka-svg" viewBox="0 0 64 74" aria-hidden="true"><defs>
+  <linearGradient id="kaEmas" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fde68a"/><stop offset=".55" stop-color="#fbbf24"/><stop offset="1" stop-color="#d97706"/></linearGradient>
+  <linearGradient id="kaPerak" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f8fafc"/><stop offset="1" stop-color="#94a3b8"/></linearGradient></defs>
+  <path class="ka-sengkang" d="M19 34V23a13 13 0 0 1 26 0v11" fill="none" stroke="url(#kaPerak)" stroke-width="7" stroke-linecap="round"/>
+  <rect x="8" y="32" width="48" height="38" rx="11" fill="url(#kaEmas)"/><rect x="12" y="35" width="40" height="8" rx="4" fill="#fff" opacity=".35"/>
+  <circle cx="32" cy="49" r="5" fill="#78350f"/><rect x="29.6" y="51" width="4.8" height="10" rx="2.4" fill="#78350f"/></svg>`;
+const KA_PERISAI = `<svg class="ka-svg" viewBox="0 0 64 74" aria-hidden="true"><defs><linearGradient id="kaHijau" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6ee7b7"/><stop offset="1" stop-color="#059669"/></linearGradient></defs>
+  <path d="M32 4 56 13v19c0 17-10.5 30-24 37C18.5 62 8 49 8 32V13z" fill="url(#kaHijau)"/><path d="M32 10 50 17v15c0 13-7.8 23.5-18 29.5z" fill="#fff" opacity=".18"/>
+  <path class="ka-centang" d="M21 37l8 8 15-16" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+function _kaNama() {
+  try { return (typeof AK !== "undefined" && AK.guru && AK.guru.nama) || localStorage.getItem("guruNama") || ""; } catch (e) { return ""; }
+}
+function _kaBingkai(isi) {
+  const nama = _kaNama();
+  return `<div class="ka-latar"><i class="ka-gumpal g1"></i><i class="ka-gumpal g2"></i><i class="ka-gumpal g3"></i><i class="ka-gumpal g4"></i><div class="ka-pola"></div></div>
+    <div class="ka-tengah">
+      <div class="ka-jam"><b data-ka-jam>--.--</b><small data-ka-tgl></small></div>
+      <div class="ka-panel">${nama ? `<div class="ka-sapa">Assalamu'alaikum, <b>${escapeHtml(nama)}</b></div>` : ""}${isi}</div>
+      <div class="ka-kaki">🕌 PKBM Al-Umm Barabai · Dilindungi PIN Admin</div>
+    </div>`;
+}
+function _kaJalankanJam(el) {
+  const jalan = () => {
+    if (!el.isConnected) return clearInterval(t);
+    const d = new Date(), j = el.querySelector("[data-ka-jam]"), g = el.querySelector("[data-ka-tgl]");
+    if (j) j.textContent = `${String(d.getHours()).padStart(2, "0")}.${String(d.getMinutes()).padStart(2, "0")}`;
+    if (g) g.textContent = d.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  };
+  const t = setInterval(jalan, 1000); jalan();
+}
+function _kaTitik(el) {
+  // titik PIN muncul satu per satu (isi asli tersembunyi); tombol 👁 menampilkan angkanya
+  const i = el.querySelector("#ka-pin"), lapis = el.querySelector(".ka-titik"), mata = el.querySelector(".ka-lihat");
+  const gambar = () => {
+    const v = i.value, lihat = mata.classList.contains("on");
+    lapis.innerHTML = v ? [...v].map((c, k) => `<i style="animation-delay:${k === v.length - 1 ? 0 : -1}s">${lihat ? escapeHtml(c) : ""}</i>`).join("") : `<span>Ketik PIN Admin</span>`;
+    lapis.classList.toggle("lihat", lihat);
+  };
+  i.addEventListener("input", gambar);
+  mata.onclick = () => { mata.classList.toggle("on"); mata.textContent = mata.classList.contains("on") ? "🙈" : "👁️"; gambar(); i.focus(); };
+  el.querySelector(".ka-isian").onclick = () => i.focus();
+  gambar();
+}
+function _kaSisaCoba(el) {
+  const c = el.querySelector(".ka-coba"); if (!c) return;
+  c.innerHTML = Array.from({ length: 5 }, (_, k) => `<i class="${k < KA.salah ? "habis" : ""}"></i>`).join("") + `<small>${5 - KA.salah} kesempatan</small>`;
+}
 function kaKunci(sebab) {
   KA.terkunci = true;
-  const el = document.createElement("div"); el.id = "ka-kunci";
-  el.innerHTML = `<div class="ka-panel"><div class="ka-ikon">🔒</div><b>Aplikasi Terkunci</b>
-    <span>${sebab === "diam" ? `Tidak dipakai lebih dari ${KA.menitKunci} menit.` : "Akun admin dibuka di jendela baru."} Masukkan <b>PIN Admin</b> untuk melanjutkan.</span>
-    <input id="ka-pin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN Admin" maxlength="12">
-    <div id="ka-pesan" class="ka-pesan"></div>
-    <button class="ka-buka" onclick="kaBuka()">Buka Kunci</button>
-    <button class="ka-keluar" onclick="kaKeluarPaksa()">Bukan saya — Keluar Akun</button></div>`;
+  const el = document.createElement("div"); el.id = "ka-kunci"; el.className = "ka-lapis";
+  el.innerHTML = _kaBingkai(`<div class="ka-ikon"><span class="ka-cincin"></span>${KA_GEMBOK}</div>
+    <h2>Aplikasi Terkunci</h2>
+    <p>${sebab === "diam" ? `Tidak dipakai lebih dari <b>${KA.menitKunci} menit</b>.` : sebab === "manual" ? "Aplikasi dikunci." : "Akun admin dibuka di <b>jendela baru</b>."}<br>Masukkan <b>PIN Admin</b> untuk melanjutkan.</p>
+    <div class="ka-isian"><input id="ka-pin" type="password" inputmode="numeric" autocomplete="off" maxlength="12" aria-label="PIN Admin"><div class="ka-titik"></div><button type="button" class="ka-lihat" title="Lihat / sembunyikan PIN">👁️</button></div>
+    <div class="ka-coba"></div>
+    <div id="ka-pesan" class="ka-pesan" role="alert"></div>
+    <button class="ka-buka" onclick="kaBuka()"><span>🔓 Buka Kunci</span></button>
+    <button class="ka-keluar" onclick="kaKeluarPaksa()">Bukan saya — Keluar Akun</button>`);
   document.body.appendChild(el);
-  const i = el.querySelector("#ka-pin"); setTimeout(() => i.focus(), 60);
+  _kaJalankanJam(el); _kaTitik(el); _kaSisaCoba(el);
+  const i = el.querySelector("#ka-pin"); setTimeout(() => i.focus(), 80);
   i.addEventListener("keydown", (e) => { if (e.key === "Enter") kaBuka(); });
 }
+function _kaGoyang(el) {
+  const p = el && el.querySelector(".ka-panel"); if (!p) return;
+  p.classList.remove("goyang"); void p.offsetWidth; p.classList.add("goyang");
+  try { navigator.vibrate && navigator.vibrate([60, 40, 60]); } catch (e) {}
+}
 async function kaBuka() {
-  const i = document.getElementById("ka-pin"), p = document.getElementById("ka-pesan"), b = document.querySelector("#ka-kunci .ka-buka");
-  const pin = (i && i.value || "").trim(); if (!pin) { p.textContent = "Isi PIN admin"; return; }
-  b.disabled = true; b.textContent = "Memeriksa…";
+  const el = document.getElementById("ka-kunci"), i = document.getElementById("ka-pin"), p = document.getElementById("ka-pesan"), b = document.querySelector("#ka-kunci .ka-buka");
+  const pin = (i && i.value || "").trim(); if (!pin) { p.textContent = "Isi PIN admin dulu"; _kaGoyang(el); return; }
+  b.disabled = true; b.classList.add("muat"); b.innerHTML = `<span><i class="ka-putar"></i>Memeriksa…</span>`;
   try {
     const h = await apiVerifyAdminPin(pin);
     if (h && (h.ok || h.pinBelumDiatur)) {
       KA.salah = 0; KA.terkunci = false; _kaLS.set("kaAktif", String(Date.now()));
-      document.getElementById("ka-kunci")?.remove();
+      p.textContent = ""; el.classList.add("terbuka"); b.innerHTML = `<span>✅ Terbuka</span>`;
+      setTimeout(() => el.remove(), 900);
       if (h.pinBelumDiatur) toast("PIN admin belum diatur — segera atur di Pengaturan supaya kunci ini berfungsi.", "warn");
       return;
     }
-    KA.salah++; i.value = "";
-    if (KA.salah >= 5) { p.textContent = "Salah 5 kali — keluar dari akun demi keamanan."; setTimeout(kaKeluarPaksa, 1200); return; }
-    p.textContent = `PIN salah (${KA.salah}/5)`;
+    KA.salah++; i.value = ""; i.dispatchEvent(new Event("input")); _kaSisaCoba(el); _kaGoyang(el);
+    if (KA.salah >= 5) { p.textContent = "Salah 5 kali — keluar dari akun demi keamanan."; setTimeout(kaKeluarPaksa, 1400); return; }
+    p.textContent = `PIN salah — sisa ${5 - KA.salah} kesempatan`;
   } catch (e) { p.textContent = "Gagal memeriksa PIN: " + (e.message || e); }
-  finally { b.disabled = false; b.textContent = "Buka Kunci"; }
+  finally { if (!el.classList.contains("terbuka")) { b.disabled = false; b.classList.remove("muat"); b.innerHTML = `<span>🔓 Buka Kunci</span>`; } }
 }
 async function kaKeluarPaksa() {
   try { if (typeof AK !== "undefined") { const r = await akPanggil("perangkat_daftar"); const ini = (r.perangkat || []).find((x) => x.perangkat_id === akPerangkat().id); if (ini) await akPanggil("perangkat_hapus", { id: ini.id }); } } catch (e) {}
@@ -86,12 +143,12 @@ function _kaMintaKode(judul) {
     const f = (await _kaFaktor())[0]; if (!f) return selesai(true);
     document.getElementById("ka-2l")?.remove();
     const el = document.createElement("div"); el.id = "ka-2l"; el.className = "ka-lapis";
-    el.innerHTML = `<div class="ka-panel"><div class="ka-ikon">🛡️</div><b>${judul || "Verifikasi 2 Langkah"}</b>
-      <span>Buka aplikasi <b>Google Authenticator</b> di HP pemilik akun, lalu masukkan <b>kode 6 angka</b> untuk "Aplikasi PKBM".</span>
-      <input id="ka-kode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••">
-      <div id="ka-pesan2" class="ka-pesan"></div>
-      <button class="ka-buka" id="ka-kode-ok">Verifikasi</button><button class="ka-keluar" id="ka-kode-batal">Batal & Keluar</button></div>`;
-    document.body.appendChild(el);
+    el.innerHTML = _kaBingkai(`<div class="ka-ikon"><span class="ka-cincin hijau"></span>${KA_PERISAI}</div><h2>${judul || "Verifikasi 2 Langkah"}</h2>
+      <p>Buka aplikasi <b>Google Authenticator</b> di HP pemilik akun, lalu masukkan <b>kode 6 angka</b> untuk "Aplikasi PKBM".</p>
+      <div class="ka-isian kode"><input id="ka-kode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="• • • • • •" aria-label="Kode 6 angka"></div>
+      <div id="ka-pesan2" class="ka-pesan" role="alert"></div>
+      <button class="ka-buka" id="ka-kode-ok">Verifikasi</button><button class="ka-keluar" id="ka-kode-batal">Batal & Keluar</button>`);
+    document.body.appendChild(el); _kaJalankanJam(el);
     const i = el.querySelector("#ka-kode"), p = el.querySelector("#ka-pesan2"), ok = el.querySelector("#ka-kode-ok");
     setTimeout(() => i.focus(), 60);
     const cek = async () => {
@@ -99,7 +156,7 @@ function _kaMintaKode(judul) {
       ok.disabled = true; ok.textContent = "Memeriksa…";
       const { error } = await AK.klien.auth.mfa.challengeAndVerify({ factorId: f.id, code: kode });
       ok.disabled = false; ok.textContent = "Verifikasi";
-      if (error) { p.textContent = "Kode salah atau kedaluwarsa — coba kode yang baru"; i.value = ""; i.focus(); return; }
+      if (error) { p.textContent = "Kode salah atau kedaluwarsa — coba kode yang baru"; i.value = ""; i.focus(); _kaGoyang(el); return; }
       el.remove(); selesai(true);
     };
     ok.onclick = cek; i.addEventListener("keydown", (e) => { if (e.key === "Enter") cek(); });
@@ -190,13 +247,76 @@ async function kaMatikan2Langkah() {
 })();
 (function () {
   const st = document.createElement("style");
-  st.textContent = `#ka-kunci,.ka-lapis{position:fixed;inset:0;z-index:2147483000;background:radial-gradient(ellipse at 50% 30%,#1e3a5f,#0b1220 70%);display:grid;place-items:center;padding:16px}
-  .ka-panel{width:min(380px,100%);background:#fff;border-radius:22px;padding:22px 20px;display:flex;flex-direction:column;gap:10px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.45)}
-  .ka-ikon{font-size:46px}.ka-panel b{font-size:19px;color:#0f172a}.ka-panel span{font-size:13px;color:#475569;line-height:1.5}
-  .ka-panel input{font-size:22px;letter-spacing:6px;text-align:center;padding:12px;border:2px solid #cbd5e1;border-radius:14px;outline:none}.ka-panel input:focus{border-color:#2563eb}
-  .ka-pesan{min-height:16px;color:#dc2626;font-size:12.5px;font-weight:700}
-  .ka-buka{border:0;border-radius:14px;padding:13px;font-weight:900;font-size:15px;color:#fff;background:linear-gradient(135deg,#1d4ed8,#0f766e);cursor:pointer}
-  .ka-keluar{border:0;background:none;color:#64748b;font-weight:700;font-size:12.5px;text-decoration:underline;cursor:pointer}
+  st.textContent = `
+  .ka-lapis{position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;padding:16px;overflow:auto;background:#06141c;font-family:inherit;color:#fff;animation:kaMasuk .5s ease both}
+  .ka-latar{position:fixed;inset:0;overflow:hidden;pointer-events:none;background:radial-gradient(120% 90% at 50% 0%,#0d3b3a 0%,#071a24 55%,#050c16 100%)}
+  .ka-gumpal{position:absolute;border-radius:50%;filter:blur(60px);opacity:.75;animation:kaMelayang 18s ease-in-out infinite alternate}
+  .ka-gumpal.g1{width:46vmax;height:46vmax;left:-12vmax;top:-14vmax;background:#10b981}
+  .ka-gumpal.g2{width:38vmax;height:38vmax;right:-10vmax;top:8vmax;background:#0ea5e9;animation-duration:22s;animation-delay:-6s}
+  .ka-gumpal.g3{width:34vmax;height:34vmax;left:18vmax;bottom:-16vmax;background:#f59e0b;opacity:.55;animation-duration:26s;animation-delay:-10s}
+  .ka-gumpal.g4{width:26vmax;height:26vmax;right:12vmax;bottom:-8vmax;background:#8b5cf6;opacity:.5;animation-duration:20s;animation-delay:-3s}
+  .ka-pola{position:absolute;inset:0;opacity:.09;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23fff' stroke-width='1.2'%3E%3Crect x='18' y='18' width='28' height='28'/%3E%3Crect x='18' y='18' width='28' height='28' transform='rotate(45 32 32)'/%3E%3Ccircle cx='32' cy='32' r='6'/%3E%3C/g%3E%3C/svg%3E");background-size:64px 64px;mask-image:radial-gradient(circle at 50% 45%,#000 0,transparent 75%);-webkit-mask-image:radial-gradient(circle at 50% 45%,#000 0,transparent 75%)}
+  .ka-tengah{position:relative;width:min(400px,100%);display:flex;flex-direction:column;align-items:center;gap:16px}
+  .ka-jam{text-align:center;text-shadow:0 4px 24px rgba(0,0,0,.35);animation:kaNaik .7s .05s cubic-bezier(.2,.9,.3,1.2) both}
+  .ka-jam b{display:block;font-size:52px;font-weight:800;letter-spacing:1px;line-height:1;font-variant-numeric:tabular-nums}
+  .ka-jam small{font-size:13.5px;opacity:.8;font-weight:600}
+  .ka-panel{width:100%;box-sizing:border-box;padding:26px 22px 18px;border-radius:28px;display:flex;flex-direction:column;align-items:stretch;gap:12px;text-align:center;
+    background:linear-gradient(160deg,rgba(255,255,255,.2),rgba(255,255,255,.07));border:1px solid rgba(255,255,255,.28);
+    box-shadow:0 30px 80px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.35);backdrop-filter:blur(22px) saturate(160%);-webkit-backdrop-filter:blur(22px) saturate(160%);
+    animation:kaNaik .7s .15s cubic-bezier(.2,.9,.3,1.2) both}
+  .ka-panel.goyang{animation:kaGoyang .5s ease both}
+  .ka-sapa{align-self:center;font-size:12.5px;padding:5px 12px;border-radius:999px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);color:#e2e8f0}
+  .ka-sapa b{color:#fde68a}
+  .ka-ikon{position:relative;width:84px;height:84px;margin:2px auto 0;display:grid;place-items:center}
+  .ka-cincin{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,rgba(251,191,36,.45),rgba(251,191,36,0) 70%);animation:kaDenyut 2.4s ease-in-out infinite}
+  .ka-cincin.hijau{background:radial-gradient(circle,rgba(52,211,153,.45),rgba(52,211,153,0) 70%)}
+  .ka-svg{position:relative;width:60px;height:70px;filter:drop-shadow(0 8px 14px rgba(0,0,0,.35));animation:kaAyun 3.2s ease-in-out infinite;transform-origin:50% 10%}
+  .ka-sengkang{transform-origin:19px 34px;transition:transform .5s cubic-bezier(.3,1.6,.5,1)}
+  .ka-centang{stroke-dasharray:40;stroke-dashoffset:40;animation:kaGaris .8s .6s ease forwards}
+  .ka-panel h2{margin:0;font-size:22px;font-weight:800;letter-spacing:.2px;color:#fff}
+  .ka-panel p{margin:-4px 0 2px;font-size:13.5px;line-height:1.6;color:rgba(226,232,240,.88)}.ka-panel p b{color:#fff}
+  .ka-isian{position:relative;height:58px;border-radius:16px;background:rgba(2,6,23,.35);border:1.5px solid rgba(255,255,255,.22);transition:border-color .2s,box-shadow .2s;cursor:text}
+  .ka-isian:focus-within{border-color:#34d399;box-shadow:0 0 0 4px rgba(52,211,153,.22)}
+  .ka-isian input{position:absolute;inset:0;width:100%;height:100%;box-sizing:border-box;border:0;outline:none;background:transparent;color:transparent;caret-color:transparent;font-size:16px;padding:0 48px;text-align:center}
+  .ka-isian.kode input{color:#fff;caret-color:#34d399;font-size:28px;font-weight:800;letter-spacing:12px;padding:0 12px 0 24px}.ka-isian.kode input::placeholder{color:rgba(255,255,255,.35);letter-spacing:6px}
+  .ka-titik{position:absolute;inset:0 48px;display:flex;align-items:center;justify-content:center;gap:10px;pointer-events:none}
+  .ka-titik span{color:rgba(255,255,255,.45);font-size:15px;letter-spacing:1px}
+  .ka-titik i{width:14px;height:14px;border-radius:50%;background:linear-gradient(135deg,#fde68a,#34d399);box-shadow:0 0 12px rgba(52,211,153,.7);animation:kaTitik .25s cubic-bezier(.3,1.8,.5,1) both}
+  .ka-titik.lihat i{width:auto;height:auto;background:none;box-shadow:none;font-style:normal;font-size:24px;font-weight:800;color:#fff}
+  .ka-lihat{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:38px;height:38px;border-radius:12px;border:0;background:rgba(255,255,255,.1);color:#fff;font-size:17px;cursor:pointer}
+  .ka-lihat:hover{background:rgba(255,255,255,.2)}
+  .ka-coba{display:flex;align-items:center;justify-content:center;gap:6px}
+  .ka-coba i{width:22px;height:5px;border-radius:9px;background:#34d399;box-shadow:0 0 8px rgba(52,211,153,.6);transition:background .3s}
+  .ka-coba i.habis{background:rgba(248,113,113,.9);box-shadow:0 0 8px rgba(248,113,113,.6)}
+  .ka-coba small{margin-left:6px;font-size:11.5px;color:rgba(226,232,240,.7);font-weight:600}
+  .ka-pesan{min-height:18px;color:#fca5a5;font-size:13px;font-weight:700}
+  .ka-buka{position:relative;overflow:hidden;border:0;border-radius:16px;padding:15px;font-weight:800;font-size:16px;color:#052e2b;cursor:pointer;
+    background:linear-gradient(135deg,#6ee7b7,#34d399 45%,#fbbf24);box-shadow:0 12px 28px rgba(16,185,129,.35);transition:transform .15s,box-shadow .2s}
+  .ka-buka:hover{transform:translateY(-2px);box-shadow:0 16px 34px rgba(16,185,129,.45)}.ka-buka:active{transform:translateY(0) scale(.98)}
+  .ka-buka::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-20deg);animation:kaKilau 3.5s 1s ease-in-out infinite}
+  .ka-buka:disabled{opacity:.85;cursor:wait}
+  .ka-buka span{position:relative;display:inline-flex;align-items:center;gap:8px}
+  .ka-putar{width:16px;height:16px;border-radius:50%;border:2.5px solid rgba(5,46,43,.25);border-top-color:#052e2b;animation:kaPutar .7s linear infinite}
+  .ka-keluar{border:0;background:none;color:rgba(226,232,240,.7);font-weight:600;font-size:12.5px;cursor:pointer;padding:6px}
+  .ka-keluar:hover{color:#fca5a5;text-decoration:underline}
+  .ka-kaki{font-size:11.5px;color:rgba(226,232,240,.55);letter-spacing:.3px;animation:kaNaik .7s .3s both}
+  .ka-lapis.terbuka .ka-sengkang{transform:translateY(-7px) rotate(-28deg)}
+  .ka-lapis.terbuka .ka-panel{animation:kaKeluar .6s .3s ease forwards}.ka-lapis.terbuka .ka-jam,.ka-lapis.terbuka .ka-kaki{animation:kaKeluar .6s .3s ease forwards}
+  .ka-lapis.terbuka{animation:kaPudar .5s .45s ease forwards}
+  @keyframes kaMasuk{from{opacity:0}to{opacity:1}}
+  @keyframes kaPudar{to{opacity:0;visibility:hidden}}
+  @keyframes kaNaik{from{opacity:0;transform:translateY(24px) scale(.97)}to{opacity:1;transform:none}}
+  @keyframes kaKeluar{to{opacity:0;transform:translateY(-18px) scale(1.04)}}
+  @keyframes kaMelayang{0%{transform:translate(0,0) scale(1)}50%{transform:translate(6vmax,4vmax) scale(1.12)}100%{transform:translate(-4vmax,7vmax) scale(.92)}}
+  @keyframes kaDenyut{0%,100%{transform:scale(.85);opacity:.7}50%{transform:scale(1.15);opacity:1}}
+  @keyframes kaAyun{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+  @keyframes kaGoyang{0%,100%{transform:none}15%,55%{transform:translateX(-10px)}35%,75%{transform:translateX(10px)}90%{transform:translateX(-4px)}}
+  @keyframes kaTitik{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+  @keyframes kaKilau{0%{left:-60%}35%,100%{left:130%}}
+  @keyframes kaPutar{to{transform:rotate(360deg)}}
+  @keyframes kaGaris{to{stroke-dashoffset:0}}
+  @media (max-height:640px){.ka-jam b{font-size:38px}.ka-ikon{width:64px;height:64px}.ka-svg{width:46px;height:54px}.ka-panel{padding:20px 18px 14px;gap:10px}}
+  @media (prefers-reduced-motion:reduce){.ka-lapis *,.ka-lapis{animation-duration:.01ms!important;animation-iteration-count:1!important}}
   .ka-atur{display:flex;align-items:center;gap:12px;justify-content:space-between;border:1.5px solid #e2e8f0;border-radius:14px;padding:12px 14px;margin-bottom:10px;background:#f8fafc}
   .ka-atur.on{border-color:#86efac;background:#f0fdf4}.ka-atur b{display:block;font-size:14px}.ka-atur small{color:var(--text-secondary);font-size:12px;line-height:1.5}
   .ka-langkah{font-size:13px;line-height:1.7;padding-left:20px}.ka-qr{display:grid;place-items:center;margin:8px 0}.ka-qr img{width:200px;height:200px;background:#fff;padding:8px;border-radius:12px;border:1px solid #e2e8f0}
