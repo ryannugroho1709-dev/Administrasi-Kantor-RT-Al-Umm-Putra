@@ -678,7 +678,8 @@ async function ujResetJawaban(id, nama) {
   ujBukaRekap(sesiId);
 }
 // Saran skor uraian: proporsi "poin penilaian" yang kata kuncinya muncul di jawaban santri.
-function _ujSaranUraian(jawab, ks, poin) {
+function _ujSaranUraian(jawab, ks, poin, soalTeks) {
+  if (typeof NU !== "undefined") { const h = NU.nilai(jawab, ks, poin, soalTeks); return h ? h.skor : null; }
   const t = String(jawab || "").toLowerCase();
   if (!t.trim()) return 0;
   const pk = ks.poin_kunci || [];
@@ -697,7 +698,8 @@ function ujNilaiUraian(jawabanId) {
     const jaw = ((r.jawaban || {}).uraian || {})[ks.no] || "";
     const lama = r.skor_uraian && r.skor_uraian[ks.no] != null ? r.skor_uraian[ks.no] : "";
     const rek = _ujRekaman(jaw);
-    const saran = rek ? null : _ujSaranUraian(jaw, ks, poin);
+    const nu = !rek && typeof NU !== "undefined" ? NU.nilai(jaw, ks, poin, so.t) : null;
+    const saran = rek ? null : nu ? nu.skor : _ujSaranUraian(jaw, ks, poin);
     return `<div class="uj-uraian">
       <div style="font-weight:700;font-size:13px">${ks.no}. ${escapeHtml(so.t || "")}</div>
       <div class="uj-jawaban">${rek ? `🎤 Rekaman suara santri:<br><audio controls preload="none" src="${escapeHtml(rek)}" style="width:100%;margin-top:4px"></audio>` : jaw ? escapeHtml(jaw) : "<i style='color:var(--text-secondary)'>(tidak dijawab)</i>"}</div>
@@ -707,7 +709,7 @@ function ujNilaiUraian(jawabanId) {
         <input type="number" class="input uj-skor" data-no="${ks.no}" min="0" max="${poin}" step="0.5" value="${lama !== "" ? lama : (saran ?? "")}" style="width:90px">
         ${saran != null && lama === "" ? `<span class="uj-sub">saran otomatis: ${saran}</span>` : ""}
         <span class="uj-cepat">${[0, Math.round(poin / 2), poin].map((v) => `<button type="button" class="btn btn-ghost btn-sm" onclick="this.closest('.uj-uraian').querySelector('.uj-skor').value=${v}">${v}</button>`).join("")}</span>
-      </div></div>`;
+      </div>${nu && jaw ? NU.html(nu, escapeHtml) : ""}</div>`;
   }).join("");
   openModal(`<h3>✍️ Nilai uraian · ${escapeHtml(nama)}</h3>
     <div class="uj-sub" style="margin-bottom:8px">Soal otomatis: <b>${Number(r.skor_otomatis || 0)}</b> poin. Skor yang terisi otomatis hanyalah saran — periksa lalu sesuaikan.</div>
