@@ -706,25 +706,28 @@ function ujNilaiUraian(jawabanId) {
       <div class="uj-kunci-uraian"><b>Kunci:</b> ${escapeHtml(ks.kunci || "-")}${(ks.poin_kunci || []).length ? `<div class="uj-sub">Poin: ${ks.poin_kunci.map(escapeHtml).join(" · ")}</div>` : ""}</div>
       <div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap">
         <label class="form-label" style="margin:0">Skor (0–${poin})</label>
-        <input type="number" class="input uj-skor" data-no="${ks.no}" min="0" max="${poin}" step="0.5" value="${lama !== "" ? lama : (saran ?? "")}" style="width:90px">
-        ${saran != null && lama === "" ? `<span class="uj-sub">saran otomatis: ${saran}</span>` : ""}
+        <input type="number" class="input uj-skor" data-no="${ks.no}" min="0" max="${poin}" step="0.5" value="${lama !== "" ? lama : (!rek && !String(jaw).trim() ? 0 : "")}" placeholder="?" style="width:90px">
+        ${saran != null && String(jaw).trim() ? `<button type="button" class="btn btn-ghost btn-sm uj-saran" data-saran="${saran}" title="Saran mesin — periksa dulu jawabannya" onclick="this.closest('.uj-uraian').querySelector('.uj-skor').value=${saran}">💡 Saran: ${saran}</button>` : ""}
         <span class="uj-cepat">${[0, Math.round(poin / 2), poin].map((v) => `<button type="button" class="btn btn-ghost btn-sm" onclick="this.closest('.uj-uraian').querySelector('.uj-skor').value=${v}">${v}</button>`).join("")}</span>
       </div>${nu && jaw ? NU.html(nu, escapeHtml) : ""}</div>`;
   }).join("");
   openModal(`<h3>✍️ Nilai uraian · ${escapeHtml(nama)}</h3>
-    <div class="uj-sub" style="margin-bottom:8px">Soal otomatis: <b>${Number(r.skor_otomatis || 0)}</b> poin. Skor yang terisi otomatis hanyalah saran — periksa lalu sesuaikan.</div>
+    <div class="uj-sub" style="margin-bottom:8px">Soal otomatis: <b>${Number(r.skor_otomatis || 0)}</b> poin. <b>Uraian dinilai Ustadz/Ustadzah</b> — baca jawabannya lalu isi skornya. Tombol 💡 Saran hanya bantuan mesin, bisa keliru.</div>
+    <div style="margin-bottom:8px"><button type="button" class="btn btn-ghost btn-sm" onclick="qsa('.uj-saran').forEach((b)=>{const i=b.closest('.uj-uraian').querySelector('.uj-skor');if(i.value==='')i.value=b.dataset.saran;})">💡 Isi Saran ke Kotak yang Masih Kosong</button></div>
     ${daftar}
     <div style="display:flex;gap:10px;margin-top:12px"><button class="btn btn-outline" style="flex:1" onclick="ujBukaRekap(UJ.rekapSesi)">‹ Kembali</button><button class="btn btn-accent" style="flex:1" onclick="ujSimpanUraian('${r.id}')">Simpan nilai</button></div>`, { lebar: true });
 }
 async function ujSimpanUraian(id) {
   const skor = {};
-  let salah = false;
+  let salah = false; const kosong = [];
   qsa(".uj-skor").forEach((i) => {
-    const v = i.value === "" ? 0 : Number(i.value), mx = Number(i.max);
+    if (i.value === "") { kosong.push(i); return; }
+    const v = Number(i.value), mx = Number(i.max);
     if (isNaN(v) || v < 0 || v > mx) salah = true;
     skor[i.dataset.no] = v;
   });
   if (salah) { toast("Ada skor di luar rentang", "err"); return; }
+  if (kosong.length) { kosong.forEach((i) => { i.style.outline = "2px solid #ef4444"; }); kosong[0].scrollIntoView({ behavior: "smooth", block: "center" }); kosong[0].focus(); toast(`${kosong.length} soal belum diberi skor`, "err"); return; }
   try {
     const n = await _ujRpc("ujian_nilai_uraian", { p_pin: UJ.rekap.pin, p_jawaban_id: id, p_skor: skor });
     toast(`Tersimpan · nilai akhir ${Math.round(n)}`, "ok");
