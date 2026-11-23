@@ -168,7 +168,7 @@ function _rkHtmlRinci() {
   return `<div class="rkx-kepala"><span>Uraian</span><span>Volume</span><span>Satuan</span><span>Harga Satuan</span><span>× Kali</span><span>Jumlah</span><span>Jadwal</span><span></span></div>` +
     kel.map((k, i) => {
       const item = _rkItem(k.id);
-      return `<section class="rkx-kel">
+      return `<section class="rkx-kel" data-kel="${k.id}">
         <header><i class="rkx-no">${i + 1}</i><input class="rkx-kel-nama" value="${_rkE(k.nama)}" placeholder="Nama kelompok" ${k.otomatis ? "disabled" : dis} oninput="rkUbahKel('${k.id}',this.value)">
           <b class="rkx-sub" data-rk-kel="${k.id}">Rp ${_rkRp(_rkSubtotal(k.id))}</b>
           ${RK.baca || k.otomatis ? "" : `<button class="rkx-ikon" title="Menu kelompok" onclick="rkMenuKel(event,'${k.id}')">⋯</button>`}</header>
@@ -195,7 +195,7 @@ function _rkHtmlBaris(x) {
     <label class="rkx-f vol"><small>Volume</small><input inputmode="decimal" value="${_rkTampil(Number(x.vol) || 0)}" placeholder="0" ${dis} ${ub("vol", 1)}></label>
     <label class="rkx-f sat"><small>Satuan</small><input value="${_rkE(x.sat || "")}" placeholder="pcs" list="rkx-satuan" ${dis} ${ub("sat")}></label>
     <label class="rkx-f harga"><small>Harga Satuan</small><input inputmode="numeric" value="${_rkTampil(Number(x.harga) || 0)}" placeholder="0" ${dis} ${ub("harga", 1)} ></label>
-    <label class="rkx-f kali ${ikut ? "oto" : ""}"><small>× Kali${ikut ? " (otomatis)" : ""}</small><input inputmode="decimal" value="${_rkTampil(rkKali(x))}" title="${ikut ? "Otomatis = jumlah bulan di jadwal. Ubah lewat tombol jadwal." : "Berapa kali dalam setahun (mis. snack 4 kali). Bila dijadwalkan per bulan, terisi otomatis."}" ${ikut ? "disabled" : dis} ${ub("frek", 1)}></label>
+    <label class="rkx-f kali ${ikut ? "oto" : ""}"><small>× Kali${ikut ? " ⚙" : ""}</small><input inputmode="decimal" value="${_rkTampil(rkKali(x))}" title="${ikut ? "Otomatis = jumlah bulan di jadwal. Ubah lewat tombol jadwal." : "Berapa kali dalam setahun (mis. snack 4 kali). Bila dijadwalkan per bulan, terisi otomatis."}" ${ikut ? "disabled" : dis} ${ub("frek", 1)}></label>
     <b class="rkx-jml" data-rk-item="${x.id}">Rp ${_rkRp(rkJumlah(x))}</b>
     <button class="rkx-jadwal" onclick="rkAturJadwal('${x.id}')" data-rk-pil="${x.id}">${_rkPil(x)}</button>
     ${RK.baca ? "<span></span>" : `<button class="rkx-ikon hapus" title="Hapus rincian" onclick="rkHapusItem('${x.id}')">🗑</button>`}
@@ -240,7 +240,7 @@ async function rkHapusItem(id) {
 }
 function rkMenuKel(ev, id) {
   ev.stopPropagation(); document.querySelector(".rkx-menu")?.remove();
-  const kel = _rkKel(), i = kel.findIndex((k) => k.id === id);
+  const kel = _rkKelAsli(), i = kel.findIndex((k) => k.id === id);
   const m = document.createElement("div"); m.className = "rkx-menu";
   m.innerHTML = `<button onclick="rkTambahItem('${id}')">＋ Tambah Rincian</button><button onclick="rkJadwalKel('${id}')">📅 Jadwalkan Semua Rincian</button>
     ${i > 0 ? `<button onclick="rkGeserKel('${id}',-1)">⬆️ Naikkan</button>` : ""}${i < kel.length - 1 ? `<button onclick="rkGeserKel('${id}',1)">⬇️ Turunkan</button>` : ""}
@@ -249,11 +249,67 @@ function rkMenuKel(ev, id) {
   const r = ev.currentTarget.getBoundingClientRect(); m.style.top = Math.min(window.innerHeight - m.offsetHeight - 8, r.bottom + 4) + "px"; m.style.left = Math.max(8, r.right - m.offsetWidth) + "px";
   setTimeout(() => document.addEventListener("click", () => m.remove(), { once: true }), 0);
 }
+// kelompok buatan sendiri saja (tanpa kelompok otomatis Honor Pengelola)
+const _rkKelAsli = () => _rkKel().filter((k) => !k.otomatis && RK.data.kel[k.id]);
 function rkGeserKel(id, arah) {
-  const kel = _rkKel(), i = kel.findIndex((k) => k.id === id), j = i + arah; if (j < 0 || j >= kel.length) return;
-  kel.forEach((k, n) => { RK.data.kel[k.id].u = n + 1; }); RK.data.kel[kel[i].id].u = j + 1; RK.data.kel[kel[j].id].u = i + 1;
-  _rkGambar(); _rkTulis({ kel: Object.fromEntries(kel.map((k) => [k.id, RK.data.kel[k.id]])) });
+  const kel = _rkKelAsli(), i = kel.findIndex((k) => k.id === id), j = i + arah; if (i < 0 || j < 0 || j >= kel.length) return;
+  const urut = kel.map((k) => k.id); [urut[i], urut[j]] = [urut[j], urut[i]];
+  _rkTerapkanUrutan(urut, id);
 }
+function _rkTerapkanUrutan(urut, sorot) {
+  urut.forEach((kid, n) => { RK.data.kel[kid].u = n + 1; });
+  _rkGambar(); _rkTulis({ kel: Object.fromEntries(urut.map((kid) => [kid, RK.data.kel[kid]])) });
+  if (sorot) setTimeout(() => { const el = document.querySelector(`.rkx-kel[data-kel="${sorot}"]`); if (el) { el.scrollIntoView({ block: "center", behavior: "smooth" }); el.classList.add("rkx-kel-pindah"); setTimeout(() => el.classList.remove("rkx-kel-pindah"), 900); } }, 40);
+}
+// ── Tekan lama kepala kelompok → geser naik / turun (HP & komputer) ──
+(function () {
+  let tahan = null, seret = null;
+  const batal = () => { clearTimeout(tahan && tahan.t); tahan = null; };
+  document.addEventListener("pointerdown", (e) => {
+    const h = e.target.closest && e.target.closest(".rkx-kel > header");
+    if (!h || RK.baca || e.target.closest("button")) return;
+    const sec = h.parentElement, id = sec.dataset.kel; if (!id || id === "__pg") return;
+    tahan = { x: e.clientX, y: e.clientY, t: setTimeout(() => mulai(sec, id, e.clientY), 450) };
+  });
+  document.addEventListener("pointermove", (e) => {
+    if (tahan && Math.hypot(e.clientX - tahan.x, e.clientY - tahan.y) > 8) batal();
+    if (!seret) return;
+    e.preventDefault();
+    const dy = e.clientY - seret.y0 + (window.scrollY - seret.gulung0); seret.el.style.transform = `translateY(${dy}px) scale(1.02)`;
+    // posisi tujuan: titik tengah kelompok lain yang dilewati
+    const tengah = e.clientY; let ke = seret.daftar.length - 1;
+    const geserGulung = window.scrollY - seret.gulung0;
+    for (let n = 0; n < seret.daftar.length; n++) { const r = n === seret.dari ? { top: seret.kotak[n].top - geserGulung, height: seret.kotak[n].height } : seret.daftar[n].getBoundingClientRect(); if (tengah < r.top + r.height / 2) { ke = n > seret.dari ? n - 1 : n; break; } }
+    seret.ke = ke;
+    seret.daftar.forEach((s, n) => { s.classList.toggle("rkx-sasaran-atas", n === ke && ke < seret.dari); s.classList.toggle("rkx-sasaran-bawah", n === ke && ke > seret.dari); });
+    // gulung otomatis di tepi layar
+    if (e.clientY < 90) window.scrollBy(0, -12); else if (e.clientY > window.innerHeight - 90) window.scrollBy(0, 12);
+  }, { passive: false });
+  // di HP: cegah layar ikut tergulung selama menggeser
+  document.addEventListener("touchmove", (e) => { if (seret) e.preventDefault(); }, { passive: false });
+  document.addEventListener("contextmenu", (e) => { if ((tahan || seret) && e.target.closest && e.target.closest(".rkx-kel > header")) e.preventDefault(); });
+  const selesai = () => {
+    batal(); if (!seret) return;
+    const { el, dari, ke, daftar } = seret; seret = null;
+    document.body.classList.remove("rkx-menyeret"); el.style.transform = ""; el.classList.remove("rkx-diseret");
+    daftar.forEach((s) => s.classList.remove("rkx-sasaran-atas", "rkx-sasaran-bawah"));
+    if (ke == null || ke === dari) return;
+    const urut = daftar.map((s) => s.dataset.kel); const [x] = urut.splice(dari, 1); urut.splice(ke, 0, x);
+    _rkTerapkanUrutan(urut, x);
+    toast("Urutan kelompok disimpan ✓", "ok");
+  };
+  document.addEventListener("pointerup", selesai); document.addEventListener("pointercancel", selesai);
+  function mulai(sec, id, y) {
+    tahan = null;
+    const daftar = [...document.querySelectorAll(".rkx-kel[data-kel]")].filter((s) => s.dataset.kel !== "__pg");
+    const dari = daftar.indexOf(sec); if (dari < 0 || daftar.length < 2) return;
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    seret = { el: sec, id, y0: y, dari, ke: dari, daftar, kotak: daftar.map((s) => s.getBoundingClientRect()), gulung0: window.scrollY };
+    document.body.classList.add("rkx-menyeret"); sec.classList.add("rkx-diseret");
+    try { navigator.vibrate && navigator.vibrate(30); } catch (e) {}
+    toast("Geser ke atas / bawah, lalu lepas", "info");
+  }
+})();
 async function rkHapusKel(id) {
   const k = RK.data.kel[id], item = _rkItem(id); if (!k) return;
   if (!(await konfirmasiTema(`Hapus kelompok <b>${_rkE(k.nama || "tanpa nama")}</b> beserta ${item.length} rinciannya?`, { ikon: "🗑️", judul: "Hapus Kelompok", teksYa: "Ya, Hapus" }))) return;
