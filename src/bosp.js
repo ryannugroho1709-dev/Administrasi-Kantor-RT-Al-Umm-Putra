@@ -26,7 +26,16 @@ const BSP_RUANG = ["A", "Pa", "Pi"];
 // penyusun inti: Admin utama, Admin Pendamping, Penyelenggara ruang ini
 const bspPenyusunInti = () => typeof STATE !== "undefined" && STATE.ruang && STATE.ruang !== "Pg" &&
   ((typeof isAdmin === "function" && isAdmin()) || (typeof rgPendamping === "function" && rgPendamping()) || ((typeof RG !== "undefined" && RG.penyelenggara) || []).includes(STATE.guruId));
-const bspBolehSusun = () => !!(bspPenyusunInti() || bspAdminJenjang("bsp-kk"));
+const bspBolehSusun = () => !!(bspPenyusunInti() || bspAdminJenjang("bsp-kk") || bspBendaharaJenjang());
+// Bendahara jenjang (jabatan "Bendahara" di Data Guru ruang ini, anggota ruang, bukan Mode Lihat) —
+// ikut menyusun & melaporkan keuangan jenjangnya (Kertas Kerja BOSP & Draft RKAS).
+function bspBendaharaJenjang() {
+  try {
+    if (STATE.modeLihat || !STATE.ruang || STATE.ruang === "Pg") return false;
+    if (typeof rgAkses === "function" && rgAkses(STATE.ruang) !== "U") return false;
+    return typeof isBendahara === "function" && isBendahara();
+  } catch (e) { return false; }
+}
 // Admin jenjang (jabatan "Admin" / Admin Kedua) yang menjadi anggota ruang ini — boleh menyusun selama
 // izinnya tidak dicabut di Pengaturan > Akses Admin Kedua.
 function bspAdminJenjang(kunci) {
@@ -124,7 +133,7 @@ function bspHitung(baris, pagu) {
 //  HALAMAN KERTAS KERJA (ruang A / Pa / Pi)
 // ============================================================
 async function bspBukaKK(th) {
-  if (!bspBolehSusun()) { toast("Kertas Kerja BOSP disusun oleh Admin, Admin Pendamping, dan Penyelenggara ruang ini.", "warn"); return; }
+  if (!bspBolehSusun()) { toast("Kertas Kerja BOSP disusun oleh Admin, Admin Pendamping, Bendahara jenjang, dan Penyelenggara ruang ini.", "warn"); return; }
   BSP.th = th || BSP.th || _bspTahunAwal(); BSP.mode = "kerja";
   const sec = _rgBukaHal("bsp-kk", "Kertas Kerja BOSP", `<div class="card"><div class="rg-memuat">Memuat Kertas Kerja…</div></div>`);
   try { await Promise.all([_bspMuatKK(BSP.th), _bspMuatUmum(BSP.th)]); }
