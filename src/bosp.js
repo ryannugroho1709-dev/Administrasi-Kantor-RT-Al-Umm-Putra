@@ -23,8 +23,21 @@ const _bspNamaRuang = (id) => (typeof rgNamaPendek === "function" ? rgNamaPendek
 const BSP_RUANG = ["A", "Pa", "Pi"];
 
 // ── Hak akses ──
-const bspBolehSusun = () => typeof STATE !== "undefined" && STATE.ruang && STATE.ruang !== "Pg" &&
+// penyusun inti: Admin utama, Admin Pendamping, Penyelenggara ruang ini
+const bspPenyusunInti = () => typeof STATE !== "undefined" && STATE.ruang && STATE.ruang !== "Pg" &&
   ((typeof isAdmin === "function" && isAdmin()) || (typeof rgPendamping === "function" && rgPendamping()) || ((typeof RG !== "undefined" && RG.penyelenggara) || []).includes(STATE.guruId));
+const bspBolehSusun = () => !!(bspPenyusunInti() || bspAdminJenjang("bsp-kk"));
+// Admin jenjang (jabatan "Admin" / Admin Kedua) yang menjadi anggota ruang ini — boleh menyusun selama
+// izinnya tidak dicabut di Pengaturan > Akses Admin Kedua.
+function bspAdminJenjang(kunci) {
+  try {
+    if (STATE.modeLihat || !STATE.ruang || STATE.ruang === "Pg") return false;
+    if (!(typeof isAdminKedua === "function" && isAdminKedua())) return false;
+    if (typeof rgAkses === "function" && rgAkses(STATE.ruang) !== "U") return false;
+    return typeof _menuDiizinkanAdminKedua === "function" ? _menuDiizinkanAdminKedua(kunci) : true;
+  } catch (e) { return false; }
+}
+if (typeof daftarFiturAdminKedua === "function") daftarFiturAdminKedua("bsp-kk", "📒", "Kertas Kerja BOSP");
 const bspBendahara = () => (typeof isAdmin === "function" && isAdmin()) || BSP.bend.includes(STATE.guruId);
 
 // ── Penyimpanan data bersama (ruang "*"): RPC kv_gabung_umum bila ada, bila belum ada baca-gabung-simpan ──

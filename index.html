@@ -2124,8 +2124,25 @@ function isAdminKedua() {
 // Menu-menu yang secara eksplisit diizinkan untuk Admin Kedua guru ini (diatur admin utama lewat
 // Pengaturan > Akses Admin Kedua). Admin utama tidak dibatasi fungsi ini sama sekali.
 function _menuDiizinkanAdminKedua(menuKey) {
+  const baru = _izinFiturBaru(STATE.guruId, menuKey);
+  if (baru !== null) return baru;
   const izin = (LOOKUP.adminIzin || []).find((a) => a.guru_id === STATE.guruId);
   return !!(izin?.menu_keys || []).includes(menuKey);
+}
+// Fitur tambahan (bukan dari MENU, mis. Kertas Kerja BOSP, Draft RKAS) mendaftar di sini supaya otomatis
+// muncul di Pengaturan > Akses Admin Kedua. Fitur berbawaan "aktif" langsung boleh dipakai Admin Kedua
+// sampai admin utama mencabutnya (dicatat sebagai "!kunci" di menu_keys).
+window.FITUR_ADMIN_KEDUA = window.FITUR_ADMIN_KEDUA || [];
+function daftarFiturAdminKedua(key, icon, label, bawaan = true) {
+  if (!window.FITUR_ADMIN_KEDUA.some((f) => f.key === key)) window.FITUR_ADMIN_KEDUA.push({ key, icon, label, bawaan });
+}
+function _izinFiturBaru(guruId, key) {
+  const f = window.FITUR_ADMIN_KEDUA.find((x) => x.key === key);
+  if (!f) return null;
+  const keys = (LOOKUP.adminIzin || []).find((a) => a.guru_id === guruId)?.menu_keys || [];
+  if (keys.includes(key)) return true;
+  if (keys.includes("!" + key)) return false;
+  return f.bawaan !== false;
 }
 // Satu pintu gerbang untuk semua halaman adminOnly: admin utama selalu lolos: Admin Kedua lolos
 // HANYA untuk menu yang eksplisit diizinkan untuknya. Dipakai di filter sidebar + showPage() +
@@ -7639,21 +7656,27 @@ function renderAksesAdminKeduaUI() {
     return;
   }
   const menuAdminOnly = MENU.flatMap((g) => g.items).filter((it) => it.adminOnly);
+  const fiturBaru = (window.FITUR_ADMIN_KEDUA || []).filter((f) => !menuAdminOnly.some((m) => m.key === f.key));
+  const kotak = (g, key, ikon, label, cek, baru) => `<label style="display:flex;align-items:center;gap:6px;font-size:11.5px;cursor:pointer;">
+          <input type="checkbox" class="aak-chk" data-guru="${g.id}" data-menu="${key}"${baru ? ' data-baru="1"' : ""} ${cek ? "checked" : ""}/> ${ikon} ${escapeHtml(label)}
+        </label>`;
   root.innerHTML = guruAdminKedua.map((g) => {
     const izinSekarang = (LOOKUP.adminIzin || []).find((a) => a.guru_id === g.id)?.menu_keys || [];
     return `<div style="border:1px solid var(--border-soft);border-radius:10px;padding:10px;margin-bottom:10px;">
       <b style="font-size:12.5px;">${escapeHtml(g.nama)}</b>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:8px 0;">
-        ${menuAdminOnly.map((m) => `<label style="display:flex;align-items:center;gap:6px;font-size:11.5px;cursor:pointer;">
-          <input type="checkbox" class="aak-chk" data-guru="${g.id}" data-menu="${m.key}" ${izinSekarang.includes(m.key) ? "checked" : ""}/> ${m.icon} ${t(m.i18n)}
-        </label>`).join("")}
+        ${menuAdminOnly.map((m) => kotak(g, m.key, m.icon, t(m.i18n), izinSekarang.includes(m.key), false)).join("")}
       </div>
+      ${fiturBaru.length ? `<div style="font-size:10.5px;font-weight:700;color:var(--text-secondary);margin:6px 0 2px;">Fitur Ruang Jenjang <span style="font-weight:400;">— fitur baru otomatis tercentang</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:4px 0 8px;">
+        ${fiturBaru.map((f) => kotak(g, f.key, f.icon, f.label, _izinFiturBaru(g.id, f.key), true)).join("")}
+      </div>` : ""}
       <button class="btn btn-accent" style="padding:5px 12px;font-size:11px;" onclick="_aakSimpan('${g.id}')">💾 Simpan Akses</button>
     </div>`;
   }).join("");
 }
 async function _aakSimpan(guruId) {
-  const menuKeys = qsa(`.aak-chk[data-guru="${guruId}"]`).filter((c) => c.checked).map((c) => c.dataset.menu);
+  const menuKeys = qsa(`.aak-chk[data-guru="${guruId}"]`).map((c) => (c.checked ? c.dataset.menu : c.dataset.baru ? "!" + c.dataset.menu : null)).filter(Boolean);
   try {
     await apiSimpanGuruAdminIzin(guruId, menuKeys);
     const existing = (LOOKUP.adminIzin || []).find((a) => a.guru_id === guruId);
@@ -16176,13 +16199,13 @@ async function handleImportSiswa(evt) {
 <script src="src/nilai-tempel.js?v=3"></script>
 <script src="src/dapodik.js?v=2"></script>
 <script src="src/modul-urut.js?v=1"></script>
-<script src="src/ruang.js?v=16"></script>
+<script src="src/ruang.js?v=17"></script>
 <script src="src/akun.js?v=8"></script>
 <script src="src/keamanan-admin.js?v=2"></script>
 <script src="src/siswa-tampil.js?v=4"></script>
 <script src="src/pengelola.js?v=4"></script>
 <script src="src/bosp-data.js?v=2"></script>
-<script src="src/bosp.js?v=5"></script>
+<script src="src/bosp.js?v=6"></script>
 <script src="src/bosp-plus.js?v=1"></script>
 <script src="src/rapi-tampil.js?v=2"></script>
 <script src="src/wajib-profil.js?v=1"></script>
@@ -16192,7 +16215,7 @@ async function handleImportSiswa(evt) {
 <script src="src/bosp-hp.js?v=1"></script>
 <script src="src/bosp-laporan.js?v=2"></script>
 <script src="src/bosp-arkas.js?v=5"></script>
-<script src="src/bosp-rkas.js?v=4"></script>
+<script src="src/bosp-rkas.js?v=5"></script>
 <script src="src/bosp-rkas-real.js?v=2"></script>
 </body>
 </html>

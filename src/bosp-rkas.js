@@ -24,7 +24,8 @@ const _rkSingkat = (n) => {
 const _rkAngka = (s) => { s = String(s == null ? "" : s).trim(); if (!s) return 0; if (/,/.test(s)) s = s.replace(/\./g, "").replace(",", "."); else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, ""); const n = parseFloat(s.replace(/[^\d.-]/g, "")); return isFinite(n) ? n : 0; };
 const _rkTampil = (n) => (n ? (Number.isInteger(n) ? n.toLocaleString("id-ID") : String(n).replace(".", ",")) : "");
 const _rkId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-const _rkBoleh = () => typeof bspBolehSusun === "function" && bspBolehSusun();
+const _rkBoleh = () => !!((typeof bspPenyusunInti === "function" && bspPenyusunInti()) || (typeof bspAdminJenjang === "function" && bspAdminJenjang("bsp-rkas")));
+if (typeof daftarFiturAdminKedua === "function") daftarFiturAdminKedua("bsp-rkas", "🗂️", "Draft RKAS");
 // Kepala PKBM (jabatan kepala_pkbm / kepala_sekolah) juga boleh memantau ketiga jenjang
 const rkKepalaPkbm = () => { try { const k = typeof _bspKepalaPkbm === "function" ? _bspKepalaPkbm() : null; return !!(k && k.id === STATE.guruId); } catch (e) { return false; } };
 const _rkBolehLihatSemua = () => (typeof bspBendahara === "function" && bspBendahara()) || rkKepalaPkbm();

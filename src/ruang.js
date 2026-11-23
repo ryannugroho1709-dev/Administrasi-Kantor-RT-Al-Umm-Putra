@@ -574,9 +574,11 @@ const _rgAdminKeduaAsli = isAdminKedua;
 isAdminKedua = function () { if (RG.siap && rgPendamping() && !isAdmin()) return true; return _rgAdminKeduaAsli(); };
 const _rgIzinAsli = _menuDiizinkanAdminKedua;
 _menuDiizinkanAdminKedua = function (k) {
+  const baru = typeof _izinFiturBaru === "function" ? _izinFiturBaru(STATE.guruId, k) : null;
+  if (baru !== null) return baru;
   if (RG.siap && rgPendamping()) {
     const izin = (LOOKUP.adminIzin || []).find((a) => a.guru_id === STATE.guruId);
-    if (izin && (izin.menu_keys || []).length) return izin.menu_keys.includes(k);
+    if (izin && (izin.menu_keys || []).some((x) => !String(x).startsWith("!"))) return izin.menu_keys.includes(k);
     return ["data-guru", "data-siswa", "kepsek", "insentif-musyrif", "laporan-kinerja", "riwayat-terhapus"].includes(k);
   }
   return _rgIzinAsli(k);
