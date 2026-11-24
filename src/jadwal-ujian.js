@@ -434,7 +434,7 @@ function _juIsiSel(j, tgl, s, kelasId, atur) {
   return `
     ${label ? '<span class="ju-grip" title="Tekan lama lalu geser untuk memindah / menukar">⠿</span>' : ""}${tandaOnline}<select class="input ju-mapel" onchange="_juSetMapel('${kunci}',this.value)">
       <option value="">— Kosong —</option>
-      ${opsiUtama.length ? `<optgroup label="Mapel Kelas Ini">${opsiUtama.map(([id, n0]) => { const n = n0 + (_juDiujikan(j, id) ? "" : " · Tidak Diujikan"); return _juSubs(id).length ? _juSubs(id).map((sb) => _juOpsiMapel(`${id}::${sb}`, `${sb} (${n})`, id === x.m && x.sub === sb, dipakai)).join("") + _juOpsiMapel(id, `${n} — Digabung`, id === x.m && !x.sub, dipakai) : _juOpsiMapel(id, n, id === x.m, dipakai); }).join("")}</optgroup>` : ""}
+      ${opsiUtama.length ? `<optgroup label="Mapel Kelas Ini">${opsiUtama.map(([id, n0]) => { const n = n0 + (_juDiujikan(j, id) ? "" : " · Tidak Diujikan"); return _juSubs(id).length ? _juSubs(id).map((sb) => _juOpsiMapel(`${id}::${sb}`, `${sb}${_juDiujikan(j, id) ? "" : " · Tidak Diujikan"}`, id === x.m && x.sub === sb, dipakai)).join("") + _juOpsiMapel(id, `${n} — Digabung`, id === x.m && !x.sub, dipakai) : _juOpsiMapel(id, n, id === x.m, dipakai); }).join("")}</optgroup>` : ""}
       <optgroup label="Mapel Lain">${opsiLain.map(([id, n]) => _juOpsiMapel(id, n, id === x.m, dipakai)).join("")}</optgroup>
       <option value="__teks" ${!x.m && x.teks ? "selected" : ""}>✏️ Tulis Sendiri…</option>
     </select>
@@ -465,7 +465,8 @@ async function _juSetMapel(kunci, nilai) {
   _juTandai(); _juGambarEditor();
 }
 // ── ANTI DOBEL: satu mapel hanya sekali per kelas dalam satu jadwal ujian ──
-const _juNamaMapelKode = (kode) => { const [m, sub] = String(kode).split("::"); return sub ? `${sub} (${_juNamaMapel(m)})` : _juNamaMapel(m); };
+// Mapel gabungan yang sudah dipecah cukup ditulis nama bagiannya saja ("PPKN", bukan "PPKN (PPKN/Sejarah)")
+const _juNamaMapelKode = (kode) => { const [m, sub] = String(kode).split("::"); return sub || _juNamaMapel(m); };
 // Map kode → kunci slot lain (kelas sama, hari aktif). Mapel gabungan utuh bentrok dengan bagiannya.
 function _juMapelTerpakai(j, kelasId, kecuali) {
   const m = new Map();
