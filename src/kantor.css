@@ -174,3 +174,21 @@ body.kt-terbuka { overflow: hidden; }
 .km-demo{display:inline-block;background:#fef3c7;color:#92400e;font-weight:800;font-size:11px;border-radius:6px;padding:2px 8px;letter-spacing:1px}
 @media (max-width:700px){.km-ruang{bottom:8px}.km-ruang button{font-size:11px;padding:6px 9px}.km-kualitas{bottom:auto;top:56px;left:10px}}
 #ki-tombol.on{background:#c6a45c!important;color:#0b3026!important}#ki-tombol small{font-size:10px;opacity:.85;margin-left:4px}
+/* ── Struktur organisasi (bisa diubah: tekan lama & seret) ── */
+.ks-ket{margin:4px 0 8px}
+.ks-puncak{border:2px dashed #c6a45c;border-radius:10px;padding:6px;text-align:center;font-size:12px;font-weight:800;color:#9a7b3f;margin-bottom:8px;display:none}
+body.ks-menyeret .ks-puncak{display:block}
+.ks-pohon,.ks-pohon ul{list-style:none;margin:0;padding:0}
+.ks-pohon ul{margin-left:14px;padding-left:12px;border-left:2px solid #d8cbb7}
+.ks-pohon li{position:relative;padding:4px 0}
+.ks-pohon ul>li::before{content:"";position:absolute;left:-12px;top:22px;width:11px;height:2px;background:#d8cbb7}
+.ks-k{display:flex;align-items:center;gap:6px;border:1px solid color-mix(in srgb,var(--w) 35%,#e7e2d6);border-left:4px solid var(--w);border-radius:10px;padding:6px 8px;background:#fff;cursor:grab;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:pan-y}
+.ks-k-isi{flex:1;min-width:0}.ks-k small{display:block;color:var(--w);font-weight:800;font-size:11px}
+.ks-k b{display:block;font-size:12.5px;cursor:pointer}.ks-k i{font-size:11px;color:#94a3b8}
+.ks-ubah{border:0;background:#f5f1e8;border-radius:8px;width:28px;height:28px;cursor:pointer;color:#123f32;flex:none}
+.ks-asal{opacity:.4}.ks-boleh{outline:2px dashed color-mix(in srgb,var(--w) 50%,transparent);outline-offset:1px}
+.ks-atas{outline:3px solid #c6a45c!important;background:#fffbeb}
+.ks-puncak.ks-atas{background:#fef3c7}
+.ks-hantu{position:fixed;z-index:10000;pointer-events:none;transform:translate(-50%,-120%) rotate(-2deg);background:#fff;border-left:4px solid var(--w);border-radius:10px;padding:6px 10px;box-shadow:0 12px 30px rgba(0,0,0,.3);max-width:220px}
+.ks-hantu small{display:block;color:var(--w);font-weight:800;font-size:11px}.ks-hantu b{display:block;font-size:12.5px}
+.km-orang button.ks-dipilih{border-color:#c6a45c;background:#fffbeb}

@@ -194,6 +194,7 @@ const _kmEase = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 
       if (p >= 1) { KM.cine = null; KT.tinggi = 21; KT.jarak = 34; KM.lampu.forEach((l) => (l.intensity = l.userData.target || 0)); }
     } else if (KM.orbit) KT.sudut += 0.0035;
     if (KM.monKanvas && kini - (KM.tMon || 0) > 650) { KM.tMon = kini; _kmGambarMonitor(kini); }
+    if (KT.rgbMat) KT.rgbMat.color.setHSL((kini / 6000) % 1, 0.85, 0.55); // lampu RGB komputer
     if (KM.infoKanvas && kini - (KM.tInfo || 0) > 20000) { KM.tInfo = kini; _kmGambarInfo(); }
     a.apply(this, arguments);
     if (!KT.buka || !KT.renderer) return;
@@ -321,7 +322,7 @@ function _kmGabung() {
   Object.values(KT.layar || {}).forEach((l) => kecuali.add(l));
   const kelompok = new Map(), buang = [];
   sc.traverse((o) => {
-    if (!o.isMesh || kecuali.has(o) || Array.isArray(o.material)) return;
+    if (!o.isMesh || kecuali.has(o) || Array.isArray(o.material) || o.userData.jangan_gabung) return;
     const m = o.material; if (m.isMeshBasicMaterial || (m.map && m.map.isCanvasTexture && !m.isMeshStandardMaterial)) return;
     if (!o.geometry || !o.geometry.attributes || !o.geometry.attributes.position) return;
     const k = m.uuid + (o.castShadow ? "s" : "") + (o.receiveShadow ? "r" : "");
