@@ -62,8 +62,8 @@ function akTampilMasuk(mode = "masuk") {
       <button class="ak-tautan" onclick="akTampilMasuk()">‹ Kembali Ke Halaman Masuk</button></div>`;
   } else {
     el.innerHTML = `<div class="ak-cahaya"></div><div class="ak-panel">${kepala}<b>Masuk Akun Guru</b><span>Masuk dengan nama pengguna (dari WA admin) atau email, dan sandi.</span></div>
-      <label class="ak-isian"><span>Nama Pengguna atau Email</span><input id="ak-login" type="text" inputmode="email" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="contoh: ahmad.fauzi"></label>
-      <label class="ak-isian"><span>Sandi</span><span class="ak-sandi"><input id="ak-sandi" type="password" autocomplete="current-password" placeholder="Sandi"><button type="button" class="ak-lihat" onclick="akLihatSandi(this)" aria-label="Lihat sandi">Lihat</button></span></label>
+      <label class="ak-isian"><span>Nama Pengguna atau Email</span><input id="ak-login" type="text" inputmode="email" name="ak-l-${Date.now()}" autocomplete="off" autocapitalize="none" spellcheck="false" data-lpignore="true" data-1p-ignore readonly placeholder="contoh: ahmad.fauzi"></label>
+      <label class="ak-isian"><span>Sandi</span><span class="ak-sandi"><input id="ak-sandi" type="text" class="ka-tutup" name="ak-s-${Date.now()}" autocomplete="off" autocapitalize="none" spellcheck="false" data-lpignore="true" data-1p-ignore readonly placeholder="Sandi"><button type="button" class="ak-lihat" onclick="akLihatSandi(this)" aria-label="Lihat sandi">Lihat</button></span></label>
       <div id="ak-pesan" class="ak-pesan"></div>
       <button class="ak-tombol" id="ak-tombol" onclick="akMasuk()">Masuk</button>
       <div class="ak-tautan-baris"><button class="ak-tautan" onclick="akTampilMasuk('lupa')">Lupa Sandi?</button><span>·</span><button class="ak-tautan" onclick="akTampilDaftar()">Belum Punya Akun? Daftar</button></div>
@@ -71,8 +71,10 @@ function akTampilMasuk(mode = "masuk") {
       <button class="ak-tombol ak-garis" onclick="location.href='santri.html?ruang='+(STATE.ruang||'Pa')">Masuk Sebagai Santri</button></div>`;
   }
   document.body.appendChild(el);
+  // kolom terkunci (readonly) sampai disentuh: Chrome/Google tidak mengisi sandi tersimpan
+  el.querySelectorAll("input").forEach((i) => { const buka = () => i.removeAttribute("readonly"); i.addEventListener("pointerdown", buka); i.addEventListener("focus", buka); });
   const pertama = el.querySelector("input");
-  setTimeout(() => pertama && pertama.focus(), 50);
+  setTimeout(() => { if (!pertama) return; pertama.removeAttribute("readonly"); pertama.focus(); }, 300);
   el.querySelectorAll("input").forEach((i) => i.addEventListener("keydown", (e) => { if (e.key === "Enter") (mode === "lupa" ? akKirimLupa : akMasuk)(); }));
 }
 function akLihatSandi(b) { const i = b.previousElementSibling; i.type = i.type === "password" ? "text" : "password"; b.textContent = i.type === "password" ? "Lihat" : "Tutup"; }

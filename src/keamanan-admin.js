@@ -433,10 +433,19 @@ function kaSegarSidik() { const w = document.getElementById("ka-atur-sidik"); if
   const sapu = (akar) => { akar.querySelectorAll("input[type=password]").forEach(ubah); akar.querySelectorAll("#ak-login,input[autocomplete=username]").forEach(nama); };
   sapu(document);
   new MutationObserver((ms) => ms.forEach((m) => m.addedNodes.forEach((n) => { if (n.nodeType !== 1) return; if (n.matches("input[type=password]")) ubah(n); if (n.matches("#ak-login")) nama(n); if (n.querySelectorAll) sapu(n); }))).observe(document.documentElement, { childList: true, subtree: true });
+  // Bila browser tetap mengisi otomatis (latar biru muda = :-webkit-autofill), kosongkan lagi:
+  // sandi & nama pengguna harus diketik sendiri oleh pemilik akun.
+  document.addEventListener("animationstart", (e) => {
+    if (e.animationName !== "kaIsiOtomatis") return;
+    const i = e.target; if (!(i instanceof HTMLInputElement)) return;
+    if (!(i.classList.contains("ka-tutup") || i.id === "ak-login" || i.id === "ka-pin" || /pin|sandi/i.test(i.id))) return;
+    i.value = ""; i.dispatchEvent(new Event("input", { bubbles: true }));
+  }, true);
   // tombol Lihat/Tutup sandi: ganti titik ↔ huruf (bukan mengganti type)
   window.akLihatSandi = function (b) { const i = b.previousElementSibling; const tutup = i.classList.toggle("ka-tutup"); b.textContent = tutup ? "Lihat" : "Tutup"; };
   const st = document.createElement("style");
   st.textContent = `.ka-tutup{-webkit-text-security:disc;text-security:disc}
+  @keyframes kaIsiOtomatis{from{outline-color:transparent}to{outline-color:transparent}}input:-webkit-autofill{animation:kaIsiOtomatis .01s}
   .ka-sidik{display:flex;align-items:center;justify-content:center;gap:10px;border:1.5px solid rgba(110,231,183,.55);border-radius:16px;padding:12px;background:rgba(16,185,129,.14);color:#d1fae5;font-weight:800;font-size:14.5px;cursor:pointer;transition:background .2s,transform .15s}
   .ka-sidik:hover{background:rgba(16,185,129,.26)}.ka-sidik:active{transform:scale(.98)}.ka-sidik span{display:grid;place-items:center;color:#6ee7b7;animation:kaDenyut 2.4s ease-in-out infinite}`;
   document.head.appendChild(st);
