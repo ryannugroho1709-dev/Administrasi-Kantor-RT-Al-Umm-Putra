@@ -822,49 +822,54 @@ async function juCetakPdf(id, dariEditor) {
   const hijri = (t) => (typeof tanggalHijriahHariIni === "function" ? tanggalHijriahHariIni(new Date(t + "T12:00:00")) : "");
   // hanya hari yang sudah berisi mapel (hari kosong tidak ikut dicetak)
   const hariTerisi = j.hari.filter((t) => j.sesi.some((s) => j.kelas.some((k) => _juLabelSlot(j.slot[_juKunci(t, s.id, k)]))));
-  const blokHari = (hariTerisi.length ? hariTerisi : j.hari).map((t) => `<section class="hari">
-      <h3><span class="garis"></span>${e(_juHariPanjang(t))}${hijri(t) ? `<small> · ${e(hijri(t))}</small>` : ""}</h3>
-      <table><thead><tr><th class="sesi">Sesi / Waktu</th>${j.kelas.map((k) => `<th class="thk" style="background:${_juWarnaKelas(k)}">Kelas ${e(_juAngkaKelas(k))}</th>`).join("")}</tr></thead>
-      <tbody>${j.sesi.map((s, i) => (j.kelas.some((k) => _juLabelSlot(j.slot[_juKunci(t, s.id, k)])) || !hariTerisi.length) ? `<tr><td class="sesi"><b>Sesi ${i + 1}</b><br/>${_juJamTeks(j, t, s)}</td>${j.kelas.map((k) => { const x = j.slot[_juKunci(t, s.id, k)]; const l = _juLabelSlot(x); return `<td style="background:${_juWarnaKelas(k)}12">${l ? `<div class="mp">${e(l)}</div>${x.ruang ? `<div class="kc">Ruang ${e(x.ruang)}</div>` : ""}<div class="pw">${(x.p || []).map((g) => e(_juNamaGuru(g))).join(", ") || "—"}</div>` : "–"}</td>`; }).join("")}</tr>` : "").join("")}</tbody></table>
+  const daftarHari = hariTerisi.length ? hariTerisi : j.hari;
+  const blokHari = daftarHari.map((t, hi) => `<section class="hari">
+      <div class="hari-kepala"><span class="no">${String(hi + 1).padStart(2, "0")}</span><div><div class="hn">${e(_juHariPanjang(t))}</div>${hijri(t) ? `<div class="hj">${e(hijri(t))}</div>` : ""}</div></div>
+      <table class="jdw"><thead><tr><th class="sesi">Sesi</th>${j.kelas.map((k) => `<th class="thk" style="--w:${_juWarnaKelas(k)}"><span class="bulat" style="background:${_juWarnaKelas(k)}">${e(_juAngkaKelas(k))}</span>Kelas ${e(_juAngkaKelas(k))}</th>`).join("")}</tr></thead>
+      <tbody>${j.sesi.map((s, i) => (j.kelas.some((k) => _juLabelSlot(j.slot[_juKunci(t, s.id, k)])) || !hariTerisi.length) ? `<tr><td class="sesi"><div class="sn">Sesi ${i + 1}</div><div class="jam">${_juJamTeks(j, t, s)}</div></td>${j.kelas.map((k) => { const x = j.slot[_juKunci(t, s.id, k)]; const l = _juLabelSlot(x); return l ? `<td style="--w:${_juWarnaKelas(k)}"><div class="mp">${e(l)}</div>${x.ruang ? `<div class="kc">Ruang ${e(x.ruang)}</div>` : ""}<div class="pw">${(x.p || []).map((g) => e(_juNamaGuru(g))).join(", ") || "Belum ada pengawas"}</div></td>` : `<td class="kosong">–</td>`; }).join("")}</tr>` : "").join("")}</tbody></table>
     </section>`).join("");
-  const per = {};
-  Object.entries(j.slot).forEach(([k, s]) => { const [t, sesiId, kelasId] = k.split("|"); if (!j.hari.includes(t) || !_juLabelSlot(s)) return; (s.p || []).forEach((g) => (per[g] = per[g] || []).push(`${_juHariPendek(t)} S${j.sesi.findIndex((x) => x.id === sesiId) + 1} K${_juAngkaKelas(kelasId)}`)); });
-  const rekap = Object.entries(per).sort((a, b) => _juNamaGuru(a[0]).localeCompare(_juNamaGuru(b[0]), "id"));
   const html = `<!doctype html><html lang="id"><head><meta charset="utf-8"><title>${e(j.judul)}</title><style>
     @page{size:A4 landscape;margin:0}
-    *{box-sizing:border-box}body{font-family:"Segoe UI","Source Sans 3",Arial,sans-serif;color:#1F2328;margin:0;padding:0 12mm;font-size:10pt}
-    table.halaman{width:100%;border-collapse:collapse;table-layout:auto}table.halaman>thead>tr>td,table.halaman>tfoot>tr>td,table.halaman>tbody>tr>td{border:0;padding:0;text-align:left;vertical-align:top}
-    .spasi{height:11mm}
-    .kop{display:flex;align-items:center;gap:14px;padding-bottom:8px;border-bottom:3px double #1F5A3D;margin-bottom:10px}
-    .kop img{width:16mm;height:16mm;object-fit:contain}
-    .lem{color:#1F5A3D;font-weight:700;letter-spacing:2px;font-size:11pt}
-    .jdl{color:#1B2A41;font-weight:800;font-size:15pt;margin-top:2px}
-    .ket{color:#5B6470;font-size:9.5pt}
-    .hari{break-inside:avoid;margin:0 0 10px}
-    h3{font-size:11pt;color:#1B2A41;margin:8px 0 5px;display:flex;align-items:center;gap:6px}h3 small{color:#5B6470;font-weight:400}
-    .garis{display:inline-block;width:4px;height:14px;background:#1F5A3D;border-radius:2px}
-    table{width:100%;border-collapse:collapse;table-layout:fixed}
-    th,td{border:.6pt solid #8C9792;padding:5px 6px;vertical-align:top;font-variant-numeric:tabular-nums}
-    thead th{background:#E3EAE6;color:#1B2A41;font-size:9.5pt;text-align:center}
-    thead th.thk{color:#fff;font-weight:800;letter-spacing:.3px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-    td{text-align:center;vertical-align:middle}td{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-
-    td.sesi,th.sesi{width:26mm;text-align:center;color:#1B2A41}
-    .mp{font-weight:700;color:#1B2A41}.kc{font-size:8.5pt;color:#5B6470}.pw{font-size:9pt;margin-top:3px}
-    .rekap{break-inside:avoid;margin-top:12px}.rekap table td{font-size:9.5pt}
-    .catatan{font-size:9pt;color:#5B6470;margin-top:8px}
-    .ttd{display:flex;justify-content:flex-end;margin-top:14px;font-size:10pt}.ttd>div{text-align:center;width:65mm;position:relative}.ttd small{display:block;color:#5B6470;font-size:7.5pt;margin-top:2px}
-    .ttd .cap{position:absolute;left:-6mm;top:7mm;width:34mm;height:auto;transform:rotate(-8deg);opacity:.92;mix-blend-mode:multiply;pointer-events:none;z-index:2}.ttd .ttd-gbr{position:relative;z-index:1}
+    *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    body{font-family:"Segoe UI","Source Sans 3",Arial,sans-serif;color:#1F2328;margin:0;padding:0 13mm;font-size:10pt;background:#fff}
+    table.halaman{width:100%;border-collapse:collapse}table.halaman>thead>tr>td,table.halaman>tfoot>tr>td,table.halaman>tbody>tr>td{border:0;padding:0;vertical-align:top}
+    .spasi{height:10mm}
+    .kop{display:flex;align-items:center;gap:12px;padding-bottom:9px;margin-bottom:12px;border-bottom:1.2pt solid #1F5A3D}
+    .kop img{width:15mm;height:15mm;object-fit:contain}
+    .kop .isi{flex:1}
+    .lem{color:#1F5A3D;font-weight:600;letter-spacing:2.5px;font-size:8.5pt}
+    .jdl{color:#1B2A41;font-weight:700;font-size:16pt;letter-spacing:-.2px;line-height:1.2;margin-top:1px}
+    .ket{display:flex;gap:6px;margin-top:5px;flex-wrap:wrap}
+    .chip{font-size:8.5pt;color:#1F5A3D;background:#EEF4F0;border-radius:20px;padding:2px 10px;font-weight:600}
+    .hari{break-inside:avoid;margin:0 0 11px}
+    .hari-kepala{display:flex;align-items:center;gap:9px;margin:0 0 6px}
+    .hari-kepala .no{font-size:9pt;font-weight:700;color:#fff;background:#1F5A3D;border-radius:6px;padding:3px 7px;font-variant-numeric:tabular-nums}
+    .hn{font-size:11.5pt;font-weight:700;color:#1B2A41;line-height:1.15}.hj{font-size:8.5pt;color:#5B6470}
+    table.jdw{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;border:.6pt solid #CBD3CF;border-radius:8px;overflow:hidden}
+    .jdw th,.jdw td{padding:6px 7px;vertical-align:middle;text-align:center;font-variant-numeric:tabular-nums;border-right:.6pt solid #E1E6E3;border-bottom:.6pt solid #E1E6E3}
+    .jdw tr>*:last-child{border-right:0}.jdw tbody tr:last-child td{border-bottom:0}
+    .jdw thead th{background:#F5F7F6;color:#1B2A41;font-size:9pt;font-weight:700;border-bottom:.6pt solid #CBD3CF}
+    .jdw th.thk{box-shadow:inset 0 2.2pt 0 var(--w)}
+    .bulat{display:inline-block;width:15px;height:15px;line-height:15px;border-radius:50%;color:#fff;font-size:7.5pt;margin-right:5px;vertical-align:1px}
+    .jdw .sesi{width:27mm;background:#FAFBFA}
+    .sn{font-weight:700;color:#1B2A41;font-size:9.5pt}.jam{font-size:8.5pt;color:#5B6470;margin-top:1px;white-space:nowrap}
+    .mp{font-weight:700;color:#1B2A41;font-size:10pt;line-height:1.25}.kc{font-size:8pt;color:#5B6470}
+    .pw{font-size:8.5pt;color:#5B6470;margin-top:3px;line-height:1.3}
+    td.kosong{color:#B4BCB8}
+    .ttd{display:flex;justify-content:flex-end;margin-top:12px;font-size:9.5pt;break-inside:avoid}
+    .ttd>div{text-align:center;width:62mm;position:relative;color:#1F2328}
+    .ttd .jab{font-weight:600;color:#1B2A41}
+    .ttd .ruang-ttd{position:relative;height:20mm;margin:2px 0}
+    .ttd .ttd-gbr{position:relative;z-index:1;height:20mm;max-width:56mm;object-fit:contain;display:block;margin:0 auto}
+    .ttd .cap{position:absolute;left:4mm;top:-1mm;width:23mm;height:auto;transform:rotate(-8deg);opacity:.9;mix-blend-mode:multiply;z-index:2}
+    .ttd .nm{font-weight:700;color:#1B2A41;border-top:.6pt solid #CBD3CF;display:inline-block;padding-top:3px;min-width:44mm}
   </style></head><body><table class="halaman"><thead><tr><td><div class="spasi"></div></td></tr></thead><tfoot><tr><td><div class="spasi"></div></td></tr></tfoot><tbody><tr><td>
-    <div class="kop">${logo ? `<img src="${e(logo)}" alt=""/>` : ""}<div><div class="lem">${e(lembaga)}</div><div class="jdl">JADWAL ${e(String(j.judul).toUpperCase())}</div><div class="ket">${e(_juHariPanjang(j.mulai))}${j.selesai !== j.mulai ? " – " + e(_juHariPanjang(j.selesai)) : ""} · Tahun Ajaran ${e(typeof hitungTahunAjaranOtomatis === "function" ? hitungTahunAjaranOtomatis() : "")}</div></div></div>
+    <div class="kop">${logo ? `<img src="${e(logo)}" alt=""/>` : ""}<div class="isi"><div class="lem">${e(lembaga)}</div><div class="jdl">Jadwal ${e(j.judul)}</div>
+      <div class="ket"><span class="chip">${e(_juHariPanjang(j.mulai))}${j.selesai !== j.mulai ? " – " + e(_juHariPanjang(j.selesai)) : ""}</span><span class="chip">${daftarHari.length} Hari Ujian</span><span class="chip">Tahun Ajaran ${e(typeof hitungTahunAjaranOtomatis === "function" ? hitungTahunAjaranOtomatis() : "")}</span></div></div></div>
     ${blokHari}
->>>>
-<<<<
-${ttd?.img && typeof stempelSvg === "function" ? `<span class="cap">${stempelSvg({ ukuran: "36mm", miring: -10 })}</span>` : ""}
-====
-${ttd?.img && cap?.img ? `<img class="cap" src="${cap.img}" alt="cap stempel"/>` : ""}
-    <div class="catatan">Catatan: selama hari ujian, KBM kelas diliburkan. Pengawas hadir 15 menit sebelum sesi dan mengisi Absen Mengawas di aplikasi.${j.catatan ? " " + e(j.catatan) : ""}</div>
-    <div class="ttd"><div>Barabai, ${e(new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }))}<br/>${e(typeof jabatanPenandatangan === "function" ? jabatanPenandatangan() : "Kepala Sekolah")}<br/>${ttd?.img && typeof stempelSvg === "function" ? `<span class="cap">${stempelSvg({ ukuran: "36mm", miring: -10 })}</span>` : ""}${ttd?.img ? `<img class="ttd-gbr" src="${ttd.img}" alt="tanda tangan" style="height:22mm;max-width:60mm;object-fit:contain;display:block;margin:2px auto"/>` : "<br/><br/><br/>"}<b>${e(ttd?.nama || p.kepala_pkbm || (typeof _namaPejabat === "function" ? _namaPejabat(p) : "") || "")}</b></div></div></section>
+    <div class="ttd"><div>Barabai, ${e(new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }))}<div class="jab">${e(typeof jabatanPenandatangan === "function" ? jabatanPenandatangan() : "Kepala PKBM")}</div>
+      <div class="ruang-ttd">${ttd?.img && cap?.img ? `<img class="cap" src="${cap.img}" alt="cap stempel"/>` : ""}${ttd?.img ? `<img class="ttd-gbr" src="${ttd.img}" alt="tanda tangan"/>` : ""}</div>
+      <div class="nm">${e(ttd?.nama || p.kepala_pkbm || (typeof _namaPejabat === "function" ? _namaPejabat(p) : "") || "")}</div></div></div>
     </td></tr></tbody></table>
     <script>window.onload=function(){setTimeout(function(){window.print()},400)}<\/script>
   </body></html>`;
