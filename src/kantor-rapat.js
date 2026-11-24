@@ -100,7 +100,7 @@ ktPanggil = async function (id) {
   try {
     _ktPanel(`<div class="kt-obrolan"><div class="kt-info">🚪 ${_ktE(_ktGelar(s))} ${_ktE(s.nama)} dipanggil</div><div id="kt-jawaban"></div><div id="kt-lanjut"></div></div>`);
     if (s.jk === "P") {
-      await _ktPergi(kp, { x: 4.2, z: 6.3, hadap: Math.PI / 2 }, { berdiri: true });
+      await _ktPergi(kp, KT.titikPintuP || { x: 4.2, z: 6.3, hadap: Math.PI / 2 }, { berdiri: true });
       await _ktBicara(kid, `Ustadzah ${s.nama.split(" ")[0]}, mohon ke Ruang Rapat sebentar.`, 2300);
       await _ktBicara(id, "Na'am, insya Allah.", 1500);
       KT.sesi = { aktif: true, ids: new Set(), judul: "Laporan " + _ktPeranPendek(s.peran[0]) }; _ktTombolRapat();

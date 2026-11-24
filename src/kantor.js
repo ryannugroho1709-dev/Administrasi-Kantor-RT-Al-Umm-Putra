@@ -216,7 +216,7 @@ async function ktPerintah(teks, kodeUtama) {
   const sTuju = kodeUtama && (KT.staf.find((x) => x.id === (KT.peran[kodeUtama] || [])[0]) || {});
   if (sTuju && sTuju.jk === "P") { // ustadzah: cukup dipanggil dari depan pintu Ruang Ustadzah
     const kid0 = (KT.peran.kepala || [])[0], kp0 = kid0 && KT.tokoh[kid0];
-    if (kp0) { KT.sibuk = true; try { await _ktPergi(kp0, { x: 4.2, z: 6.3, hadap: Math.PI / 2 }, { berdiri: true }); await _ktBicara(kid0, `Ustadzah ${sTuju.nama.split(" ")[0]} dan kawan-kawan, mari ke Ruang Rapat.`, 2400); } finally { KT.sibuk = false; } }
+    if (kp0) { KT.sibuk = true; try { await _ktPergi(kp0, KT.titikPintuP || { x: 4.2, z: 6.3, hadap: Math.PI / 2 }, { berdiri: true }); await _ktBicara(kid0, `Ustadzah ${sTuju.nama.split(" ")[0]} dan kawan-kawan, mari ke Ruang Rapat.`, 2400); } finally { KT.sibuk = false; } }
     return ktKirim(teks);
   }
   const kid = (KT.peran.kepala || [])[0], kp = kid && KT.tokoh[kid], tujuan = kodeUtama && (KT.peran[kodeUtama] || [])[0], tt = tujuan && KT.tokoh[tujuan];
