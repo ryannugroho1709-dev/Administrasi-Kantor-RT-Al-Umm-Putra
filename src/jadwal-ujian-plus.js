@@ -85,7 +85,7 @@ function _jusHtmlPenuh(j) {
   const baris = (j.hari || []).map((t) => {
     const d = _juTgl(t);
     return `<tr class="${t === hariIni ? "kini" : t < hariIni ? "lewat" : ""}"><th class="jus-pn-hari"><span>${d.toLocaleDateString("id-ID", { weekday: "long" })}</span><b>${d.getDate()}</b><small>${d.toLocaleDateString("id-ID", { month: "short" })}</small></th>
-      ${(j.kelas || []).map((k) => `<td style="--kw:${_juWarnaKelas(k)}">${j.sesi.map((s, i) => { const x = j.slot?.[_juKunci(t, s.id, k)], l = _juLabelSlot(x); return l ? `<div class="jus-pn-it"><i>S${i + 1}</i><div><b>${e(l)}</b>${(x.p || []).length ? `<small>${(x.p || []).map(_juNamaGuru).map(e).join(", ")}</small>` : ""}</div></div>` : ""; }).join("") || '<span class="jus-pn-kosong">—</span>'}</td>`).join("")}</tr>`;
+      ${(j.kelas || []).map((k) => `<td style="--kw:${_juWarnaKelas(k)}">${j.sesi.map((s, i) => { const x = j.slot?.[_juKunci(t, s.id, k)], l = _juLabelSlot(x); return l ? `<div class="jus-pn-it"><i>S${i + 1}</i><div><b>${e(l)}</b>${(x.p || []).length ? `<small>${(x.p || []).map(_juNamaGelar).map(e).join(", ")}</small>` : ""}</div></div>` : ""; }).join("") || '<span class="jus-pn-kosong">—</span>'}</td>`).join("")}</tr>`;
   }).join("");
   return `<div class="jus-pn-h"><div><b>${e(j.judul)}</b><small>${_juHariPanjang(j.mulai)}${j.selesai !== j.mulai ? " – " + _juHariPanjang(j.selesai) : ""} · ${j.sesi.map((s, i) => `S${i + 1} ${s.mulai}–${s.selesai}`).join(" · ")}${j.jamHari && (j.jamHari.jumat || j.jamHari.sabtu) ? " (Jumat/Sabtu bisa berbeda)" : ""}</small></div>
     <button class="jus-pn-x" onclick="juTutupPenuh()" aria-label="Tutup">✕</button></div>
@@ -94,8 +94,12 @@ function _jusHtmlPenuh(j) {
 async function juLayarPenuh(id) {
   const j = (id && JU.daftar.find((x) => x.id === id)) || JU.edit || _juJadwalAktif(); if (!j) return toast("Belum ada jadwal ujian", "err");
   juTutupPenuh(true);
-  const el = document.createElement("div"); el.id = "jus-penuh"; el.className = "jus-penuh"; el.innerHTML = _jusHtmlPenuh(j);
+  // tampilan sama persis dengan PDF/cetak (versi semua berwarna, nama lengkap + gelar)
+  const el = document.createElement("div"); el.id = "jus-penuh"; el.className = "jus-penuh jus-cetak";
+  el.innerHTML = `<button class="jus-pn-x" onclick="juTutupPenuh()" aria-label="Tutup">✕</button><iframe title="Jadwal ujian"></iframe>`;
   document.body.appendChild(el);
+  try { const html = await _juHtmlCetak(j, "warna", false); el.querySelector("iframe").srcdoc = html; } catch (e) { el.innerHTML = _jusHtmlPenuh(j); }
+  el.querySelector("iframe")?.addEventListener("load", function () { try { this.contentDocument.addEventListener("keydown", (ev) => { if (ev.key === "Escape") juTutupPenuh(); }); } catch (e) {} });
   try { if (el.requestFullscreen) await el.requestFullscreen({ navigationUI: "hide" }); } catch (e) {}
   try { if (screen.orientation && screen.orientation.lock) await screen.orientation.lock("landscape"); } catch (e) {}
   _jusPutar();

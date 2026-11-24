@@ -824,3 +824,7 @@ body.jus-menyeret #ju-wadah [data-kunci]:not(.jus-boleh):not(.jus-asal){opacity:
 .ju-versi small{color:var(--text-muted,#5B6470);font-size:.78rem}
 .ju-versi-cth{display:grid;grid-template-columns:1fr 1fr;border:1px solid #dfe5e2;border-radius:8px;overflow:hidden;margin-bottom:6px;font-size:.72rem;text-align:center}
 .ju-versi-cth span{color:#fff;font-weight:700;padding:4px 2px}.ju-versi-cth i{font-style:normal;font-weight:700;color:#1B2A41;padding:7px 2px;background:#fff}
+/* Layar Penuh = tampilan cetak */
+.jus-penuh.jus-cetak{background:#fff;padding:0}
+.jus-penuh.jus-cetak iframe{width:100%;flex:1;min-height:0;border:0;display:block;background:#fff}
+.jus-penuh.jus-cetak .jus-pn-x{position:absolute;top:10px;right:12px;z-index:3}

@@ -822,6 +822,14 @@ async function juCetakPdf(id, dariEditor, versi) {
   const wJendela = window.open("", "_blank"); // dibuka segera (sebelum menunggu data) supaya tidak diblokir browser
   if (wJendela) wJendela.document.write("<p style='font-family:sans-serif;padding:20px'>Menyiapkan jadwal…</p>");
   const j = dariEditor && JU.edit?.id === id ? JU.edit : JU.daftar.find((x) => x.id === id); if (!j) { wJendela?.close(); return; }
+  const html = await _juHtmlCetak(j, versi, true);
+  const w = wJendela;
+  if (!w) { toast("Izinkan pop-up untuk mencetak / simpan PDF", "err"); return; }
+  w.document.open(); w.document.write(html); w.document.close();
+  toast("Pilih \"Simpan sebagai PDF\" di jendela cetak untuk membuat file PDF", "ok");
+}
+// HTML jadwal siap cetak (dipakai PDF & Layar Penuh) — versi "warna" / "hemat"
+async function _juHtmlCetak(j, versi, cetak) {
   const [ttd, cap] = await Promise.all([_kvAmbil(_JU_TTD, null).catch(() => null), _kvAmbil(_JU_CAP, null).catch(() => null)]);
   const p = STATE.pengaturan || {};
   const logo = p.logo_kiri_url || p.logo_kanan_url || (typeof urlLogoSekolah === "function" ? urlLogoSekolah() : "");
@@ -878,12 +886,9 @@ async function juCetakPdf(id, dariEditor, versi) {
       <div class="ruang-ttd">${ttd?.img && cap?.img ? `<img class="cap" src="${cap.img}" alt="cap stempel"/>` : ""}${ttd?.img ? `<img class="ttd-gbr" src="${ttd.img}" alt="tanda tangan"/>` : ""}</div>
       <div class="nm">${e(ttd?.nama || p.kepala_pkbm || (typeof _namaPejabat === "function" ? _namaPejabat(p) : "") || "")}</div></div></div>
     </td></tr></tbody></table>
-    <script>window.onload=function(){setTimeout(function(){window.print()},400)}<\/script>
+    ${cetak ? `<script>window.onload=function(){setTimeout(function(){window.print()},400)}</script>` : ""}
   </body></html>`;
-  const w = wJendela;
-  if (!w) { toast("Izinkan pop-up untuk mencetak / simpan PDF", "err"); return; }
-  w.document.open(); w.document.write(html); w.document.close();
-  toast("Pilih \"Simpan sebagai PDF\" di jendela cetak untuk membuat file PDF", "ok");
+  return html;
 }
 
 // ── SUSUN OTOMATIS DARI JADWAL PELAJARAN ────────────────────
