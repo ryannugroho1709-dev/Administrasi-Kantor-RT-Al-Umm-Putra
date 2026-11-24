@@ -91,8 +91,8 @@ async function ktBuka() {
   if (!(typeof isAdmin === "function" && isAdmin()) || (typeof isAdminKedua === "function" && isAdminKedua())) { toast("Kantor PKBM khusus Admin utama", "warn"); return; }
   if (KT.buka) return; KT.buka = true;
   const el = document.createElement("div"); el.id = "kantor-ai";
-  el.innerHTML = `<div class="kt-atas"><div class="kt-judul"><b>🏢 Kantor PKBM Al-Umm</b><small>Ruang Ustadz · Ruang Rapat · Ruang Ustadzah</small></div>
-      <div class="kt-alat"><button onclick="ktTiketBuka()" title="Tiket Tim IT">🎫 Tiket<span id="kt-tiket-n"></span></button><button onclick="ktAturBuka()" title="Atur petugas">⚙️</button><button onclick="ktTutup()" title="Tutup">✕</button></div></div>
+  el.innerHTML = `<div class="kt-atas"><div class="kt-judul"><b>🏢 Kantor PKBM Al-Umm</b><small>Ruang Kepala · Ruang Rapat · Ruang Ustadz · Ruang Ustadzah</small></div>
+      <div class="kt-alat"><button onclick="ktKabar()" title="Kabar baru dari tiap jenjang">📰<span class="kt-sembunyi-hp"> Kabar</span></button><button onclick="ktKeliling()" title="Kepala PKBM berkeliling">🚶</button><button onclick="ktTiketBuka()" title="Tiket Tim IT">🎫<span class="kt-sembunyi-hp"> Tiket</span><span id="kt-tiket-n"></span></button><button onclick="ktAturBuka()" title="Atur petugas">⚙️</button><button onclick="ktTutup()" title="Tutup">✕</button></div></div>
     <div class="kt-layar" id="kt-layar"><div class="kt-memuat" id="kt-memuat"><i></i>Menyiapkan kantor…</div><div class="kt-hamparan" id="kt-hamparan"></div>
       <div class="kt-putar"><button onclick="ktPutar(-1)" title="Putar kiri">⟲</button><button onclick="ktZoom(1)" title="Perbesar">＋</button><button onclick="ktZoom(-1)" title="Perkecil">－</button><button onclick="ktPutar(1)" title="Putar kanan">⟳</button></div></div>
     <div class="kt-bawah"><div class="kt-chip" id="kt-chip"></div>
@@ -106,13 +106,17 @@ async function ktBuka() {
   try {
     await Promise.all([_ktMuatThree(), _ktMuatStaf()]);
     if (!KT.buka) return;
-    _ktBangun(); _ktChip(); _ktTiketBadge();
+    await _ktBangun(); _ktChip(); _ktTiketBadge();
     document.getElementById("kt-memuat")?.remove();
-    if (!KT.staf.length) _ktPanel(`<h3>Belum ada petugas</h3><p>Jabatan belum terbaca. Buka ⚙️ untuk memilih petugas tiap peran.</p>`);
+    if (!KT.staf.length) { _ktPanel(`<h3>Belum ada petugas</h3><p>Jabatan belum terbaca. Buka ⚙️ untuk memilih petugas tiap peran.</p>`); return; }
+    // Kepala berkeliling tiap N menit (atur di ⚙️), kabar baru dilaporkan saat kantor dibuka
+    KT.kelilingT = Date.now();
+    KT.timer = setInterval(() => { const m = Number((KT.atur || {}).keliling ?? 30); if (m > 0 && !document.hidden && Date.now() - (KT.kelilingT || 0) >= m * 60000) ktKeliling(); }, 20000);
+    setTimeout(() => { if (KT.buka) ktKabar(); }, 1200);
   } catch (e) { const m = document.getElementById("kt-memuat"); if (m) m.innerHTML = "Gagal memuat kantor: " + _ktE(e.message || e); }
 }
 function ktTutup() {
-  KT.buka = false; cancelAnimationFrame(KT.raf);
+  KT.buka = false; cancelAnimationFrame(KT.raf); clearInterval(KT.timer); KT.sibuk = false;
   try { KT.renderer && KT.renderer.dispose(); } catch (e) {}
   KT.renderer = null; KT.tokoh = {}; KT.label = {}; KT.gelembung = {};
   window.removeEventListener("resize", _ktUkur);
@@ -121,171 +125,6 @@ function ktTutup() {
 function _ktMuatThree() {
   if (window.THREE) return Promise.resolve();
   return new Promise((res, rej) => { const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"; s.onload = res; s.onerror = () => rej(new Error("Pustaka 3D gagal dimuat — periksa internet")); document.head.appendChild(s); });
-}
-
-// ── 3D ──
-const KT_KULIT = 0xe9c6a0;
-function _ktKotak(w, h, d, warna, x = 0, y = 0, z = 0, opsi = {}) {
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({ color: warna, ...opsi }));
-  m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; return m;
-}
-function _ktTeksKanvas(teks, { lebar = 512, tinggi = 128, latar = "#14532d", warna = "#fef3c7", ukuran = 54, sub = "" } = {}) {
-  const c = document.createElement("canvas"); c.width = lebar; c.height = tinggi; const x = c.getContext("2d");
-  x.fillStyle = latar; x.fillRect(0, 0, lebar, tinggi); x.strokeStyle = "rgba(254,243,199,.55)"; x.lineWidth = 6; x.strokeRect(8, 8, lebar - 16, tinggi - 16);
-  x.fillStyle = warna; x.textAlign = "center"; x.textBaseline = "middle"; x.font = `800 ${ukuran}px Plus Jakarta Sans, system-ui, sans-serif`;
-  x.fillText(teks, lebar / 2, sub ? tinggi * 0.4 : tinggi / 2);
-  if (sub) { x.font = `600 ${Math.round(ukuran * 0.45)}px system-ui, sans-serif`; x.globalAlpha = 0.85; x.fillText(sub, lebar / 2, tinggi * 0.74); }
-  const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return t;
-}
-function _ktTokohBaru(jk) {
-  const g = new THREE.Group(), badan = new THREE.Group(); g.add(badan);
-  const kaki = [];
-  if (jk === "P") {
-    const gamis = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.36, 1.05, 10), new THREE.MeshLambertMaterial({ color: 0x15151a }));
-    gamis.position.y = 0.53; gamis.castShadow = true; badan.add(gamis);
-    const jilbab = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.34, 0.42, 10), new THREE.MeshLambertMaterial({ color: 0x0d0d10 }));
-    jilbab.position.y = 1.02; jilbab.castShadow = true; badan.add(jilbab);
-    const kepala = _ktKotak(0.34, 0.36, 0.34, 0x0d0d10, 0, 1.32, 0); badan.add(kepala); // cadar — tanpa wajah
-    [-0.24, 0.24].forEach((x) => { const t = _ktKotak(0.12, 0.5, 0.14, 0x15151a, x, 0.82, 0.02); t.rotation.z = x < 0 ? 0.12 : -0.12; badan.add(t); });
-  } else {
-    [-0.1, 0.1].forEach((x) => { const k = new THREE.Group(); k.position.set(x, 0.5, 0); const b = _ktKotak(0.16, 0.5, 0.18, 0x334155, 0, -0.25, 0); k.add(b); badan.add(k); kaki.push(k); });
-    badan.add(_ktKotak(0.5, 0.58, 0.3, 0xf8fafc, 0, 0.8, 0));
-    [-0.31, 0.31].forEach((x) => badan.add(_ktKotak(0.12, 0.5, 0.16, 0xf1f5f9, x, 0.82, 0)));
-    badan.add(_ktKotak(0.34, 0.36, 0.34, KT_KULIT, 0, 1.28, 0)); // kepala tanpa wajah
-    badan.add(_ktKotak(0.36, 0.12, 0.36, 0x111827, 0, 1.5, 0)); // peci
-  }
-  g.userData = { kaki, badan, jk };
-  return g;
-}
-function _ktBangun() {
-  const layar = document.getElementById("kt-layar");
-  const sc = (KT.scene = new THREE.Scene()); sc.background = new THREE.Color(0xdbe7f3);
-  const r = (KT.renderer = new THREE.WebGLRenderer({ antialias: true })); r.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
-  r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap; layar.prepend(r.domElement);
-  KT.kamera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.1, 200);
-  sc.add(new THREE.HemisphereLight(0xffffff, 0x8a9bb0, 0.62));
-  const mt = new THREE.DirectionalLight(0xfff4e0, 0.6); mt.position.set(8, 16, 10); mt.castShadow = true; mt.shadow.mapSize.set(1024, 1024);
-  Object.assign(mt.shadow.camera, { left: -16, right: 16, top: 12, bottom: -12 }); sc.add(mt);
-  // lantai tiga ruangan
-  const L = 9, W = 7, XR = W / 2 + L / 2; // pusat ruang samping = ±8
-  sc.add(_ktKotak(L, 0.2, 12, 0xc99a63, -XR, -0.1, 0));   // Ruang Ustadz — kayu
-  sc.add(_ktKotak(W, 0.2, 12, 0x1f6f4a, 0, -0.1, 0));          // Ruang Rapat — karpet hijau
-  sc.add(_ktKotak(L, 0.2, 12, 0xdcb7c4, XR, -0.1, 0));    // Ruang Ustadzah
-  const karpet = _ktKotak(W - 1.2, 0.02, 10.8, 0x2f855a, 0, 0.01, 0); sc.add(karpet);
-  // dinding belakang & samping
-  const tembok = 0xe6dccb;
-  sc.add(_ktKotak(2 * L + W + 0.5, 3, 0.25, tembok, 0, 1.5, -6.1));
-  sc.add(_ktKotak(0.25, 3, 12.2, tembok, -XR - L / 2 - 0.12, 1.5, 0)); // kiri
-  sc.add(_ktKotak(0.25, 3, 12.2, tembok, XR + L / 2 + 0.12, 1.5, 0));  // kanan
-  // sekat dengan pintu
-  [-W / 2, W / 2].forEach((x) => { [-3.9, 3.9].forEach((z) => { sc.add(_ktKotak(0.18, 1.1, 4.2, 0xcdbfa8, x, 0.55, z)); sc.add(_ktKotak(0.24, 0.08, 4.2, 0x8b6b43, x, 1.12, z)); }); }); // sekat rendah supaya isi ruangan terlihat
-  // papan nama
-  const papan = (teks, sub, x, lebar, latar) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(lebar, lebar / 4), new THREE.MeshBasicMaterial({ map: _ktTeksKanvas(teks, { latar, sub }) })); m.position.set(x, 2.15, -5.96); sc.add(m); };
-  papan("Ruang Ustadz", "Petugas Ikhwan", -XR, 4.2, "#1e3a8a");
-  papan("Ruang Rapat", "PKBM Al-Umm Barabai", 0, 5, "#14532d");
-  papan("Ruang Ustadzah", "Petugas Akhawat", XR, 4.2, "#831843");
-  // meja rapat
-  sc.add(_ktKotak(1.8, 0.12, 6.2, 0x7c4a21, 0, 0.78, 0.4)); [[-0.7, -2.4], [0.7, -2.4], [-0.7, 3.2], [0.7, 3.2]].forEach(([x, z]) => sc.add(_ktKotak(0.12, 0.76, 0.12, 0x5b3412, x, 0.38, z)));
-  KT.kursiRapat = [];
-  for (let i = 0; i < 5; i++) [-1.45, 1.45].forEach((x) => { const z = -2.1 + i * 1.25; sc.add(_ktKotak(0.55, 0.45, 0.55, 0x9a3412, x, 0.23, z)); KT.kursiRapat.push({ x: x * 0.98, z, hadap: x < 0 ? Math.PI / 2 : -Math.PI / 2 }); });
-  KT.kursiRapat.unshift({ x: 0, z: -3.35, hadap: 0 }); // kursi pimpinan
-  sc.add(_ktKotak(0.6, 0.45, 0.6, 0x7c2d12, 0, 0.23, -3.3));
-  // tanaman & rak
-  [[-XR - 3.9, -5.3], [XR + 3.9, -5.3], [-W / 2 + 0.5, 5.4], [W / 2 - 0.5, 5.4]].forEach(([x, z]) => { sc.add(_ktKotak(0.45, 0.45, 0.45, 0xa16207, x, 0.23, z)); const d = new THREE.Mesh(new THREE.SphereGeometry(0.42, 10, 8), new THREE.MeshLambertMaterial({ color: 0x16a34a })); d.position.set(x, 0.8, z); d.castShadow = true; sc.add(d); });
-  [-XR - 2.2, XR + 2.2].forEach((x) => { sc.add(_ktKotak(2.4, 1.8, 0.45, 0x8b5a2b, x, 0.9, -5.7)); for (let i = 0; i < 3; i++) sc.add(_ktKotak(2.2, 0.06, 0.4, 0x6b4423, x, 0.4 + i * 0.5, -5.65)); });
-  // meja kerja tiap petugas
-  const lakiLaki = KT.staf.filter((s) => s.jk !== "P"), perempuan = KT.staf.filter((s) => s.jk === "P");
-  const susun = (daftar, xPusat) => daftar.forEach((s, i) => {
-    const kol = i % 3, bar = Math.floor(i / 3), x = xPusat + (kol - 1) * 2.9, z = [-4, -1.6, 1.9, 4.3][bar] ?? (4.3 + (bar - 3) * 2.2); // lorong z≈0 dibiarkan kosong untuk berjalan
-    sc.add(_ktKotak(1.7, 0.1, 0.9, 0xc08a4f, x, 0.76, z)); sc.add(_ktKotak(1.6, 0.7, 0.08, 0xa47148, x, 0.38, z - 0.38));
-    sc.add(_ktKotak(0.55, 0.06, 0.38, 0x1f2937, x - 0.25, 0.83, z - 0.1)); sc.add(_ktKotak(0.5, 0.36, 0.04, 0x0f172a, x - 0.25, 1.05, z - 0.26)); // laptop
-    sc.add(_ktKotak(0.3, 0.04, 0.22, 0xfefce8, x + 0.4, 0.83, z)); // kertas
-    sc.add(_ktKotak(0.55, 0.45, 0.55, 0x334155, x, 0.23, z + 0.75));
-    const t = _ktTokohBaru(s.jk); t.scale.setScalar(1.3); t.position.set(x, 0, z + 0.72); t.rotation.y = Math.PI; sc.add(t);
-    t.userData.meja = { x, z: z + 0.72, hadap: Math.PI }; t.userData.staf = s; _ktDuduk(t, true);
-    KT.tokoh[s.id] = t;
-  });
-  susun(lakiLaki, -XR); susun(perempuan, XR);
-  // label nama
-  const ham = document.getElementById("kt-hamparan"); ham.innerHTML = "";
-  KT.staf.forEach((s) => {
-    const p = _ktPeran(s.peran[0]);
-    const d = document.createElement("button"); d.className = "kt-label"; d.style.setProperty("--w", p.warna);
-    d.innerHTML = `<b>${_ktE(_ktPeranPendek(s.peran[0]))}${s.peran.length > 1 ? ` <i>+${s.peran.length - 1}</i>` : ""}</b>`; d.title = (s.namaLengkap || s.nama) + " — " + s.peran.map((k) => _ktPeran(k).nama).join(", ");
-    d.onclick = () => ktKartu(s.id); ham.appendChild(d); KT.label[s.id] = d;
-    const b = document.createElement("div"); b.className = "kt-gelembung"; b.hidden = true; ham.appendChild(b); KT.gelembung[s.id] = b;
-  });
-  // kendali: geser untuk memutar, cubit/roda untuk zoom, ketuk tokoh
-  const kan = r.domElement; let tarik = null;
-  kan.addEventListener("pointerdown", (e) => { tarik = { x: e.clientX, s: KT.sudut, gerak: 0 }; kan.setPointerCapture(e.pointerId); });
-  kan.addEventListener("pointermove", (e) => { if (!tarik) return; const dx = e.clientX - tarik.x; tarik.gerak = Math.max(tarik.gerak, Math.abs(dx)); KT.sudut = tarik.s - dx * 0.008; });
-  kan.addEventListener("pointerup", (e) => { if (tarik && tarik.gerak < 6) _ktKetuk(e); tarik = null; });
-  kan.addEventListener("wheel", (e) => { e.preventDefault(); ktZoom(e.deltaY < 0 ? 1 : -1, 0.08); }, { passive: false });
-  window.addEventListener("resize", _ktUkur); _ktUkur();
-  KT.jam = performance.now(); _ktJalan();
-}
-function _ktDuduk(t, duduk) {
-  const u = t.userData; u.duduk = duduk;
-  if (u.jk === "P") u.badan.position.y = duduk ? -0.3 : 0;
-  else { u.badan.position.y = duduk ? -0.28 : 0; u.kaki.forEach((k) => (k.rotation.x = duduk ? -Math.PI / 2 : 0)); }
-}
-function _ktUkur() {
-  const layar = document.getElementById("kt-layar"); if (!layar || !KT.renderer) return;
-  const w = layar.clientWidth, h = layar.clientHeight, a = w / h, s = (a < 1 ? 12.2 / a : 10.5) / KT.zoom;
-  Object.assign(KT.kamera, { left: -s * a, right: s * a, top: s, bottom: -s }); KT.kamera.updateProjectionMatrix();
-  KT.renderer.setSize(w, h);
-}
-function ktPutar(arah) { KT.sudut += arah * Math.PI / 8; }
-function ktZoom(arah, langkah = 0.15) { KT.zoom = Math.min(2.6, Math.max(0.6, KT.zoom * (1 + arah * langkah))); _ktUkur(); }
-function _ktKetuk(e) {
-  const kan = KT.renderer.domElement, kot = kan.getBoundingClientRect();
-  const m = new THREE.Vector2(((e.clientX - kot.left) / kot.width) * 2 - 1, -((e.clientY - kot.top) / kot.height) * 2 + 1);
-  const ray = new THREE.Raycaster(); ray.setFromCamera(m, KT.kamera);
-  const kena = ray.intersectObjects(Object.values(KT.tokoh), true)[0];
-  if (!kena) return; let o = kena.object; while (o && !o.userData.staf) o = o.parent; if (o) ktKartu(o.userData.staf.id);
-}
-function _ktJalan() {
-  if (!KT.buka || !KT.renderer) return;
-  KT.raf = requestAnimationFrame(_ktJalan);
-  const kini = performance.now(), dt = Math.min(0.05, (kini - KT.jam) / 1000); KT.jam = kini;
-  const k = KT.kamera, jarak = 30; k.position.set(Math.sin(KT.sudut) * jarak, 19, Math.cos(KT.sudut) * jarak); k.lookAt(0, 0.5, 0);
-  // gerak tokoh
-  Object.values(KT.tokoh).forEach((t) => {
-    const u = t.userData;
-    if (u.tuju) {
-      const dx = u.tuju.x - t.position.x, dz = u.tuju.z - t.position.z, d = Math.hypot(dx, dz), v = 3.2 * dt;
-      if (d <= v) { t.position.x = u.tuju.x; t.position.z = u.tuju.z; t.rotation.y = u.tuju.hadap; const s = u.tuju.selesai; u.tuju = null; u.jalan = 0; _ktDuduk(t, true); if (s) s(); }
-      else { t.position.x += (dx / d) * v; t.position.z += (dz / d) * v; t.rotation.y = Math.atan2(dx, dz); u.jalan = (u.jalan || 0) + dt * 10; }
-      const ay = Math.sin(u.jalan || 0); u.kaki.forEach((kk, i) => (kk.rotation.x = (i ? -1 : 1) * ay * 0.5)); u.badan.position.y = Math.abs(ay) * 0.04;
-    } else if (u.bicara) { u.badan.position.y = (u.duduk ? (u.jk === "P" ? -0.3 : -0.28) : 0) + Math.abs(Math.sin(kini / 140)) * 0.03; }
-  });
-  KT.renderer.render(KT.scene, k);
-  // posisi label & gelembung
-  const w = KT.renderer.domElement.clientWidth, h = KT.renderer.domElement.clientHeight, v = new THREE.Vector3();
-  Object.entries(KT.tokoh).forEach(([id, t]) => {
-    v.set(t.position.x, 1.95, t.position.z).project(k);
-    const x = (v.x * 0.5 + 0.5) * w, y = (-v.y * 0.5 + 0.5) * h, lb = KT.label[id], gb = KT.gelembung[id];
-    if (lb) lb.style.transform = `translate(${x}px,${y}px) translate(-50%,-100%)`;
-    if (gb && !gb.hidden) gb.style.transform = `translate(${x}px,${y - 46}px) translate(-50%,-100%)`;
-  });
-}
-// berjalan lewat pintu (z = 0 di sekat) supaya tidak menembus dinding
-function _ktJalanKe(t, tujuan) {
-  return new Promise((res) => {
-    const u = t.userData; _ktDuduk(t, false);
-    const titik = [];
-    const sisiAwal = Math.sign(t.position.x) * (Math.abs(t.position.x) > 3.6 ? 1 : 0), sisiAkhir = Math.sign(tujuan.x) * (Math.abs(tujuan.x) > 3.6 ? 1 : 0);
-    if (sisiAwal !== sisiAkhir) { titik.push({ x: t.position.x, z: 0 }); if (sisiAwal) titik.push({ x: sisiAwal * 3.5, z: 0 }); if (sisiAkhir) titik.push({ x: sisiAkhir * 3.5, z: 0 }); titik.push({ x: tujuan.x, z: 0 }); }
-    titik.push(tujuan);
-    const lanjut = () => { const p = titik.shift(); if (!p) return res(); u.tuju = { x: p.x, z: p.z, hadap: p.hadap ?? tujuan.hadap ?? 0, selesai: titik.length ? () => { _ktDuduk(t, false); lanjut(); } : res }; };
-    lanjut();
-  });
-}
-const _ktTunggu = (ms) => new Promise((r) => setTimeout(r, ms));
-function _ktBicara(id, teks, ms = 4200) {
-  const gb = KT.gelembung[id], t = KT.tokoh[id]; if (!gb || !t) return _ktTunggu(0);
-  gb.hidden = false; gb.textContent = teks.length > 150 ? teks.slice(0, 147) + "…" : teks; t.userData.bicara = true;
-  return _ktTunggu(ms).then(() => { gb.hidden = true; t.userData.bicara = false; });
 }
 
 // ── Kartu petugas & chip peran ──
@@ -304,12 +143,12 @@ function ktKartu(id, kode) {
 }
 function _ktTanyaCepat(k) {
   if (k === "sekretaris") return [["Cek Data Guru", "cek kelengkapan data guru"], ["Cek Data Siswa", "cek kelengkapan data siswa"]];
-  if (k === "bendahara") return [["Ringkasan BOSP", "ringkasan keuangan bosp tahun ini"]];
+  if (k === "bendahara") return [["Laporan BOSP Lengkap", "laporan bosp lengkap semua jenjang"]];
   if (k === "dapodik") return [["Cek NISN & NIK", "cek nisn nik dapodik siswa"]];
   if (k === "it") return [["Lihat Tiket", "__tiket"]];
-  if (k === "kepala") return [["Rapat Koordinasi", "rapat koordinasi semua petugas"]];
-  if (/^peny-/.test(k)) { const r = k.slice(5); return [["Izin Menunggu", `izin tutor ${KT_JENJANG[r]} yang menunggu`]]; }
-  if (/^admin-/.test(k)) { const r = k.slice(6); return [["Ringkasan Jenjang", `data kelas siswa ${KT_JENJANG[r]}`]]; }
+  if (k === "kepala") return [["📰 Kabar Baru", "__kabar"], ["Evaluasi KBM", "evaluasi kegiatan semua jenjang"], ["Laporan BOSP", "laporan bosp"]];
+  if (/^peny-/.test(k)) { const r = k.slice(5); return [["Evaluasi KBM", `evaluasi kegiatan ${KT_JENJANG[r]}`], ["BOSP Jenjang", `laporan bosp ${KT_JENJANG[r]}`]]; }
+  if (/^admin-/.test(k)) { const r = k.slice(6); return [["Evaluasi KBM", `evaluasi kegiatan ${KT_JENJANG[r]}`], ["Data Siswa", `cek data siswa`]]; }
   return [];
 }
 
@@ -329,32 +168,34 @@ function _ktArahkan(teks) {
 }
 async function ktKirim(teksLangsung) {
   if (teksLangsung === "__tiket") return ktTiketBuka();
+  if (teksLangsung === "__kabar") return ktKabar();
   const ta = document.getElementById("kt-teks"); const teks = String(teksLangsung || (ta && ta.value) || "").trim();
   if (!teks || KT.sibuk) return; if (ta && !teksLangsung) { ta.value = ""; ta.style.height = ""; }
+  const topik = _ktTopik(teks);
+  if (topik === "kabar") return ktKabar(/7 hari|seminggu|pekan/.test(teks.toLowerCase()) ? 168 : null);
   KT.sibuk = true; const tb = document.getElementById("kt-tombol-kirim"); if (tb) tb.disabled = true;
+  let ids = [];
   try {
-    let peran = _ktArahkan(teks);
-    const rapat = peran.length > 1 || peran.includes("kepala") || /rapat/.test(teks.toLowerCase());
-    if (rapat && (KT.peran.kepala || []).length && !peran.includes("kepala")) peran = ["kepala", ...peran];
-    const orang = [...new Set(peran.map((k) => (KT.peran[k] || [])[0]).filter(Boolean))];
-    _ktPanel(`<div class="kt-obrolan"><div class="kt-saya"><small>Antum</small>${_ktE(teks)}</div><div id="kt-jawaban"></div></div>`);
-    const jawabWrap = document.getElementById("kt-jawaban");
-    if (rapat && orang.length) {
-      await Promise.all(orang.map((id, i) => _ktJalanKe(KT.tokoh[id], KT.kursiRapat[i] || KT.kursiRapat[0])));
-      jawabWrap.insertAdjacentHTML("beforeend", `<div class="kt-info">🪑 Rapat di Ruang Rapat — ${orang.length} petugas</div>`);
+    _ktPanel(`<div class="kt-obrolan"><div class="kt-saya"><small>Antum</small>${_ktE(teks)}</div><div id="kt-jawaban"></div><div id="kt-lanjut" class="kt-cepat"></div></div>`);
+    let skrip = null;
+    if (topik) { document.getElementById("kt-jawaban").innerHTML = `<div class="kt-info">⏳ Petugas mengumpulkan data…</div>`; skrip = await _ktSkrip(topik, teks); document.getElementById("kt-jawaban").innerHTML = ""; }
+    if (!skrip) { // per peran (kata kunci)
+      let peran = _ktArahkan(teks);
+      const rapat = peran.length > 1 || peran.includes("kepala") || /rapat/.test(teks.toLowerCase());
+      if (rapat && (KT.peran.kepala || []).length && !peran.includes("kepala")) peran = ["kepala", ...peran];
+      const baris = [];
+      for (const k of peran) { let j; try { j = await _ktJawab(k, teks); } catch (e) { j = { teks: "Afwan, data belum bisa dibaca: " + (e.message || e) }; } baris.push({ kode: k, html: j.html || _ktE(j.teks).replace(/\n/g, "<br>"), singkat: j.singkat || j.teks }); }
+      skrip = { baris, rapat, judul: "Rapat Koordinasi", tv: [], ticker: teks };
     }
-    const hasil = [];
-    for (const k of peran) {
-      const id = (KT.peran[k] || [])[0], p = _ktPeran(k), s = id && KT.staf.find((x) => x.id === id);
-      let j; try { j = await _ktJawab(k, teks); } catch (e) { j = { teks: "Afwan, data belum bisa dibaca: " + (e.message || e) }; }
-      hasil.push({ kode: k, teks: j.teks });
-      jawabWrap.insertAdjacentHTML("beforeend", `<div class="kt-jawab" style="--w:${p.warna}"><small>${p.ikon} ${s ? _ktE(s.nama) + " · " : ""}${_ktE(p.nama)}${s ? "" : " (petugas belum ditetapkan — atur di ⚙️)"}</small><div>${j.html || _ktE(j.teks).replace(/\n/g, "<br>")}</div></div>`);
-      if (id) await _ktBicara(id, j.singkat || j.teks, 3800);
-    }
+    const kodes = [...new Set(skrip.baris.map((x) => x.kode))];
+    const rapat = skrip.rapat !== false && (kodes.length > 1 || topik);
+    if (rapat) { document.getElementById("kt-jawaban").insertAdjacentHTML("beforeend", `<div class="kt-info">🪑 ${_ktE(skrip.judul)} — Ruang Rapat</div>`); ids = await _ktRapat(kodes, skrip.judul, skrip.tv, skrip.ticker); }
+    for (const b of skrip.baris) await _ktTampilBaris(b);
+    const ln = document.getElementById("kt-lanjut");
+    if (ln && skrip.lanjut) ln.innerHTML = skrip.lanjut.map(([l, q]) => `<button onclick="ktKirim(${_ktE(JSON.stringify(q))})">${_ktE(l)}</button>`).join("");
     const idR = "r" + Date.now().toString(36);
-    _kvGabung(KT_RIWAYAT, { [idR]: { teks, peran, jawab: hasil.map((x) => ({ kode: x.kode, teks: String(x.teks).slice(0, 600) })), t: Date.now() } }).catch(() => {});
-    if (rapat) { await _ktTunggu(2500); orang.forEach((id) => { const t = KT.tokoh[id]; if (t) _ktJalanKe(t, t.userData.meja); }); }
-  } finally { KT.sibuk = false; if (tb) tb.disabled = false; }
+    _kvGabung(KT_RIWAYAT, { [idR]: { teks, topik: topik || null, peran: kodes, t: Date.now() } }).catch(() => {});
+  } finally { if (ids.length) await _ktBubar(ids); KT.sibuk = false; if (tb) tb.disabled = false; }
 }
 
 // ── Jawaban tiap petugas (data dibaca saja, tidak mengubah apa pun) ──
@@ -455,6 +296,7 @@ function ktAturBuka() {
     <div class="kt-atur">${KT_PERAN.map((p) => `<label><span>${p.ikon} ${_ktE(p.nama)}</span>${pil(p.kode)}</label>`).join("")}</div>
     <h4>Ustadz / Ustadzah</h4><p class="kt-ket">Ustadzah duduk di Ruang Ustadzah (gamis hitam & bercadar).</p>
     <div class="kt-atur">${KT.staf.map((s) => `<label><span>${_ktE(s.nama)}</span><select data-kt-jk="${s.id}"><option value="L" ${s.jk !== "P" ? "selected" : ""}>Ustadz</option><option value="P" ${s.jk === "P" ? "selected" : ""}>Ustadzah</option></select></label>`).join("")}</div>
+    <h4>Kepala PKBM Berkeliling</h4><div class="kt-atur"><label><span>🚶 Setiap</span><select id="kt-keliling">${[[0, "Mati"], [15, "15 menit"], [30, "30 menit"], [60, "1 jam"]].map(([v, l]) => `<option value="${v}" ${Number(KT.atur.keliling ?? 30) === v ? "selected" : ""}>${l}</option>`).join("")}</select></label></div>
     <button class="kt-salin" onclick="ktAturSimpan()">💾 Simpan & Susun Ulang Kantor</button>`);
 }
 async function ktAturSimpan() {
@@ -462,7 +304,8 @@ async function ktAturSimpan() {
   document.querySelectorAll("[data-kt-peran]").forEach((s) => { const k = s.dataset.ktPeran; if (s.value) peran[k] = [s.value]; else delete peran[k]; });
   document.querySelectorAll("[data-kt-jk]").forEach((s) => { jk[s.dataset.ktJk] = s.value; });
   try {
-    await _kvGabung(KT_ATUR, { peran, jk });
+    const keliling = Number((document.getElementById("kt-keliling") || {}).value ?? 30);
+    await _kvGabung(KT_ATUR, { peran, jk, keliling });
     toast("Petugas kantor disimpan", "ok");
     ktTutup(); setTimeout(ktBuka, 50);
   } catch (e) { toast("Gagal menyimpan: " + (e.message || e), "err"); }

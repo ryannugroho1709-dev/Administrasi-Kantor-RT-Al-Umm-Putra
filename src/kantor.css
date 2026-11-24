@@ -75,3 +75,8 @@ body.kt-terbuka { overflow: hidden; }
 .kt-label { flex-direction: row; padding: 3px 9px; border-radius: 999px; border: 1.5px solid var(--w); border-bottom-width: 1.5px; background: rgba(255,255,255,.96); }
 .kt-label b { font-size: 10.5px; color: var(--w); }
 .kt-label b i { font-style: normal; opacity: .65; }
+.kt-label { flex-direction: column; border-radius: 10px; padding: 2px 8px 3px; gap: 0; }
+.kt-label small { display: block !important; font-size: 9px; font-weight: 700; color: #334155; max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
+.kt-ul { margin: 4px 0 0; padding-left: 18px; }
+.kt-ul li { margin: 2px 0; }
+@media (max-width: 640px) { .kt-sembunyi-hp { display: none; } }
