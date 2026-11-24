@@ -533,12 +533,28 @@ function juPindahKe(asal, tujuan) {
   const ikut = (x.p || []).filter((g) => !_juBentrok(j, t, sid, kelasId, g).length), lepas = (x.p || []).filter((g) => !ikut.includes(g));
   j.slot[tujuan] = { ...x, p: ikut };
   delete j.slot[asal];
-  closeModal(); _juTandai(); JU.hari = t; _juGambarEditor();
+  closeModal(); _juTandai(); JU.hari = t; _juGambarEditor(); _juKilat([tujuan]);
   toast(`↔️ ${_juLabelSlot(j.slot[tujuan])} dipindah ke ${_juHariPendek(t)}${lepas.length ? ` · ${lepas.length} pengawas dilepas karena bentrok (${lepas.map(_juNamaGuru).join(", ")})` : ""}. Tekan 💾 Simpan.`, lepas.length ? "info" : "ok");
 }
+// Tukar dua slot. Pengaman: panggilan ganda untuk pasangan yang sama dalam 1,5 detik diabaikan
+// (kalau tertukar dua kali, posisinya kembali seperti semula dan terlihat "tidak berubah").
 function juTukarKe(a, b) {
-  _juTukarSlot(a, b); closeModal(); _juTandai(); _juGambarEditor();
-  toast("🔁 Posisi mapel ditukar. Tekan 💾 Simpan.", "ok");
+  const kunci = [a, b].sort().join("~");
+  if (JU._tukarAkhir && JU._tukarAkhir.k === kunci && Date.now() - JU._tukarAkhir.t < 1500) return;
+  JU._tukarAkhir = { k: kunci, t: Date.now() };
+  const A = _juLabelSlot(JU.edit.slot[a]), B = _juLabelSlot(JU.edit.slot[b]);
+  _juTukarSlot(a, b); closeModal(); _juTandai();
+  const t = a.split("|")[0]; if (JU.hari !== t && JU.hari !== b.split("|")[0]) JU.hari = t;
+  _juGambarEditor(); _juKilat([a, b]);
+  toast(`🔁 ${A} ⇄ ${B} sudah ditukar. Tekan 💾 Simpan.`, "ok");
+}
+// Sorot sebentar sel yang baru dipindah/ditukar supaya perubahannya terlihat
+function _juKilat(kunci) {
+  requestAnimationFrame(() => {
+    const el = kunci.map((k) => document.querySelector(`#ju-wadah [data-kunci="${k}"]`)).filter(Boolean);
+    el.forEach((e) => { e.classList.remove("ju-kilat"); void e.offsetWidth; e.classList.add("ju-kilat"); setTimeout(() => e.classList.remove("ju-kilat"), 2200); });
+    if (el[0]) { const r = el[0].getBoundingClientRect(); if (r.top < 60 || r.bottom > innerHeight) el[0].scrollIntoView({ behavior: "smooth", block: "center" }); }
+  });
 }
 function _juLepasPengawas(kunci, guruId) { const s = JU.edit.slot[kunci]; if (!s) return; s.p = (s.p || []).filter((g) => g !== guruId); _juTandai(); _juGambarEditor(); }
 function _juToggleHari(t, on) { const h = new Set(JU.edit.hari); on ? h.add(t) : h.delete(t); JU.edit.hari = [...h].sort(); _juTandai(); _juGambarEditor(); }
