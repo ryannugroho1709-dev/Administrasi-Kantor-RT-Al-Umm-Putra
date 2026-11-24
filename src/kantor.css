@@ -192,3 +192,4 @@ body.ks-menyeret .ks-puncak{display:block}
 .ks-hantu{position:fixed;z-index:10000;pointer-events:none;transform:translate(-50%,-120%) rotate(-2deg);background:#fff;border-left:4px solid var(--w);border-radius:10px;padding:6px 10px;box-shadow:0 12px 30px rgba(0,0,0,.3);max-width:220px}
 .ks-hantu small{display:block;color:var(--w);font-weight:800;font-size:11px}.ks-hantu b{display:block;font-size:12.5px}
 .km-orang button.ks-dipilih{border-color:#c6a45c;background:#fffbeb}
+.kt-label.kb-label{opacity:.85;transform-origin:bottom center}.kt-label.kb-label b{font-size:10.5px}.kt-label.kb-label small{font-size:9.5px}

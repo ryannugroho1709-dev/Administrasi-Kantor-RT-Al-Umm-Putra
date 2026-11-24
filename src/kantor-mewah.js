@@ -21,7 +21,7 @@ const KM_KAYU = new Set([0x725139, 0x5a3e2b, 0x4a3324, 0x7d5a40, 0x8a6647, 0x6a4
 const KM_RUANG = {
   ustadz: { nama: "Ruang Ustadz", sorot: [-10, 0, 1.9], ket: "Ruang kerja para petugas ikhwan: administrasi jenjang, Tim IT, Desain & Konten.", fasilitas: ["Meja kerja individual & monitor", "Kursi ergonomis", "Lemari arsip built-in (ketuk untuk membuka berkas)", "Rak buku & berkas", "Tanaman indoor"] },
   kepala: { nama: "Ruang Kepala PKBM", sorot: [0, -4.4, 2.2], ket: "Ruang pimpinan: memantau seluruh jenjang, menerima tamu, dan memimpin rapat.", fasilitas: ["Meja eksekutif walnut & kursi direktur", "Dua kursi tamu & sofa tamu", "Logo Al-Umm di dinding utama", "TV dasbor PKBM", "Lemari piala & arsip lembaga"] },
-  rapat: { nama: "Ruang Rapat", sorot: [-1.6, 3.8, 2.2], ket: "Rapat koordinasi Kepala PKBM bersama petugas. Ustadz dan ustadzah dipisah tabir.", fasilitas: ["Meja konferensi oval dengan tabir", "Kursi rapat ergonomis", "Layar pintar & kamera konferensi video", "Papan tulis digital", "Panel akustik dinding", "Dinding Informasi (jam, tanggal, status rapat)"] },
+  rapat: { nama: "Ruang Rapat", sorot: [-1.6, 3.8, 2.2], ket: "Rapat koordinasi Kepala PKBM bersama petugas. Ustadz dan ustadzah dipisah tabir.", fasilitas: ["Meja konferensi oval dengan tabir", "Kursi rapat ergonomis", "Layar rapat di depan sisi ustadz & sisi ustadzah, dengan kamera konferensi", "Papan tulis digital", "Panel akustik dinding", "Dinding Informasi (jam, tanggal, status rapat)"] },
   bendahara: { nama: "Ruang Bendahara", sorot: [3.4, 3, 2.6], ket: "Pengelolaan keuangan lembaga: BOSP, Kertas Kerja ARKAS, nota & realisasi.", fasilitas: ["Meja kerja & komputer", "Lemari dokumen", "Printer", "Penyimpanan digital (Arsip Drive)"] },
   ustadzah: { nama: "Ruang Ustadzah", sorot: [10, 0, 1.9], ket: "Ruang kerja petugas akhwat: Sekretaris, Admin Dapodik, Penyelenggara & Admin Putri.", fasilitas: ["Meja kerja modular & monitor", "Kursi ergonomis", "Rak arsip (ketuk untuk membuka berkas)", "Pencahayaan nyaman", "Privasi terjaga (terpisah dari ruang ikhwan)"] },
   depan: { nama: "Pintu Masuk & Halaman", sorot: [0, 10, 1.9], ket: "Gerbang utama PKBM Al-Umm Barabai, taman depan, dan halaman parkir.", fasilitas: ["Papan nama 3D & logo resmi", "Taman & tanaman hias", "Lampu arsitektural", "Halaman parkir"] },
@@ -113,15 +113,18 @@ function kmGantiKualitas() {
 function _kmPerlengkapan() {
   const sc = KT.scene, emas = new THREE.MeshPhongMaterial({ color: 0xc9a227, shininess: 90 }), gelap = new THREE.MeshPhongMaterial({ color: 0x0b0f19, shininess: 80 });
   const balok = (w, h, d, mat, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; sc.add(m); return m; };
-  // Dinding Informasi (menghadap ruang rapat, pada sekat kaca ruang kepala)
+  // Layar rapat di depan MASING-MASING sisi (ustadz & ustadzah), menghadap peserta; kamera konferensi di atasnya
+  const layarRapat = (x, lebar) => {
+    const tinggi = lebar * 0.5625; balok(lebar + 0.1, tinggi + 0.1, 0.05, gelap, x, 1.7, 0.13); balok(lebar + 0.14, 0.03, 0.07, emas, x, 1.7 + tinggi / 2 + 0.06, 0.13);
+    if (KT.tvTekstur) { const l = new THREE.Mesh(new THREE.PlaneGeometry(lebar, tinggi), new THREE.MeshBasicMaterial({ map: KT.tvTekstur })); l.position.set(x, 1.7, 0.165); sc.add(l); }
+    balok(0.4, 0.06, 0.08, gelap, x, 1.7 + tinggi / 2 + 0.12, 0.16); const lensa = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.02, 12), new THREE.MeshBasicMaterial({ color: 0x38bdf8 })); lensa.rotation.x = Math.PI / 2; lensa.position.set(x, 1.7 + tinggi / 2 + 0.12, 0.21); sc.add(lensa);
+  };
+  layarRapat(-3.3, 1.8); layarRapat(-0.8, 1.2);
+  // Dinding Informasi (jam, tanggal, status rapat) di dinding kiri ruang rapat + panel akustik
   KM.infoKanvas = document.createElement("canvas"); KM.infoKanvas.width = 640; KM.infoKanvas.height = 360; KM.infoTeks = new THREE.CanvasTexture(KM.infoKanvas);
-  balok(1.75, 1.02, 0.05, gelap, -3.85, 1.75, 0.13); balok(1.8, 0.03, 0.07, emas, -3.85, 2.27, 0.13);
-  const info = new THREE.Mesh(new THREE.PlaneGeometry(1.66, 0.94), new THREE.MeshBasicMaterial({ map: KM.infoTeks })); info.position.set(-3.85, 1.75, 0.165); sc.add(info);
+  balok(0.06, 1.12, 1.9, gelap, -4.86, 1.75, 3.9); balok(0.08, 0.03, 1.95, emas, -4.86, 2.33, 3.9);
+  const info = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.01), new THREE.MeshBasicMaterial({ map: KM.infoTeks })); info.rotation.y = Math.PI / 2; info.position.set(-4.82, 1.75, 3.9); sc.add(info);
   _kmGambarInfo();
-  // Layar pintar (cermin TV dasbor) + kamera konferensi + panel akustik di dinding kiri ruang rapat
-  balok(0.07, 1.25, 2.2, gelap, -4.86, 1.75, 3.9);
-  if (KT.tvTekstur) { const l = new THREE.Mesh(new THREE.PlaneGeometry(2.1, 1.16), new THREE.MeshBasicMaterial({ map: KT.tvTekstur })); l.rotation.y = Math.PI / 2; l.position.set(-4.82, 1.75, 3.9); sc.add(l); }
-  balok(0.1, 0.08, 0.5, gelap, -4.83, 2.45, 3.9); const lensa = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.02, 12), new THREE.MeshBasicMaterial({ color: 0x38bdf8 })); lensa.rotation.z = Math.PI / 2; lensa.position.set(-4.775, 2.45, 3.9); sc.add(lensa);
   const akustik = new THREE.MeshLambertMaterial({ color: 0xd8cbb7 });
   [2.3, 2.6, 5.2, 5.5].forEach((z) => balok(0.06, 2.3, 0.22, akustik, -4.86, 1.3, z));
   // Papan tulis digital (sekat kaca bendahara, menghadap ruang rapat)
@@ -255,7 +258,7 @@ function _kmHover() {
   const { x: cx, y: cy } = KM.hoverPos, ray = _kmSinar(cx, cy);
   const kena = ray.intersectObjects([...Object.values(KT.tokoh), ...(KT.rak || [])], true)[0];
   let target = null, teks = "";
-  if (kena) { let o = kena.object; while (o && !o.userData.staf && !(o.userData.rak && o.parent && o.parent.type === "Scene")) o = o.parent; target = o || kena.object; const s = target && target.userData.staf; teks = s ? `${_ktGelar(s)} ${s.nama} — ${s.peran.map((k) => _ktPeran(k).nama).join(", ")}` : "Lemari arsip — ketuk untuk membuka berkas"; }
+  if (kena) { let o = kena.object; while (o && !o.userData.staf && !(o.userData.npc) && !(o.userData.rak && o.parent && o.parent.type === "Scene")) o = o.parent; target = o || kena.object; const s = target && target.userData.staf; teks = s ? `${s.namaLengkap || s.nama} — ${s.peran.map((k) => _ktPeran(k).nama).join(", ")}` : target && target.userData.npc ? "Petugas kebersihan" : "Lemari arsip — ketuk untuk membuka berkas"; }
   else { const p = _kmLantai(ray); const r = p && kmRuangDi(p.x, p.z); if (r) teks = KM_RUANG[r].nama + " — ketuk untuk melihat info"; }
   if (target !== KM.hover) { _kmSorot(KM.hover, false); _kmSorot(target, true); KM.hover = target; }
   const tip = document.getElementById("km-tip"), lay = document.getElementById("kt-layar");

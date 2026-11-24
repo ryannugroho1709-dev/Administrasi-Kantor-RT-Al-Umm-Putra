@@ -797,3 +797,5 @@ body.jus-menyeret #ju-wadah [data-kunci]:not(.jus-boleh):not(.jus-asal){opacity:
 /* sorotan setelah pindah/tukar */
 @keyframes juKilat{0%{box-shadow:0 0 0 0 rgba(245,158,11,.9);background:#fef3c7}70%{box-shadow:0 0 0 10px rgba(245,158,11,0)}100%{box-shadow:0 0 0 0 rgba(245,158,11,0)}}
 .ju-kilat{animation:juKilat 1s ease-out 2;outline:3px solid #f59e0b;outline-offset:-3px}
+/* pengawas gabungan (satu guru mengawas 2 kelas sekaligus) */
+.ju-chip.gabung{background:#fef3c7;color:#92400e;border:1px solid #fcd34d}.ju-chip.gabung small{font-weight:700;opacity:.8}

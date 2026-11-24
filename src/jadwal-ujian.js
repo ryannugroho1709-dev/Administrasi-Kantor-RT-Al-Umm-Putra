@@ -426,7 +426,7 @@ function _juIsiSel(j, tgl, s, kelasId, atur) {
   const pengampu = x.m ? [...(mapelKelas[x.m] || [])] : [];
   const label = _juLabelSlot(x);
   const tandaOnline = _juOnline(j, x, kelasId) ? '<span class="ju-online" title="Soal dibuat di Ujian Online — memakai LAB">💻 Online</span>' : "";
-  const chips = (x.p || []).map((g) => { const bentrok = _juBentrok(j, tgl, s.id, kelasId, g); return `<span class="ju-chip ${bentrok.length ? "bentrok" : ""}" title="${bentrok.length ? "Bentrok: juga mengawas Kelas " + bentrok.map(_juAngkaKelas).join(", ") + " di sesi ini" : ""}">${_juEsc(_juNamaGuru(g))}${atur ? `<button onclick="_juLepasPengawas('${kunci}','${g}')" aria-label="lepas">×</button>` : ""}</span>`; }).join("");
+  const chips = (x.p || []).map((g) => { const bentrok = _juBentrok(j, tgl, s.id, kelasId, g); return `<span class="ju-chip ${bentrok.length ? "gabung" : ""}" title="${bentrok.length ? "Mengawas gabungan: juga mengawas Kelas " + bentrok.map(_juAngkaKelas).join(", ") + " di sesi ini. Sekali absen tercatat untuk semua kelasnya." : ""}">${bentrok.length ? "🔗 " : ""}${_juEsc(_juNamaGuru(g))}${bentrok.length ? ` <small>+Kls ${bentrok.map(_juAngkaKelas).join(",")}</small>` : ""}${atur ? `<button onclick="_juLepasPengawas('${kunci}','${g}')" aria-label="lepas">×</button>` : ""}</span>`; }).join("");
   if (!atur) return label ? `${tandaOnline}<b>${_juEsc(label)}</b>${x.ruang ? `<small>Ruang ${_juEsc(x.ruang)}</small>` : ""}<div class="ju-chips">${chips || '<span class="ju-ket">Pengawas Belum Ada</span>'}</div>` : "–";
   const dipakai = _juMapelTerpakai(j, kelasId, kunci);
   const opsiUtama = Object.keys(mapelKelas).map((m) => [m, _juNamaMapel(m)]).filter(([, n]) => n).sort((a, b) => a[1].localeCompare(b[1], "id"));
@@ -493,13 +493,8 @@ function _juTukarSlot(a, b) {
   const ia = salin(A), ib = salin(B);
   if (_juLabelSlot(ib)) sl[a] = ib; else delete sl[a];
   if (_juLabelSlot(ia)) sl[b] = ia; else delete sl[b];
-  const lepas = [];
-  [a, b].forEach((k) => {
-    const s = sl[k]; if (!s || !(s.p || []).length) return;
-    const [t, sid, kelasId] = k.split("|");
-    s.p = s.p.filter((g) => { const bentrok = _juBentrok(j, t, sid, kelasId, g).length > 0; if (bentrok) lepas.push(g); return !bentrok; });
-  });
-  return lepas;
+  // pengawas yang di jam barunya juga mengawas kelas lain TIDAK dilepas: dianggap mengawas gabungan (sengaja)
+  return [];
 }
 // Jendela Pindah/Tukar: sesi kosong kelas ini (disarankan: hari yang paling longgar, dekat hari asal) + tukar dengan mapel lain
 function juPindahSlot(kunci) {
@@ -539,7 +534,7 @@ async function juTukarTanya(a, b) {
 function juPindahKe(asal, tujuan) {
   const j = JU.edit, x = j.slot[asal]; if (!x) return;
   const [t, sid, kelasId] = tujuan.split("|");
-  const ikut = (x.p || []).filter((g) => !_juBentrok(j, t, sid, kelasId, g).length), lepas = (x.p || []).filter((g) => !ikut.includes(g));
+  const ikut = (x.p || []).slice(), lepas = []; // pengawas ikut pindah; bila jadi mengawas 2 kelas sekaligus = mengawas gabungan
   j.slot[tujuan] = { ...x, p: ikut };
   delete j.slot[asal];
   closeModal(); _juTandai(); JU.hari = t; _juGambarEditor(); _juKilat([tujuan]);
@@ -741,11 +736,15 @@ async function _juMuatHadir(ids) {
 async function juAbsenMengawas(jadwalId, kunci) {
   try {
     setGlobalLoading(true, "Mencatat kehadiran mengawas…");
-    const k = `${kunci}|${STATE.guruId}`;
-    const data = await _kvAmbil("ujian:hadir:" + jadwalId, {});
-    if (!data[k]) { data[k] = { t: new Date().toISOString(), oleh: STATE.guruNama || "" }; await _kvSimpan("ujian:hadir:" + jadwalId, data); }
+    // mengawas gabungan: sekali absen tercatat untuk SEMUA kelas yang diawasi guru ini di sesi yang sama
+    const j = JU.daftar.find((x) => x.id === jadwalId), [t0, s0] = kunci.split("|");
+    const semua = j ? Object.keys(j.slot || {}).filter((kk) => { const [t, s] = kk.split("|"); return t === t0 && s === s0 && (j.slot[kk].p || []).includes(STATE.guruId); }) : [kunci];
+    if (!semua.includes(kunci)) semua.push(kunci);
+    const data = await _kvAmbil("ujian:hadir:" + jadwalId, {}), waktu = new Date().toISOString(), baru = {};
+    semua.forEach((kk) => { const k = `${kk}|${STATE.guruId}`; if (!data[k]) baru[k] = { t: waktu, oleh: STATE.guruNama || "", ...(semua.length > 1 ? { gabung: semua.length } : {}) }; });
+    if (Object.keys(baru).length) { Object.assign(data, baru); if (typeof _kvGabung === "function") { try { Object.assign(data, await _kvGabung("ujian:hadir:" + jadwalId, baru)); } catch (e) { await _kvSimpan("ujian:hadir:" + jadwalId, data); } } else await _kvSimpan("ujian:hadir:" + jadwalId, data); }
     (JU._hadir = JU._hadir || {})[jadwalId] = data;
-    toast("✓ Kehadiran mengawas tercatat. Barakallahu fiik", "ok");
+    toast(semua.length > 1 ? `✓ Kehadiran mengawas gabungan tercatat untuk ${semua.length} kelas (${semua.map((kk) => "Kelas " + _juAngkaKelas(kk.split("|")[2])).join(" + ")}). Barakallahu fiik` : "✓ Kehadiran mengawas tercatat. Barakallahu fiik", "ok");
     if (STATE.currentPage === "dashboard") _juSisipkanKartuDasbor(); else if (qs("ju-wadah")) _juGambarDaftar();
   } catch (e) { toast("Gagal mencatat: " + (e.message || e), "err"); }
   finally { setGlobalLoading(false); }

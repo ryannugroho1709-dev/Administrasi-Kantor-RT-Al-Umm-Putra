@@ -49,8 +49,8 @@ function _kiAmbil(info, p) {
 }
 function _kiTaruh(p) {
   if (!p.bawa) return; p.t.remove(p.bawa);
-  const k = p.kursi, m = k.meja || k, arah = k.sisiMeja || 1;
-  p.bawa.scale.setScalar(1); p.bawa.position.set(m.x + arah * 0.18, 0.76, m.z); p.bawa.rotation.y = arah > 0 ? 0 : Math.PI;
+  const k = p.kursi, tp = k.taruh || { x: k.x + Math.sin(k.hadap) * 0.6, z: k.z + Math.cos(k.hadap) * 0.6 };
+  p.bawa.scale.setScalar(1); p.bawa.position.set(tp.x, 0.785, tp.z); p.bawa.rotation.y = k.hadap + Math.PI / 2;
   KT.scene.add(p.bawa); p.diMeja = p.bawa; p.bawa = null;
 }
 function _kiHabiskan(p, bagian) { // kopi & kue berkurang sedikit demi sedikit
@@ -69,7 +69,7 @@ async function _kiBuang(info, p) {
 async function _kiSisi(sisi, orang) {
   const info = KT.pantryInfo && KT.pantryInfo[sisi];
   if (!info) { await Promise.all(orang.map((p) => _ktPergi(p.t, p.kursi))); return; }
-  if (_kiStok(info, orang.length) && orang[0]) _ktBicara(orang[0].id, "Alhamdulillah, stok kopi & kue sudah diisi lagi.", 2200);
+  if (_kiStok(info, orang.length)) { const cs = KT.npc && KT.npc[sisi]; if (cs) _ktBicara(cs.id, "Stok kopi & kue sudah ana isi lagi, silakan.", 2400); else if (orang[0]) _ktBicara(orang[0].id, "Alhamdulillah, stok kopi & kue sudah diisi lagi.", 2200); }
   const slot = (i) => info.antre[Math.min(i, info.antre.length - 1)];
   let barisan = orang.slice();
   barisan.forEach((p) => (p.t.userData.antre = true)); // sesama pengantre boleh saling menyelip (lorong antre sempit)
