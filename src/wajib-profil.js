@@ -6,20 +6,24 @@
 // ============================================================
 const _WP_ISIAN = [["foto_url", "Foto"], ["nip_nik", "NIK"], ["no_wa", "No. WhatsApp"], ["tempat_lahir", "Tempat Lahir"], ["tanggal_lahir", "Tanggal Lahir"], ["alamat_domisili", "Alamat"]];
 const _WP_JENJANG = ["SMA/SMK/MA", "Pondok Pesantren", "D3", "S1", "S2", "S3"];
-let _WP_FOTO = null, _WP_TUNDA = false;
+let _WP_FOTO = null, _WP_TUNDA = false, _WP_SEDANG = false;
 
 async function _wpCek() {
   try {
-    if (!STATE.guruId || _WP_TUNDA || document.getElementById("wp-layar")) return;
+    if (!STATE.guruId || _WP_TUNDA || _WP_SEDANG || document.getElementById("wp-layar")) return;
+    _WP_SEDANG = true; // cegah pemeriksaan ganda (jendela dobel bertumpuk)
     const adminLain = typeof _ADMIN_TERVERIFIKASI !== "undefined" && _ADMIN_TERVERIFIKASI && typeof _namaTermasukAdmin === "function" && !_namaTermasukAdmin(STATE.guruNama);
     if (adminLain) return;
     const [g, pend] = await Promise.all([apiGetGuruDetail(STATE.guruId), apiGetPendidikanGuru(STATE.guruId).catch(() => null)]);
     if (!g || pend === null) return; // gagal memuat → jangan menghalangi
     const kurang = _WP_ISIAN.filter(([k]) => !String(g[k] || "").trim()).map(([, l]) => l);
     let lewat = false; try { lewat = localStorage.getItem("wpPendLewat:" + STATE.guruId) === "1"; } catch (e) {}
+    // cadangan: pendidikan yang tersimpan di kv (bila tabel pendidikan menolak) dianggap sudah diisi
+    if (!pend.length && !lewat) { const cad = await _kvAmbil("profil:pendidikan:" + STATE.guruId, null).catch(() => null); if (cad && cad.terakhir && cad.terakhir.nama_institusi) { lewat = true; pend.push(cad.terakhir); } }
     if (!pend.length && !lewat) kurang.push("Pendidikan Terakhir");
-    if (kurang.length) _wpTampil(g, pend, kurang);
+    if (kurang.length && !document.getElementById("wp-layar")) _wpTampil(g, pend, kurang);
   } catch (e) { console.warn("Cek data diri:", e); }
+  finally { _WP_SEDANG = false; }
 }
 
 function _wpTampil(g, pend, kurang) {
@@ -78,6 +82,7 @@ async function _wpPilihFoto(input) {
 }
 
 async function _wpSimpan(guruId, pendId) {
+  document.querySelectorAll("#wp-layar").forEach((x, i, semua) => { if (i < semua.length - 1) x.remove(); }); // sisa jendela dobel lama
   const v = (id) => (qs(id)?.value || "").trim();
   const pesan = (t) => { const p = qs("wp-pesan"); p.textContent = t; p.style.display = t ? "block" : "none"; };
   const adaFoto = !!_WP_FOTO || !!qs("wp-foto").querySelector("img");
@@ -103,8 +108,14 @@ async function _wpSimpan(guruId, pendId) {
     if (_WP_FOTO) baru.foto_url = await apiUploadFoto(new File([_WP_FOTO], "foto.jpg", { type: "image/jpeg" }), "guru/foto");
     await apiSimpanGuru({ id: guruId, ...baru });
     const pend = { guru_id: guruId, jenjang: v("wp-jenjang"), nama_institusi: v("wp-inst"), jurusan: v("wp-jurusan") || null, tahun_lulus: th };
-    try { await apiSimpanPendidikan(pendId ? { id: pendId, ...pend } : { ...pend, urutan: 1 }); }
-    catch (e) { console.warn("Pendidikan tidak tersimpan:", e); try { localStorage.setItem("wpPendLewat:" + guruId, "1"); } catch (x) {} toast("Data pendidikan belum tersimpan — admin akan melengkapinya", "warn"); }
+    // selalu simpan juga salinan di kv (cadangan lintas perangkat); tabel pendidikan tetap dicoba
+    let cadOk = false; try { await _kvGabung("profil:pendidikan:" + guruId, { terakhir: { ...pend, t: Date.now() } }); cadOk = true; } catch (e) { console.warn("Cadangan pendidikan:", e); }
+    try { await apiSimpanPendidikan(pendId && !String(pendId).startsWith("kv") ? { id: pendId, ...pend } : { ...pend, urutan: 1 }); }
+    catch (e) {
+      console.warn("Pendidikan tidak tersimpan ke tabel:", e);
+      try { localStorage.setItem("wpPendLewat:" + guruId, "1"); } catch (x) {}
+      if (!cadOk) toast("Data pendidikan belum tersimpan: " + (e.message || e), "warn");
+    }
     const lk = (LOOKUP.guruAll || []).find((x) => x.id === guruId); if (lk) Object.assign(lk, baru);
     const dg = (STATE.daftarGuru || []).find((x) => x.id === guruId); if (dg) Object.assign(dg, baru);
     if (baru.foto_url && typeof _perbaruiFotoGuruPill === "function") _perbaruiFotoGuruPill(baru.foto_url);
@@ -113,7 +124,7 @@ async function _wpSimpan(guruId, pendId) {
       ubah.push({ k: "pendidikan", lama: "", baru: `${pend.jenjang} ${pend.nama_institusi} (${th})` });
       try { await _catatPerubahanProfil(guruId, lama?.nama, ubah); } catch (e) {}
     }
-    document.getElementById("wp-layar")?.remove();
+    document.querySelectorAll("#wp-layar").forEach((x) => x.remove());
     toast("Jazakumullahu khairan, data diri tersimpan ✓", "ok");
   } catch (e) { tb.disabled = false; tb.textContent = "Simpan Data Diri"; pesan("Gagal menyimpan: " + (e.message || e)); }
 }
