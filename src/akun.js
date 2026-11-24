@@ -62,7 +62,7 @@ function akTampilMasuk(mode = "masuk") {
       <button class="ak-tautan" onclick="akTampilMasuk()">‹ Kembali Ke Halaman Masuk</button></div>`;
   } else {
     el.innerHTML = `<div class="ak-cahaya"></div><div class="ak-panel">${kepala}<b>Masuk Akun Guru</b><span>Masuk dengan nama pengguna (dari WA admin) atau email, dan sandi.</span></div>
-      <label class="ak-isian"><span>Nama Pengguna atau Email</span><input id="ak-login" type="text" inputmode="email" name="ak-l-${Date.now()}" autocomplete="off" autocapitalize="none" spellcheck="false" data-lpignore="true" data-1p-ignore readonly placeholder="contoh: ahmad.fauzi"></label>
+      <label class="ak-isian"><span>Nama Pengguna atau Email</span><input id="ak-login" type="text" inputmode="email" name="email" autocomplete="username email" autocapitalize="none" spellcheck="false" placeholder="contoh: ahmad.fauzi"></label>
       <label class="ak-isian"><span>Sandi</span><span class="ak-sandi"><input id="ak-sandi" type="text" class="ka-tutup" name="ak-s-${Date.now()}" autocomplete="off" autocapitalize="none" spellcheck="false" data-lpignore="true" data-1p-ignore readonly placeholder="Sandi"><button type="button" class="ak-lihat" onclick="akLihatSandi(this)" aria-label="Lihat sandi">Lihat</button></span></label>
       <div id="ak-pesan" class="ak-pesan"></div>
       <button class="ak-tombol" id="ak-tombol" onclick="akMasuk()">Masuk</button>
@@ -72,7 +72,7 @@ function akTampilMasuk(mode = "masuk") {
   }
   document.body.appendChild(el);
   // kolom terkunci (readonly) sampai disentuh: Chrome/Google tidak mengisi sandi tersimpan
-  el.querySelectorAll("input").forEach((i) => { const buka = () => i.removeAttribute("readonly"); i.addEventListener("pointerdown", buka); i.addEventListener("focus", buka); });
+  el.querySelectorAll("input[readonly]").forEach((i) => { const buka = () => i.removeAttribute("readonly"); i.addEventListener("pointerdown", buka); i.addEventListener("focus", buka); });
   const pertama = el.querySelector("input");
   setTimeout(() => { if (!pertama) return; pertama.removeAttribute("readonly"); pertama.focus(); }, 300);
   el.querySelectorAll("input").forEach((i) => i.addEventListener("keydown", (e) => { if (e.key === "Enter") (mode === "lupa" ? akKirimLupa : akMasuk)(); }));

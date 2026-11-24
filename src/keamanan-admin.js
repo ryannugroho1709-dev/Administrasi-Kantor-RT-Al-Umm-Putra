@@ -429,16 +429,16 @@ function kaSegarSidik() { const w = document.getElementById("ka-atur-sidik"); if
     if (!i.name) i.name = "f" + Math.random().toString(36).slice(2, 8);
     if (pin) { i.inputMode = "numeric"; i.setAttribute("pattern", "[0-9]*"); i.addEventListener("input", () => { const d = i.value.replace(/\D/g, ""); if (d !== i.value) i.value = d; }); }
   };
-  const nama = (i) => { if (i && !i.dataset.kaAman && (i.id === "ak-login" || i.getAttribute("autocomplete") === "username")) { i.dataset.kaAman = "1"; i.setAttribute("autocomplete", "off"); i.setAttribute("data-lpignore", "true"); i.name = "u" + Math.random().toString(36).slice(2, 8); } };
-  const sapu = (akar) => { akar.querySelectorAll("input[type=password]").forEach(ubah); akar.querySelectorAll("#ak-login,input[autocomplete=username]").forEach(nama); };
+  // nama pengguna / email BOLEH diingat browser — yang dicegah hanya sandi & PIN
+  const sapu = (akar) => { akar.querySelectorAll("input[type=password]").forEach(ubah); };
   sapu(document);
-  new MutationObserver((ms) => ms.forEach((m) => m.addedNodes.forEach((n) => { if (n.nodeType !== 1) return; if (n.matches("input[type=password]")) ubah(n); if (n.matches("#ak-login")) nama(n); if (n.querySelectorAll) sapu(n); }))).observe(document.documentElement, { childList: true, subtree: true });
+  new MutationObserver((ms) => ms.forEach((m) => m.addedNodes.forEach((n) => { if (n.nodeType !== 1) return; if (n.matches("input[type=password]")) ubah(n); if (n.querySelectorAll) sapu(n); }))).observe(document.documentElement, { childList: true, subtree: true });
   // Bila browser tetap mengisi otomatis (latar biru muda = :-webkit-autofill), kosongkan lagi:
   // sandi & nama pengguna harus diketik sendiri oleh pemilik akun.
   document.addEventListener("animationstart", (e) => {
     if (e.animationName !== "kaIsiOtomatis") return;
     const i = e.target; if (!(i instanceof HTMLInputElement)) return;
-    if (!(i.classList.contains("ka-tutup") || i.id === "ak-login" || i.id === "ka-pin" || /pin|sandi/i.test(i.id))) return;
+    if (!(i.classList.contains("ka-tutup") || i.id === "ka-pin" || /pin|sandi/i.test(i.id))) return;
     i.value = ""; i.dispatchEvent(new Event("input", { bubbles: true }));
   }, true);
   // tombol Lihat/Tutup sandi: ganti titik ↔ huruf (bukan mengganti type)
