@@ -799,3 +799,16 @@ body.jus-menyeret #ju-wadah [data-kunci]:not(.jus-boleh):not(.jus-asal){opacity:
 .ju-kilat{animation:juKilat 1s ease-out 2;outline:3px solid #f59e0b;outline-offset:-3px}
 /* pengawas gabungan (satu guru mengawas 2 kelas sekaligus) */
 .ju-chip.gabung{background:#fef3c7;color:#92400e;border:1px solid #fcd34d}.ju-chip.gabung small{font-weight:700;opacity:.8}
+/* ── Cek soal & jadwal sebelum dibagikan ── */
+.juc-tanda{font-size:10.5px;font-weight:800;border-radius:7px;padding:2px 7px;margin:0 0 4px;display:inline-block}
+.juc-tanda.ok{background:#dcfce7;color:#166534}.juc-tanda.belum{background:#fef3c7;color:#92400e}
+.juc-panel{border-left:4px solid #d97706}.juc-panel.ok{border-left-color:#16a34a}
+.juc-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:800;font-size:14px;margin-bottom:6px}
+.juc-h span{font-size:12px;font-weight:800;background:#fef3c7;color:#92400e;border-radius:99px;padding:2px 10px}.juc-panel.ok .juc-h span{background:#dcfce7;color:#166534}
+.juc-h button{margin-left:auto}
+.juc-blok{border:1px solid color-mix(in srgb,var(--c) 30%,#e5e7eb);border-left:3px solid var(--c);border-radius:10px;padding:6px 10px;margin-top:6px;background:color-mix(in srgb,var(--c) 5%,#fff)}
+.juc-blok summary{cursor:pointer;font-size:13px}.juc-isi{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.juc-pill{border:1px solid #e5e7eb;background:#fff;border-radius:99px;padding:3px 10px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.juc-pill small{font-weight:600;color:#64748b}.juc-pill:hover{border-color:var(--c)}
+.juc-baris{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:4px 0;border-bottom:1px dashed #e5e7eb;font-size:12.5px}
+.juc-baris small{color:#64748b;margin-left:4px}
