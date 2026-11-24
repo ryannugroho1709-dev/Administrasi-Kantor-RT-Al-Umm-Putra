@@ -814,7 +814,7 @@ async function juCetakPdf(id, dariEditor) {
   const wJendela = window.open("", "_blank"); // dibuka segera (sebelum menunggu data) supaya tidak diblokir browser
   if (wJendela) wJendela.document.write("<p style='font-family:sans-serif;padding:20px'>Menyiapkan jadwal…</p>");
   const j = dariEditor && JU.edit?.id === id ? JU.edit : JU.daftar.find((x) => x.id === id); if (!j) { wJendela?.close(); return; }
-  const ttd = await _kvAmbil(_JU_TTD, null).catch(() => null);
+  const [ttd, cap] = await Promise.all([_kvAmbil(_JU_TTD, null).catch(() => null), _kvAmbil(_JU_CAP, null).catch(() => null)]);
   const p = STATE.pengaturan || {};
   const logo = p.logo_kiri_url || p.logo_kanan_url || (typeof urlLogoSekolah === "function" ? urlLogoSekolah() : "");
   const lembaga = (p.nama_lembaga_kop || "Rumah Tahfizh Al Umm Putra Barabai").toUpperCase();
@@ -831,8 +831,10 @@ async function juCetakPdf(id, dariEditor) {
   Object.entries(j.slot).forEach(([k, s]) => { const [t, sesiId, kelasId] = k.split("|"); if (!j.hari.includes(t) || !_juLabelSlot(s)) return; (s.p || []).forEach((g) => (per[g] = per[g] || []).push(`${_juHariPendek(t)} S${j.sesi.findIndex((x) => x.id === sesiId) + 1} K${_juAngkaKelas(kelasId)}`)); });
   const rekap = Object.entries(per).sort((a, b) => _juNamaGuru(a[0]).localeCompare(_juNamaGuru(b[0]), "id"));
   const html = `<!doctype html><html lang="id"><head><meta charset="utf-8"><title>${e(j.judul)}</title><style>
-    @page{size:A4 landscape;margin:12mm}
-    *{box-sizing:border-box}body{font-family:"Segoe UI","Source Sans 3",Arial,sans-serif;color:#1F2328;margin:0;font-size:10pt}
+    @page{size:A4 landscape;margin:0}
+    *{box-sizing:border-box}body{font-family:"Segoe UI","Source Sans 3",Arial,sans-serif;color:#1F2328;margin:0;padding:0 12mm;font-size:10pt}
+    table.halaman{width:100%;border-collapse:collapse;table-layout:auto}table.halaman>thead>tr>td,table.halaman>tfoot>tr>td,table.halaman>tbody>tr>td{border:0;padding:0;text-align:left;vertical-align:top}
+    .spasi{height:11mm}
     .kop{display:flex;align-items:center;gap:14px;padding-bottom:8px;border-bottom:3px double #1F5A3D;margin-bottom:10px}
     .kop img{width:16mm;height:16mm;object-fit:contain}
     .lem{color:#1F5A3D;font-weight:700;letter-spacing:2px;font-size:11pt}
@@ -852,17 +854,18 @@ async function juCetakPdf(id, dariEditor) {
     .rekap{break-inside:avoid;margin-top:12px}.rekap table td{font-size:9.5pt}
     .catatan{font-size:9pt;color:#5B6470;margin-top:8px}
     .ttd{display:flex;justify-content:flex-end;margin-top:14px;font-size:10pt}.ttd>div{text-align:center;width:65mm;position:relative}.ttd small{display:block;color:#5B6470;font-size:7.5pt;margin-top:2px}
-    .ttd .cap{position:absolute;left:-4mm;top:2mm;mix-blend-mode:multiply;pointer-events:none}.ttd .ttd-gbr{position:relative;z-index:1}
-    footer{position:fixed;bottom:0;left:0;right:0;font-size:7.5pt;color:#5B6470;border-top:.4pt solid #8C9792;padding-top:3px;display:flex;justify-content:space-between}
-  </style></head><body>
+    .ttd .cap{position:absolute;left:-6mm;top:7mm;width:34mm;height:auto;transform:rotate(-8deg);opacity:.92;mix-blend-mode:multiply;pointer-events:none;z-index:2}.ttd .ttd-gbr{position:relative;z-index:1}
+  </style></head><body><table class="halaman"><thead><tr><td><div class="spasi"></div></td></tr></thead><tfoot><tr><td><div class="spasi"></div></td></tr></tfoot><tbody><tr><td>
     <div class="kop">${logo ? `<img src="${e(logo)}" alt=""/>` : ""}<div><div class="lem">${e(lembaga)}</div><div class="jdl">JADWAL ${e(String(j.judul).toUpperCase())}</div><div class="ket">${e(_juHariPanjang(j.mulai))}${j.selesai !== j.mulai ? " – " + e(_juHariPanjang(j.selesai)) : ""} · Tahun Ajaran ${e(typeof hitungTahunAjaranOtomatis === "function" ? hitungTahunAjaranOtomatis() : "")}</div></div></div>
     ${blokHari}
-    <section class="rekap"><h3><span class="garis"></span>Daftar Tugas Pengawas</h3><table><thead><tr><th style="width:8mm">No</th><th style="width:60mm">Nama</th><th style="width:16mm">Jumlah</th><th>Hari · Sesi · Kelas</th></tr></thead><tbody>
-      ${rekap.map(([g, xs], i) => `<tr><td style="text-align:center">${i + 1}</td><td>${e(_juGuru(g)?.nama || "-")}</td><td style="text-align:center">${xs.length}</td><td>${e(xs.join(" · "))}</td></tr>`).join("") || `<tr><td colspan="4">Belum ada pengawas.</td></tr>`}
-    </tbody></table>
+>>>>
+<<<<
+${ttd?.img && typeof stempelSvg === "function" ? `<span class="cap">${stempelSvg({ ukuran: "36mm", miring: -10 })}</span>` : ""}
+====
+${ttd?.img && cap?.img ? `<img class="cap" src="${cap.img}" alt="cap stempel"/>` : ""}
     <div class="catatan">Catatan: selama hari ujian, KBM kelas diliburkan. Pengawas hadir 15 menit sebelum sesi dan mengisi Absen Mengawas di aplikasi.${j.catatan ? " " + e(j.catatan) : ""}</div>
     <div class="ttd"><div>Barabai, ${e(new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }))}<br/>${e(typeof jabatanPenandatangan === "function" ? jabatanPenandatangan() : "Kepala Sekolah")}<br/>${ttd?.img && typeof stempelSvg === "function" ? `<span class="cap">${stempelSvg({ ukuran: "36mm", miring: -10 })}</span>` : ""}${ttd?.img ? `<img class="ttd-gbr" src="${ttd.img}" alt="tanda tangan" style="height:22mm;max-width:60mm;object-fit:contain;display:block;margin:2px auto"/>` : "<br/><br/><br/>"}<b>${e(ttd?.nama || p.kepala_pkbm || (typeof _namaPejabat === "function" ? _namaPejabat(p) : "") || "")}</b></div></div></section>
-    <footer><span>${e(j.judul)} · ${e(lembaga)}</span><span>Dicetak ${e(new Date().toLocaleString("id-ID"))}</span></footer>
+    </td></tr></tbody></table>
     <script>window.onload=function(){setTimeout(function(){window.print()},400)}<\/script>
   </body></html>`;
   const w = wJendela;
@@ -975,8 +978,9 @@ function _juSusunJalankan() {
 // Digambar sekali (jari / mouse), disimpan sebagai gambar di kuliah_pengaturan "ttd:kepala_sekolah",
 // lalu otomatis muncul di PDF jadwal ujian.
 const _JU_TTD = "ttd:kepala_sekolah";
+const _JU_CAP = "ttd:stempel"; // gambar cap stempel asli (diunggah admin, latar putih dibuang otomatis) — disimpan di database, bukan di berkas aplikasi
 async function juTandaTangan() {
-  const lama = await _kvAmbil(_JU_TTD, null).catch(() => null);
+  const [lama, capLama] = await Promise.all([_kvAmbil(_JU_TTD, null).catch(() => null), _kvAmbil(_JU_CAP, null).catch(() => null)]);
   const p = STATE.pengaturan || {};
   const namaBawaan = lama?.nama || p.kepala_pkbm || (typeof _namaPejabat === "function" ? _namaPejabat(p) : "") || "";
   openModal(`<h3>✍️ Tanda Tangan ${_juEsc(typeof jabatanPenandatangan === "function" ? jabatanPenandatangan() : "Kepala Sekolah")}</h3>
@@ -985,7 +989,10 @@ async function juTandaTangan() {
     <div class="ju-ttd-ket">Tanda tangan di kotak ini dengan jari atau mouse:</div>
     <canvas id="ttd-kanvas" class="ju-ttd-kanvas" width="600" height="240"></canvas>
     <div class="ju-ttd-aksi"><button class="btn btn-ghost btn-sm" onclick="_juTtdBersih()">🧽 Ulangi</button>${lama?.img ? `<button class="btn btn-ghost btn-sm" onclick="_juTtdHapus()">🗑️ Hapus Tanda Tangan</button>` : ""}</div>
-    <button class="btn btn-accent" style="width:100%;margin-top:10px;" onclick="_juTtdSimpan()">💾 Simpan Tanda Tangan</button>`);
+    <button class="btn btn-accent" style="width:100%;margin-top:10px;" onclick="_juTtdSimpan()">💾 Simpan Tanda Tangan</button>
+    <div class="ju-cap-blok"><b>🔵 Cap Stempel</b><small>Unggah foto/scan cap stempel asli. Latar putih dibuang otomatis, lalu cap ditempel menumpuk tanda tangan di PDF.</small>
+      <div id="ju-cap-pratinjau" class="ju-cap-pratinjau">${capLama?.img ? `<img src="${capLama.img}" alt="cap stempel tersimpan"/>` : `<span>Belum ada cap stempel</span>`}</div>
+      <div class="ju-ttd-aksi"><label class="btn btn-outline btn-sm">📤 Unggah Gambar Cap<input type="file" accept="image/*" hidden onchange="_juCapUnggah(this)"/></label>${capLama?.img ? `<button class="btn btn-ghost btn-sm" onclick="_juCapHapus()">🗑️ Hapus Cap</button>` : ""}</div></div>`);
   const c = qs("ttd-kanvas"), x = c.getContext("2d");
   x.lineWidth = 3.2; x.lineCap = "round"; x.lineJoin = "round"; x.strokeStyle = "#1B2A41";
   let gambar = false, akhir = null; JU.ttdTergores = false;
@@ -1011,6 +1018,36 @@ async function _juTtdSimpan() {
     closeModal(); toast("Tanda tangan tersimpan ✓ — otomatis muncul di PDF", "ok");
   } catch (e) { toast("Gagal menyimpan: " + (e.message || e), "err"); }
   finally { setGlobalLoading(false); }
+}
+// Cap stempel: buang latar putih/abu terang jadi transparan, potong tepi kosong, perkecil (maks 700 px)
+async function _juCapUnggah(el) {
+  const f = el.files && el.files[0]; el.value = ""; if (!f) return;
+  try {
+    setGlobalLoading(true, "Memproses cap stempel…");
+    const url = URL.createObjectURL(f), img = await new Promise((r, j) => { const i = new Image(); i.onload = () => r(i); i.onerror = j; i.src = url; });
+    const s = Math.min(1, 700 / Math.max(img.width, img.height)), w = Math.round(img.width * s), h = Math.round(img.height * s);
+    const c = document.createElement("canvas"); c.width = w; c.height = h; const x = c.getContext("2d"); x.drawImage(img, 0, 0, w, h); URL.revokeObjectURL(url);
+    const data = x.getImageData(0, 0, w, h), d = data.data; let x0 = w, y0 = h, x1 = 0, y1 = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      const terang = (d[i] + d[i + 1] + d[i + 2]) / 3, jenuh = Math.max(d[i], d[i + 1], d[i + 2]) - Math.min(d[i], d[i + 1], d[i + 2]);
+      // makin putih & tak berwarna → makin transparan; tinta tetap utuh
+      const a = terang > 235 && jenuh < 30 ? 0 : terang > 200 && jenuh < 45 ? Math.round(((235 - terang) / 35) * 255) : 255;
+      d[i + 3] = Math.min(d[i + 3], a);
+      if (d[i + 3] > 40) { const p = i / 4, px = p % w, py = (p / w) | 0; if (px < x0) x0 = px; if (px > x1) x1 = px; if (py < y0) y0 = py; if (py > y1) y1 = py; }
+    }
+    x.putImageData(data, 0, 0);
+    if (x1 <= x0 || y1 <= y0) throw new Error("Cap tidak terbaca — pastikan gambar berisi cap berwarna");
+    const o = document.createElement("canvas"); o.width = x1 - x0 + 1; o.height = y1 - y0 + 1; o.getContext("2d").drawImage(c, x0, y0, o.width, o.height, 0, 0, o.width, o.height);
+    const img64 = o.toDataURL("image/png");
+    await _kvSimpan(_JU_CAP, { img: img64, t: new Date().toISOString(), oleh: STATE.guruId || null });
+    const pv = qs("ju-cap-pratinjau"); if (pv) pv.innerHTML = `<img src="${img64}" alt="cap stempel"/>`;
+    toast("Cap stempel tersimpan ✓ — otomatis menempel di PDF bersama tanda tangan", "ok");
+  } catch (e) { toast("Gagal memproses cap: " + (e.message || e), "err"); }
+  finally { setGlobalLoading(false); }
+}
+async function _juCapHapus() {
+  if (!(await konfirmasiTema("Hapus cap stempel tersimpan?", { ikon: "🗑️", judul: "Hapus Cap Stempel" }))) return;
+  try { await _kvSimpan(_JU_CAP, null); closeModal(); toast("Cap stempel dihapus", "ok"); } catch (e) { toast("Gagal: " + (e.message || e), "err"); }
 }
 async function _juTtdHapus() {
   if (!(await konfirmasiTema("Hapus tanda tangan tersimpan? PDF berikutnya kembali memakai ruang tanda tangan kosong.", { ikon: "🗑️", judul: "Hapus tanda tangan" }))) return;

@@ -812,3 +812,8 @@ body.jus-menyeret #ju-wadah [data-kunci]:not(.jus-boleh):not(.jus-asal){opacity:
 .juc-pill small{font-weight:600;color:#64748b}.juc-pill:hover{border-color:var(--c)}
 .juc-baris{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:4px 0;border-bottom:1px dashed #e5e7eb;font-size:12.5px}
 .juc-baris small{color:#64748b;margin-left:4px}
+/* cap stempel di jendela tanda tangan */
+.ju-cap-blok{margin-top:14px;padding-top:12px;border-top:1px dashed var(--border-soft,#e5e7eb)}
+.ju-cap-blok small{display:block;color:var(--text-secondary);font-size:12px;margin:2px 0 8px}
+.ju-cap-pratinjau{display:flex;align-items:center;justify-content:center;min-height:90px;border:1px dashed #cbd5e1;border-radius:10px;background:repeating-conic-gradient(#f1f5f9 0 25%,#fff 0 50%) 0 0/16px 16px}
+.ju-cap-pratinjau img{max-height:130px;max-width:100%}.ju-cap-pratinjau span{color:#94a3b8;font-size:12px}
