@@ -458,10 +458,9 @@ async function _khPasangSidik() {
     if (!el.isConnected || el.querySelector(".kh-sidik-masuk")) return;
     const nama = (AK.guru.nama || "").split(",")[0];
     const kotak = document.createElement("div"); kotak.className = "kh-sidik-masuk";
-    kotak.innerHTML = `${KH.harian ? `<div class="kh-info">🌙 Sesi kemarin sudah berakhir pukul 00.00 — silakan masuk lagi.</div>` : ""}
-      <button type="button" class="kh-sidik-btn" onclick="khSidik()"><span>${KA_SIDIK_SVG}</span><b>Masuk dengan Sidik Jari</b><small>${escapeHtml(nama)}</small></button>
-      <div id="kh-pesan" class="kh-pesan"></div><div class="ak-atau"><i></i>atau dengan sandi<i></i></div>`;
-    const isian = el.querySelector(".ak-isian"); if (isian) isian.before(kotak); else el.querySelector(".ak-panel")?.appendChild(kotak);
+    kotak.innerHTML = `<button type="button" class="kh-sidik-btn" onclick="khSidik()" aria-label="Masuk dengan sidik jari">${KA_SIDIK_SVG}</button>
+      <b>Masuk dengan sidik jari</b><small>${escapeHtml(nama)}</small><div id="kh-pesan" class="kh-pesan"></div>`;
+    const tombol = el.querySelector("#ak-tombol"); if (tombol) tombol.after(kotak); else el.querySelector(".ak-panel")?.appendChild(kotak);
     setTimeout(() => { if (document.getElementById("ak-masuk") && !document.hidden) khSidik(true); }, 450);
   } catch (e) {}
 }
@@ -495,10 +494,12 @@ function _khSesudahMasuk(lewatSandi) {
   // Kunci Admin jangan muncul di atas layar Masuk Hari Ini
   const ka = kaCek; kaCek = function () { if (_khAktif()) { let t = null; try { t = localStorage.getItem(KH.kunci(AK.guru.id)); } catch (e) {} if (t && t !== _khHariIni()) return khCek(); } return ka.apply(this, arguments); };
   const st = document.createElement("style");
-  st.textContent = `.kh-sidik-masuk{display:flex;flex-direction:column;gap:8px}.kh-info{font-size:12.5px;line-height:1.5;background:#fef9c3;border:1px solid #fde68a;color:#854d0e;border-radius:12px;padding:8px 12px;font-weight:600}
-  .kh-sidik-btn{display:flex;align-items:center;gap:12px;width:100%;border:1.5px solid #6ee7b7;background:linear-gradient(135deg,#ecfdf5,#d1fae5);color:#065f46;border-radius:16px;padding:12px 14px;cursor:pointer;text-align:left;transition:transform .15s,box-shadow .2s}
-  .kh-sidik-btn:hover{box-shadow:0 8px 20px rgba(16,185,129,.25)}.kh-sidik-btn:active{transform:scale(.98)}.kh-sidik-btn span{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:#10b981;color:#fff;flex:none;animation:kaDenyut 2.4s ease-in-out infinite}.kh-sidik-btn span svg{width:26px;height:26px}
-  .kh-sidik-btn b{font-size:15px;flex:1}.kh-sidik-btn small{font-size:12px;color:#047857;font-weight:600}.kh-pesan{min-height:0;font-size:12.5px;font-weight:700;color:#dc2626}.kh-pesan:empty{display:none}
+  st.textContent = `.kh-sidik-masuk{display:flex;flex-direction:column;align-items:center;gap:3px;margin:18px 0 6px}
+  .kh-sidik-btn{position:relative;width:78px;height:78px;border-radius:50%;border:2px solid rgba(52,211,153,.55);background:radial-gradient(circle at 50% 40%,rgba(16,185,129,.28),rgba(6,78,59,.55));color:#6ee7b7;display:grid;place-items:center;cursor:pointer;box-shadow:0 0 0 8px rgba(16,185,129,.1),0 10px 24px rgba(0,0,0,.3);transition:transform .15s,box-shadow .2s;margin-bottom:6px}
+  .kh-sidik-btn::after{content:"";position:absolute;inset:-9px;border-radius:50%;border:2px solid rgba(52,211,153,.35);animation:kaDenyut 2.4s ease-in-out infinite}
+  .kh-sidik-btn:hover{box-shadow:0 0 0 10px rgba(16,185,129,.16),0 12px 28px rgba(0,0,0,.35)}.kh-sidik-btn:active{transform:scale(.94)}.kh-sidik-btn svg{width:40px;height:40px}
+  .kh-sidik-masuk b{font-size:14px;font-weight:600;color:inherit;opacity:.92}.kh-sidik-masuk small{font-size:12.5px;opacity:.6}
+  .kh-pesan{font-size:12.5px;font-weight:700;color:#f87171;text-align:center}.kh-pesan:empty{display:none}
   .kh-bulan{position:relative;font-size:46px;filter:drop-shadow(0 8px 14px rgba(0,0,0,.35));animation:kaAyun 3.2s ease-in-out infinite}
   .kh-atau{display:flex;align-items:center;gap:10px;color:rgba(226,232,240,.6);font-size:12px}.kh-atau i{flex:1;height:1px;background:rgba(255,255,255,.18)}
   .kh-sandi{position:relative;display:flex}.kh-sandi input{flex:1;height:54px;border-radius:16px;background:rgba(2,6,23,.35);border:1.5px solid rgba(255,255,255,.22);color:#fff;font-size:16px;padding:0 52px 0 16px;outline:none}
