@@ -55,6 +55,7 @@ const _juKode = (s) => (s?.m ? (s.sub ? s.m + "::" + s.sub : s.m) : "");
 const _juSubs = (id) => (typeof subMapel === "function" ? subMapel(id) : []);
 const _juGuru = (id) => (LOOKUP.guruAll || []).find((g) => g.id === id);
 const _juNamaGuru = (id) => { const g = _juGuru(id); return g ? (typeof _namaSingkatTopbar === "function" ? _namaSingkatTopbar(g.nama) : g.nama) : "?"; };
+const _juNamaGelar = (id) => { const g = _juGuru(id); return g ? String(g.nama || "").trim() : "?"; }; // nama lengkap + gelar (untuk PDF & WA)
 const _juHariPanjang = (iso) => _juTgl(iso).toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 const _juHariPendek = (iso) => _juTgl(iso).toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short" });
 // Isi tombol tab hari: nama hari, tanggal besar, bulan, keterangan
@@ -803,7 +804,7 @@ function juBagikanWa(id) {
   Object.entries(j.slot).forEach(([k, s]) => { const [t, sesiId, kelasId] = k.split("|"); if (!j.hari.includes(t) || !_juLabelSlot(s)) return; (s.p || []).forEach((g) => (per[g] = per[g] || []).push({ t, sesi: _juSesiPada(j, t, j.sesi.find((x) => x.id === sesiId)), ke: j.sesi.findIndex((x) => x.id === sesiId) + 1, kelasId, s })); });
   const tag = (g) => { const n = typeof normalisasiNomorWa === "function" ? normalisasiNomorWa(_juGuru(g)?.no_wa) : null; return n?.valid ? ` @${n.nomor}` : ""; };
   const daftar = Object.entries(per).sort((a, b) => _juNamaGuru(a[0]).localeCompare(_juNamaGuru(b[0]), "id")).map(([g, xs], i) =>
-    `${i + 1}. *${_juNamaGuru(g)}*${tag(g)}\n` + xs.sort((a, b) => a.t.localeCompare(b.t) || a.ke - b.ke).map((x) => `     ▪️ ${_juHariPendek(x.t)}, sesi ${x.ke} (${x.sesi?.mulai}–${x.sesi?.selesai}) — Kelas ${_juAngkaKelas(x.kelasId)}, ${_juLabelSlot(x.s)}`).join("\n")).join("\n\n");
+    `${i + 1}. *${_juNamaGelar(g)}*${tag(g)}\n` + xs.sort((a, b) => a.t.localeCompare(b.t) || a.ke - b.ke).map((x) => `     ▪️ ${_juHariPendek(x.t)}, sesi ${x.ke} (${x.sesi?.mulai}–${x.sesi?.selesai}) — Kelas ${_juAngkaKelas(x.kelasId)}, ${_juLabelSlot(x.s)}`).join("\n")).join("\n\n");
   const tautan = `${location.origin}${location.pathname}?buka=jadwalujian`;
   const teks = `✳️ *JADWAL PENGAWAS ${String(j.judul).toUpperCase()}*\n\nAssalamu'alaikum warahmatullahi wabarakatuh.\nBerikut jadwal mengawas ${_juHariPanjang(j.mulai)}${j.selesai !== j.mulai ? " s.d. " + _juHariPanjang(j.selesai) : ""}:\n\n${daftar || "(belum ada pengawas)"}\n\nSelama ujian, KBM kelas libur. Mohon hadir 15 menit sebelum sesi dan tekan *Absen Mengawas* di aplikasi.\nJadwal lengkap & PDF: ${tautan}\n\nJazakumullahu khairan.`;
   window.open("https://wa.me/?text=" + encodeURIComponent(teks), "_blank", "noopener");
@@ -833,7 +834,7 @@ async function juCetakPdf(id, dariEditor, versi) {
   const blokHari = daftarHari.map((t, hi) => `<section class="hari">
       <div class="hari-kepala"><span class="no">${String(hi + 1).padStart(2, "0")}</span><div><div class="hn">${e(_juHariPanjang(t))}</div>${hijri(t) ? `<div class="hj">${e(hijri(t))}</div>` : ""}</div></div>
       <table class="jdw"><thead><tr><th class="sesi">Sesi</th>${j.kelas.map((k) => `<th class="thk" style="background:${_juWarnaKelas(k)}">Kelas ${e(_juAngkaKelas(k))}</th>`).join("")}</tr></thead>
-      <tbody>${j.sesi.map((s, i) => (j.kelas.some((k) => _juLabelSlot(j.slot[_juKunci(t, s.id, k)])) || !hariTerisi.length) ? `<tr><td class="sesi"><div class="sn">Sesi ${i + 1}</div><div class="jam">${_juJamTeks(j, t, s)}</div></td>${j.kelas.map((k) => { const x = j.slot[_juKunci(t, s.id, k)]; const l = _juLabelSlot(x); const bg = versi === "warna" ? ` style="background:${_juWarnaKelas(k)}1a"` : ""; return l ? `<td${bg}><div class="mp">${e(l)}</div>${x.ruang ? `<div class="kc">Ruang ${e(x.ruang)}</div>` : ""}<div class="pw">${(x.p || []).map((g) => e(_juNamaGuru(g))).join(", ") || "Belum ada pengawas"}</div></td>` : `<td class="kosong"${bg}>–</td>`; }).join("")}</tr>` : "").join("")}</tbody></table>
+      <tbody>${j.sesi.map((s, i) => (j.kelas.some((k) => _juLabelSlot(j.slot[_juKunci(t, s.id, k)])) || !hariTerisi.length) ? `<tr><td class="sesi"><div class="sn">Sesi ${i + 1}</div><div class="jam">${_juJamTeks(j, t, s)}</div></td>${j.kelas.map((k) => { const x = j.slot[_juKunci(t, s.id, k)]; const l = _juLabelSlot(x); const bg = versi === "warna" ? ` style="background:${_juWarnaKelas(k)}1a"` : ""; return l ? `<td${bg}><div class="mp">${e(l)}</div>${x.ruang ? `<div class="kc">Ruang ${e(x.ruang)}</div>` : ""}<div class="pw">${(x.p || []).map((g) => e(_juNamaGelar(g))).join(", ") || "Belum ada pengawas"}</div></td>` : `<td class="kosong"${bg}>–</td>`; }).join("")}</tr>` : "").join("")}</tbody></table>
     </section>`).join("");
   const html = `<!doctype html><html lang="id"><head><meta charset="utf-8"><title>${e(j.judul)}</title><style>
     @page{size:A4 landscape;margin:0}
