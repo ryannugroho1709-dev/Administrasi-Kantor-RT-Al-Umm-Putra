@@ -66,3 +66,13 @@
 .kt-sop-ul{list-style:none;padding:0;margin:4px 0 0}.kt-sop-ul li{font-size:12.5px;margin:2px 0}
 .kt-sop-ul li small{opacity:.65;font-weight:700}.kt-sop-ul li.ok{color:#15803d}
 @media (max-width:600px){.sop-pj{display:block;overflow-x:auto}.sop-pj td,.sop-pj th{padding:6px 5px}.sop-rt{flex-wrap:wrap}.sop-rt select{width:100%}.sop-tabel td:first-child{white-space:normal}}
+/* Alumni (Pengelola) */
+.al-mono{font-family:ui-monospace,Consolas,monospace;font-size:12.5px}
+.al-ok{color:#15803d;background:#dcfce7;border-radius:99px;padding:2px 9px;font-weight:700;font-size:12px;white-space:nowrap}
+.al-belum{color:#92400e;background:#fef3c7;border-radius:99px;padding:2px 9px;font-weight:700;font-size:12px}
+.al-peringatan{color:#b91c1c;font-size:12px;margin-top:3px}
+tr.al-cek{background:#fef2f2}
+.al-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.al-grid label{display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:13px}
+.al-penuh{grid-column:1/-1}
+.al-detail h3{margin:12px 0 6px}
