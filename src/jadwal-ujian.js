@@ -111,7 +111,7 @@ function _juMapelSaya(j, guruId) {
     const sesi = j.sesi.find((y) => y.id === sesiId); if (sesi) x.kapan.push({ t, sesi: _juSesiPada(j, t, sesi), ke: j.sesi.indexOf(sesi) + 1 });
   });
   // mapel yang belum masuk jadwal tetap tampil (soalnya tetap perlu dikumpulkan), kecuali kegiatan non-ujian
-  return [...per.values()].filter((x) => x.kapan.length || !_JU_LEWATI_MAPEL.test(_juNamaMapel(x.mapelId)))
+  return [...per.values()].filter((x) => x.kapan.length || _juDiujikan(j, x.mapelId))
     .filter((x) => !((LOOKUP.mapel || []).find((m) => m.id === x.mapelId.split("::")[0]) || {}).tanpa_guru)
     .map((x) => ({ ...x, kapan: x.kapan.sort((a, b) => a.t.localeCompare(b.t) || a.ke - b.ke) }))
     .sort((a, b) => (a.kapan[0]?.t || "9").localeCompare(b.kapan[0]?.t || "9") || _juNamaMapel(a.mapelId).localeCompare(_juNamaMapel(b.mapelId), "id"));
@@ -388,6 +388,10 @@ function _juGambarEditor() {
           ${["jumat", "sabtu"].map((hr) => `<div class="ju-jamhari-blok"><b>${hr === "jumat" ? "🕌 Jumat" : "📅 Sabtu"}</b>${j.sesi.map((s, i) => { const o = j.jamHari?.[hr]?.[s.id] || {}; return `<div class="ju-sesi-in"><span>Sesi ${i + 1}</span><input type="time" class="input" value="${o.mulai || ""}" title="hari biasa ${s.mulai}" onchange="_juAturJamHari('${hr}','${s.id}','mulai',this.value)"/>–<input type="time" class="input" value="${o.selesai || ""}" title="hari biasa ${s.selesai}" onchange="_juAturJamHari('${hr}','${s.id}','selesai',this.value)"/><small class="ju-ket">biasa ${s.mulai}–${s.selesai}</small></div>`; }).join("")}</div>`).join("")}
         </div>
         <div><label class="form-label">Kelas Peserta</label><div class="ju-cek">${_juKelasBawaan().map((k) => `<label><input type="checkbox" ${j.kelas.includes(k) ? "checked" : ""} onchange="_juToggleKelas('${k}',this.checked)"/> <span class="ju-dot" style="background:${_juWarnaKelas(k)}"></span>Kelas ${_juEsc(_juAngkaKelas(k))}</label>`).join("")}</div></div>
+        <div class="ju-atur-mapel"><label class="form-label">Mapel yang Diujikan <small>(hilangkan centang untuk mapel yang tidak diujikan, mis. Tahfizh, Muhadhoroh, Ekskul)</small></label>
+          <div class="ju-cek ju-cek-mapel">${_juMapelSemuaKelas(j).map((m) => { const on = _juDiujikan(j, m); return `<label class="${on ? "" : "tidak"}"><input type="checkbox" ${on ? "checked" : ""} onchange="_juToggleMapelUji('${m}',this.checked,this)"/> ${_juEsc(_juNamaMapel(m))}</label>`; }).join("") || `<span class="ju-ket">Belum ada jadwal pelajaran untuk kelas peserta.</span>`}</div>
+          <div class="ju-uji-alat"><small class="ju-ket" id="ju-uji-jml">${_juJmlMapelUji(j)}</small><button class="btn btn-ghost btn-sm" onclick="_juSemuaMapelUji(true)">Centang Semua</button><button class="btn btn-ghost btn-sm" onclick="_juSemuaMapelUji(false)">Kosongkan Semua</button></div>
+          <small class="ju-ket">Mapel yang tidak diujikan tidak ikut Susun dari Jadwal / Susun Merata, dan gurunya tidak diminta mengumpulkan soal.</small></div>
       </div></details>` : ""}
     <div class="ju-tab ju-tab-hari">${j.hari.map((t) => `<button class="${t === tgl ? "on" : ""} ${t === tanggalISO() ? "kini" : ""}" data-hari="${t}" onclick="JU.hari='${t}';_juGambarEditor()">${_juTabIsi(t, Object.keys(j.slot || {}).filter((k) => k.startsWith(t + "|") && _juLabelSlot(j.slot[k])).length + " mapel")}</button>`).join("")}</div>
     ${tgl ? `<div class="card ju-papan">
@@ -424,10 +428,11 @@ function _juIsiSel(j, tgl, s, kelasId, atur) {
   return `
     ${label ? '<span class="ju-grip" title="Tekan lama lalu geser untuk memindah / menukar">⠿</span>' : ""}${tandaOnline}<select class="input ju-mapel" onchange="_juSetMapel('${kunci}',this.value)">
       <option value="">— Kosong —</option>
-      ${opsiUtama.length ? `<optgroup label="Mapel Kelas Ini">${opsiUtama.map(([id, n]) => _juSubs(id).length ? _juSubs(id).map((sb) => _juOpsiMapel(`${id}::${sb}`, `${sb} (${n})`, id === x.m && x.sub === sb, dipakai)).join("") + _juOpsiMapel(id, `${n} — Digabung`, id === x.m && !x.sub, dipakai) : _juOpsiMapel(id, n, id === x.m, dipakai)).join("")}</optgroup>` : ""}
+      ${opsiUtama.length ? `<optgroup label="Mapel Kelas Ini">${opsiUtama.map(([id, n0]) => { const n = n0 + (_juDiujikan(j, id) ? "" : " · Tidak Diujikan"); return _juSubs(id).length ? _juSubs(id).map((sb) => _juOpsiMapel(`${id}::${sb}`, `${sb} (${n})`, id === x.m && x.sub === sb, dipakai)).join("") + _juOpsiMapel(id, `${n} — Digabung`, id === x.m && !x.sub, dipakai) : _juOpsiMapel(id, n, id === x.m, dipakai); }).join("")}</optgroup>` : ""}
       <optgroup label="Mapel Lain">${opsiLain.map(([id, n]) => _juOpsiMapel(id, n, id === x.m, dipakai)).join("")}</optgroup>
       <option value="__teks" ${!x.m && x.teks ? "selected" : ""}>✏️ Tulis Sendiri…</option>
     </select>
+    ${x.m && !_juDiujikan(j, x.m) ? `<small class="ju-ket ju-tidak-uji">⚠️ Ditandai Tidak Diujikan di ⚙️ Pengaturan</small>` : ""}
     ${!x.m && x.teks ? `<div class="ju-teks">${_juEsc(x.teks)}</div>` : ""}
     ${label ? `<div class="ju-chips">${chips}<button class="ju-tambah" onclick="juPilihPengawas('${kunci}')">＋ Pengawas</button><button class="ju-tambah ju-pindah" onclick="juPindahSlot('${kunci}')" title="Pindahkan ke sesi kosong atau tukar dengan mapel lain">↔️ Pindah/Tukar</button></div>${pengampu.length ? `<small class="ju-ket">Pengampu: ${pengampu.map(_juNamaGuru).map(_juEsc).join(", ")}</small>` : ""}` : ""}`;
 }
@@ -842,6 +847,19 @@ async function juCetakPdf(id, dariEditor) {
 // kalau masih penuh ke hari ujian lain yang masih longgar (pekan kedua didahulukan).
 const _JU_NAMA_HARI = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
 const _JU_LEWATI_MAPEL = /muhadh|muhad[oa]r|tahfi|ekskul|ekstra|pramuka|upacara|apel|halaqah|kultum/i;
+// Mapel diujikan? Diatur per jadwal di ⚙️ Pengaturan (j.mapelTidak = daftar mapel yang TIDAK diujikan).
+// Bila belum pernah diatur, bawaan: kegiatan non-ujian (tahfizh, muhadhoroh, ekskul, dll.) tidak diujikan.
+function _juDiujikan(j, m) { const b = String(m || "").split("::")[0]; if (j && Array.isArray(j.mapelTidak)) return !j.mapelTidak.includes(b); return !_JU_LEWATI_MAPEL.test(_juNamaMapel(b)); }
+function _juMapelSemuaKelas(j) { const s = new Set(); (j.kelas || []).forEach((k) => Object.keys(_juMapelDiKelas(k)).forEach((m) => s.add(m))); return [...s].filter((m) => _juNamaMapel(m)).sort((a, b) => _juNamaMapel(a).localeCompare(_juNamaMapel(b), "id")); }
+function _juJmlMapelUji(j) { const a = _juMapelSemuaKelas(j); return `${a.filter((x) => _juDiujikan(j, x)).length} diujikan · ${a.filter((x) => !_juDiujikan(j, x)).length} tidak diujikan`; }
+function _juToggleMapelUji(m, on, el) {
+  const j = JU.edit; if (!Array.isArray(j.mapelTidak)) j.mapelTidak = _juMapelSemuaKelas(j).filter((x) => !_juDiujikan(j, x));
+  const s = new Set(j.mapelTidak); if (on) s.delete(m); else s.add(m); j.mapelTidak = [...s];
+  if (el) el.closest("label").classList.toggle("tidak", !on);
+  const n = qs("ju-uji-jml"); if (n) n.textContent = _juJmlMapelUji(j);
+  _juTandai();
+}
+function _juSemuaMapelUji(on) { const j = JU.edit; j.mapelTidak = on ? [] : _juMapelSemuaKelas(j); _juTandai(); _juGambarEditor(); const d = document.querySelector(".ju-atur"); if (d) d.open = true; }
 const _juJamSore = (jam) => String(jam || "") >= "13:00";
 async function juSusunDariJadwal() {
   const j = JU.edit; if (!j) return;
@@ -862,7 +880,7 @@ async function juSusunDariJadwal() {
     <label class="je-opsi"><input type="checkbox" id="jus-pengampu" checked/> <span>Pengampu Mapel Langsung Jadi Pengawas</span></label>
     ${adaIsi ? `<label class="je-opsi"><input type="checkbox" id="jus-kosongkan" checked/> <span>Kosongkan Dulu Jadwal yang Sudah Terisi</span></label>` : ""}
     <details class="ju-susun-mapel"><summary>Mapel yang diujikan (${mapelIds.length})</summary>
-      <div class="ju-cek">${mapelIds.map((m) => `<label><input type="checkbox" class="jus-m" value="${m}" ${_JU_LEWATI_MAPEL.test(_juNamaMapel(m)) ? "" : "checked"}/> ${_juEsc(_juNamaMapel(m) || "?")}</label>`).join("")}</div>
+      <div class="ju-cek">${mapelIds.map((m) => `<label><input type="checkbox" class="jus-m" value="${m}" ${_juDiujikan(JU.edit, m) ? "checked" : ""}/> ${_juEsc(_juNamaMapel(m) || "?")}</label>`).join("")}</div>
     </details>
     <div class="ju-susun-ket">Kalau sehari melebihi batas, mapel dipindah ke <b>hari yang sama di pekan kedua</b>, supaya urutannya tetap mirip jadwal pelajaran.</div>
     <button class="btn btn-accent" style="width:100%;margin-top:10px;" onclick="_juSusunJalankan()">Susun Sekarang</button>`);

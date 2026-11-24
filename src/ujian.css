@@ -754,3 +754,10 @@ body.jus-menyeret #ju-wadah [data-kunci]:not(.jus-boleh):not(.jus-asal){opacity:
 .jus-d-tabel td{background:color-mix(in srgb,var(--kw,#334155) 8%,transparent);border-radius:8px;padding:5px 6px;text-align:center}
 .jus-d-tabel td.aku{box-shadow:inset 0 0 0 2px var(--kw,#334155)}.jus-d-tabel td small{display:block;font-size:10px}
 .jus-d-aksi{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+/* Mapel yang diujikan (Pengaturan jadwal ujian) */
+.ju-atur-mapel{grid-column:1/-1}
+.ju-cek-mapel{display:flex;flex-wrap:wrap;gap:6px}
+.ju-cek-mapel label{border:1px solid #bbf7d0;background:#f0fdf4;border-radius:99px;padding:4px 10px;font-size:12.5px;cursor:pointer}
+.ju-cek-mapel label.tidak{border-color:var(--border-soft,#e2e8f0);background:var(--bg-subtle,#f1f5f9);color:var(--text-secondary);text-decoration:line-through}
+.ju-uji-alat{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0 2px}
+.ju-tidak-uji{display:block;color:#b45309!important}

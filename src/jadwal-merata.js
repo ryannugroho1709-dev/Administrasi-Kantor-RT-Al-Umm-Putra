@@ -41,7 +41,7 @@ async function juSusunMerata() {
     <label class="je-opsi"><input type="checkbox" id="jm-pengampu" checked/> <span>Pengampu Mapel Langsung Jadi Pengawas</span></label>
     ${adaIsi ? `<label class="je-opsi"><input type="checkbox" id="jm-kosongkan" checked/> <span>Kosongkan Dulu Jadwal yang Sudah Terisi</span></label>` : ""}
     <details class="ju-susun-mapel"><summary>Mapel yang diujikan (${mapelIds.length})</summary>
-      <div class="ju-cek">${mapelIds.map((m) => `<label><input type="checkbox" class="jm-m" value="${m}" ${_JU_LEWATI_MAPEL.test(_juNamaMapel(m)) ? "" : "checked"}/> ${_juEsc(_juNamaMapel(m) || "?")} <small>${_jmKat(m) === "diniyyah" ? "· Diniyyah" : "· Umum"}</small></label>`).join("")}</div>
+      <div class="ju-cek">${mapelIds.map((m) => `<label><input type="checkbox" class="jm-m" value="${m}" ${_juDiujikan(JU.edit, m) ? "checked" : ""}/> ${_juEsc(_juNamaMapel(m) || "?")} <small>${_jmKat(m) === "diniyyah" ? "· Diniyyah" : "· Umum"}</small></label>`).join("")}</div>
     </details>
     <div id="jm-hitung" class="ju-susun-ket"></div>
     <button class="btn btn-accent" style="width:100%;margin-top:10px;" onclick="_jmJalankan()">Susun Sekarang</button>`, { lebar: true });

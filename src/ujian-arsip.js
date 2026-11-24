@@ -92,6 +92,7 @@ function _uaDaftarWajib(j) {
     (_juSubs(a.mapel_id).length ? _juSubs(a.mapel_id).map((s) => a.mapel_id + "::" + s) : [a.mapel_id]).forEach((kode) => {
       const k = _uaKunci(kode, a.kelas_id);
       if (dariSlot.size && !dariSlot.has(k)) return;
+      if (!dariSlot.has(k) && typeof _juDiujikan === "function" && !_juDiujikan(j, kode)) return;
       if (!per.has(k)) per.set(k, { mapelId: kode, kelasId: a.kelas_id, guru: new Set() });
       per.get(k).guru.add(a.guru_id);
     });
