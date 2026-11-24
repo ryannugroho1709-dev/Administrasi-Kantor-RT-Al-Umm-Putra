@@ -12,7 +12,19 @@
 //    profil:kantor:riwayat→ { id: {teks, peran:[...], jawab:[{kode, teks}], t} }
 // ============================================================
 const KT = { buka: false, staf: [], peran: {}, atur: { peran: {}, jk: {} }, tiket: {}, riwayat: {}, tokoh: {}, label: {}, gelembung: {}, kursiRapat: [], sibuk: false, sudut: Math.PI / 4, zoom: 1 };
-const KT_ATUR = "profil:kantor:atur", KT_TIKET = "profil:kantor:tiket", KT_RIWAYAT = "profil:kantor:riwayat";
+const KT_ATUR = "bosp:kantor:atur", KT_TIKET = "bosp:kantor:tiket", KT_RIWAYAT = "bosp:kantor:riwayat";
+// Data kantor bersama (ruang "*"), digabung di server lewat kv_gabung_umum (awalan bosp:) — bukan kv_gabung biasa,
+// yang menyimpan ke ruang aktif lalu bentrok ("duplicate key") saat disimpan kedua kali.
+const _ktSimpan = (kunci, potongan) => _bspGabungUmum(kunci, potongan);
+async function _ktAmbil(kunci) {
+  const baru = await supaSemua.from("kuliah_pengaturan").select("nilai").eq("kunci", kunci).eq("ruang_id", "*").maybeSingle();
+  if (baru.data && baru.data.nilai) return baru.data.nilai;
+  // pindahkan data lama (profil:kantor:*) bila ada
+  const lama = await supaSemua.from("kuliah_pengaturan").select("nilai").eq("kunci", kunci.replace(/^bosp:/, "profil:")).limit(1).maybeSingle();
+  const isi = (lama.data && lama.data.nilai) || {};
+  if (Object.keys(isi).length) { try { await _ktSimpan(kunci, isi); } catch (e) {} }
+  return isi;
+}
 const KT_JENJANG = { A: "Paket A", Pa: "Paket B & C Putra", Pi: "Paket B & C Putri" };
 const _ktE = (s) => escapeHtml(s == null ? "" : String(s));
 const _ktNama = (n) => String(n || "").split(",")[0].trim();
@@ -52,7 +64,7 @@ async function _ktMuatStaf() {
     supaSemua.from("guru_jabatan").select("guru_id,jabatan_id,is_utama,ruang_id"),
     supaSemua.from("kuliah_pengaturan").select("nilai").eq("kunci", "bosp:bendahara").eq("ruang_id", "*").maybeSingle(),
     supaSemua.from("kuliah_pengaturan").select("ruang_id,nilai").eq("kunci", "penyelenggara"),
-    _kvAmbil(KT_ATUR, {}), _kvAmbil(KT_TIKET, {}),
+    _ktAmbil(KT_ATUR), _ktAmbil(KT_TIKET),
   ]);
   const guru = g.data || [], jab = jm.data || [], pegang = gj.data || [];
   KT.guru = guru; KT.atur = { peran: {}, jk: {}, ...(atur || {}) }; KT.tiket = tiket || {};
@@ -93,11 +105,12 @@ async function ktBuka() {
   const el = document.createElement("div"); el.id = "kantor-ai";
   el.innerHTML = `<div class="kt-atas"><div class="kt-judul"><b>🏢 Kantor PKBM Al-Umm</b><small>Ruang Kepala · Ruang Rapat · Ruang Ustadz · Ruang Ustadzah</small></div>
       <div class="kt-alat"><button onclick="ktKabar()" title="Kabar baru dari tiap jenjang">📰<span class="kt-sembunyi-hp"> Kabar</span></button><button onclick="ktKeliling()" title="Kepala PKBM berkeliling">🚶</button><button onclick="ktTiketBuka()" title="Tiket Tim IT">🎫<span class="kt-sembunyi-hp"> Tiket</span><span id="kt-tiket-n"></span></button><button onclick="ktAturBuka()" title="Atur petugas">⚙️</button><button onclick="ktTutup()" title="Tutup">✕</button></div></div>
-    <div class="kt-layar" id="kt-layar"><div class="kt-memuat" id="kt-memuat"><i></i>Menyiapkan kantor…</div><div class="kt-hamparan" id="kt-hamparan"></div>
+    <div class="kt-tengah"><div class="kt-layar" id="kt-layar"><div class="kt-memuat" id="kt-memuat"><i></i>Menyiapkan kantor…</div><div class="kt-hamparan" id="kt-hamparan"></div>
       <div class="kt-putar"><button onclick="ktPutar(-1)" title="Putar kiri">⟲</button><button onclick="ktZoom(1)" title="Perbesar">＋</button><button onclick="ktZoom(-1)" title="Perkecil">－</button><button onclick="ktPutar(1)" title="Putar kanan">⟳</button></div></div>
+    <div class="kt-panel" id="kt-panel" hidden></div></div>
     <div class="kt-bawah"><div class="kt-chip" id="kt-chip"></div>
       <div class="kt-kirim"><textarea id="kt-teks" rows="1" placeholder="Sampaikan keluhan, masukan, atau pertanyaan… (mis. tombol simpan rapor tidak bisa diklik)"></textarea><button onclick="ktKirim()" id="kt-tombol-kirim">Kirim</button></div></div>
-    <div class="kt-panel" id="kt-panel" hidden></div>`;
+`;
   document.body.appendChild(el);
   document.body.classList.add("kt-terbuka");
   const ta = el.querySelector("#kt-teks");
@@ -132,11 +145,12 @@ function _ktChip() {
   const w = document.getElementById("kt-chip"); if (!w) return;
   w.innerHTML = KT_PERAN.map((p) => { const ids = KT.peran[p.kode] || []; return `<button style="--w:${p.warna}" class="${ids.length ? "" : "kosong"}" onclick="${ids.length ? `ktKartu('${ids[0]}','${p.kode}')` : `ktAturBuka()`}">${p.ikon} ${_ktE(p.nama)}</button>`; }).join("");
 }
-function _ktPanel(html) { const p = document.getElementById("kt-panel"); if (!p) return; p.hidden = false; p.innerHTML = `<button class="kt-panel-x" onclick="this.parentElement.hidden=true">✕</button>${html}`; p.scrollTop = 0; }
+function _ktPanel(html) { const p = document.getElementById("kt-panel"); if (!p) return; p.hidden = false; p.innerHTML = `<button class="kt-panel-x" onclick="this.parentElement.hidden=true;setTimeout(_ktUkur,30)">✕</button>${html}`; p.scrollTop = 0; setTimeout(_ktUkur, 30); }
 function ktKartu(id, kode) {
   const s = KT.staf.find((x) => x.id === id); if (!s) return;
+  if (!kode && (KT.peran.kepala || [])[0] === id) return ktMenuKepala();
   const daftar = kode ? [kode] : s.peran;
-  _ktPanel(`<div class="kt-kartu-kepala"><span class="kt-avatar ${s.jk === "P" ? "p" : ""}"></span><div><b>${_ktE(s.namaLengkap || s.nama)}</b><small>${s.jk === "P" ? "Ustadzah" : "Ustadz"} · ${s.peran.map((k) => _ktE(_ktPeran(k).nama)).join(" · ")}</small></div></div>
+  _ktPanel(`<div class="kt-kartu-kepala"><span class="kt-avatar ${s.jk === "P" ? "p" : ""}"></span><div><b>${s.jk === "P" ? "Ustadzah" : "Ustadz"} ${_ktE(s.namaLengkap || s.nama)}</b><small>${s.peran.map((k) => _ktE(_ktPeran(k).nama)).join(" · ")}</small></div></div>
     ${daftar.map((k) => { const p = _ktPeran(k); return `<div class="kt-tugas" style="--w:${p.warna}"><b>${p.ikon} ${_ktE(p.nama)} — Tugas</b><ul>${p.tugas.map((t) => `<li>${_ktE(t)}</li>`).join("")}</ul>
       <div class="kt-cepat">${_ktTanyaCepat(k).map(([lbl, q]) => `<button onclick="ktKirim(${_ktE(JSON.stringify(q))})">${_ktE(lbl)}</button>`).join("")}</div></div>`; }).join("")}`);
   const t = KT.tokoh[id]; if (t) _ktBicara(id, "Assalamu'alaikum, ada yang bisa ana bantu?", 2500);
@@ -150,6 +164,67 @@ function _ktTanyaCepat(k) {
   if (/^peny-/.test(k)) { const r = k.slice(5); return [["Evaluasi KBM", `evaluasi kegiatan ${KT_JENJANG[r]}`], ["BOSP Jenjang", `laporan bosp ${KT_JENJANG[r]}`]]; }
   if (/^admin-/.test(k)) { const r = k.slice(6); return [["Evaluasi KBM", `evaluasi kegiatan ${KT_JENJANG[r]}`], ["Data Siswa", `cek data siswa`]]; }
   return [];
+}
+
+// ── Perintah Kepala PKBM: Kepala berjalan sendiri ke bagian terkait lalu memimpin rapat / memanggil ke ruangannya ──
+const KT_RAPAT_KEPALA = [
+  ["📰", "Kabar Baru Tiap Jenjang", "__kabar"], ["💰", "Rapat BOSP / RKAS", "laporan bosp lengkap semua jenjang", "bendahara"],
+  ["📚", "Evaluasi KBM", "evaluasi kegiatan semua jenjang", "peny-Pa"], ["🧪", "Ujian & Bank Soal", "laporan ujian semua jenjang", "admin-Pa"],
+  ["📘", "Modul Ajar & Kop Soal", "laporan modul ajar semua jenjang", "admin-A"], ["🗓️", "Jadwal & Kalender", "laporan jadwal dan kalender", "peny-A"],
+  ["🧒", "Kehadiran Siswa", "laporan kehadiran siswa", "admin-Pi"], ["💼", "Kas, Insentif & Slip Gaji", "laporan kas insentif gaji", "bendahara"],
+  ["🗂️", "Data Siswa & Guru", "cek data siswa dan guru", "sekretaris"], ["🏫", "Laporan Lengkap Semua Fitur", "laporan lengkap semua fitur", "sekretaris"],
+];
+function ktMenuKepala() {
+  const kid = (KT.peran.kepala || [])[0], s = KT.staf.find((x) => x.id === kid) || {};
+  const lain = KT.staf.filter((x) => x.id !== kid);
+  KT.perintah = KT_RAPAT_KEPALA;
+  _ktPanel(`<div class="kt-kartu-kepala"><span class="kt-avatar"></span><div><b>${_ktE(_ktGelar(s))} ${_ktE(s.namaLengkap || s.nama || "")}</b><small>Kepala PKBM — pilih perintah</small></div></div>
+    <h4>🪑 Pimpin Rapat</h4><p class="kt-ket">Kepala mendatangi bagian terkait, lalu semua petugas berkumpul di Ruang Rapat.</p>
+    <div class="kt-perintah">${KT_RAPAT_KEPALA.map(([ik, l], i) => `<button onclick="ktPerintahNo(${i})"><span>${ik}</span>${_ktE(l)}</button>`).join("")}</div>
+    <h4>🚪 Panggil ke Ruang Kepala</h4><p class="kt-ket">Kepala menjemput petugas, lalu petugas melapor di kursi tamu Ruang Kepala.</p>
+    <div class="kt-perintah">${lain.map((x) => `<button onclick="ktPanggil('${x.id}')"><span>${_ktPeran(x.peran[0]).ikon}</span>${_ktE(_ktGelar(x))} ${_ktE(x.nama.split(" ")[0])}<small>${_ktE(_ktPeranPendek(x.peran[0]))}</small></button>`).join("")}</div>
+    <h4>🚶 Lainnya</h4><div class="kt-perintah"><button onclick="ktKeliling()"><span>🚶</span>Keliling Kantor</button><button onclick="ktTiketBuka()"><span>🎫</span>Tiket Tim IT</button></div>`);
+}
+function ktPerintahNo(i) { const p = KT_RAPAT_KEPALA[i]; if (p) ktPerintah(p[2], p[3] || ""); }
+// titik berdiri di belakang kursi seseorang
+const _ktDekatKursi = (k) => ({ x: k.x - Math.sin(k.hadap) * 0.85, z: k.z - Math.cos(k.hadap) * 0.85, hadap: k.hadap });
+async function ktPerintah(teks, kodeUtama) {
+  if (teks === "__kabar") return ktKabar();
+  if (KT.sibuk) { toast("Kepala sedang sibuk, tunggu sebentar", "info"); return; }
+  const kid = (KT.peran.kepala || [])[0], kp = kid && KT.tokoh[kid], tujuan = kodeUtama && (KT.peran[kodeUtama] || [])[0], tt = tujuan && KT.tokoh[tujuan];
+  if (kp && tt && tujuan !== kid) {
+    KT.sibuk = true;
+    try {
+      const s = KT.staf.find((x) => x.id === tujuan);
+      await _ktBicara(kid, "Bismillah, ana ke bagian " + _ktPeranPendek(kodeUtama) + " dulu.", 1600);
+      await _ktPergi(kp, _ktDekatKursi(tt.userData.meja), { berdiri: true });
+      await _ktBicara(kid, `${_ktGelar(s)} ${s.nama.split(" ")[0]}, mari kita rapat sekarang. Tolong siapkan datanya.`, 2600);
+      await _ktBicara(tujuan, "Na'am, siap. Ana kabari yang lain.", 2000);
+    } finally { KT.sibuk = false; }
+  }
+  return ktKirim(teks);
+}
+// panggil petugas ke kursi tamu Ruang Kepala → melapor → kembali
+async function ktPanggil(id) {
+  if (KT.sibuk) { toast("Kepala sedang sibuk, tunggu sebentar", "info"); return; }
+  const kid = (KT.peran.kepala || [])[0], kp = KT.tokoh[kid], t = KT.tokoh[id], s = KT.staf.find((x) => x.id === id);
+  if (!kp || !t || !s) return;
+  KT.sibuk = true;
+  try {
+    _ktPanel(`<div class="kt-obrolan"><div class="kt-info">🚪 ${_ktE(_ktGelar(s))} ${_ktE(s.nama)} dipanggil ke Ruang Kepala</div><div id="kt-jawaban"></div></div>`);
+    await _ktPergi(kp, _ktDekatKursi(t.userData.meja), { berdiri: true });
+    await _ktBicara(kid, `${_ktGelar(s)} ${s.nama.split(" ")[0]}, ke ruangan ana sebentar ya.`, 2200);
+    await Promise.all([_ktPergi(kp, KT.kursiKepala), _ktTunggu(500).then(() => _ktPergi(t, KT.kursiTamu[0]))]);
+    const k = s.peran[0], r = /^(peny|admin)-/.test(k) ? k.split("-")[1] : null;
+    const topik = /^peny-/.test(k) ? "evaluasi" : k === "bendahara" ? "bosp" : /^admin-/.test(k) ? "lengkap" : k === "sekretaris" || k === "dapodik" ? "data" : null;
+    await _ktTampilBaris({ kode: "kepala", html: "Silakan laporkan perkembangan bagian antum.", singkat: "Silakan laporkan perkembangan bagian antum." });
+    const skrip = topik ? await _ktSkrip(topik, (r ? KT_JENJANG[r] : "") + " " + topik) : null;
+    const baris = skrip ? skrip.baris.filter((b) => b.kode !== "kepala").slice(0, 4) : [];
+    if (!baris.length) { const j = await _ktJawab(k, k === "it" ? "laporan tiket" : "laporan"); baris.push({ kode: k, html: _ktE(j.teks).replace(/\n/g, "<br>"), singkat: j.singkat || j.teks }); }
+    for (const b of baris) await _ktTampilBaris({ ...b, kode: k });
+    await _ktTampilBaris({ kode: "kepala", html: "Jazakallahu khairan, lanjutkan. Laporkan bila ada kendala.", singkat: "Jazakallahu khairan, lanjutkan." });
+    await _ktPergi(t, t.userData.meja);
+  } finally { KT.sibuk = false; }
 }
 
 // ── Mengarahkan pesan ke petugas ──
@@ -194,7 +269,7 @@ async function ktKirim(teksLangsung) {
     const ln = document.getElementById("kt-lanjut");
     if (ln && skrip.lanjut) ln.innerHTML = skrip.lanjut.map(([l, q]) => `<button onclick="ktKirim(${_ktE(JSON.stringify(q))})">${_ktE(l)}</button>`).join("");
     const idR = "r" + Date.now().toString(36);
-    _kvGabung(KT_RIWAYAT, { [idR]: { teks, topik: topik || null, peran: kodes, t: Date.now() } }).catch(() => {});
+    _ktSimpan(KT_RIWAYAT, { [idR]: { teks, topik: topik || null, peran: kodes, t: Date.now() } }).catch(() => {});
   } finally { if (ids.length) await _ktBubar(ids); KT.sibuk = false; if (tb) tb.disabled = false; }
 }
 
@@ -260,7 +335,7 @@ async function _ktJawabIt(teks) {
   const prioritas = /tidak bisa|gak bisa|ga bisa|nggak bisa|error|eror|hilang|rusak|crash|macet|login|sandi/.test(t) ? "Tinggi" : jenis === "Fitur Baru" ? "Rendah" : "Sedang";
   const no = Object.keys(KT.tiket || {}).length + 1, id = "t" + Date.now().toString(36);
   const tk = { no, judul: teks.split(/[.!?\n]/)[0].slice(0, 90), isi: teks, jenis, prioritas, status: "baru", t: Date.now(), oleh: STATE.guruNama || "Admin", ruang: STATE.ruang };
-  try { await _kvGabung(KT_TIKET, { [id]: tk }); KT.tiket[id] = tk; _ktTiketBadge(); }
+  try { await _ktSimpan(KT_TIKET, { [id]: tk }); KT.tiket[id] = tk; _ktTiketBadge(); }
   catch (e) { return { teks: "Afwan, tiket belum tersimpan: " + (e.message || e) }; }
   return { teks: `Tiket #${no} dicatat — ${jenis}, prioritas ${prioritas}.\nAna laporkan di Ruang Rapat dan masuk daftar 🎫 Tiket. Antum bisa salin daftar tiket untuk dikerjakan Claude.`, singkat: `Tiket #${no} (${jenis}) sudah ana catat.` };
 }
@@ -268,7 +343,7 @@ async function _ktJawabIt(teks) {
 // ── Tiket ──
 function _ktTiketBadge() { const n = Object.values(KT.tiket || {}).filter((x) => x && (x.status === "baru" || x.status === "dikerjakan")).length; const b = document.getElementById("kt-tiket-n"); if (b) b.textContent = n ? ` ${n}` : ""; }
 async function ktTiketBuka() {
-  try { KT.tiket = await _kvAmbil(KT_TIKET, {}); } catch (e) {}
+  try { KT.tiket = await _ktAmbil(KT_TIKET); } catch (e) {}
   const daftar = Object.entries(KT.tiket || {}).filter(([, x]) => x && x.status !== "hapus").sort((a, b) => b[1].t - a[1].t);
   const label = { baru: "🆕 Baru", dikerjakan: "🔧 Dikerjakan", selesai: "✅ Selesai" };
   _ktPanel(`<h3>🎫 Tiket Tim IT</h3><p class="kt-ket">Laporan bug, tampilan & fitur dari Kantor. Salin tiket yang belum selesai lalu tempel ke Claude untuk dikerjakan.</p>
@@ -278,7 +353,7 @@ async function ktTiketBuka() {
 }
 async function ktTiketStatus(id, status) {
   const x = KT.tiket[id]; if (!x) return;
-  try { await _kvGabung(KT_TIKET, { [id]: { ...x, status, diubah: Date.now() } }); x.status = status; _ktTiketBadge(); if (status === "hapus") ktTiketBuka(); toast("Tiket diperbarui", "ok"); }
+  try { await _ktSimpan(KT_TIKET, { [id]: { ...x, status, diubah: Date.now() } }); x.status = status; _ktTiketBadge(); if (status === "hapus") ktTiketBuka(); toast("Tiket diperbarui", "ok"); }
   catch (e) { toast("Gagal: " + (e.message || e), "err"); }
 }
 function ktTiketSalin() {
@@ -305,7 +380,7 @@ async function ktAturSimpan() {
   document.querySelectorAll("[data-kt-jk]").forEach((s) => { jk[s.dataset.ktJk] = s.value; });
   try {
     const keliling = Number((document.getElementById("kt-keliling") || {}).value ?? 30);
-    await _kvGabung(KT_ATUR, { peran, jk, keliling });
+    await _ktSimpan(KT_ATUR, { peran, jk, keliling });
     toast("Petugas kantor disimpan", "ok");
     ktTutup(); setTimeout(ktBuka, 50);
   } catch (e) { toast("Gagal menyimpan: " + (e.message || e), "err"); }

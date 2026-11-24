@@ -232,6 +232,6 @@ async function ktKabar(paksaJam) {
 }
 async function _ktTampilBaris(b) {
   const wrap = document.getElementById("kt-jawaban"), id = (KT.peran[b.kode] || [])[0], p = _ktPeran(b.kode), s = id && KT.staf.find((x) => x.id === id);
-  if (wrap) { wrap.insertAdjacentHTML("beforeend", `<div class="kt-jawab" style="--w:${p.warna}"><small>${p.ikon} ${s ? _ktE(s.nama) + " · " : ""}${_ktE(p.nama)}${s ? "" : " (petugas belum ditetapkan)"}</small><div>${b.html}</div></div>`); const pn = document.getElementById("kt-panel"); if (pn) pn.scrollTop = pn.scrollHeight; }
+  if (wrap) { wrap.insertAdjacentHTML("beforeend", `<div class="kt-jawab" style="--w:${p.warna}"><small>${p.ikon} ${s ? _ktE(_ktGelar(s) + " " + s.nama) + " · " : ""}${_ktE(p.nama)}${s ? "" : " (petugas belum ditetapkan)"}</small><div>${b.html}</div></div>`); const pn = document.getElementById("kt-panel"); if (pn) pn.scrollTop = pn.scrollHeight; }
   if (id) await _ktBicara(id, b.singkat || "", 3600); else await _ktTunggu(600);
 }
