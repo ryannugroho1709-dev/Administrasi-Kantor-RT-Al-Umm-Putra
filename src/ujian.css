@@ -761,3 +761,36 @@ body.jus-menyeret #ju-wadah [data-kunci]:not(.jus-boleh):not(.jus-asal){opacity:
 .ju-cek-mapel label.tidak{border-color:var(--border-soft,#e2e8f0);background:var(--bg-subtle,#f1f5f9);color:var(--text-secondary);text-decoration:line-through}
 .ju-uji-alat{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0 2px}
 .ju-tidak-uji{display:block;color:#b45309!important}
+
+/* ── Pengaturan Ujian (kartu rapi) ── */
+.ju-atur>summary{display:flex;flex-direction:column;gap:2px;list-style:none;padding:2px 0}
+.ju-atur>summary::-webkit-details-marker{display:none}
+.ju-atur>summary span{font-size:14px;font-weight:800}
+.ju-atur>summary span::after{content:" ▾";color:var(--text-secondary)}.ju-atur[open]>summary span::after{content:" ▴"}
+.ju-atur>summary small{font-weight:500;color:var(--text-secondary);font-size:12px}
+.ju-at{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+.ju-at-kartu{border:1px solid var(--border-soft,#e3e8ef);border-radius:14px;padding:12px 14px;background:var(--surface,#fff);min-width:0}
+.ju-at-kartu.lebar{grid-column:1/-1}
+.ju-at-kartu h4{margin:0 0 10px;font-size:13.5px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.ju-at-kartu h4 small{font-weight:500;font-size:11.5px;color:var(--text-secondary)}
+.ju-at-pil{display:flex;flex-wrap:wrap;gap:6px}
+.ju-at-pil input{position:absolute;opacity:0;pointer-events:none;width:0;height:0}
+.ju-at-kls{position:relative;border:1.5px solid var(--kw);color:var(--kw);border-radius:99px;padding:5px 14px;font-size:12.5px;font-weight:700;cursor:pointer;background:var(--surface,#fff)}
+.ju-at-kls.on{background:var(--kw);color:#fff}
+.ju-at-pekan{display:flex;gap:10px;align-items:center;margin-bottom:8px}
+.ju-at-pekan-l{font-size:11px;font-weight:800;color:var(--text-secondary);min-width:52px;text-transform:uppercase}
+.ju-at-hari{position:relative;width:58px;display:flex;flex-direction:column;align-items:center;border:1px solid var(--border-soft,#e3e8ef);border-radius:12px;padding:4px 0 5px;cursor:pointer;background:var(--bg-subtle,#f8fafc);color:var(--text-secondary);transition:.15s}
+.ju-at-hari span{font-size:10px;font-weight:800;text-transform:uppercase}.ju-at-hari b{font-size:18px;line-height:1.1}.ju-at-hari small{font-size:10px}
+.ju-at-hari.on{background:var(--accent,#0d5c4b);border-color:var(--accent,#0d5c4b);color:#fff}
+.ju-at-hari.ahad:not(.on){opacity:.55}
+.ju-at-hari:hover{transform:translateY(-1px)}
+.ju-at-jam-wadah{overflow-x:auto}
+.ju-at-jam{border-collapse:separate;border-spacing:6px 4px;font-size:12.5px}
+.ju-at-jam thead th{text-align:left;font-size:12px;font-weight:800;padding:0 2px;white-space:nowrap}
+.ju-at-jam thead th small{display:block;font-weight:500;font-size:10.5px;color:var(--text-secondary)}
+.ju-at-sesi{display:inline-flex;width:26px;height:26px;border-radius:50%;align-items:center;justify-content:center;background:var(--accent,#0d5c4b);color:#fff;font-weight:800;font-size:12px}
+.ju-at-jj{display:flex;align-items:center;gap:4px}.ju-at-jj i{font-style:normal;color:var(--text-secondary)}
+.ju-jam{width:64px!important;padding:5px 6px!important;text-align:center;font-variant-numeric:tabular-nums;font-size:13px!important}
+.ju-jam::placeholder{color:#cbd5e1}
+.ju-at-hapus{border:0;background:#fee2e2;color:#b91c1c;border-radius:8px;width:28px;height:28px;cursor:pointer}
+@media (max-width:760px){.ju-at{grid-template-columns:1fr}.ju-at-pekan{flex-direction:column;align-items:flex-start;gap:4px}}
