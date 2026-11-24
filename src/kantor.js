@@ -134,7 +134,7 @@ async function ktBuka() {
     if (!KT.staf.length) { _ktPanel(`<h3>Belum ada petugas</h3><p>Jabatan belum terbaca. Buka ⚙️ untuk memilih petugas tiap peran.</p>`); return; }
     // Kepala berkeliling tiap N menit (atur di ⚙️), kabar baru dilaporkan saat kantor dibuka
     KT.kelilingT = Date.now();
-    _ktKanalBuka(); _ktSegarLayar(); KT.timerLayar = setInterval(_ktSegarLayar, 20000);
+    _ktKanalBuka(); _ktSegarLayar(); KT.timerLayar = setInterval(() => { if (!document.hidden) _ktSegarLayar(); }, 60000);
     if (!pemilik) { await _ktPulihkanSiaran(); return; }
     KT.timer = setInterval(() => { const m = Number((KT.atur || {}).keliling ?? 30); if (m > 0 && !document.hidden && Date.now() - (KT.kelilingT || 0) >= m * 60000) ktKeliling(); }, 20000);
     setTimeout(() => { if (KT.buka) ktKabar(null, true); }, 1200);

@@ -6,7 +6,8 @@
 //    bosp:sop:induk          { kode: {ringkas, bagian, rutin, diubah, oleh} }   (perubahan atas SOP bawaan)
 //    bosp:sop:baca           { "guruId|kode": {t} }
 //    bosp:sop:atur           { tahap:{kode}, mulai:{kode}, libur:[0..6], pj:{"kode@R": [ids]} }
-//    bosp:sop:ceklis:YYYY-MM { "guruId|kode@R|periode|butir": {t, cat} }   + bosp:sop:ceklis:panjang (semester/tahunan)
+//    bosp:sop:ceklis:YYYY-MM:<guruId> { "guruId|kode@R|periode|butir": {t, cat} }  + bosp:sop:ceklis:panjang:<guruId>
+//      (satu baris per orang per bulan → tiap centang hanya mengirim/menerima data milik orang itu, hemat kuota)
 // ============================================================
 const SOP = { siap: false, t: 0, induk: {}, baca: {}, atur: {}, ceklis: {}, pj: {}, guru: [], tab: "saya", ember: {} };
 const SOP_RG = ["A", "Pa", "Pi"];
@@ -59,14 +60,21 @@ async function _sopKv(kunci) { const r = await supaSemua.from("kuliah_pengaturan
 async function sopMuat(paksa) {
   if (!paksa && SOP.siap && Date.now() - SOP.t < 60000) return SOP;
   const now = new Date(), b1 = _sopTgl(now).slice(0, 7), b0 = _sopTgl(new Date(now.getFullYear(), now.getMonth() - 1, 1)).slice(0, 7);
-  const k = ["bosp:sop:induk", "bosp:sop:baca", "bosp:sop:atur", "bosp:sop:ceklis:" + b1, "bosp:sop:ceklis:" + b0, "bosp:sop:ceklis:panjang"];
+  const g = STATE.guruId || "-", k = ["bosp:sop:induk", "bosp:sop:baca", "bosp:sop:atur", `bosp:sop:ceklis:${b1}:${g}`, `bosp:sop:ceklis:${b0}:${g}`, `bosp:sop:ceklis:panjang:${g}`];
   const [m] = await Promise.all([_sopKv(k), _sopMuatPj()]);
   SOP.induk = m[k[0]] || {}; SOP.baca = m[k[1]] || {}; SOP.atur = m[k[2]] || {};
-  SOP.ember = { [b1]: m[k[3]] || {}, [b0]: m[k[4]] || {}, panjang: m[k[5]] || {} };
-  SOP.ceklis = { ...SOP.ember[b0], ...SOP.ember[b1], ...SOP.ember.panjang };
+  const lain = Object.fromEntries(Object.entries(SOP.ceklis).filter(([x]) => !x.startsWith(g + "|")));
+  SOP.ceklis = { ...lain, ...(m[k[4]] || {}), ...(m[k[3]] || {}), ...(m[k[5]] || {}) };
   _sopHitungPj(); SOP.siap = true; SOP.t = Date.now(); return SOP;
 }
-async function _sopMuatEmber(ym) { if (SOP.ember[ym]) return SOP.ember[ym]; const m = await _sopKv(["bosp:sop:ceklis:" + ym]); SOP.ember[ym] = m["bosp:sop:ceklis:" + ym] || {}; return SOP.ember[ym]; }
+// ceklis semua orang (hanya untuk Capaian, Kantor Maya, dan rapat) — disimpan sementara 2 menit
+async function _sopMuatEmber(ym) {
+  const c = SOP.ember[ym]; if (c && Date.now() - c.t < 120000) return c.d;
+  const [a, p] = await Promise.all([ym, "panjang"].map((x) => supaSemua.from("kuliah_pengaturan").select("nilai").eq("ruang_id", "*").like("kunci", `bosp:sop:ceklis:${x}:%`)));
+  const d = {}; [a, p].forEach((r) => (r.data || []).forEach((x) => Object.assign(d, x.nilai || {})));
+  SOP.ember[ym] = { t: Date.now(), d }; Object.assign(SOP.ceklis, d); return d;
+}
+async function _sopMuatEmberKini() { const now = new Date(); await Promise.all([_sopTgl(now).slice(0, 7), _sopTgl(new Date(now.getFullYear(), now.getMonth() - 1, 1)).slice(0, 7)].map(_sopMuatEmber)); }
 async function _sopMuatPj() {
   const aman = (p) => p.then((r) => r, () => ({ data: null }));
   const [g, jm, gj, bend, peny, kt, mus] = await Promise.all([
@@ -190,14 +198,14 @@ async function sopCentang(key, i, el) {
   const per = sopPeriode(f), k = _sopKunciCek(gid, key, per, i), lama = SOP.ceklis[k] || null, baru = lama ? null : { t: Date.now() };
   if (baru) SOP.ceklis[k] = baru; else delete SOP.ceklis[k];
   const lbl = el && el.closest("label"); if (lbl) lbl.classList.toggle("sudah", !!baru);
-  try { await _bspGabungUmum("bosp:sop:ceklis:" + _sopEmber(per), { [k]: baru }); const e = SOP.ember[_sopEmber(per)]; if (e) { if (baru) e[k] = baru; else delete e[k]; } if (typeof _sopSegarBadge === "function") _sopSegarBadge(); }
+  try { await _bspGabungUmum(`bosp:sop:ceklis:${_sopEmber(per)}:${gid}`, { [k]: baru }); const e = SOP.ember[_sopEmber(per)]; if (e) { if (baru) e.d[k] = baru; else delete e.d[k]; } if (typeof _sopSegarBadge === "function") _sopSegarBadge(); }
   catch (e) { if (lama) SOP.ceklis[k] = lama; else delete SOP.ceklis[k]; if (el) el.checked = !!lama; if (lbl) lbl.classList.toggle("sudah", !!lama); toast("Gagal menyimpan ceklis: " + (e.message || e), "err"); }
 }
 async function sopCatatan(key, i) {
   const f = (sopJab(key.split("@")[0]).rutin[i] || [])[0], per = sopPeriode(f), k = _sopKunciCek(STATE.guruId, key, per, i), c = SOP.ceklis[k]; if (!c) return;
   const cat = prompt("Catatan singkat (misal: laporan sudah dikirim ke grup WA):", c.cat || ""); if (cat === null) return;
   const baru = { ...c, cat: cat.trim().slice(0, 200) };
-  try { await _bspGabungUmum("bosp:sop:ceklis:" + _sopEmber(per), { [k]: baru }); SOP.ceklis[k] = baru; _sopRender(); } catch (e) { toast("Gagal menyimpan catatan: " + (e.message || e), "err"); }
+  try { await _bspGabungUmum(`bosp:sop:ceklis:${_sopEmber(per)}:${STATE.guruId}`, { [k]: baru }); SOP.ceklis[k] = baru; _sopRender(); } catch (e) { toast("Gagal menyimpan catatan: " + (e.message || e), "err"); }
 }
 async function sopTandaiBaca(kode) {
   const k = STATE.guruId + "|" + kode, v = { t: Date.now(), n: STATE.guruNama || "" };
@@ -272,9 +280,9 @@ async function sopSimpanPj(key, otomatis) {
 
 // Capaian SOP
 function _sopHtmlCapaian(r) {
-  const ym = SOP.capBulan || _sopTgl(new Date()).slice(0, 7), data = SOP.ember[ym];
-  if (!data) { _sopMuatEmber(ym).then(() => _sopRender()); return `<div class="card"><div class="rg-memuat">Memuat capaian…</div></div>`; }
-  const isi = { ...data, ...SOP.ember.panjang }, opsi = [];
+  const ym = SOP.capBulan || _sopTgl(new Date()).slice(0, 7), data = SOP.ember[ym] && SOP.ember[ym].d;
+  if (!data) { _sopMuatEmber(ym).then(() => _sopRender(), (e) => toast("Gagal memuat capaian: " + (e.message || e), "err")); return `<div class="card"><div class="rg-memuat">Memuat capaian…</div></div>`; }
+  const isi = data, opsi = [];
   for (let n = 0; n < 6; n++) { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - n); const v = _sopTgl(d).slice(0, 7); opsi.push(`<option value="${v}" ${v === ym ? "selected" : ""}>${SOP_BLN[d.getMonth()]} ${d.getFullYear()}</option>`); }
   const keys = sopKunciSemua().filter((k) => !r || !k.includes("@") || k.endsWith("@" + r));
   const semuaKenal = keys.every((k) => sopTahap(k.split("@")[0]) === "kenal");
@@ -328,7 +336,7 @@ async function sopCekPengingat(malam) {
     const tugas = sopTugasDari(gid); if (!tugas.length) return;
     const kodeKenal = [...new Set(tugas.map((k) => k.split("@")[0]))].filter((k) => sopTahap(k) === "kenal" && !sopSudahBaca(gid, k));
     let belum = _sopBelumKini(gid); if (malam) belum = belum.filter((b) => b.f === "harian");
-    if (malam && !belum.length) return;
+    if (malam && !belum.length) { try { localStorage.setItem(lk, hari); } catch (e) {} return; }
     if (!belum.length && !kodeKenal.length) { try { localStorage.setItem(lk, hari); } catch (e) {} return; }
     try { localStorage.setItem(lk, hari); } catch (e) {}
     const kelompok = {}; belum.forEach((b) => (kelompok[b.key] = kelompok[b.key] || []).push(b));
@@ -398,7 +406,7 @@ function _sopHtmlKantor(gid, ktKode) {
         const s = (KT.staf || []).find((x) => x.id === id); if (!s) return h;
         if (!kode && (KT.peran.kepala || [])[0] === id && !KT.penonton) return h; // menu perintah Kepala
         const daftar = kode ? [kode] : s.peran;
-        sopMuat().then(() => { const p = document.getElementById("kt-panel"); if (!p || p.hidden || p.querySelector(".kt-sop")) return; const html = daftar.map((k) => _sopHtmlKantor(id, k)).join(""); if (html) { p.insertAdjacentHTML("beforeend", html); if (typeof _ktUkur === "function") setTimeout(_ktUkur, 30); } }).catch(() => {});
+        sopMuat().then(_sopMuatEmberKini).then(() => { const p = document.getElementById("kt-panel"); if (!p || p.hidden || p.querySelector(".kt-sop")) return; const html = daftar.map((k) => _sopHtmlKantor(id, k)).join(""); if (html) { p.insertAdjacentHTML("beforeend", html); if (typeof _ktUkur === "function") setTimeout(_ktUkur, 30); } }).catch(() => {});
       } catch (e) {}
       return h;
     };
@@ -409,7 +417,7 @@ function _sopHtmlKantor(gid, ktKode) {
     const a = _ktSkrip;
     _ktSkrip = async function (topik, teks) {
       if (topik !== "sop") return a.apply(this, arguments);
-      await sopMuat(true);
+      await sopMuat(true); await _sopMuatEmberKini();
       const ada = (k) => (KT.peran[k] || []).length > 0, sos = typeof _ktSosialisasi === "function" && _ktSosialisasi();
       const ym = _sopTgl(new Date()).slice(0, 7), baris = [], arahan = [], catatan = [], tv = [];
       const rekap = (key) => { const ids = SOP.pj[key] || [], kode = key.split("@")[0]; const t = sopTahap(kode), c = t === "kenal" ? [] : ids.map((id) => sopCapaian(id, key, ym)).filter((x) => x.persen != null); return { n: ids.length, baca: ids.filter((id) => sopSudahBaca(id, kode)).length, p: c.length ? Math.round(c.reduce((s, x) => s + x.persen, 0) / c.length) : null, t }; };
@@ -448,7 +456,7 @@ function _sopHtmlKantor(gid, ktKode) {
       w.innerHTML = '<div class="kt-info">⏳ Membuka berkas SOP…</div>';
       let isi = [];
       try {
-        await sopMuat(); const ym = _sopTgl(new Date()).slice(0, 7);
+        await sopMuat(); await _sopMuatEmberKini(); const ym = _sopTgl(new Date()).slice(0, 7);
         const keys = sopKunciSemua().filter((k) => (rg === "Pg" ? !k.includes("@") : k.endsWith("@" + rg)));
         isi = keys.map((k) => { const ids = SOP.pj[k] || [], kode = k.split("@")[0], t = sopTahap(kode); if (!ids.length) return `${_sopE(sopNamaTugas(k))}: PJ belum ada`; const c = ids.map((id) => sopCapaian(id, k, ym)).filter((x) => x.persen != null); return `${_sopE(sopNamaTugas(k))}: baca ${ids.filter((id) => sopSudahBaca(id, kode)).length}/${ids.length} · ${t === "kenal" ? "Tahap Kenal" : c.length ? "capaian " + Math.round(c.reduce((s, x) => s + x.persen, 0) / c.length) + "%" : SOP_TAHAP[t][0]}`; });
       } catch (e) { isi = ["Ringkasan belum bisa dibaca: " + (e.message || e)]; }
