@@ -99,12 +99,19 @@ async function _ktKabarBaru(sejak) {
     if (rl.length) k.push(`💳 ${rl.length} laporan realisasi Draft RKAS (${rl.filter((x) => x.status === "sudah").length} sudah dibelanjakan, ${_ktRp(rl.reduce((s, x) => s + (x.status === "sudah" ? Number(x.rp) || 0 : 0), 0))})`);
     kabar[r] = k;
   }));
+  try {
+    const lg = await supaSemua.from("log_aktivitas").select("aksi,nama,ruang_id,rincian").gte("waktu", sIso).not("aksi", "in", "(masuk-akun,pindah-ruang)").limit(500);
+    const LABEL = { "bosp-ubah": "mengubah Kertas Kerja BOSP", "bosp-honor-pengelola": "mengatur honor pengelola", "bosp-disahkan": "mengesahkan Kertas Kerja", "ubah-ruang-guru": "mengubah anggota ruang", "ubah-ruang-utama": "mengubah ruang utama guru", "ubah-fitur-ruang": "mengatur fitur ruang", "buat-akun": "membuat akun guru", "buat-akun-massal": "membuat akun guru massal", "setujui-akun": "menyetujui akun guru", "akun-wajib": "mengatur wajib akun", "ubah-penyelenggara": "mengubah penyelenggara", "rapikan-ai": "merapikan soal" };
+    const per = {};
+    (lg.data || []).forEach((x) => { const r = ["A", "Pa", "Pi"].includes(x.ruang_id) ? x.ruang_id : "Pg"; const kunci = (x.nama || "?") + "|" + x.aksi; (per[r] = per[r] || {})[kunci] = ((per[r] || {})[kunci] || 0) + 1; });
+    Object.entries(per).forEach(([r, isi]) => Object.entries(isi).slice(0, 6).forEach(([k, n]) => { const [nm, aksi] = k.split("|"); (kabar[r] = kabar[r] || []).push(`🗒️ ${_ktE(String(nm).split(",")[0])} ${LABEL[aksi] || aksi.replace(/-/g, " ")}${n > 1 ? ` (${n}×)` : ""}`); }));
+  } catch (e) {}
   // keuangan PKBM (Kertas Kerja diajukan/disahkan)
   try {
     const um = await supaSemua.from("kuliah_pengaturan").select("nilai").eq("kunci", "bosp:th:" + th).eq("ruang_id", "*").maybeSingle();
     const kep = ((um.data && um.data.nilai) || {}).keputusan || {}, k = [];
     Object.entries(kep).forEach(([r, v]) => { if (v && (v.t || 0) >= sejak) k.push(`💰 Kertas Kerja ${KT_JENJANG[r] || r}: ${KT_STATUS_KK[v.status] || v.status}`); });
-    kabar.Pg = k;
+    kabar.Pg = [...k, ...(kabar.Pg || [])];
   } catch (e) { kabar.Pg = []; }
   KT.kabarCache = kabar;
   return kabar;
@@ -206,8 +213,8 @@ async function _ktSkrip(topik, teks) {
 }
 
 // ── Kabar Baru: tiap jenjang yang ada perubahan melapor ke Kepala di Ruang Rapat ──
-async function ktKabar(paksaJam) {
-  if (KT.sibuk) return; KT.sibuk = true;
+async function ktKabar(paksaJam, otomatis) {
+  if (KT.sibuk) return; KT.sibuk = true; KT.bubarOtomatis = !!otomatis && !(KT.sesi && KT.sesi.aktif); KT.topikIni = "kabar";
   try {
     let sejak = 0; try { sejak = Number(localStorage.getItem(_ktKunciTerakhir())) || 0; } catch (e) {}
     if (paksaJam || !sejak) sejak = Date.now() - (paksaJam || 24) * 3600e3;
@@ -217,18 +224,22 @@ async function ktKabar(paksaJam) {
     const sejakTeks = new Date(sejak).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" });
     if (!ada.length && !keu) { _ktPanel(`<h3>📰 Kabar Baru</h3><p class="kt-ket">Belum ada perubahan data dari guru sejak ${sejakTeks}.</p><button class="kt-salin" onclick="ktKabar(168)">Lihat 7 Hari Terakhir</button>`); return; }
     const wakil = (r) => ((KT.peran["admin-" + r] || []).length ? "admin-" + r : "peny-" + r);
-    const kodes = ["kepala", ...ada.map(wakil), ...(keu ? ["bendahara"] : [])];
-    _ktPanel(`<div class="kt-obrolan"><div class="kt-info">📰 Laporan kabar baru sejak ${sejakTeks}</div><div id="kt-jawaban"></div></div>`);
+    const kodes = ["kepala", ...ada.flatMap((r) => ["admin-" + r, "peny-" + r]), ...(keu || (kabar.Pg || []).length ? ["bendahara"] : [])];
+    _ktPanel(`<div class="kt-obrolan"><div class="kt-info">📰 Laporan kabar baru sejak ${sejakTeks}</div><div id="kt-jawaban"></div><div id="kt-lanjut"></div></div>`);
     const tv = ada.map((r) => ({ label: { A: "Paket A", Pa: "Putra", Pi: "Putri" }[r], nilai: kabar[r].length, teks: kabar[r].length + " kabar", warna: { A: "#10b981", Pa: "#3b82f6", Pi: "#ec4899" }[r] }));
     const ids = await _ktRapat(kodes, "Laporan Kabar Baru", tv, ada.map((r) => `${KT_JENJANG[r]}: ${kabar[r].length} kabar`).join("  •  "));
     const kid = (KT.peran.kepala || [])[0];
     await _ktTampilBaris({ kode: "kepala", html: "Assalamu'alaikum. Silakan laporkan perkembangan terbaru dari jenjang masing-masing.", singkat: "Silakan laporkan perkembangan terbaru." });
-    for (const r of ada) await _ktTampilBaris({ kode: wakil(r), html: `<b>${KT_JENJANG[r]}</b>:` + _ktLi(kabar[r]), singkat: `${KT_JENJANG[r]}: ${kabar[r][0].replace(/^\S+\s/, "")}${kabar[r].length > 1 ? `, dan ${kabar[r].length - 1} lainnya` : ""}.` });
+    for (const r of ada) {
+      await _ktTampilBaris({ kode: wakil(r), html: `<b>${KT_JENJANG[r]}</b> — input terbaru:` + _ktLi(kabar[r]), singkat: `${KT_JENJANG[r]}: ${kabar[r][0].replace(/<[^>]+>/g, "").replace(/^\S+\s/, "")}${kabar[r].length > 1 ? `, dan ${kabar[r].length - 1} lainnya` : ""}.` });
+      if ((KT.peran["peny-" + r] || []).length && wakil(r) !== "peny-" + r) await _ktTampilBaris({ kode: "peny-" + r, html: `Ana selaku Penyelenggara ${KT_JENJANG[r]} sudah menerima laporannya. ${kabar[r].some((x) => /menunggu/.test(x)) ? "Yang menunggu keputusan segera ana proses." : "Insya Allah ana pantau tindak lanjutnya."}`, singkat: "Na'am, ana tindak lanjuti di jenjang." });
+    }
     if (keu) await _ktTampilBaris({ kode: "bendahara", html: "Keuangan:" + _ktLi(kabar.Pg), singkat: kabar.Pg[0].replace(/^\S+\s/, "") });
     await _ktTampilBaris({ kode: "kepala", html: "Jazakumullahu khairan. Teruskan, dan segera tindak lanjuti yang menunggu keputusan.", singkat: "Jazakumullahu khairan, lanjutkan." });
-    void kid; await _ktBubar(ids);
+    void kid; void ids;
+    if (KT.bubarOtomatis) await ktAkhiriRapat(true); else _ktOpsiRapat();
   } catch (e) { _ktPanel(`<h3>Kabar Baru</h3><p>Gagal memuat: ${_ktE(e.message || e)}</p>`); }
-  finally { KT.sibuk = false; }
+  finally { KT.sibuk = false; KT.bubarOtomatis = false; }
 }
 async function _ktTampilBaris(b) {
   const wrap = document.getElementById("kt-jawaban"), id = (KT.peran[b.kode] || [])[0], p = _ktPeran(b.kode), s = id && KT.staf.find((x) => x.id === id);

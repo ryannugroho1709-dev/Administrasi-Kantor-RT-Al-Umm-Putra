@@ -46,6 +46,7 @@ const _ktFmtTgl = (t) => (t ? new Date(t + "T00:00:00").toLocaleDateString("id-I
 const _ktTopikAsli = _ktTopik;
 _ktTopik = function (teks) {
   const t = " " + teks.toLowerCase() + " ";
+  if (/(bop|bosp|arkas|rkas)/.test(t)) return _ktTopikAsli(teks);
   if (/lengkap semua|semua fitur|laporan lengkap|menyeluruh/.test(t)) return "lengkap";
   if (/ujian|bank soal|\bsoal\b|ulangan|\buts\b|\buas\b|latihan soal/.test(t)) return "ujian";
   if (/modul|kop soal|perangkat ajar|bahan ajar/.test(t)) return "modul";
@@ -66,7 +67,7 @@ _ktSkrip = async function (topik, teks) {
   baris.push({ kode: "kepala", html: buka, singkat: buka });
   if (topik === "kas") {
     baris.push({ kode: "bendahara", html: "Laporan keuangan harian:" + _ktLi(daftar.map((r) => { const d = data[r]; return `<b>${KT_JENJANG[r]}</b>: kas 30 hari masuk ${_ktRp(d.kas.masuk)}, keluar ${_ktRp(d.kas.keluar)} (${d.kas.n} transaksi)` + (d.insentif ? ` · insentif musyrif ${KT_BLN[d.insentif.bulan] || d.insentif.bulan} ${d.insentif.tahun}: ${_ktRp(d.insentif.total)} (${d.insentif.n} orang)` : "") + (d.slip ? ` · slip gaji ${KT_BLN[d.slip.bulan] || d.slip.bulan} ${d.slip.tahun}: ${d.slip.n} slip, ${_ktRp(d.slip.total)}` : " · belum ada arsip slip gaji"); })), singkat: "Laporan kas, insentif & slip sudah ana sampaikan." });
-    daftar.forEach((r) => { const d = data[r]; tv.push({ label: KT_PENDEK_RG[r], nilai: d.kas.keluar || 0.001, teks: (d.kas.keluar / 1e6).toFixed(1) + " jt", warna: KT_WARNA_RG[r] }); if (!d.slip) arahan.push(`${KT_JENJANG[r]}: arsipkan slip gaji bulan ini`); if (d.kas.keluar > d.kas.masuk && d.kas.masuk) arahan.push(`${KT_JENJANG[r]}: pengeluaran kas melebihi pemasukan 30 hari terakhir`); });
+    daftar.forEach((r) => { const d = data[r], pk = "peny-" + r; if ((KT.peran[pk] || []).length) baris.push({ kode: pk, html: `Insentif ${KT_JENJANG[r]}: ${d.insentif ? `musyrif ${KT_BLN[d.insentif.bulan] || d.insentif.bulan} ${d.insentif.tahun} ${_ktRp(d.insentif.total)} (${d.insentif.n} orang)` : "belum ada rekap insentif musyrif"}${d.slip ? ` · slip gaji tutor terakhir ${KT_BLN[d.slip.bulan] || d.slip.bulan} ${d.slip.tahun} (${d.slip.n} slip)` : " · slip gaji tutor belum diarsipkan"}. Ana pastikan kehadiran & kinerja tutor sesuai sebelum insentif dibayarkan.`, singkat: `Insentif ${KT_PENDEK_RG[r]} sudah ana periksa.` }); tv.push({ label: KT_PENDEK_RG[r], nilai: d.kas.keluar || 0.001, teks: (d.kas.keluar / 1e6).toFixed(1) + " jt", warna: KT_WARNA_RG[r] }); if (!d.slip) arahan.push(`${KT_JENJANG[r]}: arsipkan slip gaji bulan ini`); if (d.kas.keluar > d.kas.masuk && d.kas.masuk) arahan.push(`${KT_JENJANG[r]}: pengeluaran kas melebihi pemasukan 30 hari terakhir`); });
   } else {
     for (const r of daftar) {
       const d = data[r], u = d.ujian, m = d.modul, j = d.jadwal, h = d.hadir, ph = _ktPersenHadir(h);
@@ -79,6 +80,7 @@ _ktSkrip = async function (topik, teks) {
       }[topik].filter(Boolean);
       const kode = topik === "jadwal" || topik === "lengkap" ? wakil(r, "peny") : wakil(r, "admin");
       baris.push({ kode, html: `<b>${KT_JENJANG[r]}</b>:` + _ktLi(isi), singkat: `${KT_JENJANG[r]}: ${String(isi[0]).replace(/<[^>]+>/g, "")}` });
+      const sebelum = arahan.length; KT._arahanJenjang = () => arahan.slice(sebelum).filter((a) => a.startsWith(KT_JENJANG[r]));
       const nilaiTv = { ujian: u.sesi, modul: m.n, jadwal: j.sesi, hadir: ph || 0, lengkap: j.sesi }[topik];
       tv.push({ label: KT_PENDEK_RG[r], nilai: nilaiTv || 0.001, teks: topik === "hadir" ? (ph != null ? ph + "%" : "—") : String(nilaiTv), warna: KT_WARNA_RG[r] });
       if ((topik === "ujian" || topik === "lengkap") && !u.bank) arahan.push(`${KT_JENJANG[r]}: belum ada bank soal — tutor mulai menyusun soal`);
@@ -86,6 +88,10 @@ _ktSkrip = async function (topik, teks) {
       if ((topik === "hadir" || topik === "lengkap") && ph != null && ph < 85) arahan.push(`${KT_JENJANG[r]}: kehadiran santri ${ph}% — Penyelenggara & wali kelas menindaklanjuti`);
       if ((topik === "hadir" || topik === "lengkap") && !h.pertemuan) arahan.push(`${KT_JENJANG[r]}: tutor belum mengisi jurnal (kehadiran santri tidak terekam)`);
       if ((topik === "jadwal" || topik === "lengkap") && !j.sesi) arahan.push(`${KT_JENJANG[r]}: jadwal pelajaran belum disusun`);
+      // Penyelenggara jenjang ikut menanggapi bagian jenjangnya
+      const pk = "peny-" + r, catJ = KT._arahanJenjang ? KT._arahanJenjang() : [];
+      if ((KT.peran[pk] || []).length && kode !== pk) baris.push({ kode: pk, html: catJ.length ? `Selaku Penyelenggara ${KT_JENJANG[r]}, ana tindak lanjuti: ${_ktLi(catJ.map((a) => a.replace(KT_JENJANG[r] + ": ", "")))}` : `Selaku Penyelenggara ${KT_JENJANG[r]}: alhamdulillah sesuai rencana, ana pantau terus.`, singkat: catJ.length ? `Ana tindak lanjuti ${catJ.length} catatan di ${KT_PENDEK_RG[r]}.` : "Alhamdulillah sesuai rencana." });
+      else if ((KT.peran["admin-" + r] || []).length && kode === pk && topik === "lengkap") baris.push({ kode: "admin-" + r, html: `Admin ${KT_JENJANG[r]}: data siap, rinciannya bisa dibuka di lemari arsip.`, singkat: "Data siap." });
     }
     if (topik === "lengkap") {
       try { const b = await _ktSkripAsli("bosp", "bosp"); const bend = b && b.baris.find((x) => x.kode === "bendahara"); if (bend) baris.push(bend); } catch (e) {}
