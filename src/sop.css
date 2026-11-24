@@ -79,3 +79,25 @@ tr.al-cek{background:#fef2f2}
 .pg-kartu-baris.al-kartu{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
 .pg-kartu-baris.al-kartu>*{min-width:0;margin:0}
 @media (max-width:760px){.pg-kartu-baris.al-kartu{grid-template-columns:repeat(2,minmax(0,1fr))}.pg-kartu-baris.al-kartu .pg-angka b{font-size:22px}.pg-kartu-baris.al-kartu .pg-angka small{font-size:11px}}
+/* Buku Induk, Klaper, Pencarian Cepat */
+.bi-keadaan{font-size:11.5px;font-weight:700;border-radius:99px;padding:2px 9px;white-space:nowrap}
+.bi-k-aktif{background:#dcfce7;color:#166534}.bi-k-lulus{background:#dbeafe;color:#1e40af}.bi-k-mutasi{background:#f1f5f9;color:#475569}
+.bi-lengkap{width:70px;height:7px;background:var(--bg-subtle,#e2e8f0);border-radius:99px;overflow:hidden;display:inline-block;vertical-align:middle;margin-right:4px}
+.bi-lengkap i{display:block;height:100%}
+.bi-lembar-alat{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.bi-lembar-kepala{display:flex;gap:14px;align-items:center;margin-bottom:8px}
+.bi-lembar-kepala img,.bi-foto-kosong{width:72px;height:96px;object-fit:cover;border-radius:8px;border:1px solid var(--border-soft);flex:none}
+.bi-foto-kosong{display:flex;align-items:center;justify-content:center;text-align:center;font-size:11px;color:var(--text-secondary);background:var(--bg-subtle,#f1f5f9)}
+.bi-lembar-kepala small{color:var(--text-secondary);font-size:11px;font-weight:700;letter-spacing:.3px}.bi-lembar-kepala h3{margin:2px 0}
+.bi-bagian{margin:16px 0 6px;color:var(--accent,#0d5c4b);font-size:14px}
+.bi-tabel td:first-child{width:38%;color:var(--text-secondary);font-weight:600}
+.bk-huruf{display:flex;flex-wrap:wrap;gap:4px;position:sticky;top:0;z-index:2}
+.bk-huruf a{min-width:30px;text-align:center;padding:5px 0;border-radius:8px;background:var(--bg-subtle,#f1f5f9);font-weight:800;text-decoration:none;color:var(--accent,#0d5c4b)}
+.bk-h{font-size:22px;font-weight:800;color:var(--accent,#0d5c4b);margin-bottom:4px}
+.bc-kotak h3{margin-top:0}.bc-input{font-size:17px;padding:12px 14px}
+.bc-judul{font-weight:800;margin-bottom:6px}.bc-judul small{background:var(--bg-subtle,#f1f5f9);border-radius:99px;padding:1px 8px;margin-left:4px}
+.bc-baris{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:0;border-top:1px solid var(--border-soft);background:none;padding:9px 4px;font:inherit;color:inherit;cursor:pointer}
+div.bc-baris{cursor:default}.bc-baris>div{flex:1;min-width:0}.bc-baris small{display:block;color:var(--text-secondary);font-size:12px}
+button.bc-baris:hover{background:var(--bg-subtle,#f8fafc)}
+.bc-baris mark{background:#fef08a;color:inherit;border-radius:3px;padding:0 1px}
+.bc-kosong{text-align:center;color:var(--text-secondary)}
