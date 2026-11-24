@@ -101,3 +101,4 @@ div.bc-baris{cursor:default}.bc-baris>div{flex:1;min-width:0}.bc-baris small{dis
 button.bc-baris:hover{background:var(--bg-subtle,#f8fafc)}
 .bc-baris mark{background:#fef08a;color:inherit;border-radius:3px;padding:0 1px}
 .bc-kosong{text-align:center;color:var(--text-secondary)}
+.al-arsip-h{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}

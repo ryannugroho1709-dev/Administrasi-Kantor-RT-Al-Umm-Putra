@@ -41,6 +41,13 @@ async function alMuat(paksa) {
   if (r.error) throw r.error;
   AL.data = (r.data && r.data.nilai) || {}; AL.t = Date.now(); return AL.data;
 }
+// Arsip e-Ijazah per angkatan (PDF gabungan dari Dinas): AL.data._ijazah = { id: {tp:"2024/2025", paket:"C", rg:"Pi", url, judul} }
+const alArsipIjazah = () => Object.entries((AL.data || {})._ijazah || {}).filter(([, v]) => v && v.url).map(([id, v]) => ({ id, ...v })).sort((a, b) => String(b.tp).localeCompare(String(a.tp)) || String(a.paket).localeCompare(String(b.paket)) || String(a.rg).localeCompare(String(b.rg)));
+function alUrlIjazah(x) {
+  if (x.url_ijazah) return { url: x.url_ijazah, gabung: false };
+  const th = String(x.lulus || ""), a = alArsipIjazah().find((z) => z.paket === "C" && (!z.rg || !x.rg || z.rg === x.rg) && String(z.tp).slice(-4) === th);
+  return a ? { url: a.url, gabung: true, tp: a.tp } : null;
+}
 const _alDaftar = () => Object.entries(AL.data || {}).filter(([, v]) => v && typeof v === "object" && v.nama).map(([id, v]) => ({ id, ...v }));
 function _alSaring() {
   const f = AL.f, q = f.cari.toLowerCase().trim();
@@ -86,9 +93,10 @@ function _alHtml() {
       <td><b>${_alE(x.nama)}</b><br><small>${_alE(x.jk || "-")} · ${_alE(x.tgl_lahir || "-")} · ${x.rg === "Pa" ? "Putra" : x.rg === "Pi" ? "Putri" : "-"}</small>${c.length || ganda ? `<div class="al-peringatan">⚠️ ${_alE([...c, ganda ? "NIK ganda" : ""].filter(Boolean).join(" · "))}</div>` : ""}</td>
       <td class="al-mono">${_alE(x.nik || "-")}<br><small>${_alE(x.nisn || "-")}</small></td><td>${_alE(x.lulus || "-")}</td>
       <td class="al-mono">${x.hp ? `<a href="https://wa.me/62${_alE(_alHp(x.hp).slice(1))}" target="_blank" rel="noopener">${_alE(x.hp)}</a>` : "-"}</td>
-      <td>${x.isi === "sudah" ? '<span class="al-ok">✓ Sudah</span>' : '<span class="al-belum">Belum</span>'}${x.url_ijazah ? ` <a href="${_alE(x.url_ijazah)}" target="_blank" rel="noopener" title="Buka e-Ijazah">📄</a>` : ""}</td>
+      <td>${x.isi === "sudah" ? '<span class="al-ok">✓ Sudah</span>' : '<span class="al-belum">Belum</span>'}${(() => { const u = alUrlIjazah(x); return u ? ` <a href="${_alE(u.url)}" target="_blank" rel="noopener" title="${u.gabung ? "e-Ijazah angkatan (PDF gabungan)" : "Buka e-Ijazah"}">📄</a>` : ""; })()}</td>
       <td style="white-space:nowrap"><button class="btn btn-sm btn-secondary" onclick="alDetail('${x.id}')">Lihat</button>${ubah ? ` <button class="btn btn-sm btn-secondary" onclick="alForm('${x.id}')">Ubah</button>` : ""}</td></tr>`; }).join("") || `<tr><td colspan="7" class="empty-state">${semua.length ? "Tidak ada yang cocok." : "Belum ada data alumni. Tekan Impor Excel atau + Tambah Alumni."}</td></tr>`}
     </tbody></table></div>
+    ${_alHtmlArsipIjazah(ubah)}
     <p class="rg-ket">Alumni = santri yang resmi <b>lulus Paket C (kelas 12)</b> dari PKBM Al-Umm Barabai. Lulusan Paket A dan B tidak dicatat di sini.</p>`;
 }
 function alDetail(id) {
@@ -97,7 +105,7 @@ function alDetail(id) {
   const jaw = Object.entries(x.jawaban || {});
   const c = alCekNik(x);
   const sec = document.getElementById("page-rg");
-  sec.innerHTML = `<div class="card al-detail"><button class="btn btn-secondary btn-sm" onclick="alBuka()">‹ Kembali</button>${x.url_ijazah ? ` <a class="btn btn-primary btn-sm" href="${_alE(x.url_ijazah)}" target="_blank" rel="noopener">📄 Buka e-Ijazah</a>` : ""}<h3>${_alE(x.nama)}</h3>
+  sec.innerHTML = `<div class="card al-detail"><button class="btn btn-secondary btn-sm" onclick="alBuka()">‹ Kembali</button>${(() => { const u = alUrlIjazah(x); return u ? ` <a class="btn btn-primary btn-sm" href="${_alE(u.url)}" target="_blank" rel="noopener">📄 ${u.gabung ? `e-Ijazah Angkatan TP ${_alE(u.tp)}` : "Buka e-Ijazah"}</a>` : ""; })()}<h3>${_alE(x.nama)}</h3>
     ${c.length ? `<div class="al-peringatan">⚠️ ${_alE(c.join(" · "))}</div>` : ""}
     <table class="table"><tbody>${baris.map(([k, v]) => `<tr><td style="width:38%"><b>${k}</b></td><td>${_alE(v || "-")}</td></tr>`).join("")}</tbody></table>
     ${jaw.length ? `<h4>Isian Pendataan Alumni (dari berkas Dinas)</h4><table class="table"><tbody>${jaw.map(([k, v]) => `<tr><td style="width:38%">${_alE(k)}</td><td>${_alE(v)}</td></tr>`).join("")}</tbody></table>` : ""}
