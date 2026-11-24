@@ -340,8 +340,18 @@ const _kaSidikKunci = () => "ka-sidik:" + ((typeof STATE !== "undefined" && STAT
 const _kaB64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 const _kaDariB64 = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
 const _kaAcak = (n) => crypto.getRandomValues(new Uint8Array(n));
-function kaSidikAda() { try { return !!(window.PublicKeyCredential && localStorage.getItem(_kaSidikKunci())); } catch (e) { return false; } }
+// Sidik jari hanya untuk HP (bukan tablet / komputer): tawaran, ikon & tombol tidak muncul di perangkat lain
+function _kaAdalahHp() {
+  try {
+    const u = navigator.userAgent || "", kecil = Math.min(screen.width, screen.height) < 600;
+    if (/iPad|Tablet/i.test(u) || (/Macintosh/.test(u) && navigator.maxTouchPoints > 1)) return false;
+    if (navigator.userAgentData && typeof navigator.userAgentData.mobile === "boolean") return navigator.userAgentData.mobile && kecil;
+    return (/iPhone|iPod/.test(u) || (/Android/.test(u) && /Mobile/.test(u))) && kecil;
+  } catch (e) { return false; }
+}
+function kaSidikAda() { if (!_kaAdalahHp()) return false; try { return !!(window.PublicKeyCredential && localStorage.getItem(_kaSidikKunci())); } catch (e) { return false; } }
 async function kaSidikDidukung() {
+  if (!_kaAdalahHp()) return false;
   try { return !!(window.PublicKeyCredential && window.isSecureContext && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()); } catch (e) { return false; }
 }
 // Pendaftaran sidik jari perangkat ini. Bila fungsi server sudah diperbarui, kunci publiknya disimpan di
@@ -408,6 +418,7 @@ async function kaTawarkanSidik() {
   } catch (e) {}
 }
 function kaHtmlSidik() {
+  if (!_kaAdalahHp()) return `<div class="ka-atur" id="ka-atur-sidik"><div><b>👆 Sidik Jari</b><small>Hanya untuk HP. Aktifkan dari HP Antum (masuk dengan sandi, lalu pilih Aktifkan Sidik Jari).</small></div></div>`;
   const ada = kaSidikAda();
   return `<div class="ka-atur ${ada ? "on" : ""}" id="ka-atur-sidik"><div><b>👆 Sidik Jari — perangkat ini</b><small>${ada ? "AKTIF — Masuk Harian & Kunci Admin di perangkat ini bisa dibuka dengan sidik jari. Sandi & PIN tetap bisa dipakai." : "Masuk Harian & Kunci Admin dibuka dengan sidik jari / kunci layar HP, tanpa mengetik. Diaktifkan per perangkat."}</small></div>
     ${ada ? `<button class="btn btn-sm btn-outline" onclick="kaHapusSidik()">Matikan</button>` : `<button class="btn btn-sm btn-accent" onclick="kaDaftarSidik().then(kaSegarSidik)">Aktifkan</button>`}</div>`;
@@ -482,7 +493,7 @@ const _khSidikKunci = () => "ka-sidik:" + ((typeof AK !== "undefined" && AK.guru
 // sidik jari di server (kapan saja, juga setelah Keluar Akun) — atau, cara lama, akunnya masih tersimpan.
 async function _khPasangSidik() {
   try {
-    const el = document.getElementById("ak-masuk"); if (!el || !window.PublicKeyCredential) return;
+    const el = document.getElementById("ak-masuk"); if (!el || !window.PublicKeyCredential || !_kaAdalahHp()) return;
     const reg = _sidikPerangkat();
     let mode = reg && reg.server ? "server" : null, nama = reg && reg.nama;
     if (!mode && typeof AK !== "undefined" && AK.guru && localStorage.getItem(_khSidikKunci())) {
