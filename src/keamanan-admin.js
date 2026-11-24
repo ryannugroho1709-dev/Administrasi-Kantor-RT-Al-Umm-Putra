@@ -58,7 +58,7 @@ function _kaTitik(el) {
     lapis.innerHTML = v ? [...v].map((c, k) => `<i style="animation-delay:${k === v.length - 1 ? 0 : -1}s">${lihat ? escapeHtml(c) : ""}</i>`).join("") : `<span>Ketik PIN Admin</span>`;
     lapis.classList.toggle("lihat", lihat);
   };
-  i.addEventListener("input", gambar);
+  i.addEventListener("input", () => { const d = i.value.replace(/\D/g, ""); if (d !== i.value) i.value = d; gambar(); }); // PIN angka saja
   mata.onclick = () => { mata.classList.toggle("on"); mata.textContent = mata.classList.contains("on") ? "🙈" : "👁️"; gambar(); i.focus(); };
   el.querySelector(".ka-isian").onclick = () => i.focus();
   gambar();
@@ -73,14 +73,20 @@ function kaKunci(sebab) {
   el.innerHTML = _kaBingkai(`<div class="ka-ikon"><span class="ka-cincin"></span>${KA_GEMBOK}</div>
     <h2>Aplikasi Terkunci</h2>
     <p>${sebab === "diam" ? `Tidak dipakai lebih dari <b>${KA.menitKunci} menit</b>.` : sebab === "manual" ? "Aplikasi dikunci." : "Akun admin dibuka di <b>jendela baru</b>."}<br>Masukkan <b>PIN Admin</b> untuk melanjutkan.</p>
-    <div class="ka-isian"><input id="ka-pin" type="password" inputmode="numeric" autocomplete="off" maxlength="12" aria-label="PIN Admin"><div class="ka-titik"></div><button type="button" class="ka-lihat" title="Lihat / sembunyikan PIN">👁️</button></div>
+    <div class="ka-isian"><input id="ka-pin" type="text" name="ka-${Date.now()}" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore readonly maxlength="12" aria-label="PIN Admin"><div class="ka-titik"></div><button type="button" class="ka-lihat" title="Lihat / sembunyikan PIN">👁️</button></div>
+    ${kaSidikAda() ? `<button type="button" class="ka-sidik" onclick="kaBukaSidik()"><span>${KA_SIDIK_SVG}</span>Buka dengan Sidik Jari</button>` : ""}
     <div class="ka-coba"></div>
     <div id="ka-pesan" class="ka-pesan" role="alert"></div>
     <button class="ka-buka" onclick="kaBuka()"><span>🔓 Buka Kunci</span></button>
     <button class="ka-keluar" onclick="kaKeluarPaksa()">Bukan saya — Keluar Akun</button>`);
   document.body.appendChild(el);
   _kaJalankanJam(el); _kaTitik(el); _kaSisaCoba(el);
-  const i = el.querySelector("#ka-pin"); setTimeout(() => i.focus(), 80);
+  const i = el.querySelector("#ka-pin");
+  // readonly sampai disentuh: Chrome/Google tidak menawarkan sandi tersimpan ke kolom ini
+  const aktifkan = () => { i.removeAttribute("readonly"); };
+  i.addEventListener("pointerdown", aktifkan); i.addEventListener("focus", aktifkan);
+  setTimeout(() => { aktifkan(); i.focus(); }, 120);
+  if (kaSidikAda()) setTimeout(() => { if (document.getElementById("ka-kunci") && !document.hidden) kaBukaSidik(true); }, 400);
   i.addEventListener("keydown", (e) => { if (e.key === "Enter") kaBuka(); });
 }
 function _kaGoyang(el) {
@@ -98,6 +104,7 @@ async function kaBuka() {
       KA.salah = 0; KA.terkunci = false; _kaLS.set("kaAktif", String(Date.now()));
       p.textContent = ""; el.classList.add("terbuka"); b.innerHTML = `<span>✅ Terbuka</span>`;
       setTimeout(() => el.remove(), 900);
+      setTimeout(kaTawarkanSidik, 1300);
       if (h.pinBelumDiatur) toast("PIN admin belum diatur — segera atur di Pengaturan supaya kunci ini berfungsi.", "warn");
       return;
     }
@@ -203,6 +210,7 @@ async function kaHtml2Langkah() {
   return `<div class="ka-atur ${f.length ? "on" : ""}"><div><b>🛡️ Verifikasi 2 Langkah — akun ${escapeHtml(AK.guru.nama || "")}</b>
     <small>${f.length ? "AKTIF — setiap masuk dari perangkat baru, selain sandi wajib memasukkan kode 6 angka dari Google Authenticator di HP Antum." : "Belum aktif. Sangat disarankan untuk akun admin: walau sandi tersimpan di Chrome / diketahui orang lain, akun tetap tidak bisa dibuka tanpa HP Antum."}</small></div>
     ${f.length ? `<button class="btn btn-sm btn-outline" onclick="kaMatikan2Langkah()">Matikan</button>` : `<button class="btn btn-sm btn-accent" onclick="kaAktifkan2Langkah()">Aktifkan</button>`}</div>
+    ${kaHtmlSidik()}
     <div class="ka-atur"><div><b>🔒 Kunci Admin</b><small>Aplikasi meminta PIN admin setiap dibuka di jendela baru & setelah ${KA.menitKunci} menit tidak dipakai.</small></div><button class="btn btn-sm btn-ghost" onclick="kaKunci('manual')">Kunci Sekarang</button></div>`;
 }
 async function kaAktifkan2Langkah() {
@@ -321,5 +329,94 @@ async function kaMatikan2Langkah() {
   .ka-atur.on{border-color:#86efac;background:#f0fdf4}.ka-atur b{display:block;font-size:14px}.ka-atur small{color:var(--text-secondary);font-size:12px;line-height:1.5}
   .ka-langkah{font-size:13px;line-height:1.7;padding-left:20px}.ka-qr{display:grid;place-items:center;margin:8px 0}.ka-qr img{width:200px;height:200px;background:#fff;padding:8px;border-radius:12px;border:1px solid #e2e8f0}
   .ka-rahasia{font-size:12px;margin-bottom:8px}.ka-rahasia code{display:block;word-break:break-all;background:#f1f5f9;padding:6px 8px;border-radius:8px;margin-top:4px}`;
+  document.head.appendChild(st);
+})();
+
+// ── 3. 👆 SIDIK JARI (WebAuthn, sensor bawaan HP/laptop) untuk membuka Kunci Admin ──
+// Didaftarkan per perangkat. Sidik jari tidak pernah keluar dari HP — aplikasi hanya menyimpan "kunci
+// pengenal" perangkat ini (localStorage). PIN tetap bisa dipakai sebagai cadangan.
+const KA_SIDIK_SVG = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 11v3a8 8 0 0 1-1.5 4.7"/><path d="M8.5 13.5A3.5 3.5 0 0 1 15.5 11v1.5c0 2.6-.6 5-1.7 7"/><path d="M5.2 15.5A7 7 0 0 1 5 13v-2a7 7 0 0 1 12.6-4.2"/><path d="M19 10.5v1.8c0 1.6-.2 3.2-.6 4.7"/><path d="M7 4.6A9.9 9.9 0 0 1 12 3.3"/></svg>`;
+const _kaSidikKunci = () => "ka-sidik:" + ((typeof STATE !== "undefined" && STATE.guruId) || "");
+const _kaB64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const _kaDariB64 = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
+const _kaAcak = (n) => crypto.getRandomValues(new Uint8Array(n));
+function kaSidikAda() { try { return !!(window.PublicKeyCredential && localStorage.getItem(_kaSidikKunci())); } catch (e) { return false; } }
+async function kaSidikDidukung() {
+  try { return !!(window.PublicKeyCredential && window.isSecureContext && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()); } catch (e) { return false; }
+}
+async function kaDaftarSidik() {
+  if (!(await kaSidikDidukung())) { toast("Perangkat/browser ini tidak punya sensor sidik jari (atau kunci layar belum diatur).", "warn"); return false; }
+  try {
+    const nama = _kaNama() || "Admin";
+    const k = await navigator.credentials.create({ publicKey: {
+      challenge: _kaAcak(32), rp: { name: "PKBM Al-Umm Barabai" },
+      user: { id: new TextEncoder().encode(String(STATE.guruId).slice(0, 64)), name: nama, displayName: nama },
+      pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+      authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required", residentKey: "discouraged" },
+      timeout: 60000, attestation: "none" } });
+    if (!k) return false;
+    localStorage.setItem(_kaSidikKunci(), JSON.stringify({ id: _kaB64(k.rawId), t: Date.now() }));
+    toast("👆 Sidik jari aktif di perangkat ini", "ok");
+    return true;
+  } catch (e) { if (e && e.name !== "NotAllowedError") toast("Gagal mendaftarkan sidik jari: " + (e.message || e), "err"); return false; }
+}
+function kaHapusSidik() { try { localStorage.removeItem(_kaSidikKunci()); } catch (e) {} toast("Sidik jari dimatikan di perangkat ini", "ok"); kaSegarSidik(); }
+async function kaBukaSidik(diam) {
+  const el = document.getElementById("ka-kunci"), p = document.getElementById("ka-pesan"); if (!el || el.classList.contains("terbuka")) return;
+  let data; try { data = JSON.parse(localStorage.getItem(_kaSidikKunci()) || "null"); } catch (e) {}
+  if (!data) return;
+  try {
+    const h = await navigator.credentials.get({ publicKey: { challenge: _kaAcak(32), allowCredentials: [{ type: "public-key", id: _kaDariB64(data.id), transports: ["internal"] }], userVerification: "required", timeout: 60000 } });
+    const flag = h && new Uint8Array(h.response.authenticatorData)[32];
+    if (!h || !(flag & 0x04)) throw new Error("Sidik jari tidak terverifikasi");
+    KA.salah = 0; KA.terkunci = false; _kaLS.set("kaAktif", String(Date.now()));
+    if (p) p.textContent = ""; el.classList.add("terbuka");
+    const b = el.querySelector(".ka-buka"); if (b) b.innerHTML = `<span>✅ Terbuka</span>`;
+    setTimeout(() => el.remove(), 900);
+  } catch (e) {
+    if (diam) return; // percobaan otomatis saat layar kunci muncul — diam saja bila dibatalkan
+    if (p) p.textContent = e && e.name === "NotAllowedError" ? "Sidik jari dibatalkan — coba lagi atau pakai PIN." : "Sidik jari gagal — pakai PIN.";
+  }
+}
+// Setelah berhasil membuka dengan PIN: tawarkan sidik jari sekali (bila perangkat mendukung)
+async function kaTawarkanSidik() {
+  try {
+    if (kaSidikAda() || localStorage.getItem("ka-sidik-tolak:" + STATE.guruId) || !(await kaSidikDidukung())) return;
+    const ya = typeof konfirmasiTema === "function" ? await konfirmasiTema("Lain kali buka kunci cukup dengan <b>sidik jari</b> di perangkat ini — tanpa mengetik PIN.<br><small>Sidik jari tetap tersimpan di HP Antum, tidak dikirim ke aplikasi.</small>", { ikon: "👆", judul: "Aktifkan Sidik Jari?", teksYa: "Aktifkan" }) : false;
+    if (ya) await kaDaftarSidik(); else localStorage.setItem("ka-sidik-tolak:" + STATE.guruId, "1");
+  } catch (e) {}
+}
+function kaHtmlSidik() {
+  const ada = kaSidikAda();
+  return `<div class="ka-atur ${ada ? "on" : ""}" id="ka-atur-sidik"><div><b>👆 Sidik Jari — perangkat ini</b><small>${ada ? "AKTIF — Kunci Admin di perangkat ini bisa dibuka dengan sidik jari. PIN tetap bisa dipakai." : "Buka Kunci Admin dengan sidik jari / kunci layar HP, tanpa mengetik PIN. Diaktifkan per perangkat."}</small></div>
+    ${ada ? `<button class="btn btn-sm btn-outline" onclick="kaHapusSidik()">Matikan</button>` : `<button class="btn btn-sm btn-accent" onclick="kaDaftarSidik().then(kaSegarSidik)">Aktifkan</button>`}</div>`;
+}
+function kaSegarSidik() { const w = document.getElementById("ka-atur-sidik"); if (w) w.outerHTML = kaHtmlSidik(); }
+
+// ── 4. Jangan biarkan browser menyimpan / menawarkan sandi tersimpan (Google Password Manager) ──
+// Semua kolom sandi & PIN diubah jadi kolom teks bertitik (bukan type=password), sehingga Chrome tidak
+// mengenalinya sebagai form sandi: tidak muncul daftar sandi tersimpan & tidak menawarkan "Simpan sandi?".
+// Kolom PIN (inputmode numeric / id berisi "pin") hanya menerima angka.
+(function () {
+  const ubah = (i) => {
+    if (!i || i.dataset.kaAman) return;
+    i.dataset.kaAman = "1";
+    const pin = i.inputMode === "numeric" || /pin/i.test(i.id);
+    if (i.type === "password") { i.type = "text"; i.classList.add("ka-tutup"); }
+    i.setAttribute("autocomplete", "off"); i.setAttribute("autocorrect", "off"); i.setAttribute("autocapitalize", "off");
+    i.setAttribute("spellcheck", "false"); i.setAttribute("data-lpignore", "true"); i.setAttribute("data-1p-ignore", "");
+    if (!i.name) i.name = "f" + Math.random().toString(36).slice(2, 8);
+    if (pin) { i.inputMode = "numeric"; i.setAttribute("pattern", "[0-9]*"); i.addEventListener("input", () => { const d = i.value.replace(/\D/g, ""); if (d !== i.value) i.value = d; }); }
+  };
+  const nama = (i) => { if (i && !i.dataset.kaAman && (i.id === "ak-login" || i.getAttribute("autocomplete") === "username")) { i.dataset.kaAman = "1"; i.setAttribute("autocomplete", "off"); i.setAttribute("data-lpignore", "true"); i.name = "u" + Math.random().toString(36).slice(2, 8); } };
+  const sapu = (akar) => { akar.querySelectorAll("input[type=password]").forEach(ubah); akar.querySelectorAll("#ak-login,input[autocomplete=username]").forEach(nama); };
+  sapu(document);
+  new MutationObserver((ms) => ms.forEach((m) => m.addedNodes.forEach((n) => { if (n.nodeType !== 1) return; if (n.matches("input[type=password]")) ubah(n); if (n.matches("#ak-login")) nama(n); if (n.querySelectorAll) sapu(n); }))).observe(document.documentElement, { childList: true, subtree: true });
+  // tombol Lihat/Tutup sandi: ganti titik ↔ huruf (bukan mengganti type)
+  window.akLihatSandi = function (b) { const i = b.previousElementSibling; const tutup = i.classList.toggle("ka-tutup"); b.textContent = tutup ? "Lihat" : "Tutup"; };
+  const st = document.createElement("style");
+  st.textContent = `.ka-tutup{-webkit-text-security:disc;text-security:disc}
+  .ka-sidik{display:flex;align-items:center;justify-content:center;gap:10px;border:1.5px solid rgba(110,231,183,.55);border-radius:16px;padding:12px;background:rgba(16,185,129,.14);color:#d1fae5;font-weight:800;font-size:14.5px;cursor:pointer;transition:background .2s,transform .15s}
+  .ka-sidik:hover{background:rgba(16,185,129,.26)}.ka-sidik:active{transform:scale(.98)}.ka-sidik span{display:grid;place-items:center;color:#6ee7b7;animation:kaDenyut 2.4s ease-in-out infinite}`;
   document.head.appendChild(st);
 })();
