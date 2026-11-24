@@ -52,12 +52,15 @@ const KT_PERAN = [
   ...["A", "Pa", "Pi"].map((r) => ({ kode: "admin-" + r, ruang: r, nama: "Admin " + KT_JENJANG[r], ikon: "🖥️", warna: r === "A" ? "#0f766e" : r === "Pa" ? "#2563eb" : "#db2777",
     tugas: ["Mengelola data siswa, kelas & guru jenjang di aplikasi", "Memantau absensi & jurnal tutor", "Menginput / memeriksa nilai & mencetak rapor", "Membuat akun guru & membantu kendala login", "Menyusun Kertas Kerja BOSP & Draft RKAS jenjang", "Melaporkan kendala aplikasi ke Tim IT"],
     kata: ["absen", "absensi", "nilai", "rapor", "input", "kelas", "jurnal", "akun guru", "login guru", "cetak"] })),
+  { kode: "desain", nama: "Tim Desain & Konten Creator", ikon: "🎨", warna: "#c2410c",
+    tugas: ["Mengelola website PKBM Al-Umm & website Yayasan", "Mengelola Instagram & YouTube Rumah Tahfizh Al-Umm Putra Barabai (sementara)", "Membuat flyer, poster, banner & pamflet semua kegiatan", "Mendokumentasikan kegiatan (foto & video) lalu mengunggahnya", "Menjaga identitas visual PKBM (logo, warna, huruf) tetap seragam", "Menyiapkan konten penerimaan santri baru & pengumuman"],
+    kata: ["desain", "flyer", "flayer", "poster", "banner", "pamflet", "spanduk", "konten", "instagram", "ig", "youtube", "website", "web", "media sosial", "medsos", "dokumentasi", "video kegiatan", "foto kegiatan", "brosur", "pengumuman"] },
   { kode: "it", nama: "Tim IT", ikon: "🛠️", warna: "#475569",
     tugas: ["Menerima laporan bug, tampilan & permintaan fitur aplikasi", "Mencatat tiket & menentukan prioritas", "Memperbaiki & memperbarui aplikasi", "Mengelola akun, keamanan & cadangan data", "Melatih guru memakai fitur baru", "Melaporkan perkembangan aplikasi di Ruang Rapat"],
     kata: ["bug", "error", "eror", "galat", "tampilan", "layar", "tombol", "fitur", "aplikasi", "lambat", "loading", "macet", "crash", "tidak bisa", "gak bisa", "ga bisa", "nggak bisa", "hp", "android", "browser", "sandi", "password", "login", "sidik jari", "notifikasi", "tambah fitur", "tambahkan", "perbaiki", "berantakan", "rusak", "hilang"] },
 ];
 const _ktPeran = (k) => KT_PERAN.find((p) => p.kode === k);
-const _ktPeranPendek = (k) => ({ yayasan: "Ketua Yayasan", kepala: "Kepala PKBM", sekretaris: "Sekretaris", bendahara: "Bendahara", dapodik: "Dapodik", it: "Tim IT" })[k] || (/^peny-/.test(k) ? "Penyelenggara " + ({ A: "A", Pa: "Putra", Pi: "Putri" })[k.slice(5)] : "Admin " + ({ A: "A", Pa: "Putra", Pi: "Putri" })[k.slice(6)]);
+const _ktPeranPendek = (k) => ({ yayasan: "Ketua Yayasan", kepala: "Kepala PKBM", sekretaris: "Sekretaris", bendahara: "Bendahara", dapodik: "Dapodik", it: "Tim IT", desain: "Desain & Konten" })[k] || (/^peny-/.test(k) ? "Penyelenggara " + ({ A: "A", Pa: "Putra", Pi: "Putri" })[k.slice(5)] : "Admin " + ({ A: "A", Pa: "Putra", Pi: "Putri" })[k.slice(6)]);
 
 // ── Data: petugas dari jabatan di aplikasi (+ pengaturan kantor) ──
 async function _ktMuatStaf() {
@@ -81,6 +84,7 @@ async function _ktMuatStaf() {
   p.sekretaris = olehJabatan(/sekretaris|^tu\b|tata usaha/i).slice(0, 1);
   p.dapodik = olehJabatan(/dapodik|operator/i).slice(0, 1);
   p.it = olehJabatan(/\bit\b|teknologi|programmer/i).slice(0, 1);
+  p.desain = olehJabatan(/desain|konten|creator|media|humas/i).slice(0, 1);
   ["A", "Pa", "Pi"].forEach((r) => {
     const ids = ((peny.data || []).find((x) => x.ruang_id === r)?.nilai?.ids || []).filter(ada);
     p["peny-" + r] = (ids.length ? ids : olehJabatan(/kepala_sekolah|kepala sekolah|penyelenggara/i, r)).slice(0, 1);
@@ -111,6 +115,7 @@ async function ktBuka() {
   el.innerHTML = `<div class="kt-atas"><div class="kt-judul"><b>🏢 Kantor PKBM Al-Umm</b><small>Ruang Kepala · Ruang Rapat · Ruang Ustadz · Ruang Ustadzah</small></div><button id="kt-rapat-tb" class="kt-rapat-tb" hidden onclick="ktPanelRapat()">🪑 Rapat Berlangsung</button>
       <div class="kt-alat">${pemilik ? `<button onclick="ktKabar()" title="Kabar baru dari tiap jenjang">📰<span class="kt-sembunyi-hp"> Kabar</span></button><button onclick="ktKeliling()" title="Kepala PKBM berkeliling">🚶</button><button onclick="ktTiketBuka()" title="Tiket Tim IT">🎫<span class="kt-sembunyi-hp"> Tiket</span><span id="kt-tiket-n"></span></button><button onclick="ktAturBuka()" title="Atur petugas">⚙️</button>` : `<span class="kt-nonton">👁️ Menyaksikan langsung</span>`}<button onclick="ktTutup()" title="Tutup">✕</button></div></div>
     <div class="kt-tengah"><div class="kt-layar" id="kt-layar"><div class="kt-memuat" id="kt-memuat"><i></i>Menyiapkan kantor…</div><div class="kt-hamparan" id="kt-hamparan"></div>
+      <div class="kt-sorot"><button onclick="ktSorot(-1)" title="Ruang sebelumnya">‹</button><span id="kt-sorot-nama">Seluruh Kantor</span><button onclick="ktSorot(1)" title="Ruang berikutnya">›</button><button id="kt-auto" onclick="ktAuto()" title="Berpindah ruang otomatis">AUTO</button></div>
       <div class="kt-putar"><button onclick="ktPutar(-1)" title="Putar kiri">⟲</button><button onclick="ktZoom(1)" title="Perbesar">＋</button><button onclick="ktZoom(-1)" title="Perkecil">－</button><button onclick="ktPutar(1)" title="Putar kanan">⟳</button></div></div>
     <div class="kt-panel" id="kt-panel" hidden></div></div>
     <div class="kt-bawah" ${pemilik ? "" : "hidden"}><div class="kt-chip" id="kt-chip"></div>
@@ -136,7 +141,7 @@ async function ktBuka() {
   } catch (e) { const m = document.getElementById("kt-memuat"); if (m) m.innerHTML = "Gagal memuat kantor: " + _ktE(e.message || e); }
 }
 function ktTutup() {
-  KT.buka = false; cancelAnimationFrame(KT.raf); clearInterval(KT.timer); clearInterval(KT.timerLayar); KT.sibuk = false; KT.sesi = { aktif: false, ids: new Set(), judul: "" };
+  KT.buka = false; clearInterval(KT.autoT); KT.autoAktif = false; KT.fokus = null; KT.pusat = null; KT.zoom = 1; KT.sorotI = 0; cancelAnimationFrame(KT.raf); clearInterval(KT.timer); clearInterval(KT.timerLayar); KT.sibuk = false; KT.sesi = { aktif: false, ids: new Set(), judul: "" };
   try { KT.kanal && supaSemua.removeChannel(KT.kanal); } catch (e) {} KT.kanal = null; try { KT.ro && KT.ro.disconnect(); } catch (e) {}
   try { KT.renderer && KT.renderer.dispose(); } catch (e) {}
   KT.renderer = null; KT.tokoh = {}; KT.label = {}; KT.gelembung = {};
@@ -175,6 +180,7 @@ function _ktTanyaCepat(k) {
   if (k === "bendahara") return [["Laporan BOSP Lengkap", "laporan bosp lengkap semua jenjang"]];
   if (k === "dapodik") return [["Cek NISN & NIK", "cek nisn nik dapodik siswa"]];
   if (k === "it") return [["Lihat Tiket", "__tiket"]];
+  if (k === "desain") return [["Minta Flyer", "buatkan flyer kegiatan"], ["Laporan Konten", "laporan konten media dan desain"]];
   if (k === "kepala") return [["📰 Kabar Baru", "__kabar"], ["Evaluasi KBM", "evaluasi kegiatan semua jenjang"], ["Laporan BOSP", "laporan bosp"]];
   if (/^peny-/.test(k)) { const r = k.slice(5); return [["Evaluasi KBM", `evaluasi kegiatan ${KT_JENJANG[r]}`], ["BOSP Jenjang", `laporan bosp ${KT_JENJANG[r]}`]]; }
   if (/^admin-/.test(k)) { const r = k.slice(6); return [["Evaluasi KBM", `evaluasi kegiatan ${KT_JENJANG[r]}`], ["Data Siswa", `cek data siswa`]]; }
@@ -187,7 +193,7 @@ const KT_RAPAT_KEPALA = [
   ["📚", "Evaluasi KBM", "evaluasi kegiatan semua jenjang", "peny-Pa"], ["🧪", "Ujian & Bank Soal", "laporan ujian semua jenjang", "admin-Pa"],
   ["📘", "Modul Ajar & Kop Soal", "laporan modul ajar semua jenjang", "admin-A"], ["🗓️", "Jadwal & Kalender", "laporan jadwal dan kalender", "peny-A"],
   ["🧒", "Kehadiran Siswa", "laporan kehadiran siswa", "admin-Pi"], ["💼", "Kas, Insentif & Slip Gaji", "laporan kas insentif gaji", "bendahara"],
-  ["🗂️", "Data Siswa & Guru", "cek data siswa dan guru", "sekretaris"], ["🏫", "Laporan Lengkap Semua Fitur", "laporan lengkap semua fitur", "sekretaris"],
+  ["🗂️", "Data Siswa & Guru", "cek data siswa dan guru", "sekretaris"], ["🎨", "Desain & Konten Media", "laporan konten media dan desain", "desain"], ["🏫", "Laporan Lengkap Semua Fitur", "laporan lengkap semua fitur", "sekretaris"],
 ];
 function ktMenuKepala() {
   const kid = (KT.peran.kepala || [])[0], s = KT.staf.find((x) => x.id === kid) || {};
@@ -300,6 +306,7 @@ async function ktKirim(teksLangsung) {
 async function _ktJawab(k, teks) {
   const t = teks.toLowerCase();
   if (k === "it") return _ktJawabIt(teks);
+  if (k === "desain") return _ktJawabDesain(teks);
   if (k === "sekretaris") {
     const bag = [];
     if (!/siswa|santri|peserta/.test(t) || /guru|ptk|tutor/.test(t)) {
@@ -439,3 +446,15 @@ async function _ktMuatAkses() {
   return KT_AKSES.ids;
 }
 async function _ktBolehNonton() { KT_AKSES.ids = null; return (await _ktMuatAkses()).includes(STATE.guruId); }
+
+// Tim Desain & Konten: permintaan desain dicatat sebagai tiket "Desain & Konten"
+async function _ktJawabDesain(teks) {
+  const t = teks.toLowerCase(), minta = /buat|minta|tolong|bikin|siapkan|flyer|flayer|poster|banner|pamflet|spanduk|brosur/.test(t) && !/^laporan/.test(t);
+  const terbuka = Object.values(KT.tiket || {}).filter((x) => x && x.jenis === "Desain & Konten" && (x.status === "baru" || x.status === "dikerjakan")).length;
+  if (!minta) return { teks: `Laporan media: website PKBM & Yayasan, Instagram & YouTube Rumah Tahfizh Al-Umm Putra Barabai ana kelola. Saat ini ada ${terbuka} permintaan desain/konten yang belum selesai. Untuk flyer baru, sampaikan judul kegiatan, tanggal, dan tempatnya.`, singkat: `${terbuka} permintaan desain sedang ana kerjakan.` };
+  const no = Object.keys(KT.tiket || {}).length + 1, id = "t" + Date.now().toString(36);
+  const tk = { no, judul: teks.split(/[.!?\n]/)[0].slice(0, 90), isi: teks, jenis: "Desain & Konten", prioritas: /segera|besok|hari ini|mendesak/.test(t) ? "Tinggi" : "Sedang", status: "baru", t: Date.now(), oleh: STATE.guruNama || "Admin", ruang: STATE.ruang };
+  try { await _ktSimpan(KT_TIKET, { [id]: tk }); KT.tiket[id] = tk; _ktTiketBadge(); }
+  catch (e) { return { teks: "Afwan, permintaan belum tersimpan: " + (e.message || e) }; }
+  return { teks: `Permintaan desain #${no} ana catat (prioritas ${tk.prioritas}). Insya Allah ana siapkan rancangannya sesuai identitas visual PKBM, lalu ana kirim untuk diperiksa sebelum diunggah ke IG/YouTube/website.`, singkat: `Siap, desain #${no} ana kerjakan.` };
+}

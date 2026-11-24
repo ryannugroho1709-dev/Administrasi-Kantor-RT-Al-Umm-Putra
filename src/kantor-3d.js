@@ -227,7 +227,9 @@ async function _ktBangun() {
   };
   dinding(30.4, 0.25, 0, -8.1, "z-"); dinding(0.25, 16.2, -15.1, 0, "x-"); dinding(0.25, 16.2, 15.1, 0, "x+");
   // tepi depan bangunan: lis lime rendah supaya tampak bangunan utuh
-  [[-10, 10], [10, 10]].forEach(([x]) => KT.scene.add(_kdBalok(10, 0.18, 0.2, lime, x, 0.09, 8.05)));
+  [[-8.1, 13.8], [8.1, 13.8]].forEach(([x, w]) => { _kdTaruh(_kdBalok(w, 0.9, 0.25, lime, x, 0.45, 8.1), [w, 0.3]); KT.scene.add(_kdBalok(w, 0.05, 0.3, emas, x, 0.92, 8.1)); }); // dinding depan rendah, pintu masuk utama x -1.2..1.2
+  [[-15.1, -8.1], [15.1, -8.1], [-15.1, 8.1], [15.1, 8.1]].forEach(([x, z]) => KT.scene.add(_kdBalok(0.5, 3.1, 0.5, lime, x, 1.55, z))); // pilar sudut
+  [[0, -8.25, 30.7, 0.12], [-15.25, 0, 0.12, 16.6], [15.25, 0, 0.12, 16.6]].forEach(([x, z, w, d]) => KT.scene.add(_kdBalok(w, 0.14, d, emas, x, 3.05, z))); // lis atap
   // sekat kaca x = ±5 (pintu z 5.4..7.2)
   const kaca = new THREE.MeshPhongMaterial({ color: 0xbfe3f2, transparent: true, opacity: 0.22, shininess: 100 });
   [-5, 5].forEach((x) => {
@@ -253,7 +255,7 @@ async function _ktBangun() {
   _kdPapan("Ruang Rapat", "PKBM Al-Umm Barabai", 3, 2.0, -1.88, 3.2, "#14532d");
 
   // ── Ruang Kepala PKBM ──
-  const mk = _kdMejaKerja(0, -5.6, 2.8); KT.layar.__kepala = mk.layar;
+  const mk = _kdMejaKerja(0, -5.6, 2.8); mk.grup.rotation.y = Math.PI; KT.layar.__kepala = mk.layar; // menghadap kursi kepala
   sc.add(_ktKotak(0.7, 0.14, 0.12, 0xc9a227, 0.8, 0.92, -5.15));
   KT.kursiKepala = { x: 0, z: -6.55, hadap: 0 }; _kdKursi(0, -6.55, 0x111827, 0, 0.95);
   KT.kursiTamu = [{ x: -0.8, z: -4.35, hadap: Math.PI }, { x: 0.8, z: -4.35, hadap: Math.PI }];
@@ -266,24 +268,38 @@ async function _ktBangun() {
   if (logo) { const f = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.5), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(_kdKanvasLogo(logo, 256, false)), transparent: true })); f.position.set(0.6, 1.95, -7.95); sc.add(f); }
   _kdTanaman(-4.4, -2.6);
 
-  // ── Ruang Rapat: meja panjang walnut berkaca + logo di tengah meja ──
+  // ── Ruang Rapat: meja pimpinan di barat; meja ustadz & meja ustadzah TERPISAH, semua menghadap pimpinan,
+  //    dibatasi tabir — tidak ada ustadz & ustadzah yang saling berhadapan ──
   const kepalaId = (KT.peran.kepala || [])[0], yayasanId = (KT.peran.yayasan || [])[0];
   const peserta = KT.staf.filter((s) => s.id !== kepalaId && s.id !== yayasanId);
   const nL = Math.max(1, Math.min(6, peserta.filter((s) => s.jk !== "P").length)), nP = Math.max(1, Math.min(6, peserta.filter((s) => s.jk === "P").length));
-  const panjang = Math.max(nL, nP) * 1.1 + 0.9, x0 = -panjang / 2;
-  _kdTaruh(_kdBalok(panjang, 0.1, 1.6, _kdKilap(0x3b2314, 70), 0, 0.8, 3.2), [panjang, 1.6]);
-  sc.add(_kdBalok(panjang + 0.06, 0.04, 1.66, emas, 0, 0.75, 3.2));
-  sc.add(_kdBalok(panjang - 0.6, 0.012, 0.7, kaca, 0, 0.86, 3.2));
-  [-1, 1].forEach((a) => sc.add(_kdBalok(0.5, 0.74, 0.9, _kdKilap(0x2a180c, 50), a * (panjang / 2 - 0.6), 0.37, 3.2)));
-  const piring = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.02, 40), new THREE.MeshLambertMaterial({ map: new THREE.CanvasTexture(_kdKanvasLogo(logo, 512, true)) }));
-  piring.position.set(0, 0.87, 3.2); piring.rotation.y = -Math.PI / 2; sc.add(piring);
-  // kursi: ustadzah di sisi belakang (dekat ruang kepala), ustadz di sisi depan; Kepala & Ketua Yayasan di ujung barat
-  KT.kursiPimpinan = { x: x0 - 0.75, z: 2.8, hadap: Math.PI / 2 };
-  KT.kursiYayasan = { x: x0 - 0.75, z: 3.6, hadap: Math.PI / 2 };
+  const zP = 3.4, jarakKursi = 0.95;
+  const mejaBaris = (x, n) => {
+    const pj = n * jarakKursi + 0.35;
+    _kdTaruh(_kdBalok(0.8, 0.08, pj, _kdKilap(0x3b2314, 70), x, 0.8, zP), [0.8, pj]);
+    sc.add(_kdBalok(0.84, 0.035, pj + 0.04, emas, x, 0.75, zP)); sc.add(_kdBalok(0.4, 0.012, pj - 0.3, kaca, x, 0.85, zP));
+    sc.add(_kdBalok(0.08, 0.72, pj - 0.1, _kdKilap(0x2a180c, 50), x - 0.32, 0.37, zP)); // panel depan meja
+    return pj;
+  };
+  mejaBaris(-0.6, nL);                                   // meja ustadz (depan)
+  mejaBaris(2.6, nP);                                    // meja ustadzah (belakang, dekat pintu timur)
+  const pjTabir = Math.max(nL, nP) * jarakKursi + 1.0;   // tabir / hijab pemisah
+  _kdTaruh(_kdBalok(0.08, 1.35, pjTabir, new THREE.MeshPhongMaterial({ color: 0x14532d, transparent: true, opacity: 0.85, shininess: 30 }), 1.8, 0.68, zP), [0.08, pjTabir]);
+  sc.add(_kdBalok(0.1, 0.05, pjTabir, emas, 1.8, 1.37, zP));
+  // meja pimpinan + logo
+  _kdTaruh(_kdBalok(0.8, 0.08, 2.0, _kdKilap(0x3b2314, 70), -3.0, 0.8, zP), [0.8, 2.0]); sc.add(_kdBalok(0.84, 0.035, 2.04, emas, -3.0, 0.75, zP));
+  sc.add(_kdBalok(0.08, 0.72, 1.9, _kdKilap(0x2a180c, 50), -2.68, 0.37, zP));
+  const piring = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.02, 32), new THREE.MeshLambertMaterial({ map: new THREE.CanvasTexture(_kdKanvasLogo(logo, 256, true)) }));
+  piring.position.set(-3.0, 0.86, zP); piring.rotation.y = -Math.PI / 2; sc.add(piring);
+  const lantaiLogo = new THREE.Mesh(new THREE.CircleGeometry(0.7, 40), new THREE.MeshLambertMaterial({ map: new THREE.CanvasTexture(_kdKanvasLogo(logo, 512, true)) }));
+  lantaiLogo.rotation.x = -Math.PI / 2; lantaiLogo.rotation.z = Math.PI / 2; lantaiLogo.position.set(-1.8, 0.025, zP); sc.add(lantaiLogo);
+  KT.kursiPimpinan = { x: -3.8, z: zP - 0.45, hadap: Math.PI / 2 };
+  KT.kursiYayasan = { x: -3.8, z: zP + 0.45, hadap: Math.PI / 2 };
   [KT.kursiPimpinan, KT.kursiYayasan].forEach((k) => _kdKursi(k.x, k.z, 0x7c2d12, k.hadap, 0.95));
-  const sisi = (n, z, hadap) => Array.from({ length: n }, (_, i) => ({ x: -((n - 1) * 1.1) / 2 + i * 1.1, z, hadap }));
-  KT.kursiAkhawat = sisi(nP, 1.75, 0); KT.kursiIkhwan = sisi(nL, 4.65, Math.PI);
-  [...KT.kursiAkhawat, ...KT.kursiIkhwan].forEach((k) => _kdKursi(k.x, k.z, 0x111827, k.hadap, 0.8));
+  const baris = (n, x) => Array.from({ length: n }, (_, i) => ({ x, z: zP - ((n - 1) * jarakKursi) / 2 + i * jarakKursi, hadap: -Math.PI / 2 }));
+  KT.kursiIkhwan = baris(nL, 0.45); KT.kursiAkhawat = baris(nP, 3.45);
+  KT.kursiIkhwan.forEach((k) => _kdKursi(k.x, k.z, 0x111827, k.hadap, 0.8));
+  KT.kursiAkhawat.forEach((k) => _kdKursi(k.x, k.z, 0x3b1d2a, k.hadap, 0.8));
   KT.kursiRapat = [KT.kursiPimpinan, KT.kursiYayasan, ...KT.kursiAkhawat, ...KT.kursiIkhwan]; // kompatibel
   // TV
   KT.tvKanvas = document.createElement("canvas"); KT.tvKanvas.width = 640; KT.tvKanvas.height = 360;
@@ -348,7 +364,20 @@ function _ktUkur() {
   KT.renderer.setSize(w, h);
 }
 function ktPutar(arah) { KT.sudut += (arah * Math.PI) / 8; }
-function ktZoom(arah, langkah = 0.15) { KT.zoom = Math.min(3, Math.max(0.6, KT.zoom * (1 + arah * langkah))); _ktUkur(); }
+function ktZoom(arah, langkah = 0.15) { KT.fokus = KT.fokus || { x: 0, z: 3, zoom: KT.zoom }; KT.fokus.zoom = Math.min(3.2, Math.max(0.6, KT.fokus.zoom * (1 + arah * langkah))); }
+function _ktProyeksi() { const layar = document.getElementById("kt-layar"); if (!layar || !KT.kamera) return; const w = layar.clientWidth, h = layar.clientHeight; if (!w || !h) return; const a = w / h, s = (a < 1 ? 14.5 / a : 12) / KT.zoom; Object.assign(KT.kamera, { left: -s * a, right: s * a, top: s, bottom: -s }); KT.kamera.updateProjectionMatrix(); }
+// ── sorot ruang: ‹ Seluruh Kantor › + AUTO (berpindah sendiri tiap 7 detik) ──
+const KT_SOROT = [["Seluruh Kantor", 0, 3, 1], ["Ruang Kepala PKBM", 0, -5, 2.3], ["Ruang Rapat", 0, 3.2, 2.1], ["Ruang Ustadz", -10, -0.5, 1.9], ["Ruang Ustadzah", 10, -0.5, 1.9], ["Gapura & Halaman", 0, 12, 1.9]];
+function ktSorot(arah, langsung) {
+  KT.sorotI = langsung != null ? langsung : ((KT.sorotI || 0) + arah + KT_SOROT.length) % KT_SOROT.length;
+  const [nama, x, z, zoom] = KT_SOROT[KT.sorotI]; KT.fokus = { x, z, zoom };
+  const el = document.getElementById("kt-sorot-nama"); if (el) el.textContent = nama;
+}
+function ktAuto() {
+  const b = document.getElementById("kt-auto"); clearInterval(KT.autoT);
+  if (KT.autoT && KT.autoAktif) { KT.autoAktif = false; if (b) b.classList.remove("on"); return; }
+  KT.autoAktif = true; if (b) b.classList.add("on"); ktSorot(1); KT.autoT = setInterval(() => { if (!KT.buka) return clearInterval(KT.autoT); ktSorot(1); }, 7000);
+}
 function _ktKetuk(e) {
   const kan = KT.renderer.domElement, kot = kan.getBoundingClientRect();
   const m = new THREE.Vector2(((e.clientX - kot.left) / kot.width) * 2 - 1, -((e.clientY - kot.top) / kot.height) * 2 + 1);
@@ -389,13 +418,13 @@ async function kdYayasanDatang() {
   KT.mobil.visible = true; KT.mobil.position.set(-26, 0, 16);
   await _kdAnimasi(KT.mobil, [{ x: 0, z: 16 }, { x: 0, z: 12.4 }, { x: -6.2, z: 12.4 }], 7);
   KT.mobil.rotation.y = Math.PI / 2;
-  t.position.set(-5.0, 0, 12.4); t.visible = true; if (KT.label[id]) KT.label[id].hidden = false;
-  t.userData.diLuar = false; t.userData.meja = { x: -5.0, z: 12.4, hadap: 0 };
+  t.position.set(-3.2, 0, 12.4); t.visible = true; if (KT.label[id]) KT.label[id].hidden = false;
+  t.userData.diLuar = false; t.userData.meja = { x: -3.2, z: 12.4, hadap: 0 };
   await _ktBicara(id, "Assalamu'alaikum. Ana ikut menyimak rapatnya.", 1800);
 }
 async function kdYayasanPulang() {
   const id = (KT.peran.yayasan || [])[0], t = id && KT.tokoh[id]; if (!t || t.userData.diLuar) return;
-  await _ktPergi(t, { x: -5.0, z: 12.4, hadap: 0 }, { berdiri: true });
+  await _ktPergi(t, { x: -3.2, z: 12.4, hadap: 0 }, { berdiri: true });
   t.visible = false; if (KT.label[id]) KT.label[id].hidden = true; t.userData.diLuar = true;
   await _kdAnimasi(KT.mobil, [{ x: 0, z: 12.4 }, { x: 0, z: 16 }, { x: 26, z: 16 }], 7);
   KT.mobil.visible = false;
@@ -449,7 +478,11 @@ function _ktJalan() {
   if (!KT.buka || !KT.renderer) return;
   KT.raf = requestAnimationFrame(_ktJalan);
   const kini = performance.now(), dt = Math.min(0.05, (kini - KT.jam) / 1000); KT.jam = kini;
-  const k = KT.kamera, jarak = 34; k.position.set(Math.sin(KT.sudut) * jarak, 21, 3 + Math.cos(KT.sudut) * jarak); k.lookAt(0, 0.5, 3);
+  // kamera mengikuti ruang yang disorot (‹ › / AUTO), bergeser halus
+  const f = KT.fokus || (KT.fokus = { x: 0, z: 3, zoom: KT.zoom }), p = KT.pusat || (KT.pusat = { x: 0, z: 3 }), a = Math.min(1, dt * 3);
+  p.x += (f.x - p.x) * a; p.z += (f.z - p.z) * a;
+  if (Math.abs(KT.zoom - f.zoom) > 0.002) { KT.zoom += (f.zoom - KT.zoom) * a; _ktProyeksi(); }
+  const k = KT.kamera, jarak = 34; k.position.set(p.x + Math.sin(KT.sudut) * jarak, 21, p.z + Math.cos(KT.sudut) * jarak); k.lookAt(p.x, 0.5, p.z);
   Object.values(KT.tokoh).forEach((t) => _kdGerak(t, dt, kini));
   if (KT.pintu) { const dekat = Object.values(KT.tokoh).some((t) => Math.hypot(t.position.x, t.position.z + 2) < 1.9 && t.userData.jalur); const tuju = dekat ? -Math.PI / 2 : 0; KT.pintu.rotation.y += (tuju - KT.pintu.rotation.y) * Math.min(1, dt * 6); }
   // layar laptop yang "bekerja" berkedip pelan
@@ -504,7 +537,7 @@ function kdMinuman(kursi, tambah) {
   if (!tambah) kdMinumanHapus(); KT.gelas = KT.gelas || [];
   if (typeof _ktSiar === "function") _ktSiar("minum", { kursi, tambah: !!tambah });
   kursi.forEach((k) => {
-    const g = new THREE.Group(), dx = Math.sin(k.hadap) * 0.62, dz = Math.cos(k.hadap) * 0.62;
+    const g = new THREE.Group(), dx = Math.sin(k.hadap) * 0.72, dz = Math.cos(k.hadap) * 0.72;
     g.position.set(k.x + dx, 0.85, k.z + dz);
     g.add(_ktKotak(0.26, 0.02, 0.26, 0xf8fafc, 0, 0.01, 0));
     const gl = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.07, 0.18, 12), new THREE.MeshPhongMaterial({ color: 0xffffff, shininess: 90 })); gl.position.y = 0.1; g.add(gl);
@@ -544,7 +577,7 @@ const _ktGelar = (s) => (s && s.jk === "P" ? "Ustadzah" : "Ustadz");
 // ── Teras, halaman parkir, gapura (palang) PKBM & jalan raya ──
 function _kdGapura(logo) {
   const sc = KT.scene;
-  sc.add(_ktKotak(30, 0.2, 1.6, 0xd6d3d1, 0, -0.1, 8.8)); // teras
+  sc.add(_ktKotak(30.5, 0.2, 1.6, 0xd6d3d1, 0, -0.1, 9.0)); // teras
   const paving = _kdMarmer("#cfcac4", "#a8a29e"); paving.repeat.set(10, 2);
   const hal = new THREE.Mesh(new THREE.BoxGeometry(30, 0.2, 4.6), new THREE.MeshLambertMaterial({ map: paving })); hal.position.set(0, -0.12, 11.9); hal.receiveShadow = true; sc.add(hal); // halaman parkir
   for (let x = -12; x <= -3; x += 2.6) sc.add(_ktKotak(0.08, 0.01, 3.2, 0xffffff, x, 0.0, 12.2)); // garis parkir

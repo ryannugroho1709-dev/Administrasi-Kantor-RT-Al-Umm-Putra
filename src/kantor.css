@@ -118,3 +118,9 @@ body.kt-terbuka { overflow: hidden; }
 @keyframes ktDenyutTb { 0%, 100% { box-shadow: 0 0 0 0 rgba(250,204,21,.6); } 50% { box-shadow: 0 0 0 6px rgba(250,204,21,0); } }
 .kt-judul { display: flex; align-items: center; flex-wrap: wrap; }
 .kt-judul small { width: 100%; }
+.kt-sorot { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 2; display: flex; align-items: center; gap: 4px; padding: 4px; border-radius: 999px; background: rgba(255,255,255,.94); box-shadow: 0 4px 14px rgba(15,23,42,.18); }
+.kt-sorot button { border: 0; background: #f1f5f9; border-radius: 999px; width: 30px; height: 30px; font-size: 17px; font-weight: 800; color: #14532d; cursor: pointer; }
+.kt-sorot span { min-width: 140px; text-align: center; font-size: 12.5px; font-weight: 800; color: #0f172a; letter-spacing: .3px; }
+.kt-sorot #kt-auto { width: auto; padding: 0 12px; font-size: 11px; letter-spacing: .5px; }
+.kt-sorot #kt-auto.on { background: #16a34a; color: #fff; }
+@media (max-width: 640px) { .kt-sorot span { min-width: 104px; font-size: 11px; } }
