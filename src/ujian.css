@@ -817,3 +817,10 @@ body.jus-menyeret #ju-wadah [data-kunci]:not(.jus-boleh):not(.jus-asal){opacity:
 .ju-cap-blok small{display:block;color:var(--text-secondary);font-size:12px;margin:2px 0 8px}
 .ju-cap-pratinjau{display:flex;align-items:center;justify-content:center;min-height:90px;border:1px dashed #cbd5e1;border-radius:10px;background:repeating-conic-gradient(#f1f5f9 0 25%,#fff 0 50%) 0 0/16px 16px}
 .ju-cap-pratinjau img{max-height:130px;max-width:100%}.ju-cap-pratinjau span{color:#94a3b8;font-size:12px}
+/* pilihan versi PDF jadwal ujian */
+.ju-versi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.ju-versi{display:flex;flex-direction:column;gap:3px;text-align:left;padding:10px;border:1.5px solid var(--border,#dfe5e2);border-radius:12px;background:var(--surface,#fff);cursor:pointer;font:inherit;color:inherit}
+.ju-versi:hover{border-color:#1F5A3D;box-shadow:0 2px 10px rgba(31,90,61,.12)}
+.ju-versi small{color:var(--text-muted,#5B6470);font-size:.78rem}
+.ju-versi-cth{display:grid;grid-template-columns:1fr 1fr;border:1px solid #dfe5e2;border-radius:8px;overflow:hidden;margin-bottom:6px;font-size:.72rem;text-align:center}
+.ju-versi-cth span{color:#fff;font-weight:700;padding:4px 2px}.ju-versi-cth i{font-style:normal;font-weight:700;color:#1B2A41;padding:7px 2px;background:#fff}

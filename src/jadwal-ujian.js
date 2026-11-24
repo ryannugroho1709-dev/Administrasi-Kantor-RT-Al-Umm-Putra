@@ -171,7 +171,7 @@ function _juHtmlAktif(j, saya, atur) {
       <div><span class="ju-jenis ju-j-${j.jenis}">${e(_JU_JENIS[j.jenis] || "Ujian")}</span> <span class="ju2-waktu">${waktu}</span>
         <b class="ju2-judul">${e(j.judul)}</b><small class="ju-ket">${_juHariPanjang(j.mulai)}${j.selesai !== j.mulai ? " – " + _juHariPanjang(j.selesai) : ""} · ${j.hari.length} hari ujian</small></div>
       <div class="ju2-aksi">
-        <button class="btn btn-outline btn-sm" onclick="juLayarPenuh('${j.id}')" title="Lihat seluruh jadwal satu layar penuh (mendatar)">⛶ Layar Penuh</button><button class="btn btn-outline btn-sm" onclick="juCetakPdf('${j.id}')">🖨️ PDF</button>
+        <button class="btn btn-outline btn-sm" onclick="juLayarPenuh('${j.id}')" title="Lihat seluruh jadwal satu layar penuh (mendatar)">⛶ Layar Penuh</button><button class="btn btn-outline btn-sm" onclick="juPilihCetak('${j.id}')">🖨️ PDF</button>
         ${j.jenis !== "tahfizh" ? `<button class="btn btn-outline btn-sm" onclick="juPengumpulanSoal('${j.id}')">📥 ${atur ? "Pengumpulan soal" : "Rekap soal"}</button>` : ""}
         ${atur ? `<button class="btn btn-accent btn-sm" onclick="juBukaEditor('${j.id}')">✏️ Susun</button><button class="btn btn-wa btn-sm" onclick="juBagikanWa('${j.id}')">💬 WA</button><button class="btn btn-outline btn-sm" onclick="juRekapHadir('${j.id}')">✅ Kehadiran</button>` : ""}
       </div>
@@ -275,7 +275,7 @@ function _juHtmlKartuJadwal(j) {
     <div class="ju-bar" title="Slot yang sudah ada pengawasnya"><i style="width:${persen}%"></i></div><small class="ju-ket">${st.pengawas}/${st.slot} slot sudah ada pengawas</small>
     <div class="ju-aksi">
       ${atur ? `<button class="btn btn-accent btn-sm" onclick="juBukaEditor('${j.id}')">✏️ Susun</button>` : `<button class="btn btn-outline btn-sm" onclick="juBukaEditor('${j.id}')">📋 Lihat</button>`}
-      <button class="btn btn-outline btn-sm" onclick="juCetakPdf('${j.id}')">🖨️ PDF</button>
+      <button class="btn btn-outline btn-sm" onclick="juPilihCetak('${j.id}')">🖨️ PDF</button>
       ${j.jenis !== "tahfizh" ? `<button class="btn btn-outline btn-sm" onclick="juPengumpulanSoal('${j.id}')">📥 Soal</button>` : ""}
       ${atur ? `<button class="btn btn-wa btn-sm" onclick="juBagikanWa('${j.id}')">💬 WA</button><button class="btn btn-outline btn-sm" onclick="juRekapHadir('${j.id}')">✅ Kehadiran</button><button class="btn btn-ghost btn-sm" onclick="juHapus('${j.id}')">🗑️</button>` : ""}
     </div>
@@ -377,7 +377,7 @@ function _juGambarEditor() {
       <div class="ju-eh-judul">${atur ? `<input id="ju-judul" class="input ju-judul-in" value="${_juEsc(j.judul)}" oninput="JU.edit.judul=this.value;_juTandai()"/>` : `<b class="ju-judul">${_juEsc(j.judul)}</b>`}<small class="ju-ket">${_juHariPendek(j.mulai)}${j.selesai !== j.mulai ? " – " + _juHariPendek(j.selesai) : ""} · ${j.hari.length} hari ujian</small></div>
       <div class="ju-eh-aksi">
         ${atur ? `<button class="btn btn-accent btn-sm" onclick="juSimpanEditor()">💾 Simpan</button><button class="btn btn-outline btn-sm" onclick="juPisahGabungan()" title="Pisahkan ujian mapel gabungan (Geografi/Sosiologi/Ekonomi, dll.) menjadi ujian per mapel">🔀 Pisah Gabungan</button><button class="btn btn-outline btn-sm" onclick="juSusunDariJadwal()" title="Susun otomatis dari jadwal pelajaran">🪄 Susun dari Jadwal</button>` : ""}
-        <button class="btn btn-outline btn-sm" onclick="juLayarPenuh()" title="Lihat seluruh jadwal satu layar penuh (mendatar)">⛶ Layar Penuh</button><button class="btn btn-outline btn-sm" onclick="juCetakPdf('${j.id}', true)">🖨️ PDF</button>
+        <button class="btn btn-outline btn-sm" onclick="juLayarPenuh()" title="Lihat seluruh jadwal satu layar penuh (mendatar)">⛶ Layar Penuh</button><button class="btn btn-outline btn-sm" onclick="juPilihCetak('${j.id}', true)">🖨️ PDF</button>
         ${atur ? `<button class="btn btn-ghost btn-sm" onclick="juTandaTangan()">✍️ Tanda Tangan</button>` : ""}
       </div>
     </div>
@@ -810,7 +810,14 @@ function juBagikanWa(id) {
 }
 
 // ── CETAK / PDF (pedoman: Minimalist Islamic Academic, A4 lanskap) ──
-async function juCetakPdf(id, dariEditor) {
+// Pilih versi PDF: "warna" = kepala kelas & sel mapel berwarna kelas; "hemat" = hanya kepala kelas berwarna
+function juPilihCetak(id, dariEditor) {
+  const kartu = (v, judul, ket, isiSel) => `<button class="ju-versi" onclick="closeModal();juCetakPdf('${id}',${dariEditor ? "true" : "false"},'${v}')">
+      <div class="ju-versi-cth"><span style="background:#0EA5E9">Kelas 7</span><span style="background:#16A34A">Kelas 8</span><i style="${isiSel ? "background:#0EA5E91f" : ""}">Fiqih</i><i style="${isiSel ? "background:#16A34A1f" : ""}">Nahwu</i></div>
+      <b>${judul}</b><small>${ket}</small></button>`;
+  openModal(`<h3>🖨️ Pilih Tampilan PDF</h3><div class="ju-versi-grid">${kartu("hemat", "Kepala Kelas Berwarna", "Kolom mapel putih, hemat tinta", false)}${kartu("warna", "Semua Berwarna", "Kolom mapel ikut warna kelasnya", true)}</div>`);
+}
+async function juCetakPdf(id, dariEditor, versi) {
   const wJendela = window.open("", "_blank"); // dibuka segera (sebelum menunggu data) supaya tidak diblokir browser
   if (wJendela) wJendela.document.write("<p style='font-family:sans-serif;padding:20px'>Menyiapkan jadwal…</p>");
   const j = dariEditor && JU.edit?.id === id ? JU.edit : JU.daftar.find((x) => x.id === id); if (!j) { wJendela?.close(); return; }
@@ -825,8 +832,8 @@ async function juCetakPdf(id, dariEditor) {
   const daftarHari = hariTerisi.length ? hariTerisi : j.hari;
   const blokHari = daftarHari.map((t, hi) => `<section class="hari">
       <div class="hari-kepala"><span class="no">${String(hi + 1).padStart(2, "0")}</span><div><div class="hn">${e(_juHariPanjang(t))}</div>${hijri(t) ? `<div class="hj">${e(hijri(t))}</div>` : ""}</div></div>
-      <table class="jdw"><thead><tr><th class="sesi">Sesi</th>${j.kelas.map((k) => `<th class="thk" style="--w:${_juWarnaKelas(k)}"><span class="bulat" style="background:${_juWarnaKelas(k)}">${e(_juAngkaKelas(k))}</span>Kelas ${e(_juAngkaKelas(k))}</th>`).join("")}</tr></thead>
-      <tbody>${j.sesi.map((s, i) => (j.kelas.some((k) => _juLabelSlot(j.slot[_juKunci(t, s.id, k)])) || !hariTerisi.length) ? `<tr><td class="sesi"><div class="sn">Sesi ${i + 1}</div><div class="jam">${_juJamTeks(j, t, s)}</div></td>${j.kelas.map((k) => { const x = j.slot[_juKunci(t, s.id, k)]; const l = _juLabelSlot(x); return l ? `<td style="--w:${_juWarnaKelas(k)}"><div class="mp">${e(l)}</div>${x.ruang ? `<div class="kc">Ruang ${e(x.ruang)}</div>` : ""}<div class="pw">${(x.p || []).map((g) => e(_juNamaGuru(g))).join(", ") || "Belum ada pengawas"}</div></td>` : `<td class="kosong">–</td>`; }).join("")}</tr>` : "").join("")}</tbody></table>
+      <table class="jdw"><thead><tr><th class="sesi">Sesi</th>${j.kelas.map((k) => `<th class="thk" style="background:${_juWarnaKelas(k)}">Kelas ${e(_juAngkaKelas(k))}</th>`).join("")}</tr></thead>
+      <tbody>${j.sesi.map((s, i) => (j.kelas.some((k) => _juLabelSlot(j.slot[_juKunci(t, s.id, k)])) || !hariTerisi.length) ? `<tr><td class="sesi"><div class="sn">Sesi ${i + 1}</div><div class="jam">${_juJamTeks(j, t, s)}</div></td>${j.kelas.map((k) => { const x = j.slot[_juKunci(t, s.id, k)]; const l = _juLabelSlot(x); const bg = versi === "warna" ? ` style="background:${_juWarnaKelas(k)}1a"` : ""; return l ? `<td${bg}><div class="mp">${e(l)}</div>${x.ruang ? `<div class="kc">Ruang ${e(x.ruang)}</div>` : ""}<div class="pw">${(x.p || []).map((g) => e(_juNamaGuru(g))).join(", ") || "Belum ada pengawas"}</div></td>` : `<td class="kosong"${bg}>–</td>`; }).join("")}</tr>` : "").join("")}</tbody></table>
     </section>`).join("");
   const html = `<!doctype html><html lang="id"><head><meta charset="utf-8"><title>${e(j.judul)}</title><style>
     @page{size:A4 landscape;margin:0}
@@ -849,8 +856,7 @@ async function juCetakPdf(id, dariEditor) {
     .jdw th,.jdw td{padding:6px 7px;vertical-align:middle;text-align:center;font-variant-numeric:tabular-nums;border-right:.6pt solid #E1E6E3;border-bottom:.6pt solid #E1E6E3}
     .jdw tr>*:last-child{border-right:0}.jdw tbody tr:last-child td{border-bottom:0}
     .jdw thead th{background:#F5F7F6;color:#1B2A41;font-size:9pt;font-weight:700;border-bottom:.6pt solid #CBD3CF}
-    .jdw th.thk{box-shadow:inset 0 2.2pt 0 var(--w)}
-    .bulat{display:inline-block;width:15px;height:15px;line-height:15px;border-radius:50%;color:#fff;font-size:7.5pt;margin-right:5px;vertical-align:1px}
+    .jdw th.thk{color:#fff;font-weight:700;letter-spacing:.3px;border-right-color:rgba(255,255,255,.35)}
     .jdw .sesi{width:27mm;background:#FAFBFA}
     .sn{font-weight:700;color:#1B2A41;font-size:9.5pt}.jam{font-size:8.5pt;color:#5B6470;margin-top:1px;white-space:nowrap}
     .mp{font-weight:700;color:#1B2A41;font-size:10pt;line-height:1.25}.kc{font-size:8pt;color:#5B6470}
