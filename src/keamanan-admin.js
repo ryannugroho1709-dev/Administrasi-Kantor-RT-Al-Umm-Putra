@@ -344,23 +344,42 @@ function kaSidikAda() { try { return !!(window.PublicKeyCredential && localStora
 async function kaSidikDidukung() {
   try { return !!(window.PublicKeyCredential && window.isSecureContext && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()); } catch (e) { return false; }
 }
+// Pendaftaran sidik jari perangkat ini. Bila fungsi server sudah diperbarui, kunci publiknya disimpan di
+// server sehingga sidik jari bisa dipakai MASUK kapan saja (juga setelah Keluar Akun). Bila belum, sidik
+// jari tetap bisa membuka Kunci Admin / Masuk Harian selama akun belum dikeluarkan.
+const _sidikPerangkat = () => { try { return JSON.parse(localStorage.getItem("sidik:perangkat") || "null"); } catch (e) { return null; } };
 async function kaDaftarSidik() {
   if (!(await kaSidikDidukung())) { toast("Perangkat/browser ini tidak punya sensor sidik jari (atau kunci layar belum diatur).", "warn"); return false; }
   try {
-    const nama = _kaNama() || "Admin";
+    let tantangan = null, server = typeof akPanggil === "function";
+    if (server) { try { tantangan = (await akPanggil("sidik_tantangan")).tantangan; if (!tantangan) server = false; } catch (e) { server = false; } }
+    const nama = (STATE.guruNama || _kaNama() || "Guru").split(",")[0];
     const k = await navigator.credentials.create({ publicKey: {
-      challenge: _kaAcak(32), rp: { name: "PKBM Al-Umm Barabai" },
+      challenge: tantangan ? _kaDariB64(tantangan) : _kaAcak(32), rp: { name: "PKBM Al-Umm Barabai" },
       user: { id: new TextEncoder().encode(String(STATE.guruId).slice(0, 64)), name: nama, displayName: nama },
       pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
       authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required", residentKey: "discouraged" },
       timeout: 60000, attestation: "none" } });
     if (!k) return false;
-    localStorage.setItem(_kaSidikKunci(), JSON.stringify({ id: _kaB64(k.rawId), t: Date.now() }));
-    toast("👆 Sidik jari aktif di perangkat ini", "ok");
+    const id = _kaB64(k.rawId);
+    if (server) {
+      try {
+        const spki = k.response.getPublicKey && k.response.getPublicKey(), alg = k.response.getPublicKeyAlgorithm && k.response.getPublicKeyAlgorithm();
+        if (!spki) throw new Error("Browser ini belum mendukung masuk dengan sidik jari");
+        await akPanggil("sidik_daftar", { credId: id, spki: _kaB64(spki), alg, clientData: _kaB64(k.response.clientDataJSON), perangkat: akPerangkat() });
+      } catch (e) { server = false; console.warn("Sidik jari belum tersimpan di server:", e.message || e); }
+    }
+    localStorage.setItem(_kaSidikKunci(), JSON.stringify({ id, t: Date.now() }));
+    localStorage.setItem("sidik:perangkat", JSON.stringify({ id, guruId: STATE.guruId, nama, server, t: Date.now() }));
+    toast(server ? "👆 Sidik jari aktif — bisa dipakai masuk kapan saja di perangkat ini" : "👆 Sidik jari aktif di perangkat ini", "ok");
     return true;
   } catch (e) { if (e && e.name !== "NotAllowedError") toast("Gagal mendaftarkan sidik jari: " + (e.message || e), "err"); return false; }
 }
-function kaHapusSidik() { try { localStorage.removeItem(_kaSidikKunci()); } catch (e) {} toast("Sidik jari dimatikan di perangkat ini", "ok"); kaSegarSidik(); }
+function kaHapusSidik() {
+  const reg = _sidikPerangkat();
+  try { localStorage.removeItem(_kaSidikKunci()); if (reg && reg.guruId === STATE.guruId) { localStorage.removeItem("sidik:perangkat"); if (reg.server && typeof akPanggil === "function") akPanggil("sidik_hapus", { credId: reg.id }).catch(() => {}); } } catch (e) {}
+  toast("Sidik jari dimatikan di perangkat ini", "ok"); kaSegarSidik();
+}
 async function kaBukaSidik(diam) {
   const el = document.getElementById("ka-kunci"), p = document.getElementById("ka-pesan"); if (!el || el.classList.contains("terbuka")) return;
   let data; try { data = JSON.parse(localStorage.getItem(_kaSidikKunci()) || "null"); } catch (e) {}
@@ -381,7 +400,8 @@ async function kaBukaSidik(diam) {
 // Setelah berhasil membuka dengan PIN: tawarkan sidik jari sekali (bila perangkat mendukung)
 async function kaTawarkanSidik() {
   try {
-    if (kaSidikAda() || (localStorage.getItem("ka-sidik-tolak:" + STATE.guruId) && !(typeof KH !== "undefined" && KH.mintaDaftar)) || !(await kaSidikDidukung())) return;
+    const reg = _sidikPerangkat(), punya = reg && reg.guruId === STATE.guruId && (reg.server || Date.now() - (reg.t || 0) < 7 * 864e5);
+    if ((punya && kaSidikAda()) || (localStorage.getItem("ka-sidik-tolak:" + STATE.guruId) && !(typeof KH !== "undefined" && KH.mintaDaftar)) || !(await kaSidikDidukung())) return;
     if (typeof KH !== "undefined") KH.mintaDaftar = false;
     const ya = typeof konfirmasiTema === "function" ? await konfirmasiTema("Lain kali masuk cukup dengan <b>sidik jari</b> di perangkat ini — tanpa mengetik sandi.<br><small>Sidik jari tetap tersimpan di HP Antum, tidak dikirim ke aplikasi.</small>", { ikon: "👆", judul: "Aktifkan Sidik Jari?", teksYa: "Aktifkan" }) : false;
     if (ya) await kaDaftarSidik(); else localStorage.setItem("ka-sidik-tolak:" + STATE.guruId, "1");
@@ -449,28 +469,44 @@ function khKunci() {
   akTampilMasuk();
 }
 const _khSidikKunci = () => "ka-sidik:" + ((typeof AK !== "undefined" && AK.guru && AK.guru.id) || "");
-// Tombol "Masuk dengan Sidik Jari" di halaman Masuk — hanya bila perangkat ini masih menyimpan akun
-// terakhir dan sidik jari untuk akun itu sudah diaktifkan di sini.
+// Ikon sidik jari di halaman Masuk (selalu tampil). Siap dipakai bila perangkat ini sudah mendaftarkan
+// sidik jari di server (kapan saja, juga setelah Keluar Akun) — atau, cara lama, akunnya masih tersimpan.
 async function _khPasangSidik() {
   try {
     const el = document.getElementById("ak-masuk"); if (!el || !window.PublicKeyCredential) return;
-    // ikon selalu tampil; siap dipakai bila HP ini sudah mendaftarkan sidik jari & akunnya masih tersimpan
-    let siap = false;
-    if (typeof AK !== "undefined" && AK.guru && localStorage.getItem(_khSidikKunci())) { const { data } = await AK.klien.auth.getSession(); siap = !!(data && data.session); }
+    const reg = _sidikPerangkat();
+    let mode = reg && reg.server ? "server" : null, nama = reg && reg.nama;
+    if (!mode && typeof AK !== "undefined" && AK.guru && localStorage.getItem(_khSidikKunci())) {
+      const { data } = await AK.klien.auth.getSession(); if (data && data.session) { mode = "lokal"; nama = (AK.guru.nama || "").split(",")[0]; }
+    }
     if (!el.isConnected || el.querySelector(".kh-sidik-masuk")) return;
-    KH.sidikSiap = siap;
-    const nama = siap ? (AK.guru.nama || "").split(",")[0] : "Belum aktif di HP ini";
+    KH.sidikMode = mode; KH.sidikSiap = !!mode;
     const kotak = document.createElement("div"); kotak.className = "kh-sidik-masuk";
     kotak.innerHTML = `<button type="button" class="kh-sidik-btn" onclick="khSidik()" aria-label="Masuk dengan sidik jari">${KA_SIDIK_SVG}</button>
-      <b>Masuk dengan sidik jari</b><small>${escapeHtml(nama)}</small><div id="kh-pesan" class="kh-pesan"></div>`;
+      <b>Masuk dengan sidik jari</b><small>${escapeHtml(mode ? nama || "" : "Belum aktif di HP ini")}</small><div id="kh-pesan" class="kh-pesan"></div>`;
     const tombol = el.querySelector("#ak-tombol"); if (tombol) tombol.after(kotak); else el.querySelector(".ak-panel")?.appendChild(kotak);
-    if (siap) setTimeout(() => { if (document.getElementById("ak-masuk") && !document.hidden) khSidik(true); }, 450);
+    if (mode) setTimeout(() => { if (document.getElementById("ak-masuk") && !document.hidden) khSidik(true); }, 450);
   } catch (e) {}
 }
 async function khSidik(diam) {
-  const p = document.getElementById("kh-pesan");
-  if (!KH.sidikSiap) { if (p) p.textContent = "Sidik jari belum aktif di HP ini. Masuk dengan sandi sekali — setelah itu aplikasi menawarkan \"Aktifkan Sidik Jari\"."; try { localStorage.removeItem("ka-sidik-tolak:" + ((AK.guru && AK.guru.id) || "")); } catch (e) {} KH.mintaDaftar = true; return; }
+  const p = document.getElementById("kh-pesan"), btn = document.querySelector(".kh-sidik-btn");
+  if (!KH.sidikSiap) { if (p) p.textContent = "Sidik jari belum aktif di HP ini. Masuk dengan sandi sekali — setelah itu aplikasi menawarkan \"Aktifkan Sidik Jari\"."; KH.mintaDaftar = true; return; }
+  if (KH.sidikJalan) return; KH.sidikJalan = true; if (btn) btn.classList.add("muat");
   try {
+    if (KH.sidikMode === "server") {
+      const reg = _sidikPerangkat();
+      const { tantangan } = await akPanggil("sidik_tantangan");
+      const h = await navigator.credentials.get({ publicKey: { challenge: _kaDariB64(tantangan), allowCredentials: [{ type: "public-key", id: _kaDariB64(reg.id), transports: ["internal"] }], userVerification: "required", timeout: 60000 } });
+      if (!h) throw new Error("x");
+      if (p) p.textContent = "";
+      const r = await akPanggil("sidik_masuk", { credId: reg.id, clientData: _kaB64(h.response.clientDataJSON), authData: _kaB64(h.response.authenticatorData), signature: _kaB64(h.response.signature), perangkat: akPerangkat() });
+      const { error } = await AK.klien.auth.setSession(r.sesi); if (error) throw error;
+      _akSimpanGuru(r.guru); _akLS.set("akunCek", String(Date.now()));
+      document.getElementById("ak-masuk")?.remove(); KH.harian = false;
+      _akMasukkanGuru(r.guru); // admin → PIN Admin (lihat _khSesudahMasuk)
+      return;
+    }
+    // cara lama: hanya bila akun masih tersimpan di perangkat ini
     let data; try { data = JSON.parse(localStorage.getItem(_khSidikKunci()) || "null"); } catch (e) {}
     if (!data) throw new Error("x");
     const h = await navigator.credentials.get({ publicKey: { challenge: _kaAcak(32), allowCredentials: [{ type: "public-key", id: _kaDariB64(data.id), transports: ["internal"] }], userVerification: "required", timeout: 60000 } });
@@ -479,8 +515,9 @@ async function khSidik(diam) {
     document.getElementById("ak-masuk")?.remove(); KH.harian = false;
     if (STATE.guruId !== AK.guru.id) _akMasukkanGuru(AK.guru); else { khTandai(); _khSesudahMasuk(false); }
   } catch (e) {
-    if (!diam && p) p.textContent = e && e.name === "NotAllowedError" ? "Sidik jari dibatalkan — coba lagi atau masuk dengan sandi." : (e && e.message && e.message !== "x" ? e.message : "Sidik jari gagal — masuk dengan sandi.");
-  }
+    if (!diam && p) p.textContent = e && e.name === "NotAllowedError" ? "Sidik jari dibatalkan — ketuk ikon untuk mencoba lagi." : (e && e.message && e.message !== "x" ? e.message : "Sidik jari gagal — coba lagi atau masuk dengan sandi.");
+    if (e && /belum terdaftar/i.test(e.message || "")) { try { localStorage.removeItem("sidik:perangkat"); } catch (x) {} }
+  } finally { KH.sidikJalan = false; if (btn) btn.classList.remove("muat"); }
 }
 // Setelah masuk (sandi / sidik jari): admin wajib PIN Admin; guru lain ditawari sidik jari bila masuk dengan sandi
 function _khSesudahMasuk(lewatSandi) {
@@ -501,7 +538,7 @@ function _khSesudahMasuk(lewatSandi) {
   st.textContent = `.kh-sidik-masuk{display:flex;flex-direction:column;align-items:center;gap:3px;margin:18px 0 6px}
   .kh-sidik-btn{position:relative;width:78px;height:78px;border-radius:50%;border:2px solid rgba(52,211,153,.55);background:radial-gradient(circle at 50% 40%,rgba(16,185,129,.28),rgba(6,78,59,.55));color:#6ee7b7;display:grid;place-items:center;cursor:pointer;box-shadow:0 0 0 8px rgba(16,185,129,.1),0 10px 24px rgba(0,0,0,.3);transition:transform .15s,box-shadow .2s;margin-bottom:6px}
   .kh-sidik-btn::after{content:"";position:absolute;inset:-9px;border-radius:50%;border:2px solid rgba(52,211,153,.35);animation:kaDenyut 2.4s ease-in-out infinite}
-  .kh-sidik-btn:hover{box-shadow:0 0 0 10px rgba(16,185,129,.16),0 12px 28px rgba(0,0,0,.35)}.kh-sidik-btn:active{transform:scale(.94)}.kh-sidik-btn svg{width:40px;height:40px}
+  .kh-sidik-btn.muat{opacity:.6;pointer-events:none}.kh-sidik-btn:hover{box-shadow:0 0 0 10px rgba(16,185,129,.16),0 12px 28px rgba(0,0,0,.35)}.kh-sidik-btn:active{transform:scale(.94)}.kh-sidik-btn svg{width:40px;height:40px}
   .kh-sidik-masuk b{font-size:14px;font-weight:600;color:inherit;opacity:.92}.kh-sidik-masuk small{font-size:12.5px;opacity:.6}
   .kh-pesan{font-size:12.5px;font-weight:700;color:#f87171;text-align:center}.kh-pesan:empty{display:none}
   .kh-bulan{position:relative;font-size:46px;filter:drop-shadow(0 8px 14px rgba(0,0,0,.35));animation:kaAyun 3.2s ease-in-out infinite}
