@@ -677,3 +677,80 @@ input.nt-baru{animation:ntKedip 1.2s ease 3;box-shadow:0 0 0 2px #22c55e inset}
 .uj-gk-pilih input{display:none}.uj-gk-pilih .ik{font-size:28px}.uj-gk-pilih small{color:var(--text-secondary);font-size:11px;line-height:1.35}
 .uj-b-papan{background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;border:0}
 @media(max-width:640px){.uj-gk-pilih{grid-template-columns:1fr}.uj-gk-pilih label{flex-direction:row;text-align:left;gap:8px}.uj-gk-pilih small{display:block}}
+
+/* ── Tab hari jadwal ujian (nama hari, tanggal besar, bulan) ── */
+.ju-tab.ju-tab-hari{gap:8px;padding:4px 2px 10px}
+.ju-tab.ju-tab-hari button{min-width:86px;padding:0 0 8px;border-radius:14px;overflow:hidden;align-items:center;gap:0;border:1px solid var(--border-soft);background:var(--card,#fff);box-shadow:0 1px 2px rgba(15,23,42,.05);transition:transform .15s,box-shadow .15s}
+.ju-tab.ju-tab-hari button:hover{transform:translateY(-2px);box-shadow:0 6px 14px rgba(15,23,42,.08)}
+.ju-tb-hari{display:block;width:100%;padding:4px 8px;background:color-mix(in srgb,var(--accent,#0d5c4b) 10%,transparent);color:var(--accent,#0d5c4b);font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;text-align:center}
+.ju-tb-tgl{font-size:24px;line-height:1.1;margin-top:4px;font-weight:800}
+.ju-tb-bln{font-size:10.5px;color:var(--text-secondary);font-weight:700}
+.ju-tab.ju-tab-hari button small{margin-top:3px;background:var(--bg-subtle,#f1f5f9);border-radius:99px;padding:1px 8px}
+.ju-tab.ju-tab-hari button.on{background:var(--accent,#0d5c4b);border-color:var(--accent,#0d5c4b);color:#fff}
+.ju-tab.ju-tab-hari button.on .ju-tb-hari{background:rgba(0,0,0,.18);color:#fff}
+.ju-tab.ju-tab-hari button.on .ju-tb-bln{color:rgba(255,255,255,.85)}
+.ju-tab.ju-tab-hari button.on small{background:rgba(255,255,255,.2);color:#fff}
+.ju-tab.ju-tab-hari button.kini{box-shadow:inset 0 -3px 0 #dc2626}
+
+/* ── Pindah / Tukar: tabel per hari × sesi ── */
+.ju-pt-wadah{max-height:60vh;overflow:auto;border-radius:12px;border:1px solid var(--border-soft,#e3e8ef)}
+.ju-pt{border-collapse:separate;border-spacing:5px;width:100%;min-width:480px}
+.ju-pt thead th{position:sticky;top:0;z-index:1;background:var(--surface,#fff);font-size:12px;text-align:center;padding:6px}
+.ju-pt thead th small{display:block;font-weight:600;color:var(--text-secondary);font-size:10.5px}
+.ju-pt tbody th{width:96px}
+.ju-pt-hari{display:flex;flex-direction:column;align-items:center;border-radius:10px;background:var(--bg-subtle,#f1f5f9);padding:4px 6px}
+.ju-pt-hari span{font-size:10.5px;font-weight:800;text-transform:uppercase;color:var(--accent,#0d5c4b)}
+.ju-pt-hari b{font-size:19px;line-height:1.1}.ju-pt-hari small{font-size:10px;color:var(--text-secondary);font-weight:600}
+.ju-pt tr.asal .ju-pt-hari{background:color-mix(in srgb,var(--accent,#0d5c4b) 14%,transparent)}
+.ju-pt-sel{width:100%;min-height:52px;border-radius:10px;border:1px solid var(--border-soft,#e3e8ef);padding:6px 8px;font:inherit;text-align:left;background:var(--surface,#fff);cursor:pointer;display:flex;flex-direction:column;justify-content:center}
+.ju-pt-sel b{font-size:12.5px}.ju-pt-sel small{font-size:10.5px;color:var(--text-secondary)}
+.ju-pt-sel.kosong{border-style:dashed;background:#f0fdf4;border-color:#86efac}.ju-pt-sel.kosong b{color:#15803d}
+.ju-pt-sel.kosong.saran{background:#fff8ea;border-color:#f2c97d;border-style:solid}.ju-pt-sel.kosong.saran b{color:#b45309}
+.ju-pt-sel.isi{background:#f5f3ff;border-color:#ddd6fe}
+.ju-pt-sel.asal{background:var(--accent,#0d5c4b);color:#fff;border-color:var(--accent,#0d5c4b);cursor:default}.ju-pt-sel.asal small{color:rgba(255,255,255,.85)}
+button.ju-pt-sel:hover{transform:translateY(-1px);box-shadow:0 4px 10px rgba(15,23,42,.1)}
+
+/* ── Seret-lepas mapel ── */
+.ju-grip{float:right;cursor:grab;color:var(--text-secondary);font-size:15px;line-height:1;padding:2px 4px;border-radius:6px;user-select:none}
+#ju-wadah [data-kunci]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.ju-seret-ket{display:block;font-weight:500;margin-top:2px}
+body.jus-menyeret{cursor:grabbing}
+body.jus-menyeret #ju-wadah [data-kunci]:not(.jus-boleh):not(.jus-asal){opacity:.45}
+.jus-asal{outline:2px dashed var(--kw,#0d5c4b);outline-offset:-2px;opacity:.5}
+.jus-boleh{outline:2px dashed color-mix(in srgb,var(--kw,#0d5c4b) 55%,transparent);outline-offset:-3px}
+.jus-atas{outline:3px solid var(--kw,#0d5c4b)!important;outline-offset:-3px;transform:scale(1.02);background:color-mix(in srgb,var(--kw,#0d5c4b) 12%,#fff)!important}
+#ju-wadah [data-hari].jus-atas{outline-color:#f59e0b!important}
+.jus-hantu{position:fixed;z-index:10000;pointer-events:none;transform:translate(-50%,-120%) rotate(-2deg);background:var(--kw,#0d5c4b);color:#fff;border-radius:12px;padding:8px 12px;box-shadow:0 12px 30px rgba(0,0,0,.3);max-width:240px}
+.jus-hantu b{display:block;font-size:13.5px}.jus-hantu small{font-size:10.5px;opacity:.9}
+
+/* ── Layar penuh jadwal ujian ── */
+.jus-penuh{position:fixed;inset:0;z-index:9500;background:#fff;color:#0f172a;display:flex;flex-direction:column}
+.jus-penuh.putar{width:100vh;height:100vw;inset:auto;top:0;left:100vw;transform-origin:top left;transform:rotate(90deg)}
+.jus-pn-h{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #e2e8f0;background:#f8fafc}
+.jus-pn-h>div{flex:1;min-width:0}.jus-pn-h b{display:block;font-size:15px}.jus-pn-h small{color:#64748b;font-size:11.5px}
+.jus-pn-x{width:40px;height:40px;border-radius:50%;border:0;background:#0f172a;color:#fff;font-size:18px;cursor:pointer;flex:none}
+.jus-pn-isi{flex:1;overflow:auto;padding:6px}
+.jus-pn{border-collapse:separate;border-spacing:4px;width:100%;table-layout:fixed}
+.jus-pn th{background:var(--kw,#334155);color:#fff;font-size:12px;padding:5px;border-radius:8px;position:sticky;top:0;z-index:1}
+.jus-pn .jus-pn-pojok{width:72px;background:#334155}
+.jus-pn-hari{background:#f1f5f9!important;color:#0f172a!important;position:static!important;display:table-cell}
+.jus-pn-hari span{display:block;font-size:9.5px;text-transform:uppercase;font-weight:800;color:#0d5c4b}.jus-pn-hari b{font-size:17px;display:block;line-height:1.1}.jus-pn-hari small{font-size:9.5px;color:#64748b}
+.jus-pn td{vertical-align:top;background:color-mix(in srgb,var(--kw,#334155) 7%,#fff);border-radius:8px;padding:4px;border-top:3px solid var(--kw,#334155)}
+.jus-pn tr.kini td,.jus-pn tr.kini th.jus-pn-hari{box-shadow:inset 0 0 0 2px #dc2626}
+.jus-pn tr.lewat td{opacity:.55}
+.jus-pn-it{display:flex;gap:4px;align-items:flex-start;margin:2px 0}
+.jus-pn-it i{font-style:normal;font-size:9.5px;font-weight:800;background:var(--kw,#334155);color:#fff;border-radius:5px;padding:1px 4px;flex:none;margin-top:1px}
+.jus-pn-it b{font-size:11.5px;display:block;line-height:1.2}.jus-pn-it small{font-size:9.5px;color:#64748b;display:block;line-height:1.2}
+.jus-pn-kosong{color:#cbd5e1}
+
+/* ── Kartu dasbor jadwal ujian ── */
+.jus-dasbor{border-left:4px solid var(--accent,#0d5c4b)}
+.jus-d-h{display:flex;gap:10px;align-items:center}.jus-d-h>span{font-size:26px}.jus-d-h b{display:block;font-size:15px}.jus-d-h small{color:var(--text-secondary)}
+.jus-d-tabel{overflow-x:auto;margin-top:10px}
+.jus-d-tabel table{border-collapse:separate;border-spacing:4px;width:100%;font-size:12px}
+.jus-d-tabel th{background:var(--kw,#334155);color:#fff;border-radius:8px;padding:4px 6px;white-space:nowrap}
+.jus-d-tabel tr th:first-child{background:var(--bg-subtle,#f1f5f9);color:var(--text-primary)}
+.jus-d-tabel th small{display:block;font-weight:600;font-size:10px;opacity:.8}
+.jus-d-tabel td{background:color-mix(in srgb,var(--kw,#334155) 8%,transparent);border-radius:8px;padding:5px 6px;text-align:center}
+.jus-d-tabel td.aku{box-shadow:inset 0 0 0 2px var(--kw,#334155)}.jus-d-tabel td small{display:block;font-size:10px}
+.jus-d-aksi{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}

@@ -76,3 +76,6 @@ tr.al-cek{background:#fef2f2}
 .al-grid label{display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:13px}
 .al-penuh{grid-column:1/-1}
 .al-detail h3{margin:12px 0 6px}
+.pg-kartu-baris.al-kartu{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.pg-kartu-baris.al-kartu>*{min-width:0;margin:0}
+@media (max-width:760px){.pg-kartu-baris.al-kartu{grid-template-columns:repeat(2,minmax(0,1fr))}.pg-kartu-baris.al-kartu .pg-angka b{font-size:22px}.pg-kartu-baris.al-kartu .pg-angka small{font-size:11px}}

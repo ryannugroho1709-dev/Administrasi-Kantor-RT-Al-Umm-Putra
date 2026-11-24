@@ -65,7 +65,7 @@ function _alHtml() {
   const masalah = semua.filter((x) => alCekNik(x).length).length;
   const nikGanda = new Set(), lihat = {}; semua.forEach((x) => { const k = _alDigit(x.nik); if (!k) return; if (lihat[k]) nikGanda.add(k); lihat[k] = 1; });
   const per = (r) => semua.filter((x) => x.rg === r).length;
-  return `<div class="pg-kartu-baris">
+  return `<div class="pg-kartu-baris al-kartu">
       <div class="pg-angka total"><span>Alumni Paket C</span><b>${semua.length}</b><small>Putra ${per("Pa")} · Putri ${per("Pi")}</small></div>
       <button class="pg-angka" onclick="AL.f.isi=AL.f.isi==='sudah'?'':'sudah';_alSegar()"><span>Sudah Mengisi Pendataan</span><b>${sudah}</b><small>${semua.length ? Math.round((sudah / semua.length) * 100) : 0}% dari seluruh alumni</small></button>
       <button class="pg-angka" onclick="AL.f.isi=AL.f.isi==='belum'?'':'belum';_alSegar()"><span>Belum Mengisi</span><b>${semua.length - sudah}</b><small>perlu dihubungi</small></button>
