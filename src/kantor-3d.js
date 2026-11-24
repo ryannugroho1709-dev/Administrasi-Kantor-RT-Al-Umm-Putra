@@ -508,7 +508,7 @@ function _ktJalan() {
   const f = KT.fokus || (KT.fokus = { x: 0, z: 3, zoom: KT.zoom }), p = KT.pusat || (KT.pusat = { x: 0, z: 3 }), a = Math.min(1, dt * 3);
   p.x += (f.x - p.x) * a; p.z += (f.z - p.z) * a;
   if (Math.abs(KT.zoom - f.zoom) > 0.002) { KT.zoom += (f.zoom - KT.zoom) * a; _ktProyeksi(); }
-  const k = KT.kamera, jarak = 34; k.position.set(p.x + Math.sin(KT.sudut) * jarak, 21, p.z + Math.cos(KT.sudut) * jarak); k.lookAt(p.x, 0.5, p.z);
+  const k = KT.kamera, jarak = KT.jarak ?? 34; k.position.set(p.x + Math.sin(KT.sudut) * jarak, KT.tinggi ?? 21, p.z + Math.cos(KT.sudut) * jarak); k.lookAt(p.x, 0.5, p.z);
   Object.values(KT.tokoh).forEach((t) => _kdGerak(t, dt, kini));
   if (KT.pintu) { const pp = KT.pintuPos || { x: 0, z: -2 }, dekat = Object.values(KT.tokoh).some((t) => Math.hypot(t.position.x - pp.x, t.position.z - pp.z) < 1.9 && t.userData.jalur); const tuju = dekat ? -Math.PI / 2 : 0; KT.pintu.rotation.y += (tuju - KT.pintu.rotation.y) * Math.min(1, dt * 6); }
   // layar laptop yang "bekerja" berkedip pelan

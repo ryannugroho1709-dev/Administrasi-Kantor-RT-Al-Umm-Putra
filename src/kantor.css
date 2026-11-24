@@ -138,3 +138,38 @@ body.kt-terbuka { overflow: hidden; }
 .kt-r-agenda{list-style:none;margin:2px 0 0;padding:0;border-left:2px solid color-mix(in srgb,var(--w,#14532d) 35%,transparent)}
 .kt-r-agenda li{display:flex;justify-content:space-between;gap:8px;padding:3px 0 3px 10px;font-size:12.5px}
 .kt-r-agenda li em{font-style:normal;font-weight:700;font-size:11px;white-space:nowrap;background:#fef3c7;color:#92400e;border-radius:6px;padding:1px 7px;align-self:flex-start}
+/* ── AL-UMM Virtual Headquarters ── */
+#kantor-ai .kt-atas{background:linear-gradient(135deg,#0b3026,#123f32);border-bottom:1px solid rgba(198,164,92,.45)}
+.km-judul{display:flex;align-items:center;gap:10px}.km-judul b{letter-spacing:.8px;color:#f5f1e8}.km-judul small{color:#d8cbb7}
+.km-logo{width:34px;height:34px;border-radius:50%;background:#f5f1e8;object-fit:contain;padding:2px;box-shadow:0 0 0 2px #c6a45c}
+#kantor-ai .kt-alat button{background:rgba(245,241,232,.1);border:1px solid rgba(198,164,92,.35)}
+#kantor-ai .kt-alat button.on,#km-auto.on{background:#c6a45c;color:#0b3026}
+#kantor-ai #kt-auto{display:none}
+.km-ruang{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:2;display:flex;gap:4px;padding:4px;border-radius:999px;background:rgba(11,48,38,.78);backdrop-filter:blur(6px);box-shadow:0 6px 20px rgba(0,0,0,.25);max-width:calc(100% - 24px);overflow-x:auto;scrollbar-width:none}
+.km-ruang::-webkit-scrollbar{display:none}
+.km-ruang button{flex:none;border:0;background:transparent;color:#f5f1e8;font-weight:700;font-size:12px;padding:7px 12px;border-radius:999px;cursor:pointer;white-space:nowrap}
+.km-ruang button:hover{background:rgba(245,241,232,.12)}.km-ruang button.on{background:#c6a45c;color:#0b3026}
+.km-kualitas{position:absolute;left:12px;bottom:14px;z-index:2;border:1px solid rgba(198,164,92,.5);background:rgba(255,255,255,.85);color:#123f32;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:800;cursor:pointer}
+.km-tip{position:absolute;left:0;top:0;z-index:3;pointer-events:none;background:rgba(11,48,38,.92);color:#f5f1e8;font-size:12px;font-weight:700;padding:5px 9px;border-radius:8px;border:1px solid rgba(198,164,92,.6);max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.km-buka{position:absolute;inset:0;z-index:4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;pointer-events:none;background:radial-gradient(circle at 50% 45%,rgba(11,48,38,.55),rgba(11,48,38,.15) 60%,transparent);opacity:0;transition:opacity .9s ease}
+.km-buka.tampil{opacity:1}.km-buka.pudar{opacity:0}
+.km-buka img{width:84px;height:84px;border-radius:50%;background:#f5f1e8;padding:4px;box-shadow:0 0 0 3px #c6a45c,0 10px 30px rgba(0,0,0,.35);transform:scale(.8);transition:transform 1.2s ease}
+.km-buka.tampil img{transform:scale(1)}
+.km-buka b{font-size:clamp(18px,3.4vw,30px);letter-spacing:4px;color:#f5f1e8;text-shadow:0 2px 14px rgba(0,0,0,.55)}
+.km-buka small{color:#e9d8a6;letter-spacing:2px;font-weight:700;text-shadow:0 2px 10px rgba(0,0,0,.5)}
+.km-info small{color:#9a7b3f;font-weight:800;letter-spacing:1px;font-size:10.5px}
+.km-info h3{margin:2px 0 6px;color:#123f32}.km-info h4{margin:12px 0 6px;font-size:12.5px;color:#123f32}
+.km-info p{font-size:12.5px;color:#334155;margin:4px 0}
+.km-orang{display:flex;flex-direction:column;gap:4px}
+.km-orang button{display:flex;align-items:center;gap:8px;text-align:left;border:1px solid #e7e2d6;background:#fbfaf6;border-radius:10px;padding:6px 8px;cursor:pointer;font:inherit}
+.km-orang button:hover{border-color:#c6a45c}.km-orang span{display:flex;flex-direction:column}.km-orang b{font-size:12.5px}.km-orang small{font-size:11px;color:#64748b;letter-spacing:0;font-weight:500}
+.km-on{display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-right:5px;vertical-align:middle}
+.km-org{display:flex;flex-direction:column;align-items:center;gap:0}
+.km-org-garis{width:2px;height:12px;background:#c6a45c}
+.km-org-baris{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}.km-org-kol{display:flex;flex-direction:column;gap:4px}
+.km-org-k{border:1px solid color-mix(in srgb,var(--w) 40%,#e7e2d6);border-top:3px solid var(--w);border-radius:10px;padding:6px 8px;background:#fff;min-width:120px;text-align:center}
+.km-org-k small{display:block;color:var(--w);font-size:10.5px;letter-spacing:0}
+.km-org-k button{display:block;width:100%;border:0;background:none;font:inherit;font-weight:700;font-size:12px;cursor:pointer;color:#0f172a;padding:1px 0}
+.km-org-k i{font-size:11px;color:#94a3b8}
+.km-demo{display:inline-block;background:#fef3c7;color:#92400e;font-weight:800;font-size:11px;border-radius:6px;padding:2px 8px;letter-spacing:1px}
+@media (max-width:700px){.km-ruang{bottom:8px}.km-ruang button{font-size:11px;padding:6px 9px}.km-kualitas{bottom:auto;top:56px;left:10px}}
