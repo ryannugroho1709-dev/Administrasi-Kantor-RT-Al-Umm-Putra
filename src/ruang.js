@@ -127,6 +127,7 @@ async function _rgMuat() {
     RG.daftar = (a.data || []).filter((r) => r.aktif !== false);
     RG.saya = b.data || {};
     try { const p = await supaSemua.from("kuliah_pengaturan").select("nilai").eq("kunci", "penyelenggara").eq("ruang_id", STATE.ruang).maybeSingle(); RG.penyelenggara = (p.data && p.data.nilai && p.data.nilai.ids) || []; } catch (e) { RG.penyelenggara = []; }
+    await rgMuatAbsenWajib();
     RG.siap = window.RUANG_SIAP = RG.daftar.length > 0;
   } catch (e) { RG.siap = window.RUANG_SIAP = false; return; } // SQL Tahap 1 belum dijalankan
   if (!RG.siap) return;
@@ -457,7 +458,7 @@ async function rgBukaPengaturan(tab) {
     if (RG_ATUR.tab === "fitur") {
       const atur = RG.daftar.filter((r) => r.jenjang && r.id !== "Pa");
       const kepalaKol = atur.map((r) => `<span class="rg-ft-kol" style="--rw:${r.warna}">${rgIkonRuang(r.id)}${escapeHtml(rgNamaPendek(r.id))}</span>`).join("");
-      isi = `<p class="rg-ket">Paket B & C Putra selalu lengkap. Ketuk sakelar untuk menyalakan/mematikan menu di ruang lain — berlaku saat guru membuka aplikasi berikutnya. Data tiap ruang tetap terpisah.</p>
+      isi = _rgHtmlAbsenWajib() + `<p class="rg-ket">Paket B & C Putra selalu lengkap. Ketuk sakelar untuk menyalakan/mematikan menu di ruang lain — berlaku saat guru membuka aplikasi berikutnya. Data tiap ruang tetap terpisah.</p>
         <div class="rg-ft-grid">${MENU.filter((grp) => !grp.kuliahOnly).map((grp) => `<div class="rg-ft-kartu"><div class="rg-ft-h"><b>${escapeHtml(grp.group)}</b><span class="rg-ft-kols">${kepalaKol}</span></div>
           ${grp.items.map((it) => `<div class="rg-ft-baris"><span class="rg-ft-ikon">${typeof svgIkon === "function" && IKON_GARIS[it.key] ? svgIkon(it.key) : `<span>${it.icon}</span>`}</span><span class="rg-ft-nama">${escapeHtml(t(it.i18n))}</span>
             <span class="rg-ft-kols">${atur.map((r) => { const on = !r.fitur || r.fitur.includes(it.key); return `<button class="rg-ft-sakelar ${on ? "on" : ""}" style="--rw:${r.warna}" onclick="rgUbahFitur('${r.id}','${it.key}')" aria-label="${escapeHtml(rgNamaPendek(r.id))}: ${on ? "matikan" : "nyalakan"}"><i></i></button>`; }).join("")}</span></div>`).join("")}</div>`).join("")}</div>`;
@@ -914,3 +915,43 @@ isKepsek = function () {
     return asli.apply(this, arguments);
   };
 });
+
+
+// ── 22. Absensi Wajib per jenjang (sakelar Admin utama) ──
+//   Selama OFF: sesi yang tidak diabsen TIDAK dijadikan alpha (reset tengah malam dilewati), baris
+//   "jadwal tanpa absen" tidak muncul di Riwayat Absen, dan tutor tidak ditanya klarifikasi alpha.
+//   Absen yang benar-benar diisi tetap tercatat. Bawaan: Putra ON, Paket A & Putri OFF (belum mulai).
+const RG_ABSEN_BAWAAN = { A: false, Pa: true, Pi: false };
+async function rgMuatAbsenWajib() {
+  try { const r = await supaSemua.from("kuliah_pengaturan").select("nilai").eq("kunci", "absen_wajib").eq("ruang_id", "*").maybeSingle(); RG.absenWajib = { ...RG_ABSEN_BAWAAN, ...((r.data && r.data.nilai) || {}) }; }
+  catch (e) { RG.absenWajib = { ...RG_ABSEN_BAWAAN }; }
+  return RG.absenWajib;
+}
+function absenWajib(ruang) { const r = ruang || STATE.ruang; if (r === "Pg") return false; const m = RG.absenWajib || RG_ABSEN_BAWAAN; return m[r] !== undefined ? !!m[r] : true; }
+function _rgHtmlAbsenWajib() {
+  const m = RG.absenWajib || RG_ABSEN_BAWAAN;
+  const sakelar = (r) => { const on = m[r] !== false, w = (rgRuang(r) || {}).warna || "#16a34a"; return `<label class="rg-absen-sakelar"><span>${escapeHtml(rgNamaPendek(r))}</span><button class="rg-ft-sakelar ${on ? "on" : ""}" style="--rw:${w}" onclick="rgUbahAbsenWajib('${r}')" aria-label="Absensi wajib ${escapeHtml(rgNamaPendek(r))}"><i></i></button><small>${on ? "Wajib" : "Belum wajib"}</small></label>`; };
+  return `<div class="rg-absen-wajib"><b>🕌 Absensi Wajib Tutor</b>
+    <p class="rg-ket">Matikan untuk jenjang yang belum memulai absensi: sesi yang tidak diabsen <b>tidak dihitung alpha</b>, tidak muncul di Riwayat Absen, dan tidak ditanyakan ke tutor. Absen yang tetap diisi tetap tercatat.</p>
+    <div class="rg-absen-baris">${sakelar("A")}${sakelar("Pa")}${sakelar("Pi")}</div></div>`;
+}
+async function rgUbahAbsenWajib(r) {
+  if (!(typeof isAdmin === "function" && isAdmin()) || (typeof isAdminKedua === "function" && isAdminKedua())) { toast("Khusus Admin utama", "err"); return; }
+  const m = { ...(RG.absenWajib || RG_ABSEN_BAWAAN) }; m[r] = !(m[r] !== false);
+  const { error } = await supaSemua.from("kuliah_pengaturan").upsert({ ruang_id: "*", kunci: "absen_wajib", nilai: { ...m, diubah: new Date().toISOString() } }, { onConflict: "ruang_id,kunci" });
+  if (error) { toast("Gagal menyimpan: " + error.message, "err"); return; }
+  RG.absenWajib = m; _rgLog("ubah-absen-wajib", { ruang: r, aktif: m[r] });
+  toast(`Absensi ${rgNamaPendek(r)}: ${m[r] ? "wajib" : "belum wajib"}`, "ok"); rgBukaPengaturan("fitur");
+}
+(function () {
+  if (typeof apiAutoAlphakanSesiKadaluarsa === "function") { const a = apiAutoAlphakanSesiKadaluarsa; apiAutoAlphakanSesiKadaluarsa = async function () { if (!absenWajib()) return []; return a.apply(this, arguments); }; }
+  if (typeof apiGetAlphaPerluKlarifikasi === "function") { const a = apiGetAlphaPerluKlarifikasi; apiGetAlphaPerluKlarifikasi = async function () { if (!absenWajib()) return []; return a.apply(this, arguments); }; }
+  if (typeof _gabungRiwayatDenganJadwal === "function") {
+    const a = _gabungRiwayatDenganJadwal;
+    _gabungRiwayatDenganJadwal = async function () {
+      const hasil = await a.apply(this, arguments);
+      if (absenWajib() || !Array.isArray(hasil)) return hasil;
+      return hasil.filter((r) => r.jam_masuk || r.jam_pulang || !["alpha", "belum_absen", "", null, undefined].includes(r.status_kehadiran));
+    };
+  }
+})();

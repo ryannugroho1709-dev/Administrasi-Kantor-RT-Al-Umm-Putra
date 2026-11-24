@@ -269,3 +269,34 @@ function ktPanelRapat() {
   (KT.barisSiar || []).slice(-12).forEach(_ktBarisPenonton);
   _ktOpsiRapat();
 }
+
+// ── Masa sosialisasi SOP & absensi yang belum wajib ──
+// • Jenjang yang absensi tutornya belum diwajibkan (Pengaturan Ruang) → absensi tidak dibahas/ditagih.
+// • Selama masa sosialisasi (bawaan: aktif, atur di ⚙️), arahan Kepala ditulis sebagai catatan, bukan teguran.
+const _ktAbsenWajib = (r) => (typeof absenWajib === "function" ? absenWajib(r) : true);
+const _ktSosialisasi = () => (KT.atur || {}).sosialisasi !== false;
+(function () {
+  const kb = _ktKabarBaru;
+  _ktKabarBaru = async function () {
+    const k = await kb.apply(this, arguments);
+    ["A", "Pa", "Pi"].forEach((r) => { if (!_ktAbsenWajib(r) && k[r]) k[r] = k[r].filter((x) => !/Absensi tutor/.test(x)); });
+    KT.kabarCache = k; return k;
+  };
+  const sk = _ktSkrip;
+  _ktSkrip = async function (topik, teks) {
+    const h = await sk.apply(this, arguments); if (!h || !h.baris) return h;
+    const off = ["A", "Pa", "Pi"].filter((r) => !_ktAbsenWajib(r)), nm = (r) => KT_JENJANG[r];
+    h.baris.forEach((b) => {
+      const r = (b.kode.match(/^(?:peny|admin)-(A|Pa|Pi)$/) || [])[1];
+      if (r && off.includes(r)) b.html = b.html.replace(/<li>[^<]*sesi mengajar tercatat[\s\S]*?<\/li>/, "<li>Absensi tutor belum diwajibkan di jenjang ini (belum dihitung)</li>");
+      if (b.kode === "kepala" && /Arahan ana/.test(b.html)) {
+        b.html = b.html.replace(/<li>([^<]*)<\/li>/g, (m, isi) => (off.some((x) => isi.startsWith(nm(x)) && /absensi tutor|jurnal/i.test(isi)) ? "" : m));
+        if (_ktSosialisasi()) { b.html = b.html.replace("Arahan ana:", "Catatan ana (masa sosialisasi SOP — belum ditagih):"); b.singkat = "Ana catat dulu, nanti kita sosialisasikan bersama."; }
+        if (!/<li>/.test(b.html)) b.html = b.html.replace(/<ul class="kt-ul">\s*<\/ul>/, "<ul class=\"kt-ul\"><li>Alhamdulillah, tidak ada catatan.</li></ul>");
+      }
+      if (_ktSosialisasi()) b.html = b.html.replace(/[⚠️⏰🧾]️?\s?/gu, "").replace(/<b style="color:#dc2626">/g, "<b>");
+    });
+    if (_ktSosialisasi() && h.ticker) h.ticker = h.judul || "";
+    return h;
+  };
+})();

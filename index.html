@@ -19,7 +19,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Amiri:wght@400;700&family=Playfair+Display:wght@600;700;800&display=swap&family=Anton&family=Great+Vibes" rel="stylesheet">
 <!-- Tema elegan + pilihan palet (menu ✨ di topbar). "klasik" = tampilan hijau lama. Dipasang
      sedini mungkin supaya tidak sempat "berkedip" tampilan lain dulu. Disimpan per perangkat. -->
-<link rel="stylesheet" href="src/tema-elegan.css?v=46">
+<link rel="stylesheet" href="src/tema-elegan.css?v=47">
 <link rel="stylesheet" href="src/bosp-rkas.css?v=4">
 <link rel="stylesheet" href="src/kantor.css?v=9">
 <link rel="stylesheet" href="src/kas.css?v=6">
@@ -3581,7 +3581,10 @@ async function boot() {
   terapkanLogoSekolah();
   muatDaftarMetodeDariPengaturan();
 
-  try { await apiAutoAlphakanSesiKadaluarsa(); } catch (e) { console.warn("Gagal auto-alpha sesi kadaluarsa:", e); }
+  // Jenjang yang absensinya belum wajib (sakelar Admin utama di Pengaturan Ruang) tidak di-alpha-kan otomatis
+  let _absenWajibIni = true;
+  try { if (typeof rgMuatAbsenWajib === "function") { await rgMuatAbsenWajib(); _absenWajibIni = absenWajib(); } } catch (e) {}
+  if (_absenWajibIni) { try { await apiAutoAlphakanSesiKadaluarsa(); } catch (e) { console.warn("Gagal auto-alpha sesi kadaluarsa:", e); } }
 
 async function apiAutoAlphakanSesiKadaluarsa() {
   try {
@@ -16207,7 +16210,7 @@ async function handleImportSiswa(evt) {
 <script src="src/nilai-tempel.js?v=3"></script>
 <script src="src/dapodik.js?v=2"></script>
 <script src="src/modul-urut.js?v=1"></script>
-<script src="src/ruang.js?v=18"></script>
+<script src="src/ruang.js?v=19"></script>
 <script src="src/akun.js?v=10"></script>
 <script src="src/keamanan-admin.js?v=12"></script>
 <script src="src/siswa-tampil.js?v=4"></script>
@@ -16224,11 +16227,11 @@ async function handleImportSiswa(evt) {
 <script src="src/bosp-laporan.js?v=2"></script>
 <script src="src/bosp-arkas.js?v=5"></script>
 <script src="src/bosp-rkas.js?v=6"></script>
-<script src="src/kantor.js?v=9"></script>
+<script src="src/kantor.js?v=10"></script>
 <script src="src/kantor-3d.js?v=10"></script>
 <script src="src/kantor-bicara.js?v=5"></script>
 <script src="src/kantor-fitur.js?v=3"></script>
-<script src="src/kantor-rapat.js?v=2"></script>
+<script src="src/kantor-rapat.js?v=3"></script>
 <script src="src/bosp-rkas-real.js?v=2"></script>
 </body>
 </html>

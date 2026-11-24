@@ -404,6 +404,7 @@ function ktAturBuka() {
     <h4>👁️ Yang Boleh Menyaksikan Kantor</h4><p class="kt-ket">Hanya melihat (tidak bisa memerintah). Mereka ikut menyaksikan rapat & kegiatan kantor secara langsung.</p>
     <input class="kt-cari" placeholder="Cari nama…" oninput="document.querySelectorAll('[data-kt-nonton]').forEach((l)=>{l.hidden=!l.textContent.toLowerCase().includes(this.value.toLowerCase())})">
     <div class="kt-atur kt-nonton-daftar">${guru.map((g) => `<label data-kt-nonton><span>${_ktE(_ktNama(g.nama))}</span><input type="checkbox" value="${g.id}" ${(KT.atur.penonton || []).includes(g.id) ? "checked" : ""}></label>`).join("")}</div>
+    <h4>📣 Masa Sosialisasi SOP</h4><div class="kt-atur"><label><span>Kepala hanya mencatat (belum menegur) & tanpa tanda peringatan</span><input type="checkbox" id="kt-sosialisasi" ${(KT.atur || {}).sosialisasi !== false ? "checked" : ""}></label></div>
     <h4>Kepala PKBM Berkeliling</h4><div class="kt-atur"><label><span>🚶 Setiap</span><select id="kt-keliling">${[[0, "Mati"], [15, "15 menit"], [30, "30 menit"], [60, "1 jam"]].map(([v, l]) => `<option value="${v}" ${Number(KT.atur.keliling ?? 30) === v ? "selected" : ""}>${l}</option>`).join("")}</select></label></div>
     <button class="kt-salin" onclick="ktAturSimpan()">💾 Simpan & Susun Ulang Kantor</button>`);
 }
@@ -414,7 +415,8 @@ async function ktAturSimpan() {
   try {
     const keliling = Number((document.getElementById("kt-keliling") || {}).value ?? 30);
     const penonton = [...document.querySelectorAll(".kt-nonton-daftar input:checked")].map((c) => c.value);
-    await _ktSimpan(KT_ATUR, { peran, jk, keliling, penonton });
+    const sosialisasi = !!(document.getElementById("kt-sosialisasi") || {}).checked;
+    await _ktSimpan(KT_ATUR, { peran, jk, keliling, penonton, sosialisasi });
     toast("Petugas kantor disimpan", "ok");
     ktTutup(); setTimeout(ktBuka, 50);
   } catch (e) { toast("Gagal menyimpan: " + (e.message || e), "err"); }
