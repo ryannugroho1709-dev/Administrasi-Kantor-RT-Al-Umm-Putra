@@ -851,7 +851,8 @@ async function juCetakPdf(id, dariEditor) {
     .mp{font-weight:700;color:#1B2A41}.kc{font-size:8.5pt;color:#5B6470}.pw{font-size:9pt;margin-top:3px}
     .rekap{break-inside:avoid;margin-top:12px}.rekap table td{font-size:9.5pt}
     .catatan{font-size:9pt;color:#5B6470;margin-top:8px}
-    .ttd{display:flex;justify-content:flex-end;margin-top:14px;font-size:10pt}.ttd div{text-align:center;width:65mm}.ttd small{display:block;color:#5B6470;font-size:7.5pt;margin-top:2px}
+    .ttd{display:flex;justify-content:flex-end;margin-top:14px;font-size:10pt}.ttd>div{text-align:center;width:65mm;position:relative}.ttd small{display:block;color:#5B6470;font-size:7.5pt;margin-top:2px}
+    .ttd .cap{position:absolute;left:-4mm;top:2mm;mix-blend-mode:multiply;pointer-events:none}.ttd .ttd-gbr{position:relative;z-index:1}
     footer{position:fixed;bottom:0;left:0;right:0;font-size:7.5pt;color:#5B6470;border-top:.4pt solid #8C9792;padding-top:3px;display:flex;justify-content:space-between}
   </style></head><body>
     <div class="kop">${logo ? `<img src="${e(logo)}" alt=""/>` : ""}<div><div class="lem">${e(lembaga)}</div><div class="jdl">JADWAL ${e(String(j.judul).toUpperCase())}</div><div class="ket">${e(_juHariPanjang(j.mulai))}${j.selesai !== j.mulai ? " – " + e(_juHariPanjang(j.selesai)) : ""} · Tahun Ajaran ${e(typeof hitungTahunAjaranOtomatis === "function" ? hitungTahunAjaranOtomatis() : "")}</div></div></div>
@@ -860,7 +861,7 @@ async function juCetakPdf(id, dariEditor) {
       ${rekap.map(([g, xs], i) => `<tr><td style="text-align:center">${i + 1}</td><td>${e(_juGuru(g)?.nama || "-")}</td><td style="text-align:center">${xs.length}</td><td>${e(xs.join(" · "))}</td></tr>`).join("") || `<tr><td colspan="4">Belum ada pengawas.</td></tr>`}
     </tbody></table>
     <div class="catatan">Catatan: selama hari ujian, KBM kelas diliburkan. Pengawas hadir 15 menit sebelum sesi dan mengisi Absen Mengawas di aplikasi.${j.catatan ? " " + e(j.catatan) : ""}</div>
-    <div class="ttd"><div>Barabai, ${e(new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }))}<br/>Kepala Sekolah<br/>${ttd?.img ? `<img src="${ttd.img}" alt="tanda tangan" style="height:22mm;max-width:60mm;object-fit:contain;display:block;margin:2px auto"/>` : "<br/><br/><br/>"}<b>${e(ttd?.nama || p.kepala_pkbm || (typeof _namaPejabat === "function" ? _namaPejabat(p) : "") || "")}</b>${ttd?.img ? `<small>Ditandatangani elektronik · ${e(new Date(ttd.t).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }))}</small>` : ""}</div></div></section>
+    <div class="ttd"><div>Barabai, ${e(new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }))}<br/>${e(typeof jabatanPenandatangan === "function" ? jabatanPenandatangan() : "Kepala Sekolah")}<br/>${ttd?.img && typeof stempelSvg === "function" ? `<span class="cap">${stempelSvg({ ukuran: "36mm", miring: -10 })}</span>` : ""}${ttd?.img ? `<img class="ttd-gbr" src="${ttd.img}" alt="tanda tangan" style="height:22mm;max-width:60mm;object-fit:contain;display:block;margin:2px auto"/>` : "<br/><br/><br/>"}<b>${e(ttd?.nama || p.kepala_pkbm || (typeof _namaPejabat === "function" ? _namaPejabat(p) : "") || "")}</b></div></div></section>
     <footer><span>${e(j.judul)} · ${e(lembaga)}</span><span>Dicetak ${e(new Date().toLocaleString("id-ID"))}</span></footer>
     <script>window.onload=function(){setTimeout(function(){window.print()},400)}<\/script>
   </body></html>`;
@@ -978,7 +979,7 @@ async function juTandaTangan() {
   const lama = await _kvAmbil(_JU_TTD, null).catch(() => null);
   const p = STATE.pengaturan || {};
   const namaBawaan = lama?.nama || p.kepala_pkbm || (typeof _namaPejabat === "function" ? _namaPejabat(p) : "") || "";
-  openModal(`<h3>✍️ Tanda tangan Kepala Sekolah</h3>
+  openModal(`<h3>✍️ Tanda Tangan ${_juEsc(typeof jabatanPenandatangan === "function" ? jabatanPenandatangan() : "Kepala Sekolah")}</h3>
     ${lama?.img ? `<div class="ju-ttd-lama"><img src="${lama.img}" alt="tanda tangan tersimpan"/><small>Tersimpan ${_juEsc(new Date(lama.t).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }))}</small></div>` : ""}
     <div class="field"><label class="form-label">Nama di Bawah Tanda Tangan</label><input id="ttd-nama" class="input" value="${_juEsc(namaBawaan)}"/></div>
     <div class="ju-ttd-ket">Tanda tangan di kotak ini dengan jari atau mouse:</div>
