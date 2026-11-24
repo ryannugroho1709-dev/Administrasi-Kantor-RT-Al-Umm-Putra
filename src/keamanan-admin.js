@@ -14,7 +14,7 @@ const _kaAdminAktif = () => !!(STATE && STATE.guruId) && ((typeof AK !== "undefi
 
 // ── 1. Kunci Admin ──
 function kaCek() {
-  if (!KA.siap || KA.terkunci || document.getElementById("ka-kunci") || document.getElementById("ak-masuk")) return;
+  if (!KA.siap || KA.terkunci || document.getElementById("ka-kunci") || document.getElementById("ak-masuk") || document.getElementById("kh-kunci")) return;
   if (!_kaAdminAktif()) return;
   const terakhir = +(_kaLS.get("kaAktif") || 0);
   if (!terakhir || Date.now() - terakhir > KA.menitKunci * 60000) kaKunci(terakhir ? "diam" : "baru");
@@ -38,7 +38,7 @@ function _kaBingkai(isi) {
     <div class="ka-tengah">
       <div class="ka-jam"><b data-ka-jam>--.--</b><small data-ka-tgl></small></div>
       <div class="ka-panel">${nama ? `<div class="ka-sapa">Assalamu'alaikum, <b>${escapeHtml(nama)}</b></div>` : ""}${isi}</div>
-      <div class="ka-kaki">🕌 PKBM Al-Umm Barabai · Dilindungi PIN Admin</div>
+      <div class="ka-kaki">🕌 PKBM Al-Umm Barabai · Akun Terlindungi</div>
     </div>`;
 }
 function _kaJalankanJam(el) {
@@ -72,9 +72,9 @@ function kaKunci(sebab) {
   const el = document.createElement("div"); el.id = "ka-kunci"; el.className = "ka-lapis";
   el.innerHTML = _kaBingkai(`<div class="ka-ikon"><span class="ka-cincin"></span>${KA_GEMBOK}</div>
     <h2>Aplikasi Terkunci</h2>
-    <p>${sebab === "diam" ? `Tidak dipakai lebih dari <b>${KA.menitKunci} menit</b>.` : sebab === "manual" ? "Aplikasi dikunci." : "Akun admin dibuka di <b>jendela baru</b>."}<br>Masukkan <b>PIN Admin</b> untuk melanjutkan.</p>
+    <p>${sebab === "diam" ? `Tidak dipakai lebih dari <b>${KA.menitKunci} menit</b>.` : sebab === "manual" ? "Aplikasi dikunci." : sebab === "harian" ? "Langkah terakhir khusus <b>admin</b>." : "Akun admin dibuka di <b>jendela baru</b>."}<br>Masukkan <b>PIN Admin</b> untuk melanjutkan.</p>
     <div class="ka-isian"><input id="ka-pin" type="text" name="ka-${Date.now()}" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore readonly maxlength="12" aria-label="PIN Admin"><div class="ka-titik"></div><button type="button" class="ka-lihat" title="Lihat / sembunyikan PIN">👁️</button></div>
-    ${kaSidikAda() ? `<button type="button" class="ka-sidik" onclick="kaBukaSidik()"><span>${KA_SIDIK_SVG}</span>Buka dengan Sidik Jari</button>` : ""}
+    ${kaSidikAda() && sebab !== "harian" ? `<button type="button" class="ka-sidik" onclick="kaBukaSidik()"><span>${KA_SIDIK_SVG}</span>Buka dengan Sidik Jari</button>` : ""}
     <div class="ka-coba"></div>
     <div id="ka-pesan" class="ka-pesan" role="alert"></div>
     <button class="ka-buka" onclick="kaBuka()"><span>🔓 Buka Kunci</span></button>
@@ -86,7 +86,7 @@ function kaKunci(sebab) {
   const aktifkan = () => { i.removeAttribute("readonly"); };
   i.addEventListener("pointerdown", aktifkan); i.addEventListener("focus", aktifkan);
   setTimeout(() => { aktifkan(); i.focus(); }, 120);
-  if (kaSidikAda()) setTimeout(() => { if (document.getElementById("ka-kunci") && !document.hidden) kaBukaSidik(true); }, 400);
+  if (kaSidikAda() && sebab !== "harian") setTimeout(() => { if (document.getElementById("ka-kunci") && !document.hidden) kaBukaSidik(true); }, 400);
   i.addEventListener("keydown", (e) => { if (e.key === "Enter") kaBuka(); });
 }
 function _kaGoyang(el) {
@@ -388,7 +388,7 @@ async function kaTawarkanSidik() {
 }
 function kaHtmlSidik() {
   const ada = kaSidikAda();
-  return `<div class="ka-atur ${ada ? "on" : ""}" id="ka-atur-sidik"><div><b>👆 Sidik Jari — perangkat ini</b><small>${ada ? "AKTIF — Kunci Admin di perangkat ini bisa dibuka dengan sidik jari. PIN tetap bisa dipakai." : "Buka Kunci Admin dengan sidik jari / kunci layar HP, tanpa mengetik PIN. Diaktifkan per perangkat."}</small></div>
+  return `<div class="ka-atur ${ada ? "on" : ""}" id="ka-atur-sidik"><div><b>👆 Sidik Jari — perangkat ini</b><small>${ada ? "AKTIF — Masuk Harian & Kunci Admin di perangkat ini bisa dibuka dengan sidik jari. Sandi & PIN tetap bisa dipakai." : "Masuk Harian & Kunci Admin dibuka dengan sidik jari / kunci layar HP, tanpa mengetik. Diaktifkan per perangkat."}</small></div>
     ${ada ? `<button class="btn btn-sm btn-outline" onclick="kaHapusSidik()">Matikan</button>` : `<button class="btn btn-sm btn-accent" onclick="kaDaftarSidik().then(kaSegarSidik)">Aktifkan</button>`}</div>`;
 }
 function kaSegarSidik() { const w = document.getElementById("ka-atur-sidik"); if (w) w.outerHTML = kaHtmlSidik(); }
@@ -418,5 +418,94 @@ function kaSegarSidik() { const w = document.getElementById("ka-atur-sidik"); if
   st.textContent = `.ka-tutup{-webkit-text-security:disc;text-security:disc}
   .ka-sidik{display:flex;align-items:center;justify-content:center;gap:10px;border:1.5px solid rgba(110,231,183,.55);border-radius:16px;padding:12px;background:rgba(16,185,129,.14);color:#d1fae5;font-weight:800;font-size:14.5px;cursor:pointer;transition:background .2s,transform .15s}
   .ka-sidik:hover{background:rgba(16,185,129,.26)}.ka-sidik:active{transform:scale(.98)}.ka-sidik span{display:grid;place-items:center;color:#6ee7b7;animation:kaDenyut 2.4s ease-in-out infinite}`;
+  document.head.appendChild(st);
+})();
+
+// ── 5. 🌙 MASUK HARIAN — setiap lewat pukul 00.00, semua pengguna akun wajib masuk lagi ──
+// Pilihan: ketik sandi akun (diperiksa server, sesi diperbarui) ATAU sidik jari (bila sudah diaktifkan di
+// perangkat ini). Khusus admin: setelah itu tetap diminta PIN Admin. Berlaku saat "Wajib Masuk Dengan Akun" aktif.
+const KH = { kunci: (id) => "akunHarian:" + id };
+const _khHariIni = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+const _khAktif = () => typeof AK !== "undefined" && AK.wajib && AK.guru && AK.guru.id && typeof STATE !== "undefined" && STATE.guruId === AK.guru.id;
+function khTandai() { try { if (typeof AK !== "undefined" && AK.guru) localStorage.setItem(KH.kunci(AK.guru.id), _khHariIni()); } catch (e) {} }
+async function _kaVerifSidik() {
+  let data; try { data = JSON.parse(localStorage.getItem(_kaSidikKunci()) || "null"); } catch (e) {}
+  if (!data) return false;
+  const h = await navigator.credentials.get({ publicKey: { challenge: _kaAcak(32), allowCredentials: [{ type: "public-key", id: _kaDariB64(data.id), transports: ["internal"] }], userVerification: "required", timeout: 60000 } });
+  return !!(h && (new Uint8Array(h.response.authenticatorData)[32] & 0x04));
+}
+function khCek() {
+  if (!KA.siap || !_khAktif() || document.getElementById("kh-kunci") || document.getElementById("ak-masuk")) return;
+  let t = null; try { t = localStorage.getItem(KH.kunci(AK.guru.id)); } catch (e) {}
+  if (!t) { khTandai(); return; } // pertama kali sejak fitur ini ada: mulai berlaku pukul 00.00 berikutnya
+  if (t !== _khHariIni()) khKunci();
+}
+function khKunci() {
+  document.getElementById("ka-kunci")?.remove(); KA.terkunci = false;
+  const sidik = kaSidikAda();
+  const el = document.createElement("div"); el.id = "kh-kunci"; el.className = "ka-lapis";
+  el.innerHTML = _kaBingkai(`<div class="ka-ikon"><span class="ka-cincin hijau"></span><span class="kh-bulan">🌙</span></div>
+    <h2>Masuk Hari Ini</h2>
+    <p>Demi keamanan, setiap hari pukul <b>00.00</b> aplikasi meminta Antum masuk lagi.${sidik ? "<br>Pakai <b>sidik jari</b> atau ketik <b>sandi akun</b>." : "<br>Ketik <b>sandi akun</b> Antum."}</p>
+    ${sidik ? `<button type="button" class="ka-sidik" onclick="khSidik()"><span>${KA_SIDIK_SVG}</span>Masuk dengan Sidik Jari</button><div class="kh-atau"><i></i>atau<i></i></div>` : ""}
+    <div class="kh-sandi"><input id="kh-sandi" type="text" class="ka-tutup" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore name="k${Date.now()}" placeholder="Sandi akun" readonly><button type="button" onclick="const i=qs('kh-sandi');this.textContent=i.classList.toggle('ka-tutup')?'👁️':'🙈';i.focus()">👁️</button></div>
+    <div id="kh-pesan" class="ka-pesan" role="alert"></div>
+    <button class="ka-buka" onclick="khSandi()"><span>Masuk</span></button>
+    <button class="ka-keluar" onclick="kaKeluarPaksa()">Bukan saya / Lupa sandi — Keluar Akun</button>`);
+  document.body.appendChild(el);
+  _kaJalankanJam(el);
+  const i = el.querySelector("#kh-sandi"), buka = () => i.removeAttribute("readonly");
+  i.addEventListener("pointerdown", buka); i.addEventListener("focus", buka);
+  i.addEventListener("keydown", (e) => { if (e.key === "Enter") khSandi(); });
+  if (sidik) setTimeout(() => { if (document.getElementById("kh-kunci") && !document.hidden) khSidik(true); }, 400);
+  else setTimeout(() => { buka(); i.focus(); }, 150);
+}
+function _khLolos(lewatSandi) {
+  const el = document.getElementById("kh-kunci"); if (!el) return;
+  khTandai(); el.classList.add("terbuka");
+  const b = el.querySelector(".ka-buka"); if (b) b.innerHTML = `<span>✅ Selamat bekerja</span>`;
+  setTimeout(() => {
+    el.remove();
+    if (_kaAdminAktif()) { _kaLS.set("kaAktif", null); kaKunci("harian"); } // admin: tetap PIN
+    else if (lewatSandi) setTimeout(kaTawarkanSidik, 400);
+  }, 900);
+}
+async function khSidik(diam) {
+  const p = document.getElementById("kh-pesan");
+  try { if (await _kaVerifSidik()) return _khLolos(false); throw new Error("x"); }
+  catch (e) { if (!diam && p) p.textContent = e && e.name === "NotAllowedError" ? "Sidik jari dibatalkan — coba lagi atau ketik sandi." : "Sidik jari gagal — ketik sandi akun."; }
+}
+async function khSandi() {
+  const el = document.getElementById("kh-kunci"), i = document.getElementById("kh-sandi"), p = document.getElementById("kh-pesan"), b = el && el.querySelector(".ka-buka");
+  const sandi = (i && i.value) || ""; if (!sandi) { p.textContent = "Ketik sandi akun dulu"; _kaGoyang(el); return; }
+  b.disabled = true; b.innerHTML = `<span><i class="ka-putar"></i>Memeriksa…</span>`;
+  try {
+    const { data } = await AK.klien.auth.getSession();
+    const login = (data && data.session && data.session.user && data.session.user.email) || AK.guru.username || AK.guru.email;
+    if (!login) throw new Error("Akun tidak dikenali — keluar lalu masuk lagi.");
+    const r = await akPanggil("masuk", { login, sandi, perangkat: akPerangkat() });
+    const { error } = await AK.klien.auth.setSession(r.sesi); if (error) throw error;
+    _akLS.set("akunCek", String(Date.now()));
+    _khLolos(true);
+  } catch (e) {
+    i.value = ""; _kaGoyang(el);
+    p.textContent = /sandi|password|invalid|salah/i.test(e.message || "") ? "Sandi salah — coba lagi." : (e.message || "Gagal masuk");
+    b.disabled = false; b.innerHTML = `<span>Masuk</span>`;
+  }
+}
+(function () {
+  // masuk lewat layar Masuk biasa juga dihitung sudah masuk hari ini
+  if (typeof _akMasukkanGuru === "function") { const asli = _akMasukkanGuru; _akMasukkanGuru = function () { khTandai(); return asli.apply(this, arguments); }; }
+  if (typeof boot === "function") { const asli = boot; boot = async function () { const h = await asli.apply(this, arguments); setTimeout(khCek, 300); return h; }; }
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) khCek(); });
+  setInterval(khCek, 30000);
+  // Kunci Admin jangan muncul di atas layar Masuk Hari Ini
+  const ka = kaCek; kaCek = function () { if (_khAktif()) { let t = null; try { t = localStorage.getItem(KH.kunci(AK.guru.id)); } catch (e) {} if (t && t !== _khHariIni()) return khCek(); } return ka.apply(this, arguments); };
+  const st = document.createElement("style");
+  st.textContent = `.kh-bulan{position:relative;font-size:46px;filter:drop-shadow(0 8px 14px rgba(0,0,0,.35));animation:kaAyun 3.2s ease-in-out infinite}
+  .kh-atau{display:flex;align-items:center;gap:10px;color:rgba(226,232,240,.6);font-size:12px}.kh-atau i{flex:1;height:1px;background:rgba(255,255,255,.18)}
+  .kh-sandi{position:relative;display:flex}.kh-sandi input{flex:1;height:54px;border-radius:16px;background:rgba(2,6,23,.35);border:1.5px solid rgba(255,255,255,.22);color:#fff;font-size:16px;padding:0 52px 0 16px;outline:none}
+  .kh-sandi input:focus{border-color:#34d399;box-shadow:0 0 0 4px rgba(52,211,153,.22)}.kh-sandi input::placeholder{color:rgba(255,255,255,.45)}
+  .kh-sandi button{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:38px;height:38px;border-radius:12px;border:0;background:rgba(255,255,255,.1);color:#fff;font-size:17px;cursor:pointer}`;
   document.head.appendChild(st);
 })();
