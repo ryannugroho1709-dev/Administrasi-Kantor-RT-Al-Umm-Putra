@@ -456,7 +456,7 @@ async function _juSetMapel(kunci, nilai) {
     if (lain) {
       const [t2, sid2] = lain.split("|"), ke = JU.edit.sesi.findIndex((x) => x.id === sid2) + 1;
       const ok = await konfirmasiTema(`<b>${_juEsc(_juNamaMapelKode(nilai))}</b> sudah terjadwal di <b>${_juHariPendek(t2)} · Sesi ${ke}</b> untuk kelas ini.<br>Tukar posisinya dengan mapel di sel ini?`, { ikon: "🔁", judul: "Mapel Sudah Terjadwal", teksYa: "Tukar Posisi", teksTidak: "Batal" });
-      if (ok) { _juTukarSlot(kunci, lain); _juTandai(); }
+      if (ok) { const lepas = _juTukarSlot(kunci, lain); _juTandai(); if (lepas.length) toast(`🔁 Ditukar beserta pengawasnya · ${lepas.length} pengawas dilepas karena bentrok (${lepas.map(_juNamaGuru).join(", ")})`, "info"); }
       _juGambarEditor(); return;
     }
     const [m, sub] = String(nilai || "").split("::"); s.m = m; s.teks = ""; if (sub) s.sub = sub; else delete s.sub;
@@ -485,13 +485,21 @@ function _juOpsiMapel(kode, nama, terpilih, dipakai) {
   const [t, sid] = k.split("|"), ke = (JU.edit || {}).sesi ? JU.edit.sesi.findIndex((x) => x.id === sid) + 1 : "";
   return `<option value="${_juEsc(kode)}" class="ju-opsi-dipakai">${_juEsc(nama)} · Sudah ${_juHariPendek(t)}${ke ? " S" + ke : ""}</option>`;
 }
-// Tukar isi mapel dua slot (pengawas tetap di jam/sesinya masing-masing)
+// Tukar dua slot: mapel BESERTA pengawasnya ikut berpindah. Pengawas yang di jam barunya bentrok
+// (sudah mengawas kelas lain di sesi itu) dilepas dan dilaporkan — kembalikan daftar yang dilepas.
 function _juTukarSlot(a, b) {
-  const sl = JU.edit.slot, A = sl[a] || {}, B = sl[b] || {};
-  const isi = (x) => ({ m: x.m || "", ...(x.sub ? { sub: x.sub } : {}), teks: x.teks || "", ...(x.ruang ? { ruang: x.ruang } : {}) });
-  const ia = isi(A), ib = isi(B);
-  const pasang = (k, isiBaru, lama) => { const o = { ...isiBaru, p: (lama.p || []).slice() }; if (_juLabelSlot(o)) sl[k] = o; else delete sl[k]; };
-  pasang(a, ib, A); pasang(b, ia, B);
+  const j = JU.edit, sl = j.slot, A = sl[a] || {}, B = sl[b] || {};
+  const salin = (x) => ({ m: x.m || "", ...(x.sub ? { sub: x.sub } : {}), teks: x.teks || "", ...(x.ruang ? { ruang: x.ruang } : {}), p: (x.p || []).slice() });
+  const ia = salin(A), ib = salin(B);
+  if (_juLabelSlot(ib)) sl[a] = ib; else delete sl[a];
+  if (_juLabelSlot(ia)) sl[b] = ia; else delete sl[b];
+  const lepas = [];
+  [a, b].forEach((k) => {
+    const s = sl[k]; if (!s || !(s.p || []).length) return;
+    const [t, sid, kelasId] = k.split("|");
+    s.p = s.p.filter((g) => { const bentrok = _juBentrok(j, t, sid, kelasId, g).length > 0; if (bentrok) lepas.push(g); return !bentrok; });
+  });
+  return lepas;
 }
 // Jendela Pindah/Tukar: sesi kosong kelas ini (disarankan: hari yang paling longgar, dekat hari asal) + tukar dengan mapel lain
 function juPindahSlot(kunci) {
@@ -517,7 +525,7 @@ function juPindahSlot(kunci) {
   };
   openModal(`<h3>↔️ Pindah / Tukar Jadwal</h3>
     <div class="ju-pindah-asal" style="--kw:${_juWarnaKelas(kelasId)}"><span class="ju-kls">${e(_juAngkaKelas(kelasId))}</span><div><b>${e(nama)} · Kelas ${e(_juAngkaKelas(kelasId))}</b><small>Sekarang: ${_juHariPanjang(t0)} · Sesi ${sid0i + 1} (${_juJamTeks(j, t0, j.sesi[sid0i])})</small></div></div>
-    <p class="ju-ket" style="margin:8px 2px">Pilih sel <b>Kosong</b> untuk memindah, atau mapel lain untuk <b>menukar</b> (pengawas tetap di sesinya). ⭐ = disarankan: hari paling longgar & dekat.</p>
+    <p class="ju-ket" style="margin:8px 2px">Pilih sel <b>Kosong</b> untuk memindah, atau mapel lain untuk <b>menukar</b> (pengawas ikut pindah bersama mapelnya). ⭐ = disarankan: hari paling longgar & dekat.</p>
     <div class="ju-pt-wadah"><table class="ju-pt"><thead><tr><th>Hari</th>${j.sesi.map((s, i) => `<th>Sesi ${i + 1}<small>${s.mulai}–${s.selesai}</small></th>`).join("")}</tr></thead>
     <tbody>${j.hari.map((t) => `<tr class="${t === t0 ? "asal" : ""}"><th><div class="ju-pt-hari"><span>${_juTgl(t).toLocaleDateString("id-ID", { weekday: "long" })}</span><b>${_juTgl(t).getDate()}</b><small>${_juTgl(t).toLocaleDateString("id-ID", { month: "short" })} · ${beban(t)} ujian</small></div></th>${j.sesi.map((s, i) => sel(t, s, i)).join("")}</tr>`).join("")}</tbody></table></div>`, { lebar: true });
 }
@@ -525,7 +533,7 @@ function juPindahSlot(kunci) {
 async function juTukarTanya(a, b) {
   const j = JU.edit, A = _juLabelSlot(j.slot[a]), B = _juLabelSlot(j.slot[b]);
   const posisi = (k) => { const [t, sid] = k.split("|"); return `${_juHariPendek(t)} · Sesi ${j.sesi.findIndex((s) => s.id === sid) + 1}`; };
-  const ok = await konfirmasiTema(`Yakin tukar jam <b>${_juEsc(A)}</b> (${posisi(a)}) dengan <b>${_juEsc(B)}</b> (${posisi(b)})?<br><small>Pengawas tetap di sesinya masing-masing.</small>`, { ikon: "🔁", judul: "Tukar Jadwal Ujian", teksYa: "Ya, Tukar", teksTidak: "Batal" });
+  const ok = await konfirmasiTema(`Yakin tukar jam <b>${_juEsc(A)}</b> (${posisi(a)}) dengan <b>${_juEsc(B)}</b> (${posisi(b)})?<br><small>Pengawas ikut pindah bersama mapelnya.</small>`, { ikon: "🔁", judul: "Tukar Jadwal Ujian", teksYa: "Ya, Tukar", teksTidak: "Batal" });
   if (ok) juTukarKe(a, b);
 }
 function juPindahKe(asal, tujuan) {
@@ -544,10 +552,10 @@ function juTukarKe(a, b) {
   if (JU._tukarAkhir && JU._tukarAkhir.k === kunci && Date.now() - JU._tukarAkhir.t < 1500) return;
   JU._tukarAkhir = { k: kunci, t: Date.now() };
   const A = _juLabelSlot(JU.edit.slot[a]), B = _juLabelSlot(JU.edit.slot[b]);
-  _juTukarSlot(a, b); closeModal(); _juTandai();
+  const lepas = _juTukarSlot(a, b); closeModal(); _juTandai();
   const t = a.split("|")[0]; if (JU.hari !== t && JU.hari !== b.split("|")[0]) JU.hari = t;
   _juGambarEditor(); _juKilat([a, b]);
-  toast(`🔁 ${A} ⇄ ${B} sudah ditukar. Tekan 💾 Simpan.`, "ok");
+  toast(`🔁 ${A} ⇄ ${B} sudah ditukar beserta pengawasnya.${lepas.length ? ` ${lepas.length} pengawas dilepas karena bentrok di jam barunya (${lepas.map(_juNamaGuru).join(", ")}).` : ""} Tekan 💾 Simpan.`, lepas.length ? "info" : "ok");
 }
 // Sorot sebentar sel yang baru dipindah/ditukar supaya perubahannya terlihat
 function _juKilat(kunci) {
