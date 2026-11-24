@@ -193,3 +193,9 @@ body.ks-menyeret .ks-puncak{display:block}
 .ks-hantu small{display:block;color:var(--w);font-weight:800;font-size:11px}.ks-hantu b{display:block;font-size:12.5px}
 .km-orang button.ks-dipilih{border-color:#c6a45c;background:#fffbeb}
 .kt-label.kb-label{opacity:.85;transform-origin:bottom center}.kt-label.kb-label b{font-size:10.5px}.kt-label.kb-label small{font-size:9.5px}
+/* ── Suasana: waktu sholat & pengaturan ── */
+.ks-sholat{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:6px}
+.ks-sholat span{background:#f5f1e8;border:1px solid #e7e2d6;border-radius:8px;padding:5px 2px;text-align:center}
+.ks-sholat small{display:block;font-size:10px;color:#64748b;letter-spacing:0;font-weight:700}.ks-sholat b{font-size:13px;color:#123f32}
+.ks-cek{display:flex;align-items:center;gap:6px;font-size:12.5px;margin:6px 0}
+.ks-cek input[type=time]{border:1px solid #e7e2d6;border-radius:6px;padding:2px 6px;font:inherit}
