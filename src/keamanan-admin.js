@@ -381,7 +381,8 @@ async function kaBukaSidik(diam) {
 // Setelah berhasil membuka dengan PIN: tawarkan sidik jari sekali (bila perangkat mendukung)
 async function kaTawarkanSidik() {
   try {
-    if (kaSidikAda() || localStorage.getItem("ka-sidik-tolak:" + STATE.guruId) || !(await kaSidikDidukung())) return;
+    if (kaSidikAda() || (localStorage.getItem("ka-sidik-tolak:" + STATE.guruId) && !(typeof KH !== "undefined" && KH.mintaDaftar)) || !(await kaSidikDidukung())) return;
+    if (typeof KH !== "undefined") KH.mintaDaftar = false;
     const ya = typeof konfirmasiTema === "function" ? await konfirmasiTema("Lain kali masuk cukup dengan <b>sidik jari</b> di perangkat ini — tanpa mengetik sandi.<br><small>Sidik jari tetap tersimpan di HP Antum, tidak dikirim ke aplikasi.</small>", { ikon: "👆", judul: "Aktifkan Sidik Jari?", teksYa: "Aktifkan" }) : false;
     if (ya) await kaDaftarSidik(); else localStorage.setItem("ka-sidik-tolak:" + STATE.guruId, "1");
   } catch (e) {}
@@ -452,20 +453,23 @@ const _khSidikKunci = () => "ka-sidik:" + ((typeof AK !== "undefined" && AK.guru
 // terakhir dan sidik jari untuk akun itu sudah diaktifkan di sini.
 async function _khPasangSidik() {
   try {
-    const el = document.getElementById("ak-masuk"); if (!el || !window.PublicKeyCredential || typeof AK === "undefined" || !AK.guru) return;
-    if (!localStorage.getItem(_khSidikKunci())) return;
-    const { data } = await AK.klien.auth.getSession(); if (!data || !data.session) return;
+    const el = document.getElementById("ak-masuk"); if (!el || !window.PublicKeyCredential) return;
+    // ikon selalu tampil; siap dipakai bila HP ini sudah mendaftarkan sidik jari & akunnya masih tersimpan
+    let siap = false;
+    if (typeof AK !== "undefined" && AK.guru && localStorage.getItem(_khSidikKunci())) { const { data } = await AK.klien.auth.getSession(); siap = !!(data && data.session); }
     if (!el.isConnected || el.querySelector(".kh-sidik-masuk")) return;
-    const nama = (AK.guru.nama || "").split(",")[0];
+    KH.sidikSiap = siap;
+    const nama = siap ? (AK.guru.nama || "").split(",")[0] : "Belum aktif di HP ini";
     const kotak = document.createElement("div"); kotak.className = "kh-sidik-masuk";
     kotak.innerHTML = `<button type="button" class="kh-sidik-btn" onclick="khSidik()" aria-label="Masuk dengan sidik jari">${KA_SIDIK_SVG}</button>
       <b>Masuk dengan sidik jari</b><small>${escapeHtml(nama)}</small><div id="kh-pesan" class="kh-pesan"></div>`;
     const tombol = el.querySelector("#ak-tombol"); if (tombol) tombol.after(kotak); else el.querySelector(".ak-panel")?.appendChild(kotak);
-    setTimeout(() => { if (document.getElementById("ak-masuk") && !document.hidden) khSidik(true); }, 450);
+    if (siap) setTimeout(() => { if (document.getElementById("ak-masuk") && !document.hidden) khSidik(true); }, 450);
   } catch (e) {}
 }
 async function khSidik(diam) {
   const p = document.getElementById("kh-pesan");
+  if (!KH.sidikSiap) { if (p) p.textContent = "Sidik jari belum aktif di HP ini. Masuk dengan sandi sekali — setelah itu aplikasi menawarkan \"Aktifkan Sidik Jari\"."; try { localStorage.removeItem("ka-sidik-tolak:" + ((AK.guru && AK.guru.id) || "")); } catch (e) {} KH.mintaDaftar = true; return; }
   try {
     let data; try { data = JSON.parse(localStorage.getItem(_khSidikKunci()) || "null"); } catch (e) {}
     if (!data) throw new Error("x");
