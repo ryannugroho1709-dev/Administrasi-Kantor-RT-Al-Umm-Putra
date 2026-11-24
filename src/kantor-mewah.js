@@ -201,17 +201,31 @@ const _kmEase = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 
     _kmRapikanLabel();
   };
 })();
+// Label tidak menumpuk TANPA bergetar: susunan dihitung ulang tiap 0,35 detik dengan urutan tetap,
+// lalu tiap label bergeser halus ke tempatnya; pergeseran paling jauh 2 tingkat supaya tetap dekat orangnya.
+KM.lbl = { geser: {}, target: {}, ukuran: {}, t: 0 };
 function _kmRapikanLabel() {
-  const ada = Object.values(KT.label || {}).filter((l) => l && !l.hidden && l.style.transform);
-  const kotak = [];
-  ada.map((l) => { const m = l.style.transform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/); return m ? { l, x: +m[1], y: +m[2], w: l.offsetWidth || 120, h: l.offsetHeight || 34 } : null; })
-    .filter(Boolean).sort((p, q) => q.y - p.y)
-    .forEach((b) => {
-      let y = b.y, geser = 0;
-      while (geser < 12 && kotak.some((k) => Math.abs(k.x - b.x) < (k.w + b.w) / 2 + 2 && Math.abs(k.y - y) < (k.h + b.h) / 2 + 1)) { y -= b.h * 0.55; geser++; }
-      kotak.push({ x: b.x, y, w: b.w, h: b.h });
-      if (y !== b.y) b.l.style.transform = `translate(${b.x}px,${y}px) translate(-50%,-100%)`;
+  const kini = performance.now(), L = KM.lbl;
+  const data = Object.entries(KT.label || {}).filter(([, l]) => l && !l.hidden && l.style.transform).map(([id, l]) => {
+    const m = l.style.transform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/); return m ? { id, l, x: +m[1], y: +m[2] } : null;
+  }).filter(Boolean);
+  if (kini - L.t > 350) {
+    L.t = kini; L.target = {};
+    data.forEach((b) => { L.ukuran[b.id] = [b.l.offsetWidth || 120, b.l.offsetHeight || 32]; });
+    const urut = data.slice().sort((p, q) => Math.round(q.y / 8) - Math.round(p.y / 8) || (p.id < q.id ? -1 : 1));
+    const kotak = [];
+    urut.forEach((b) => {
+      const [w, h] = L.ukuran[b.id]; let tingkat = 0;
+      const tabrak = (y) => kotak.some((k) => Math.abs(k.x - b.x) < (k.w + w) / 2 + 2 && Math.abs(k.y - y) < (k.h + h) / 2);
+      while (tingkat < 2 && tabrak(b.y - tingkat * (h + 2))) tingkat++;
+      L.target[b.id] = tingkat * (h + 2); kotak.push({ x: b.x, y: b.y - L.target[b.id], w, h });
     });
+  }
+  data.forEach((b) => {
+    const tg = L.target[b.id] || 0, kini2 = L.geser[b.id] || 0, baru = Math.abs(tg - kini2) < 0.5 ? tg : kini2 + (tg - kini2) * 0.18;
+    L.geser[b.id] = baru;
+    if (baru) b.l.style.transform = `translate(${Math.round(b.x)}px,${Math.round(b.y - baru)}px) translate(-50%,-100%)`;
+  });
 }
 
 // ── klik & sorotan ──
