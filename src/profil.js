@@ -260,18 +260,37 @@ async function _kvAmbil(kunci, bawaan) {
 async function _kvSimpan(kunci, nilai) { const { error } = await supa.from("kuliah_pengaturan").upsert({ kunci, nilai }); if (error) throw error; }
 // Tambah/ubah sebagian entri tanpa menimpa entri lain (data bersama banyak guru, mis. pengumpulan soal).
 // Di server (SQL_PKBM_6_KV_GABUNG.sql) bila ada; bila belum, baca KETAT (gagal baca = batal, tidak menimpa).
-async function _kvGabung(kunci, potongan) {
-  const r = await supa.rpc("kv_gabung", { p_kunci: kunci, p_isi: potongan });
-  if (!r.error) return r.data || {};
-  if (!/kv_gabung|PGRST202|schema cache|Could not find the function/i.test(r.error.message || "")) throw r.error;
-  const a = await supa.from("kuliah_pengaturan").select("nilai").eq("kunci", kunci).maybeSingle();
-  if (a.error) throw new Error("Gagal membaca data terbaru, coba lagi: " + a.error.message);
-  const nilai = { ...((a.data && a.data.nilai) || {}) };
+// Kunci yang berlaku di semua ruang — pemicu di server menyimpannya di ruang_id "*" (SQL_PKBM_1_RUANG.sql).
+const _KV_GLOBAL = /^(pin:guru:|profil:|ma:|akses$|s[0-9]:store)/;
+function _kvTerapkan(lama, potongan) {
+  const nilai = { ...(lama || {}) };
   for (const [k, v] of Object.entries(potongan)) {
     if (v === null) delete nilai[k];
     else if (v && typeof v === "object" && !Array.isArray(v) && nilai[k] && typeof nilai[k] === "object") nilai[k] = { ...nilai[k], ...v };
     else nilai[k] = v;
   }
+  return nilai;
+}
+async function _kvGabung(kunci, potongan) {
+  const r = await supa.rpc("kv_gabung", { p_kunci: kunci, p_isi: potongan });
+  if (!r.error) return r.data || {};
+  const pesan = (r.error.message || "") + " " + (r.error.code || "");
+  const tanpaFungsi = /kv_gabung|PGRST202|schema cache|Could not find the function/i.test(pesan);
+  // Versi lama kv_gabung mencari kunci global di ruang aktif → "duplicate key". Gabungkan langsung ke baris ruang "*"
+  // (cadangan sampai SQL_PKBM_12_KV_GABUNG_GLOBAL.sql dijalankan).
+  if (_KV_GLOBAL.test(kunci) && (tanpaFungsi || /duplicate key|23505|kuliah_pengaturan_pkey/i.test(pesan))) {
+    const db = typeof supaSemua !== "undefined" ? supaSemua : supa;
+    const a = await db.from("kuliah_pengaturan").select("nilai").eq("kunci", kunci).eq("ruang_id", "*").maybeSingle();
+    if (a.error) throw new Error("Gagal membaca data terbaru, coba lagi: " + a.error.message);
+    const nilai = _kvTerapkan(a.data && a.data.nilai, potongan);
+    const s = await db.from("kuliah_pengaturan").upsert({ ruang_id: "*", kunci, nilai }, { onConflict: "ruang_id,kunci" });
+    if (s.error) throw s.error;
+    return nilai;
+  }
+  if (!tanpaFungsi) throw r.error;
+  const a = await supa.from("kuliah_pengaturan").select("nilai").eq("kunci", kunci).maybeSingle();
+  if (a.error) throw new Error("Gagal membaca data terbaru, coba lagi: " + a.error.message);
+  const nilai = _kvTerapkan(a.data && a.data.nilai, potongan);
   await _kvSimpan(kunci, nilai);
   return nilai;
 }
