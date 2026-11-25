@@ -51,36 +51,44 @@ function _khMobil(warna) {
   [[-0.78, 1.25], [0.78, 1.25], [-0.78, -1.25], [0.78, -1.25]].forEach(([x, z]) => _khRoda(g, 0.34, 0.26, x, 0.34, z));
   return g;
 }
+// Parkir terpisah: ustadz di ujung KIRI halaman, mobil Kepala di petak mobil, ustadzah di KANAN pintu masuk (sebelum Musholla).
+// Musholla (x 6,3–14) khusus ibadah — tidak ada kendaraan di sana.
+const KHD_PARKIR = { L: [], P: [] };
+[10.3, 11.4, 12.5].forEach((z) => [-12.5, -13.3, -14.1, -14.9].forEach((x) => KHD_PARKIR.L.push({ x, z })));
+[10.3, 11.4, 12.5].forEach((z) => [2.4, 3.2, 4.0, 4.8, 5.6].forEach((x) => KHD_PARKIR.P.push({ x, z })));
 function _khSiapkanSlot() {
   KHD.slot = {}; let iL = 0, iP = 0;
   const kid = (KT.peran.kepala || [])[0];
   _khDaftarOrang().forEach((id) => {
     const t = KT.tokoh[id], akhwat = t.userData.jk === "P";
-    if (id === kid) { KHD.slot[id] = { x: -11.2, z: 12.7, mobil: true }; return; }
-    if (akhwat) { const i = iP++; KHD.slot[id] = { x: 14.2 - (i % 6) * 0.95, z: 12.9 + Math.floor(i / 6) * 1.6 }; }
-    else { const i = iL++; KHD.slot[id] = { x: 2.7 + (i % 6) * 0.95, z: 12.9 + Math.floor(i / 6) * 1.6 }; }
+    if (id === kid) { KHD.slot[id] = { x: -10.7, z: 12.3, mobil: true }; return; }
+    const daftar = akhwat ? KHD_PARKIR.P : KHD_PARKIR.L, i = akhwat ? iP++ : iL++;
+    const p = daftar[i % daftar.length]; KHD.slot[id] = { x: p.x, z: p.z + (i >= daftar.length ? 0.45 : 0) };
   });
 }
 function _khKendaraan(id) {
   if (KHD.kendaraan[id]) return KHD.kendaraan[id];
   const s = KHD.slot[id]; if (!s) return null;
   const v = s.mobil ? _khMobil(0x14532d) : _khMotor(KHD_WARNA_MOTOR[Math.abs([...id].reduce((a, c) => a + c.charCodeAt(0), 0)) % KHD_WARNA_MOTOR.length]);
-  v.visible = false; v.position.set(s.x, 0, s.z); v.rotation.y = s.mobil ? Math.PI / 2 : Math.PI; KT.scene.add(v); KHD.kendaraan[id] = v; return v;
+  v.visible = false; v.position.set(s.x, 0, s.z); v.rotation.y = Math.PI; KT.scene.add(v); KHD.kendaraan[id] = v; return v;
 }
-function _khParkir(id) { const v = _khKendaraan(id), s = KHD.slot[id]; if (!v) return; v.visible = true; v.position.set(s.x, 0, s.z); v.rotation.y = s.mobil ? Math.PI / 2 : Math.PI; }
+function _khParkir(id) { const v = _khKendaraan(id), s = KHD.slot[id]; if (!v) return; v.visible = true; v.position.set(s.x, 0, s.z); v.rotation.y = Math.PI; }
 function _khSembunyi(id, t) {
   t.visible = false; t.userData.ksDiLuar = true; t.userData.jalur = null;
   const s = KHD.slot[id]; if (s) t.position.set(s.x + 0.8, 0, s.z - 0.9);
   const lb = KT.label[id]; if (lb) lb.hidden = true; const v = KHD.kendaraan[id]; if (v) v.visible = false;
 }
-const _khTitikTurun = (s) => ({ x: s.mobil ? s.x + 1.6 : s.x + 0.6, z: s.mobil ? s.z : s.z - 1.1, hadap: Math.PI });
+const _khTitikTurun = (s) => (s.mobil ? { x: s.x + 1.3, z: s.z - 1.2, hadap: Math.PI } : { x: s.x + 0.4, z: s.z - 0.2, hadap: Math.PI });
+// jalur kendaraan: ustadz & Kepala dari/ke arah KIRI jalan, ustadzah dari/ke arah KANAN — tidak pernah berpapasan
+const _khUjung = (s) => (s.x < 0 ? -30 : 30);
 async function _khDatang(id, t) {
   const s = KHD.slot[id], v = _khKendaraan(id); if (!s || !v) { t.userData.ksDiLuar = false; t.visible = true; return; }
   t.userData.khSibuk = true;
   try {
-    const kiri = s.x < 0; v.visible = true; v.position.set(kiri ? -30 : 30, 0, 16.6);
+    await _khTungguSantri();
+    v.visible = true; v.position.set(_khUjung(s), 0, 16.6);
     await _kdAnimasi(v, [{ x: s.x, z: 16.6 }, { x: s.x, z: s.z }], s.mobil ? 7 : 6);
-    v.rotation.y = s.mobil ? Math.PI / 2 : Math.PI;
+    v.rotation.y = Math.PI;
     const p = _khTitikTurun(s); t.position.set(p.x, 0, p.z); t.visible = true; t.userData.ksDiLuar = false;
     if (typeof _ktDuduk === "function") _ktDuduk(t, false);
     const lb = KT.label[id]; if (lb) lb.hidden = false;
@@ -93,7 +101,7 @@ async function _khPulang(id, t) {
     if (s) await Promise.race([KHD.pergiAsli(t, _khTitikTurun(s), { berdiri: true }), _ktTunggu(45000)]);
     t.visible = false; t.userData.ksDiLuar = true; const lb = KT.label[id]; if (lb) lb.hidden = true;
     const v = KHD.kendaraan[id];
-    if (v && s) { v.visible = true; await _kdAnimasi(v, [{ x: s.x, z: 16.6 }, { x: s.x < 0 ? -30 : 30, z: 16.6 }], s.mobil ? 7 : 6); v.visible = false; }
+    if (v && s) { await _khTungguSantri(); v.visible = true; await _kdAnimasi(v, [{ x: s.x, z: 16.6 }, { x: _khUjung(s), z: 16.6 }], s.mobil ? 7 : 6); v.visible = false; }
   } finally { t.userData.khSibuk = false; }
 }
 async function _khPerbarui(awal) {
@@ -112,28 +120,38 @@ async function _khPerbarui(awal) {
   }
 }
 
-// ── santri berjalan bergantian (putra / putri tidak berbaur) ──
-const KHD_ROMBONGAN = [{ jk: "L", sd: true }, { jk: "P", sd: true }, { jk: "L", sd: false }, { jk: "P", sd: false }];
-function _khSantri(jk, sd) {
-  const t = _ktTokohBaru(jk);
+// ── santri berjalan: rombongan PUTRA (SD/SMP/SMA boleh bersama) lalu rombongan PUTRI — bergantian, tidak berbaur ──
+// Seragam: SD putih-merah, SMP putih-biru, SMA putih-abu. Putri: SD jilbab putih + gamis merah, SMP jilbab & gamis biru, SMA jilbab & gamis abu-abu.
+const KHD_SERAGAM = { SD: { celana: 0xb91c1c, jilbab: 0xf8fafc, gamis: 0xb91c1c, skala: 0.82 }, SMP: { celana: 0x1e40af, jilbab: 0x1e40af, gamis: 0x1e40af, skala: 0.95 }, SMA: { celana: 0x6b7280, jilbab: 0x9ca3af, gamis: 0x6b7280, skala: 1.05 } };
+function _khSantri(jk, jenjang) {
+  const sg = KHD_SERAGAM[jenjang] || KHD_SERAGAM.SMP, t = _ktTokohBaru(jk);
   t.traverse((o) => {
     if (!o.isMesh || !o.material || !o.material.color) return; const h = o.material.color.getHex();
-    if (jk === "P" && (h === 0x15151a || h === 0x0d0d10)) { o.material = o.material.clone(); o.material.color.setHex(sd ? 0x1e40af : 0x1e293b); }
-    if (jk === "L" && h === 0x334155) { o.material = o.material.clone(); o.material.color.setHex(sd ? 0x991b1b : 0x1f2937); } // celana SD merah, SMP/SMA gelap
+    if (jk === "L" && h === 0x334155) { o.material = o.material.clone(); o.material.color.setHex(sg.celana); }
+    if (jk === "P" && h === 0x15151a) { o.material = o.material.clone(); o.material.color.setHex(sg.gamis); }
+    if (jk === "P" && h === 0x0d0d10) { o.material = o.material.clone(); o.material.color.setHex(sg.jilbab); }
   });
-  const tas = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.4, 0.16), _khBahan([0xf59e0b, 0x0ea5e9, 0x16a34a, 0xe11d48][Math.floor(Math.random() * 4)])); tas.position.set(0, 0.86, -0.25); t.userData.badan.add(tas);
-  t.scale.setScalar(sd ? 0.82 : 1.05); t.userData.santri = true; KT.scene.add(t); return t;
+  if (jk === "P") { // santriwati berjilbab (wajah terlihat), bukan bercadar
+    const b = t.userData.badan, kulit = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.22, 0.02), _khBahan(0xe9c6a0, 0.1)); kulit.position.set(0, 1.32, 0.172); b.add(kulit);
+    [-0.06, 0.06].forEach((x) => { const m = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.03, 0.01), _khBahan(0x1f1a17, 0.1)); m.position.set(x, 1.36, 0.184); b.add(m); });
+  }
+  const tas = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.4, 0.16), _khBahan([0xf59e0b, 0x0ea5e9, 0x16a34a, 0xe11d48, 0x7c3aed][Math.floor(Math.random() * 5)])); tas.position.set(0, 0.86, -0.25); t.userData.badan.add(tas);
+  t.scale.setScalar(sg.skala); t.userData.santri = true; KT.scene.add(t); return t;
 }
 function _khMalam() { try { return typeof ksFaseSekarang === "function" ? ksFaseSekarang() === "malam" : new Date().getHours() >= 18 || new Date().getHours() < 6; } catch (e) { return false; } }
+const _khAdaKendaraanBergerak = () => _khDaftarOrang().some((id) => KT.tokoh[id] && KT.tokoh[id].userData.khSibuk);
 function _khKirimRombongan() {
-  if (KHD.santri.length || _khMalam() || !KT.buka) return;
-  const r = KHD_ROMBONGAN[KHD.antrean++ % KHD_ROMBONGAN.length], n = 3 + Math.floor(Math.random() * 2), arah = KHD.antrean % 2 ? 1 : -1;
+  if (KHD.santri.length || _khMalam() || !KT.buka || _khAdaKendaraanBergerak()) return;
+  const jk = KHD.antrean++ % 2 ? "P" : "L", n = 4 + Math.floor(Math.random() * 2), arah = Math.floor(KHD.antrean / 2) % 2 ? -1 : 1;
+  const jenjang = ["SD", "SMP", "SMA"];
   for (let i = 0; i < n; i++) {
-    const t = _khSantri(r.jk, r.sd);
-    t.position.set(-arah * (30 + i * 1.1), 0, 14.5 + (i % 2) * 0.35); t.rotation.y = arah > 0 ? Math.PI / 2 : -Math.PI / 2;
-    t.userData.arah = arah; t.userData.v = r.sd ? 1.25 : 1.45; t.userData.fase = Math.random() * 6; KHD.santri.push(t);
+    const t = _khSantri(jk, jenjang[Math.floor(Math.random() * 3)]);
+    t.position.set(-arah * (30 + i * 1.15), 0, 14.75 + (i % 2) * 0.3); t.rotation.y = arah > 0 ? Math.PI / 2 : -Math.PI / 2;
+    t.userData.arah = arah; t.userData.v = 1.35; t.userData.fase = Math.random() * 6; KHD.santri.push(t);
   }
 }
+// kendaraan menunggu rombongan santri lewat dulu (tidak menembus / berpapasan)
+async function _khTungguSantri() { const t0 = Date.now(); while (KHD.santri.length && KT.buka && Date.now() - t0 < 70000) await _ktTunggu(700); }
 function _khGerakSantri(dt) {
   if (!KHD.santri.length) return;
   KHD.santri.forEach((t) => {
@@ -200,6 +218,71 @@ function _khRapikanNonton() {
   daftar.insertAdjacentHTML("afterend", `<p class="kt-ket">Centang = boleh menyaksikan. Nama yang dicentang selalu tampil paling atas. Nama tidak ada? Kemungkinan statusnya <b>nonaktif</b> di Data Guru.</p>`);
 }
 
+// ── SHOLAT BERJAMAAH yang tertib ──
+// Saf diisi dari saf terdepan, dari tengah ke pinggir (rapat & lurus); ustadz di depan, ustadzah di belakang tabir.
+// Imam memimpin: takbiratul ihram → (qiyam, ruku', i'tidal, sujud, duduk, sujud) tiap rakaat → tasyahud → salam kanan-kiri → istighfar 3x → kembali.
+const KHD_RAKAAT = { Subuh: 2, Dzuhur: 4, Ashar: 4, Maghrib: 3, Isya: 4 };
+function _khRapikanSaf() {
+  if (typeof KS2 === "undefined" || !KS2.saf || KS2.saf._rapi) return;
+  const urutZ = [12.1, 11.55, 12.65, 11.0, 13.2];
+  ["L", "P"].forEach((k) => {
+    const xs = [...new Set(KS2.saf[k].map((p) => p.x))].sort((a, b) => b - a); // saf terdepan = paling dekat kiblat (+x)
+    KS2.saf[k] = xs.flatMap((x) => urutZ.map((z) => ({ x, z, hadap: Math.PI / 2 })));
+  });
+  KS2.saf._rapi = true;
+}
+function _khPoseSholat(t, fase, toleh = 0) { if (typeof _ksPose === "function") _ksPose(t, fase); const b = t.userData.badan; if (b) b.rotation.y = toleh; }
+async function _khSholatTertib(nama = "Berjamaah") {
+  if (!KT.buka || typeof KS2 === "undefined" || !KS2.saf || KS2.sholat) return;
+  if (KT.sesi && KT.sesi.aktif) { toast("Rapat berlangsung — sholat setelah rapat", "info"); return; }
+  _khRapikanSaf();
+  KS2.sholat = true; if (typeof _ksSuara === "function") _ksSuara("azan");
+  const peserta = [];
+  try {
+    const kid = (KT.peran.kepala || [])[0], yid = (KT.peran.yayasan || [])[0];
+    const hadir = Object.entries(KT.tokoh).filter(([id, t]) => t.visible && id !== yid && (t.userData.staf || t.userData.npc) && !t.userData.diLuar && !t.userData.ksDiLuar && !t.userData.khSibuk && !t.userData.santri);
+    const ikhwan = hadir.filter(([, t]) => t.userData.jk !== "P"), akhwat = hadir.filter(([, t]) => t.userData.jk === "P");
+    let imam = ikhwan.find(([id]) => id === kid) || ikhwan.find(([, t]) => t.userData.staf) || ikhwan[0];
+    if (!imam) { toast("Belum ada ustadz di kantor untuk menjadi imam", "info"); return; }
+    const [imamId] = imam;
+    toast(`🕌 Waktu ${nama} — sholat berjamaah di Musholla`, "ok");
+    await _ktBicara(imamId, `Allahu akbar, sudah masuk waktu ${nama}. Mari sholat berjamaah.`, 2600);
+    let iL = 0, iP = 0;
+    hadir.forEach(([id, t]) => {
+      const tempat = id === imamId ? KS2.saf.imam : t.userData.jk === "P" ? KS2.saf.P[iP++] : KS2.saf.L[iL++];
+      if (!tempat) return;
+      peserta.push({ id, t, tempat, asal: { ...(t.userData.meja || { x: 0, z: 0, hadap: 0 }) } });
+      _ktTunggu(Math.random() * 1200).then(() => KHD.pergiAsli(t, tempat, { berdiri: true }));
+    });
+    const mulai = Date.now(); await new Promise((r) => { const iv = setInterval(() => { if (!KT.buka || Date.now() - mulai > 60000 || peserta.every((p) => !p.t.userData.jalur)) { clearInterval(iv); r(); } }, 500); });
+    if (!KT.buka) return;
+    // luruskan saf: tiap orang tepat di garis safnya & menghadap kiblat
+    peserta.forEach((p) => { p.t.userData.jalur = null; p.t.position.set(p.tempat.x, 0, p.tempat.z); p.t.rotation.y = Math.PI / 2; if (typeof _ktDuduk === "function") _ktDuduk(p.t, false); _khPoseSholat(p.t, 0); });
+    await _ktBicara(imamId, "Luruskan dan rapatkan saf, karena lurusnya saf termasuk kesempurnaan sholat.", 2600);
+    const semua = (fase, toleh) => peserta.forEach((p) => _khPoseSholat(p.t, fase, toleh));
+    const langkah = async (teks, fase, ms = 1700, toleh = 0) => { if (!KT.buka) return; if (teks) _ktBicara(imamId, teks, ms - 150); await _ktTunggu(250); semua(fase, toleh); await _ktTunggu(ms - 250); };
+    const n = KHD_RAKAAT[nama] || 2;
+    await langkah("Allahu akbar.", 0, 2200); // takbiratul ihram
+    for (let r = 1; r <= n; r++) {
+      if (r > 1) await langkah("Allahu akbar.", 0, 1500);
+      await langkah(r <= 2 ? "(membaca Al-Fatihah & surat)" : "(membaca Al-Fatihah)", 0, 2200);
+      await langkah("Allahu akbar.", 1); // ruku'
+      await langkah("Sami'allahu liman hamidah.", 0); // i'tidal
+      await langkah("Allahu akbar.", 2); // sujud
+      await langkah("Allahu akbar.", 3, 1400); // duduk di antara dua sujud
+      await langkah("Allahu akbar.", 2); // sujud kedua
+      if (r === 2 || r === n) await langkah(r === n ? "Allahu akbar. (tasyahud akhir)" : "Allahu akbar. (tasyahud awal)", 3, 2400);
+    }
+    await langkah("Assalamu'alaikum warahmatullah.", 3, 1700, 0.7);   // salam ke kanan
+    await langkah("Assalamu'alaikum warahmatullah.", 3, 1700, -0.7);  // salam ke kiri
+    semua(3, 0);
+    for (let i = 0; i < 3; i++) await langkah("Astaghfirullahal 'adzim.", 3, 1500);
+    await _ktBicara(imamId, "Alhamdulillah. Mari kembali ke ruangan masing-masing.", 2200);
+    semua(0, 0);
+    await Promise.race([Promise.all(peserta.map((p, i) => _ktTunggu(i * 300).then(() => KHD.pergiAsli(p.t, p.asal)))), _ktTunggu(60000)]);
+  } finally { peserta.forEach((p) => _khPoseSholat(p.t, 0, 0)); KS2.sholat = false; }
+}
+
 // ── pemasangan ──
 (function () {
   // _ktPergi: orang yang sedang di luar kantor hanya datang bila dipanggil RAPAT (naik kendaraan); selain itu tetap di luar
@@ -213,6 +296,8 @@ function _khRapikanNonton() {
       return a.apply(this, arguments);
     };
   }
+  // sholat berjamaah tertib menggantikan versi lama
+  ksSholat = function (nama) { return _khSholatTertib(nama); };
   // kehadiran mengikuti jam kerja (menggantikan "masuk akun hari ini")
   _ksPerbaruiKehadiran = function (awal) { return _khPerbarui(awal); };
   if (typeof _ktBangun === "function") {
@@ -221,7 +306,7 @@ function _khRapikanNonton() {
       await a.apply(this, arguments);
       try {
         KHD.kendaraan = {}; KHD.santri = []; KHD.tSantri = performance.now() + 4000;
-        await _khMuatJam(); _khSiapkanSlot(); await _khPerbarui(true); _khSasaran();
+        _khRapikanSaf(); await _khMuatJam(); _khSiapkanSlot(); await _khPerbarui(true); _khSasaran();
         clearInterval(KHD.iv); clearInterval(KHD.ivRapat);
         KHD.iv = setInterval(() => { if (!KT.buka) return clearInterval(KHD.iv); _khPerbarui(false); }, 30000);
         KHD.ivRapat = setInterval(() => {

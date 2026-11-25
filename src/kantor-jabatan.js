@@ -131,6 +131,7 @@ const KJ_DZIKIR = ["Subhanallah wa bihamdih, subhanallahil 'azhim.", "Astaghfiru
 async function ksDzikirPagi(lamaDetik = 70) {
   if (!KT.buka || KJ.dzikir || (typeof KS2 !== "undefined" && (KS2.sholat || !KS2.saf))) { if (typeof KS2 !== "undefined" && !KS2.saf) toast("Musholla belum siap", "info"); return; }
   if (KT.sesi && KT.sesi.aktif) { toast("Rapat berlangsung — dzikir pagi setelah rapat", "info"); return; }
+  if (typeof _khRapikanSaf === "function") _khRapikanSaf();
   KJ.dzikir = true; KS2.sholat = true; // memakai Musholla yang sama, mencegah tumpang tindih dengan sholat
   try {
     const kid = (KT.peran.kepala || [])[0], yid = (KT.peran.yayasan || [])[0];
@@ -140,11 +141,11 @@ async function ksDzikirPagi(lamaDetik = 70) {
     const pakai = { L: 0, P: 0 }, peserta = [];
     Object.entries(KT.tokoh).filter(([id, t]) => t.visible && id !== yid && t.userData.staf && !t.userData.npc && !t.userData.diLuar && !t.userData.ksDiLuar).forEach(([id, t]) => {
       const jk = t.userData.jk === "P" ? "P" : "L"; const tempat = kp && t === kp ? KS2.saf.imam : KS2.saf[jk][pakai[jk]++]; if (!tempat) return;
-      peserta.push({ id, t, asal: { ...(t.userData.meja || { x: 0, z: 0, hadap: 0 }) } });
+      peserta.push({ id, t, tempat, asal: { ...(t.userData.meja || { x: 0, z: 0, hadap: 0 }) } });
       _ktTunggu(Math.random() * 1500).then(() => _ktPergi(t, tempat, { berdiri: true }));
     });
     const mulai = Date.now(); await new Promise((r) => { const iv = setInterval(() => { if (!KT.buka || Date.now() - mulai > 60000 || peserta.every((p) => !p.t.userData.jalur)) { clearInterval(iv); r(); } }, 500); });
-    peserta.forEach((p) => _ktDuduk(p.t, true));
+    peserta.forEach((p) => { p.t.userData.jalur = null; p.t.position.set(p.tempat.x, 0, p.tempat.z); p.t.rotation.y = p.tempat.hadap ?? Math.PI / 2; _ktDuduk(p.t, true); }); // saf lurus & rapi
     const t0 = Date.now(); let i = 0;
     await new Promise((r) => { const iv = setInterval(() => {
       if (!KT.buka || Date.now() - t0 > lamaDetik * 1000) { clearInterval(iv); return r(); }
