@@ -543,7 +543,7 @@ function _ktJalan() {
     v.set(t.position.x, 2.1, t.position.z).project(k);
     const x = (v.x * 0.5 + 0.5) * w, y = (-v.y * 0.5 + 0.5) * h, lb = KT.label[id], gb = KT.gelembung[id];
     // label tidak bergetar: posisi baru dipakai hanya bila bergeser ≥ 1,5 px (getaran 1 px di layar HP diabaikan)
-    if (lb) { if (lb._x == null || Math.abs(x - lb._x) >= 1.5 || Math.abs(y - lb._y) >= 1.5) { lb._x = Math.round(x); lb._y = Math.round(y); } lb.style.transform = `translate(${lb._x}px,${lb._y}px) translate(-50%,-100%)`; }
+    if (lb) { if (lb._x == null || Math.abs(x - lb._x) >= 1.5 || Math.abs(y - lb._y) >= 1.5) { lb._x = Math.round(x); lb._y = Math.round(y); } if (!lb._tu || kini - lb._tu > 1000) { lb._tu = kini; lb._ow = lb.offsetWidth; lb._oh = lb.offsetHeight; } lb.style.transform = `translate(${lb._x - Math.round((lb._ow || 0) / 2)}px,${lb._y - (lb._oh || 0)}px)`; } // piksel bulat: tulisan tetap tajam
     if (gb && !gb.hidden) gb.style.transform = `translate(${lb && lb._x != null ? lb._x : Math.round(x)}px,${(lb && lb._y != null ? lb._y : Math.round(y)) - 40}px) translate(-50%,-100%)`;
   });
 }

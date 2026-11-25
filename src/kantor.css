@@ -230,3 +230,7 @@ body.ks-menyeret .ks-puncak{display:block}
 .kj-ujian div { padding: 3px 0; border-top: 1px dashed #e2e8f0; }
 .kj-ujian div span { display: inline-block; min-width: 56px; font-weight: 800; color: #334155; }
 .kj-ujian div small { display: block; color: #64748b; font-size: 11px; }
+/* v7 — label tajam: tanpa lapisan gambar (will-change), tanpa pudar */
+.kt-label, .kt-gelembung { will-change: auto !important; backface-visibility: visible !important; -webkit-font-smoothing: antialiased; }
+.kt-label.ks-belum { opacity: 1 !important; filter: none !important; }
+.kt-label.ks-belum::before { content: ""; position: absolute; left: -3px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; box-shadow: 0 0 0 2px #fff; }

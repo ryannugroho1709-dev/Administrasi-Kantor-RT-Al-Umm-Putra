@@ -210,9 +210,8 @@ const _kmEase = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 
 KM.lbl = { geser: {}, target: {}, ukuran: {}, t: 0 };
 function _kmRapikanLabel() {
   const kini = performance.now(), L = KM.lbl;
-  const data = Object.entries(KT.label || {}).filter(([, l]) => l && !l.hidden && l.style.transform).map(([id, l]) => {
-    const m = l.style.transform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/); return m ? { id, l, x: +m[1], y: +m[2] } : null;
-  }).filter(Boolean);
+  // titik jangkar label (tengah-bawah) dari kantor-3d: l._x / l._y (piksel bulat)
+  const data = Object.entries(KT.label || {}).filter(([, l]) => l && !l.hidden && l._x != null).map(([id, l]) => ({ id, l, x: l._x, y: l._y }));
   if (kini - L.t > 350) {
     L.t = kini; L.target = {};
     data.forEach((b) => { L.ukuran[b.id] = [b.l.offsetWidth || 120, b.l.offsetHeight || 32]; });
@@ -232,7 +231,7 @@ function _kmRapikanLabel() {
   data.forEach((b) => {
     const tg = L.target[b.id] || 0, kini2 = L.geser[b.id] || 0, baru = Math.abs(tg - kini2) < 1 ? tg : kini2 + (tg - kini2) * 0.25;
     L.geser[b.id] = baru;
-    if (baru) b.l.style.transform = `translate(${Math.round(b.x)}px,${Math.round(b.y - baru)}px) translate(-50%,-100%)`;
+    if (baru) { const [w, h] = L.ukuran[b.id] || [b.l._ow || 0, b.l._oh || 0]; b.l.style.transform = `translate(${Math.round(b.x - w / 2)}px,${Math.round(b.y - baru - h)}px)`; } // piksel bulat → tulisan tajam
   });
 }
 
