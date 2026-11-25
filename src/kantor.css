@@ -264,3 +264,14 @@ body.ks-menyeret .ks-puncak{display:block}
 .khr-tabel { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .khr-tabel th, .khr-tabel td { padding: 5px 6px; border-bottom: 1px solid #e2e8f0; text-align: left; }
 .khr-tabel th { color: #64748b; font-size: 11px; }
+/* v10 — bilah atas bisa digeser di HP, tombol ✕ selalu terlihat; tombol pesan HP tampil/sembunyi */
+.kt-atas { min-width: 0; }
+.kt-judul { flex: 0 1 auto; min-width: 0; }
+.kt-alat { flex: 1 1 auto; min-width: 0; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; padding: 2px 0; }
+.kt-alat::-webkit-scrollbar { display: none; }
+.kt-alat > * { flex: 0 0 auto; white-space: nowrap; }
+.kt-alat > :first-child { margin-left: auto; }
+.kt-alat > button[onclick="ktTutup()"] { position: sticky; right: 0; z-index: 2; background: #b91c1c !important; border-color: #fca5a5 !important; color: #fff !important; box-shadow: -14px 0 14px 2px #0b3026; }
+@media (max-width: 900px) { .kt-alat { -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 18px); mask-image: linear-gradient(90deg, transparent 0, #000 18px); } }
+.kh-pesan.buka { background: linear-gradient(135deg, #334155, #0f172a); animation: none; }
+@media (max-width: 640px) { .kt-judul b { font-size: 12.5px; line-height: 1.15; max-width: 92px; } .kt-atas { gap: 6px; padding-left: 10px; padding-right: 8px; } }

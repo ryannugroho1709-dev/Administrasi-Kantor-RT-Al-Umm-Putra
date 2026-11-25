@@ -177,14 +177,24 @@ function khBukaPesan() {
   if (KT.sesi && KT.sesi.aktif && (!p || !p.querySelector(".kt-obrolan"))) { if (typeof ktPanelRapat === "function") ktPanelRapat(); }
   else if (p && p.innerHTML.trim()) { p.hidden = false; setTimeout(_ktUkur, 30); }
   else toast("Belum ada rapat atau pesan saat ini", "info");
-  KHD.paksa = false; _khTombolPesan(false);
+  KHD.paksa = false; KHD.adaPesan = false; _khSegarPesan();
 }
-function _khTombolPesan(tampil) {
+function _khTombolPesan(tampil) { KHD.adaPesan = !!tampil; _khSegarPesan(); }
+// HP: tombol tetap untuk menampilkan / menyembunyikan pesan & percakapan rapat
+function _khSegarPesan() {
   let b = document.getElementById("kh-pesan");
-  if (!b) { const l = document.getElementById("kt-layar"); if (!l) return; l.insertAdjacentHTML("beforeend", `<button id="kh-pesan" class="kh-pesan" hidden onclick="khBukaPesan()">💬 <span>Lihat Pesan</span></button>`); b = document.getElementById("kh-pesan"); }
-  b.hidden = !tampil; if (tampil) b.querySelector("span").textContent = KT.sesi && KT.sesi.aktif ? "Lihat Percakapan Rapat" : "Lihat Pesan";
+  if (!b) { const l = document.getElementById("kt-layar"); if (!l) return; l.insertAdjacentHTML("beforeend", `<button id="kh-pesan" class="kh-pesan" hidden onclick="khTogelPesan()">💬 <span>Lihat Pesan</span></button>`); b = document.getElementById("kh-pesan"); }
+  const p = document.getElementById("kt-panel"), rapat = !!(KT.sesi && KT.sesi.aktif), terbuka = !!(p && !p.hidden && p.innerHTML.trim());
+  const tampil = _khHP() && (rapat || KHD.adaPesan || terbuka);
+  b.hidden = !tampil; if (!tampil) return;
+  b.classList.toggle("buka", terbuka);
+  b.innerHTML = terbuka ? `🙈 <span>Sembunyikan ${rapat ? "Percakapan" : "Pesan"}</span>` : `💬 <span>${rapat ? "Lihat Percakapan Rapat" : "Lihat Pesan"}</span>`;
 }
-
+function khTogelPesan() {
+  const p = document.getElementById("kt-panel");
+  if (p && !p.hidden && p.innerHTML.trim()) { p.hidden = true; KHD.adaPesan = true; setTimeout(_ktUkur, 30); _khSegarPesan(); return; }
+  khBukaPesan();
+}
 // ── pengaturan jam kerja (🌗 Suasana) ──
 async function _khMuatJam() {
   try { const j = await _ktAmbil(KHD_KUNCI_JAM); if (j && typeof j === "object") ["guru", "kepala", "cs"].forEach((k) => { if (j[k]) KHD.jam[k] = { ...KHD.jam[k], ...j[k] }; }); } catch (e) {}
@@ -251,10 +261,17 @@ async function _khSholatTertib(nama = "Berjamaah") {
     hadir.forEach(([id, t]) => {
       const tempat = id === imamId ? KS2.saf.imam : t.userData.jk === "P" ? KS2.saf.P[iP++] : KS2.saf.L[iL++];
       if (!tempat) return;
-      peserta.push({ id, t, tempat, asal: { ...(t.userData.meja || { x: 0, z: 0, hadap: 0 }) } });
-      _ktTunggu(Math.random() * 1200).then(() => KHD.pergiAsli(t, tempat, { berdiri: true }));
+      peserta.push({ id, t, tempat, p: t.userData.jk === "P", asal: { ...(t.userData.meja || { x: 0, z: 0, hadap: 0 }) } });
     });
-    const mulai = Date.now(); await new Promise((r) => { const iv = setInterval(() => { if (!KT.buka || Date.now() - mulai > 60000 || peserta.every((p) => !p.t.userData.jalur)) { clearInterval(iv); r(); } }, 500); });
+    // berangkat BERGANTIAN supaya ustadz & ustadzah tidak berpapasan: ustadz dulu (beriringan satu-satu) sampai semua di saf, baru ustadzah
+    const jalanKelompok = async (grup, ke, berdiri = true) => { await Promise.all(grup.map((p, i) => _ktTunggu(i * 700).then(() => KHD.pergiAsli(p.t, ke(p), { berdiri })))); };
+    const tungguDiam = (grup, ms = 60000) => { const m = Date.now(); return new Promise((r) => { const iv = setInterval(() => { if (!KT.buka || Date.now() - m > ms || grup.every((p) => !p.t.userData.jalur)) { clearInterval(iv); r(); } }, 400); }); };
+    const ikh = peserta.filter((p) => !p.p), akh = peserta.filter((p) => p.p);
+    peserta.forEach((p) => { p.t.userData.antre = true; }); // barisan saf boleh rapat (tidak saling menunggu)
+    await Promise.race([jalanKelompok(ikh, (p) => p.tempat), tungguDiam(ikh, 45000)]);
+    if (!KT.buka) return;
+    ikh.forEach((p) => { p.t.userData.jalur = null; p.t.position.set(p.tempat.x, 0, p.tempat.z); p.t.rotation.y = Math.PI / 2; _khPoseSholat(p.t, 3); }); // ustadz duduk menunggu di saf
+    if (akh.length) { await _ktTunggu(600); await Promise.race([jalanKelompok(akh, (p) => p.tempat), tungguDiam(akh, 45000)]); }
     if (!KT.buka) return;
     // luruskan saf: tiap orang tepat di garis safnya & menghadap kiblat
     peserta.forEach((p) => { p.t.userData.jalur = null; p.t.position.set(p.tempat.x, 0, p.tempat.z); p.t.rotation.y = Math.PI / 2; if (typeof _ktDuduk === "function") _ktDuduk(p.t, false); _khPoseSholat(p.t, 0); });
@@ -277,10 +294,14 @@ async function _khSholatTertib(nama = "Berjamaah") {
     await langkah("Assalamu'alaikum warahmatullah.", 3, 1700, -0.7);  // salam ke kiri
     semua(3, 0);
     for (let i = 0; i < 3; i++) await langkah("Astaghfirullahal 'adzim.", 3, 1500);
-    await _ktBicara(imamId, "Alhamdulillah. Mari kembali ke ruangan masing-masing.", 2200);
-    semua(0, 0);
-    await Promise.race([Promise.all(peserta.map((p, i) => _ktTunggu(i * 300).then(() => KHD.pergiAsli(p.t, p.asal)))), _ktTunggu(60000)]);
-  } finally { peserta.forEach((p) => _khPoseSholat(p.t, 0, 0)); KS2.sholat = false; }
+    await _ktBicara(imamId, "Alhamdulillah. Ustadzah kembali lebih dulu, kami menyusul setelah dzikir.", 2400);
+    // pulang BERGANTIAN: ustadzah kembali lebih dulu, ustadz tetap duduk berdzikir sampai ustadzah tiba di ruangannya
+    akh.forEach((p) => _khPoseSholat(p.t, 0, 0));
+    if (akh.length) { await Promise.race([jalanKelompok(akh, (p) => p.asal, false), _ktTunggu(60000)]); }
+    if (!KT.buka) return;
+    await _ktTunggu(500); ikh.forEach((p) => _khPoseSholat(p.t, 0, 0));
+    await Promise.race([jalanKelompok(ikh, (p) => p.asal, false), _ktTunggu(60000)]);
+  } finally { peserta.forEach((p) => { _khPoseSholat(p.t, 0, 0); p.t.userData.antre = false; }); KS2.sholat = false; }
 }
 
 // ── pemasangan ──
@@ -309,6 +330,7 @@ async function _khSholatTertib(nama = "Berjamaah") {
         _khRapikanSaf(); await _khMuatJam(); _khSiapkanSlot(); await _khPerbarui(true); _khSasaran();
         clearInterval(KHD.iv); clearInterval(KHD.ivRapat);
         KHD.iv = setInterval(() => { if (!KT.buka) return clearInterval(KHD.iv); _khPerbarui(false); }, 30000);
+        clearInterval(KHD.ivPesan); KHD.ivPesan = setInterval(() => { if (!KT.buka) return clearInterval(KHD.ivPesan); try { _khSegarPesan(); } catch (e) {} }, 1000);
         KHD.ivRapat = setInterval(() => {
           if (!KT.buka) return clearInterval(KHD.ivRapat);
           if (KT.sesi && KT.sesi.aktif) { if (_khHP() && !KHD.petunjuk) { KHD.petunjuk = true; toast("Rapat dimulai — ketuk layar rapat atau tombol 💬 untuk melihat percakapan", "info"); } return; }
@@ -342,9 +364,10 @@ async function _khSholatTertib(nama = "Berjamaah") {
   if (typeof _ktPanel === "function") {
     const a = _ktPanel;
     _ktPanel = function () {
+      const p0 = document.getElementById("kt-panel"), tadiTerbuka = !!(p0 && !p0.hidden && p0.innerHTML.trim()); // yang sedang dibaca jangan ditutup
       const r = a.apply(this, arguments), p = document.getElementById("kt-panel");
       const ulah = navigator.userActivation ? navigator.userActivation.isActive : true;
-      if (p && _khHP() && !ulah && !KHD.paksa) { p.hidden = true; setTimeout(_ktUkur, 30); _khTombolPesan(true); } else _khTombolPesan(false);
+      if (p && _khHP() && !ulah && !KHD.paksa && !tadiTerbuka) { p.hidden = true; setTimeout(_ktUkur, 30); _khTombolPesan(true); } else _khTombolPesan(false);
       return r;
     };
   }

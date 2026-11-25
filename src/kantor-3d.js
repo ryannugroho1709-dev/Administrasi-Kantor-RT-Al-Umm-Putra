@@ -45,8 +45,16 @@ function _kdCari(dari, ke) {
       if (ng < g[nid]) { g[nid] = ng; asal[nid] = id; dorong(ng + h(ni, nj), nid); }
     }
   }
-  if (!ketemu) return [ke];
-  const sel = []; for (let id = gj * KD.NX + gi; id !== -1; id = asal[id]) sel.unshift([id % KD.NX, Math.floor(id / KD.NX)]);
+  // tujuan tak terjangkau → JANGAN menembus dinding: berhenti di petak terjangkau yang paling dekat dengan tujuan
+  let akhirId = gj * KD.NX + gi, sampai = true;
+  if (!ketemu) {
+    let best = -1, bd = Infinity;
+    for (let id = 0; id < N; id++) if (tutup[id]) { const c = _kdPusat(id % KD.NX, Math.floor(id / KD.NX)), d = Math.hypot(c.x - ke.x, c.z - ke.z); if (d < bd) { bd = d; best = id; } }
+    if (best < 0) return [{ x: dari.x, z: dari.z }];
+    akhirId = best; sampai = bd < 0.7;
+  }
+  const sel = []; for (let id = akhirId; id !== -1; id = asal[id]) sel.unshift([id % KD.NX, Math.floor(id / KD.NX)]);
+  if (!sampai) { const t = [], ujung = _kdPusat(...sel[sel.length - 1]); sel.forEach((s, k) => { if (k % 2 === 0 || k === sel.length - 1) t.push(_kdPusat(...s)); }); t[t.length - 1] = ujung; const h = t.length ? t : [ujung]; h.putus = true; return h; }
   // rapikan jalur: lompati titik yang masih terlihat lurus tanpa terhalang
   const lihat = (a, b) => { const p = _kdPusat(...a), q = _kdPusat(...b), n = Math.ceil(Math.hypot(q.x - p.x, q.z - p.z) / 0.2); for (let k = 1; k < n; k++) { const [i, j] = _kdSel(p.x + ((q.x - p.x) * k) / n, p.z + ((q.z - p.z) * k) / n); if (!bebas(i, j)) return false; } return true; };
   const titik = []; let a = 0;
@@ -489,7 +497,8 @@ function kdLayar(id, status) {
 function _ktPergi(t, tujuan, opsi = {}) {
   return new Promise((res) => {
     const u = t.userData; _ktDuduk(t, false);
-    u.jalur = _kdCari({ x: t.position.x, z: t.position.z }, tujuan); u.tujuan = tujuan; u.berdiri = !!opsi.berdiri; u.selesai = res; u.tunggu = 0;
+    u.jalur = _kdCari({ x: t.position.x, z: t.position.z }, tujuan); u.tujuan = tujuan; u.berdiri = !!opsi.berdiri;
+    if (u.jalur.putus) { const e = u.jalur[u.jalur.length - 1]; u.tujuan = { x: e.x, z: e.z, hadap: tujuan.hadap }; u.berdiri = true; } // tak terjangkau: berhenti di depan halangan, tidak menembus u.selesai = res; u.tunggu = 0;
     if (typeof _ktSiar === "function" && u.staf) _ktSiar("pergi", { id: u.staf.id, tujuan, berdiri: !!opsi.berdiri });
   });
 }
