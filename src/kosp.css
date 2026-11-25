@@ -1,136 +1,223 @@
-/* ============ KOSP — Kurikulum Operasional Satuan Pendidikan ============ */
-.kosp { --kh: #0f3d2e; --kh2: #1f6b4c; --ke: #c9a227; --ke2: #f3dc8b; max-width: 1180px; margin: 0 auto; }
-.kosp-bar { position: sticky; top: 0; z-index: 30; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 10px 12px; margin: -4px 0 14px;
-  background: var(--glass-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid var(--border-soft); border-radius: 16px; box-shadow: 0 6px 18px rgba(0,0,0,.05); }
+/* ============ KOSP — antarmuka modern (gaya dasbor bisnis) ============ */
+.kosp {
+  --k-ink: #0b1220; --k-ink2: #111a2e; --k-hijau: #10b981; --k-sian: #06b6d4; --k-emas: #f5c451;
+  --k-garis: rgba(148,163,184,.22); --k-kartu: var(--surface); --k-lembut: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  --k-grad: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+  max-width: 1200px; margin: 0 auto; font-feature-settings: "tnum" 1;
+}
+.kosp-ik { width: 18px; height: 18px; flex: 0 0 auto; }
+
+/* ─── Bilah perintah ─── */
+.kosp-bar { position: sticky; top: 0; z-index: 30; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 8px; margin: -4px 0 16px;
+  background: color-mix(in srgb, var(--surface) 78%, transparent); backdrop-filter: blur(16px) saturate(1.4); -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  border: 1px solid var(--k-garis); border-radius: 16px; box-shadow: 0 1px 0 rgba(255,255,255,.5) inset, 0 10px 30px -12px rgba(2,6,23,.18); }
 .kosp-bar-kiri, .kosp-bar-kanan { display: flex; gap: 6px; align-items: center; }
-.kosp-tb { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border-soft); background: var(--surface); color: var(--text-primary); border-radius: 10px; padding: 7px 11px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
-.kosp-tb:hover { border-color: var(--accent); color: var(--accent); }
-.kosp-th { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--text-secondary); background: var(--accent-soft); border-radius: 10px; padding: 3px 4px 3px 10px; }
-.kosp-th select { border: 0; background: var(--surface); color: var(--text-primary); border-radius: 8px; padding: 4px 6px; font: inherit; font-weight: 700; }
-.kosp-cari { flex: 1 1 260px; display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1.5px solid var(--accent-dim); border-radius: 12px; padding: 0 12px; }
-.kosp-cari:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(var(--accent-rgb), .15); }
-.kosp-cari input { flex: 1; border: 0; outline: 0; background: transparent; color: var(--text-primary); font: inherit; font-size: 14px; padding: 9px 0; min-width: 0; }
+.kosp-merek { display: inline-flex; align-items: center; gap: 8px; padding: 0 10px 0 6px; font-weight: 800; letter-spacing: .08em; font-size: 13px; color: var(--text-primary); }
+.kosp-merek .kosp-ik { width: 30px; height: 30px; padding: 6px; border-radius: 9px; color: #fff; background: var(--k-grad); box-shadow: 0 6px 16px -6px rgba(16,185,129,.7); }
+.kosp-tb { display: inline-flex; align-items: center; gap: 7px; height: 38px; border: 1px solid var(--k-garis); background: var(--k-kartu); color: var(--text-primary); border-radius: 11px; padding: 0 12px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all .18s; }
+.kosp-tb .kosp-ik { width: 16px; height: 16px; opacity: .8; }
+.kosp-tb:hover { border-color: color-mix(in srgb, var(--k-hijau) 55%, transparent); color: var(--k-hijau); box-shadow: 0 0 0 4px rgba(16,185,129,.1); }
+.kosp-th { display: inline-flex; align-items: center; height: 38px; border: 1px solid var(--k-garis); border-radius: 11px; overflow: hidden; background: var(--k-kartu); }
+.kosp-th > span { padding: 0 9px; height: 100%; display: flex; align-items: center; font-size: 11px; font-weight: 800; letter-spacing: .08em; color: var(--text-secondary); background: var(--k-lembut); border-right: 1px solid var(--k-garis); }
+.kosp-th select { border: 0; background: transparent; color: var(--text-primary); padding: 0 8px; font: inherit; font-weight: 700; font-size: 13px; height: 100%; cursor: pointer; }
+.kosp-cari { flex: 1 1 260px; display: flex; align-items: center; gap: 10px; height: 40px; background: var(--k-kartu); border: 1px solid var(--k-garis); border-radius: 12px; padding: 0 8px 0 12px; transition: all .18s; }
+.kosp-cari .kosp-ik { color: var(--text-secondary); width: 17px; height: 17px; }
+.kosp-cari:focus-within { border-color: var(--k-hijau); box-shadow: 0 0 0 4px rgba(16,185,129,.14); }
+.kosp-cari input { flex: 1; border: 0; outline: 0; background: transparent; color: var(--text-primary); font: inherit; font-size: 14px; min-width: 0; }
+.kosp-cari kbd { font: 600 10.5px/1 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--text-secondary); border: 1px solid var(--k-garis); border-bottom-width: 2px; border-radius: 6px; padding: 4px 6px; background: var(--k-lembut); }
 
-/* hasil pencarian */
-.kosp-hasil { position: sticky; top: 72px; z-index: 29; max-height: min(62vh, 560px); overflow: auto; margin: -6px 0 14px; background: var(--surface); border: 1px solid var(--accent-dim); border-radius: 14px; box-shadow: 0 14px 34px rgba(0,0,0,.14); }
-.kosp-h-kepala { position: sticky; top: 0; display: flex; align-items: center; gap: 6px; padding: 10px 14px; background: var(--accent-soft); font-size: 13px; color: var(--text-secondary); }
+/* ─── Hasil pencarian ─── */
+.kosp-hasil { position: sticky; top: 66px; z-index: 29; max-height: min(64vh, 580px); overflow: auto; margin: -8px 0 16px; background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  border: 1px solid var(--k-garis); border-radius: 16px; box-shadow: 0 30px 60px -20px rgba(2,6,23,.35); }
+.kosp-h-kepala { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 6px; padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--k-garis); font-size: 13px; color: var(--text-secondary); }
 .kosp-h-kepala b { color: var(--text-primary); }
-.kosp-h-kepala button { margin-left: auto; border: 0; background: transparent; font-size: 16px; cursor: pointer; color: var(--text-secondary); }
-.kosp-h-bab { padding: 10px 14px 4px; font-size: 12px; font-weight: 800; letter-spacing: .02em; color: var(--accent); text-transform: uppercase; }
-.kosp-h-bab span { background: var(--accent-soft); border-radius: 99px; padding: 1px 8px; margin-left: 4px; }
-.kosp-h-item { display: block; width: 100%; text-align: left; border: 0; border-top: 1px solid var(--border-soft); background: transparent; padding: 9px 14px; cursor: pointer; color: var(--text-primary); font: inherit; font-size: 13.5px; line-height: 1.5; }
-.kosp-h-item:hover { background: var(--nl); }
-.kosp-h-item small { display: block; font-size: 11.5px; font-weight: 700; color: var(--text-secondary); margin-bottom: 2px; }
-.kosp-h-item mark, mark.kosp-m { background: #fde68a; color: #422006; border-radius: 3px; padding: 0 1px; }
+.kosp-h-kepala button { margin-left: auto; border: 0; background: var(--k-lembut); width: 28px; height: 28px; border-radius: 8px; cursor: pointer; color: var(--text-secondary); }
+.kosp-h-bab { display: flex; align-items: center; gap: 8px; padding: 12px 16px 6px; font-size: 11px; font-weight: 800; letter-spacing: .1em; color: var(--text-secondary); text-transform: uppercase; }
+.kosp-h-bab .kosp-ik { width: 15px; height: 15px; color: var(--k-hijau); }
+.kosp-h-bab span { margin-left: auto; background: var(--k-lembut); color: var(--k-hijau); border-radius: 99px; padding: 2px 8px; }
+.kosp-h-item { display: block; width: calc(100% - 16px); margin: 2px 8px; text-align: left; border: 1px solid transparent; background: transparent; padding: 9px 12px; border-radius: 10px; cursor: pointer; color: var(--text-primary); font: inherit; font-size: 13.5px; line-height: 1.55; transition: all .15s; }
+.kosp-h-item:hover { background: var(--k-lembut); border-color: var(--k-garis); }
+.kosp-h-item small { display: block; font-size: 11px; font-weight: 700; color: var(--k-hijau); margin-bottom: 2px; }
+.kosp-h-item mark, mark.kosp-m { background: rgba(245,196,81,.45); color: inherit; border-radius: 4px; padding: 0 2px; box-shadow: 0 0 0 1px rgba(245,196,81,.6); }
 
-/* ─── Sampul & daftar bab ─── */
-.kosp-depan { display: grid; grid-template-columns: minmax(260px, 360px) 1fr; gap: 22px; align-items: start; }
-.kosp-depan-kiri { position: sticky; top: 84px; display: flex; flex-direction: column; gap: 12px; }
-.kosp-mulai { width: 100%; padding: 12px; font-size: 15px; border-radius: 12px; }
-.kosp-sampul { position: relative; aspect-ratio: 210 / 297; border-radius: 6px 16px 16px 6px; overflow: hidden; color: #fff;
-  background: radial-gradient(120% 80% at 50% 0%, #2a7d5a 0%, var(--kh2) 35%, var(--kh) 100%);
-  box-shadow: inset 10px 0 0 rgba(0,0,0,.18), inset 13px 0 0 rgba(255,255,255,.08), 0 18px 40px rgba(15,61,46,.35); }
-.kosp-sp-pola { position: absolute; inset: 0; opacity: .13;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'%3E%3Cg fill='none' stroke='%23f3dc8b' stroke-width='1.2'%3E%3Cpath d='M28 4l7 17 17 7-17 7-7 17-7-17-17-7 17-7z'/%3E%3Ccircle cx='28' cy='28' r='6'/%3E%3C/g%3E%3C/svg%3E"); }
-.kosp-sampul::before, .kosp-sampul::after { content: ""; position: absolute; left: 22px; right: 12px; border: 1.5px solid rgba(243,220,139,.7); pointer-events: none; }
-.kosp-sampul::before { top: 12px; bottom: 12px; border-radius: 4px 10px 10px 4px; }
-.kosp-sampul::after { top: 17px; bottom: 17px; left: 27px; right: 17px; border-width: .8px; border-color: rgba(243,220,139,.4); border-radius: 3px 8px 8px 3px; }
-.kosp-sp-isi { position: relative; height: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 11% 12% 9% 15%; }
-.kosp-sp-atas { font-size: 10px; letter-spacing: .32em; text-transform: uppercase; color: var(--ke2); opacity: .9; }
-.kosp-sp-logo { width: 26%; aspect-ratio: 1; object-fit: contain; margin: 9% 0 7%; background: #fff; border-radius: 50%; padding: 5px; box-shadow: 0 0 0 3px var(--ke), 0 6px 16px rgba(0,0,0,.3); }
-.kosp-sampul h1 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: clamp(17px, 2.1vw, 23px); line-height: 1.22; font-weight: 700; letter-spacing: .01em; }
-.kosp-sp-kode { margin-top: 6px; font-family: Georgia, serif; font-size: clamp(26px, 3.3vw, 36px); font-weight: 800; letter-spacing: .22em; color: var(--ke2); text-shadow: 0 2px 10px rgba(0,0,0,.25); }
-.kosp-sp-garis { display: flex; align-items: center; gap: 8px; width: 70%; margin: 6% 0; color: var(--ke); }
-.kosp-sp-garis i { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--ke), transparent); }
-.kosp-sp-lembaga { font-weight: 800; letter-spacing: .12em; font-size: clamp(12px, 1.35vw, 15px); }
-.kosp-sp-prog { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; justify-content: center; }
-.kosp-sp-prog span { font-size: 10.5px; font-weight: 700; border: 1px solid rgba(243,220,139,.6); color: var(--ke2); border-radius: 99px; padding: 2px 9px; }
-.kosp-sp-th { margin-top: auto; background: linear-gradient(90deg, var(--ke), var(--ke2), var(--ke)); color: #3b2a00; font-weight: 800; font-size: 12.5px; letter-spacing: .06em; padding: 6px 14px; border-radius: 6px; }
-.kosp-sp-alamat { margin-top: 10px; font-size: 9px; line-height: 1.45; opacity: .78; }
+/* ─── Hero ─── */
+.kosp-hero { position: relative; overflow: hidden; display: grid; grid-template-columns: 1.35fr 1fr; gap: 28px; align-items: center; padding: 44px 44px 40px; border-radius: 24px; color: #e2e8f0;
+  background: radial-gradient(120% 120% at 0% 0%, #13233f 0%, var(--k-ink) 55%), var(--k-ink); border: 1px solid rgba(148,163,184,.16); box-shadow: 0 30px 60px -30px rgba(2,6,23,.6); isolation: isolate; }
+.kosp-hero-grid { position: absolute; inset: 0; z-index: -1; opacity: .5; pointer-events: none;
+  background-image: linear-gradient(rgba(148,163,184,.09) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.09) 1px, transparent 1px); background-size: 34px 34px;
+  -webkit-mask-image: radial-gradient(ellipse at 70% 40%, #000 20%, transparent 75%); mask-image: radial-gradient(ellipse at 70% 40%, #000 20%, transparent 75%); }
+.kosp-hero-glow { position: absolute; z-index: -1; border-radius: 50%; filter: blur(70px); opacity: .55; pointer-events: none; }
+.kosp-hero-glow.a { width: 380px; height: 380px; right: -60px; top: -120px; background: #06b6d4; animation: kosp-apung 14s ease-in-out infinite; }
+.kosp-hero-glow.b { width: 320px; height: 320px; left: 25%; bottom: -200px; background: #10b981; animation: kosp-apung 18s ease-in-out infinite reverse; }
+@keyframes kosp-apung { 50% { transform: translate(-30px, 20px) scale(1.08); } }
+.kosp-chip { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: #a7f3d0; padding: 6px 12px; border-radius: 99px; background: rgba(16,185,129,.1); border: 1px solid rgba(16,185,129,.3); }
+.kosp-chip i { width: 7px; height: 7px; border-radius: 50%; background: #34d399; box-shadow: 0 0 0 4px rgba(52,211,153,.2); animation: kosp-denyut 2s infinite; }
+@keyframes kosp-denyut { 50% { box-shadow: 0 0 0 7px rgba(52,211,153,0); } }
+.kosp-hero h1 { margin: 18px 0 12px; font-size: clamp(28px, 4vw, 46px); line-height: 1.06; font-weight: 800; letter-spacing: -.03em; color: #f8fafc; }
+.kosp-hero h1 em { font-style: normal; background: linear-gradient(90deg, #34d399, #22d3ee 60%, #a5b4fc); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.kosp-hero p { margin: 0; max-width: 520px; font-size: 15px; line-height: 1.65; color: #94a3b8; }
+.kosp-hero-aksi { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 26px; }
+.kosp-cta, .kosp-cta2 { display: inline-flex; align-items: center; gap: 9px; height: 46px; padding: 0 20px; border-radius: 12px; font: inherit; font-size: 14.5px; font-weight: 700; cursor: pointer; transition: transform .18s, box-shadow .18s, background .18s; }
+.kosp-cta { border: 0; color: #04241a; background: var(--k-grad); box-shadow: 0 12px 30px -10px rgba(16,185,129,.8), inset 0 1px 0 rgba(255,255,255,.4); }
+.kosp-cta:hover { transform: translateY(-2px); box-shadow: 0 18px 36px -12px rgba(6,182,212,.9); }
+.kosp-cta2 { color: #e2e8f0; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); }
+.kosp-cta2:hover { background: rgba(255,255,255,.12); }
+.kosp-hero-dok { display: flex; justify-content: center; perspective: 1200px; }
 
-.kosp-pengantar { background: var(--accent-soft); border-radius: 14px; padding: 12px 14px; font-size: 13.5px; line-height: 1.6; color: var(--text-primary); margin-bottom: 12px; }
-.kosp-daftar { display: flex; flex-direction: column; gap: 10px; }
-.kosp-kartu { display: flex; gap: 14px; align-items: center; background: var(--surface); border: 1px solid var(--border-soft); border-radius: 16px; padding: 12px 14px; cursor: pointer; transition: transform .15s, box-shadow .15s, border-color .15s; }
-.kosp-kartu:hover { transform: translateY(-2px); border-color: var(--accent-dim); box-shadow: 0 10px 24px rgba(0,0,0,.07); }
-.kosp-kartu.kosong { opacity: .6; cursor: default; }
-.kosp-k-no { flex: 0 0 54px; height: 62px; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; background: linear-gradient(160deg, var(--kh2), var(--kh)); box-shadow: inset 0 -3px 0 var(--ke); }
-.kosp-k-no small { font-size: 9px; letter-spacing: .2em; color: var(--ke2); }
-.kosp-k-no b { font-family: Georgia, serif; font-size: 20px; line-height: 1.1; }
-.kosp-k-isi { flex: 1; min-width: 0; }
-.kosp-k-isi h3 { margin: 0 0 3px; font-size: 15px; }
-.kosp-k-isi p { margin: 0 0 6px; font-size: 12.5px; color: var(--text-secondary); line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+/* kartu dokumen digital */
+.kosp-dok { position: relative; width: min(100%, 300px); aspect-ratio: 210 / 280; padding: 22px; border-radius: 20px; overflow: hidden; display: flex; flex-direction: column;
+  background: linear-gradient(160deg, rgba(255,255,255,.14), rgba(255,255,255,.03)); border: 1px solid rgba(255,255,255,.18); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 40px 70px -30px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.25); transform: rotateY(-12deg) rotateX(6deg); transition: transform .6s cubic-bezier(.2,.8,.2,1); }
+.kosp-dok:hover { transform: rotateY(0) rotateX(0) translateY(-4px); }
+.kosp-dok::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(16,185,129,.22)); pointer-events: none; }
+.kosp-dok-kilau { position: absolute; inset: -40%; background: linear-gradient(115deg, transparent 40%, rgba(255,255,255,.18) 50%, transparent 60%); animation: kosp-kilau 6s ease-in-out infinite; pointer-events: none; }
+@keyframes kosp-kilau { 0%, 60% { transform: translateX(-40%); } 100% { transform: translateX(40%); } }
+.kosp-dok-atas { display: flex; gap: 10px; align-items: center; }
+.kosp-dok-atas img { width: 40px; height: 40px; border-radius: 12px; background: #fff; padding: 3px; object-fit: contain; }
+.kosp-dok-atas b { display: block; font-size: 12.5px; color: #f8fafc; }
+.kosp-dok-atas small { font-size: 10.5px; color: #94a3b8; }
+.kosp-dok-kode { margin-top: auto; font-size: clamp(44px, 5vw, 60px); font-weight: 900; letter-spacing: -.04em; line-height: 1; background: linear-gradient(180deg, #fff, rgba(255,255,255,.55)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.kosp-dok-sub { margin-top: 6px; font-size: 13px; line-height: 1.35; color: #cbd5e1; font-weight: 600; }
+.kosp-dok-prog { display: flex; gap: 5px; margin: 14px 0 16px; flex-wrap: wrap; }
+.kosp-dok-prog span { font-size: 10.5px; font-weight: 700; color: #a7f3d0; padding: 3px 9px; border-radius: 99px; background: rgba(16,185,129,.14); border: 1px solid rgba(16,185,129,.3); }
+.kosp-dok-bawah { position: relative; display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,.2); font-size: 11px; color: #94a3b8; }
+.kosp-dok-bawah b { font-size: 14px; color: #fde68a; letter-spacing: .02em; }
+
+/* statistik */
+.kosp-statistik { display: grid; grid-template-columns: repeat(4, 1fr) 1.6fr; gap: 10px; margin: 14px 0 26px; }
+.kosp-statistik > div { padding: 14px 16px; border-radius: 16px; background: var(--k-kartu); border: 1px solid var(--k-garis); position: relative; overflow: hidden; }
+.kosp-statistik > div::after { content: ""; position: absolute; left: 16px; right: 16px; bottom: 0; height: 2px; background: var(--k-grad); opacity: 0; transition: opacity .2s; }
+.kosp-statistik > div:hover::after { opacity: 1; }
+.kosp-statistik b { display: block; font-size: 24px; font-weight: 800; letter-spacing: -.02em; color: var(--text-primary); line-height: 1.15; }
+.kosp-statistik .lebar b { font-size: 17px; padding-top: 5px; }
+.kosp-statistik span { font-size: 11.5px; font-weight: 600; letter-spacing: .04em; color: var(--text-secondary); text-transform: uppercase; }
+
+.kosp-sekat { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 0 2px 12px; }
+.kosp-sekat h2 { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: -.01em; }
+.kosp-sekat span { font-size: 12.5px; color: var(--text-secondary); }
+
+/* kartu bab (bento) */
+.kosp-daftar { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.kosp-kartu { position: relative; display: flex; flex-direction: column; text-align: left; padding: 18px 18px 14px; border-radius: 20px; background: var(--k-kartu); border: 1px solid var(--k-garis); cursor: pointer; overflow: hidden;
+  transition: transform .25s cubic-bezier(.2,.8,.2,1), box-shadow .25s, border-color .25s; animation: kosp-masuk .5s both; animation-delay: calc(var(--i, 0) * 60ms); font: inherit; color: inherit; }
+@keyframes kosp-masuk { from { opacity: 0; transform: translateY(10px); } }
+.kosp-kartu::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; background: var(--k-grad); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; opacity: 0; transition: opacity .25s; pointer-events: none; }
+.kosp-kartu:hover { transform: translateY(-4px); box-shadow: 0 24px 40px -24px rgba(2,6,23,.35); }
+.kosp-kartu:hover::before { opacity: 1; }
+.kosp-kartu.kosong { opacity: .55; cursor: default; }
+.kosp-k-atas { display: flex; justify-content: space-between; align-items: flex-start; }
+.kosp-k-ikon { display: inline-flex; width: 42px; height: 42px; align-items: center; justify-content: center; border-radius: 12px; color: var(--k-hijau); background: var(--k-lembut); border: 1px solid color-mix(in srgb, var(--k-hijau) 20%, transparent); }
+.kosp-k-ikon .kosp-ik { width: 21px; height: 21px; }
+.kosp-k-no { font-size: 46px; font-weight: 900; line-height: .8; letter-spacing: -.05em; color: transparent; -webkit-text-stroke: 1.2px color-mix(in srgb, var(--text-secondary) 45%, transparent); transition: color .25s; }
+.kosp-kartu:hover .kosp-k-no { color: color-mix(in srgb, var(--k-hijau) 18%, transparent); -webkit-text-stroke-color: var(--k-hijau); }
+.kosp-k-bab { margin-top: 14px; font-size: 11px; font-weight: 800; letter-spacing: .14em; color: var(--k-hijau); text-transform: uppercase; }
+.kosp-kartu h3 { margin: 4px 0 6px; font-size: 16.5px; line-height: 1.3; font-weight: 750; letter-spacing: -.01em; }
+.kosp-kartu p { margin: 0 0 12px; font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 37px; }
 .kosp-k-meta { display: flex; gap: 6px; flex-wrap: wrap; font-size: 11px; color: var(--text-secondary); }
-.kosp-k-meta span { background: var(--nl); border-radius: 99px; padding: 2px 8px; }
-.kosp-lbl.ok { background: #dcfce7 !important; color: #166534; } .kosp-lbl.warn { background: #fef3c7 !important; color: #92400e; }
-.kosp-k-aksi { display: flex; flex-direction: column; gap: 4px; }
-.kosp-ib { border: 1px solid var(--border-soft); background: var(--surface); border-radius: 9px; width: 34px; height: 30px; cursor: pointer; font-size: 14px; }
-.kosp-ib:hover { border-color: var(--accent); }
-.kosp-tambah { margin-top: 10px; }
-.kosp-catatan { margin-top: 16px; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 14px; padding: 10px 14px; color: #422006; }
-.kosp-catatan summary { cursor: pointer; font-weight: 800; font-size: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.kosp-catatan summary span { background: #f59e0b; color: #fff; border-radius: 99px; font-size: 11px; padding: 1px 8px; }
-.kosp-catatan summary small { font-weight: 500; color: #92400e; font-size: 11px; }
-.kosp-cat-grup { margin-top: 10px; font-size: 13px; }
-.kosp-cat-grup ul { margin: 4px 0 0; padding-left: 20px; line-height: 1.55; }
+.kosp-k-meta > span { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--k-garis); border-radius: 99px; padding: 2px 9px; font-weight: 600; }
+.kosp-lbl i { width: 6px; height: 6px; border-radius: 50%; background: #94a3b8; }
+.kosp-lbl.ok i { background: #10b981; } .kosp-lbl.warn i { background: #f59e0b; } .kosp-lbl.draf i { background: #06b6d4; }
+.kosp-k-bar { height: 4px; border-radius: 99px; background: var(--k-lembut); margin: 14px 0 12px; overflow: hidden; }
+.kosp-k-bar i { display: block; height: 100%; border-radius: inherit; background: var(--k-grad); }
+.kosp-k-aksi { display: flex; align-items: center; gap: 6px; margin-top: auto; }
+.kosp-ib { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: 1px solid var(--k-garis); background: transparent; color: var(--text-secondary); border-radius: 9px; cursor: pointer; transition: all .15s; }
+.kosp-ib .kosp-ik { width: 15px; height: 15px; }
+.kosp-ib:hover { color: var(--k-hijau); border-color: var(--k-hijau); background: var(--k-lembut); }
+.kosp-k-buka { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 700; color: var(--k-hijau); cursor: pointer; }
+.kosp-k-buka .kosp-ik { width: 15px; height: 15px; transition: transform .2s; }
+.kosp-kartu:hover .kosp-k-buka .kosp-ik { transform: translate(2px, -2px); }
+.kosp-tambah { border-style: dashed; background: transparent; justify-content: center; align-items: flex-start; min-height: 180px; }
+.kosp-tambah h3 { margin-top: 14px; }
+
+/* catatan pengelola */
+.kosp-catatan { margin-top: 18px; border-radius: 18px; border: 1px solid rgba(245,158,11,.35); background: linear-gradient(180deg, rgba(245,158,11,.08), transparent 60%), var(--k-kartu); padding: 4px 16px; }
+.kosp-catatan summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 0; font-size: 14px; }
+.kosp-catatan summary::-webkit-details-marker { display: none; }
+.kosp-cat-ikon { width: 26px; height: 26px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-weight: 900; color: #fff; background: linear-gradient(135deg, #f59e0b, #f97316); }
+.kosp-cat-jml { font-size: 11px; font-weight: 800; color: #b45309; background: rgba(245,158,11,.15); border-radius: 99px; padding: 2px 9px; }
+.kosp-catatan summary small { margin-left: auto; font-size: 11px; color: var(--text-secondary); }
+.kosp-cat-isi { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+.kosp-cat-grup { font-size: 13px; padding: 12px 14px; border-radius: 12px; background: var(--k-lembut); border: 1px solid var(--k-garis); }
+.kosp-cat-grup b { font-size: 12px; letter-spacing: .04em; }
+.kosp-cat-grup ul { margin: 6px 0 0; padding-left: 18px; line-height: 1.55; color: var(--text-secondary); }
 .kosp-ket { font-size: 12.5px; color: var(--text-secondary); line-height: 1.55; }
-.kosp-catatan .kosp-ket { color: #92400e; }
 
 /* ─── Membaca ─── */
-.kosp-baca { display: grid; grid-template-columns: 270px 1fr; gap: 22px; align-items: start; }
-.kosp-toc { position: sticky; top: 84px; max-height: calc(100vh - 100px); overflow: auto; background: var(--surface); border: 1px solid var(--border-soft); border-radius: 16px; padding: 10px; font-size: 13px; }
-.kosp-toc-judul { display: flex; justify-content: space-between; align-items: center; font-weight: 800; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-secondary); padding: 4px 6px 8px; }
-.kosp-toc-tutup, .kosp-toc-buka, .kosp-toc-latar { display: none; }
-.kosp-toc-bab { display: flex; gap: 8px; align-items: flex-start; padding: 7px 8px; border-radius: 10px; cursor: pointer; color: var(--text-primary); font-weight: 600; line-height: 1.35; }
-.kosp-toc-bab b { flex: 0 0 28px; text-align: center; font-family: Georgia, serif; color: var(--accent); }
-.kosp-toc-bab:hover { background: var(--nl); }
-.kosp-toc-bab.aktif { background: linear-gradient(90deg, var(--kh2), var(--kh)); color: #fff; }
-.kosp-toc-bab.aktif b { color: var(--ke2); }
-.kosp-toc-sub { margin: 4px 0 8px 18px; border-left: 2px solid var(--accent-dim); }
-.kosp-toc-sub a { display: block; padding: 5px 8px 5px 12px; cursor: pointer; color: var(--text-secondary); line-height: 1.35; border-left: 2px solid transparent; margin-left: -2px; }
-.kosp-toc-sub a.kosp-toc-h3 { padding-left: 24px; font-size: 12.5px; }
-.kosp-toc-sub a:hover { color: var(--accent); }
-.kosp-toc-sub a.aktif { color: var(--accent); font-weight: 700; border-left-color: var(--accent); background: var(--accent-soft); }
+.kosp-baca { display: grid; grid-template-columns: 280px 1fr; gap: 22px; align-items: start; }
+.kosp-toc { position: sticky; top: 76px; max-height: calc(100vh - 96px); overflow: auto; background: var(--k-kartu); border: 1px solid var(--k-garis); border-radius: 18px; padding: 10px; font-size: 13px; scrollbar-width: thin; }
+.kosp-toc-judul { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-secondary); padding: 6px 8px 10px; }
+.kosp-toc-judul .kosp-ik { width: 15px; height: 15px; }
+.kosp-toc-persen { margin-left: auto; font-size: 11px; color: var(--k-hijau); background: var(--k-lembut); border-radius: 99px; padding: 2px 8px; letter-spacing: 0; }
+.kosp-toc-tutup, .kosp-toc-latar { display: none; }
+.kosp-toc-bab { display: flex; gap: 10px; align-items: center; padding: 8px; border-radius: 11px; cursor: pointer; color: var(--text-primary); font-weight: 600; line-height: 1.3; transition: background .15s; }
+.kosp-toc-bab b { flex: 0 0 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border-radius: 9px; font-size: 12px; font-weight: 800; color: var(--text-secondary); background: var(--k-lembut); border: 1px solid var(--k-garis); }
+.kosp-toc-bab:hover { background: var(--k-lembut); }
+.kosp-toc-bab.aktif { background: var(--k-ink); color: #f8fafc; }
+.kosp-toc-bab.aktif b { background: var(--k-grad); color: #04241a; border: 0; }
+.kosp-toc-sub { position: relative; margin: 6px 0 10px 22px; padding-left: 12px; border-left: 1px solid var(--k-garis); }
+.kosp-toc-sub a { position: relative; display: block; padding: 6px 8px; cursor: pointer; color: var(--text-secondary); line-height: 1.35; border-radius: 8px; transition: all .15s; }
+.kosp-toc-sub a::before { content: ""; position: absolute; left: -16px; top: 12px; width: 7px; height: 7px; border-radius: 50%; background: var(--k-kartu); border: 1.5px solid var(--k-garis); transition: all .15s; }
+.kosp-toc-sub a.kosp-toc-h3 { padding-left: 18px; font-size: 12.5px; }
+.kosp-toc-sub a.kosp-toc-h3::before { width: 5px; height: 5px; left: -15px; top: 13px; }
+.kosp-toc-sub a:hover { color: var(--text-primary); background: var(--k-lembut); }
+.kosp-toc-sub a.aktif { color: var(--k-hijau); font-weight: 700; background: var(--k-lembut); }
+.kosp-toc-sub a.aktif::before { background: var(--k-hijau); border-color: var(--k-hijau); box-shadow: 0 0 0 4px rgba(16,185,129,.18); }
 
-.kosp-artikel { background: var(--surface); border: 1px solid var(--border-soft); border-radius: 18px; padding: 0 0 18px; min-width: 0; overflow: hidden; box-shadow: 0 8px 26px rgba(0,0,0,.04); }
-.kosp-bab-kepala { position: relative; color: #fff; padding: 26px 34px 20px; background: linear-gradient(135deg, var(--kh2), var(--kh)); overflow: hidden; }
-.kosp-bab-kepala::after { content: ""; position: absolute; right: -30px; top: -30px; width: 200px; height: 200px; opacity: .14;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'%3E%3Cg fill='none' stroke='%23f3dc8b' stroke-width='1.2'%3E%3Cpath d='M28 4l7 17 17 7-17 7-7 17-7-17-17-7 17-7z'/%3E%3Ccircle cx='28' cy='28' r='6'/%3E%3C/g%3E%3C/svg%3E"); }
-.kosp-bk-no { display: inline-block; font-size: 11px; font-weight: 800; letter-spacing: .25em; color: #3b2a00; background: linear-gradient(90deg, var(--ke), var(--ke2)); border-radius: 6px; padding: 3px 10px; }
-.kosp-bab-kepala h1 { margin: 10px 0 4px; font-family: Georgia, "Times New Roman", serif; font-size: clamp(21px, 2.6vw, 28px); line-height: 1.25; }
-.kosp-bk-meta { font-size: 12px; opacity: .85; }
-.kosp-bk-aksi { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 14px; position: relative; z-index: 1; }
-.kosp-bk-aksi .kosp-tb { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.25); color: #fff; }
-.kosp-bk-aksi .kosp-tb:hover { background: rgba(255,255,255,.22); color: #fff; }
+.kosp-artikel { background: var(--k-kartu); border: 1px solid var(--k-garis); border-radius: 22px; padding: 0 0 22px; min-width: 0; overflow: hidden; box-shadow: 0 20px 50px -30px rgba(2,6,23,.25); }
+.kosp-bab-kepala { position: relative; isolation: isolate; overflow: hidden; color: #e2e8f0; padding: 26px 36px 24px; background: radial-gradient(120% 140% at 0% 0%, #13233f, var(--k-ink) 60%); }
+.kosp-bab-kepala .kosp-hero-glow.a { width: 280px; height: 280px; right: -60px; top: -140px; opacity: .45; }
+.kosp-bk-angka { position: absolute; right: 26px; bottom: -22px; z-index: -1; font-size: 150px; font-weight: 900; line-height: 1; letter-spacing: -.06em; color: transparent; -webkit-text-stroke: 1.5px rgba(148,163,184,.25); }
+.kosp-bk-jejak { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #94a3b8; flex-wrap: wrap; }
+.kosp-bk-jejak a { color: #a7f3d0; cursor: pointer; font-weight: 700; }
+.kosp-bk-jejak .kosp-ik { width: 12px; height: 12px; opacity: .6; }
+.kosp-bab-kepala h1 { margin: 12px 0 12px; font-size: clamp(24px, 3vw, 34px); line-height: 1.15; font-weight: 800; letter-spacing: -.025em; color: #f8fafc; max-width: 80%; }
+.kosp-bk-meta { display: flex; gap: 6px; flex-wrap: wrap; font-size: 11.5px; }
+.kosp-bk-meta > span { display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.05); border-radius: 99px; padding: 3px 10px; color: #cbd5e1; }
+.kosp-bk-status i { width: 6px; height: 6px; border-radius: 50%; background: #34d399; }
+.kosp-bk-aksi { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 18px; }
+.kosp-bk-aksi .kosp-tb { height: 34px; background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.16); color: #e2e8f0; }
+.kosp-bk-aksi .kosp-tb:hover { background: rgba(255,255,255,.14); color: #fff; box-shadow: none; }
+.kosp-toc-buka { display: none !important; }
 
-.kosp-isi { padding: 8px 34px 0; font-size: 15.5px; line-height: 1.78; color: var(--text-primary); }
-.kosp-isi p { margin: 0 0 11px; text-align: justify; hyphens: auto; }
-.kosp-isi p.kd-li { padding-left: 26px; text-indent: -20px; text-align: left; margin-bottom: 7px; }
-.kosp-isi h2 { margin: 30px 0 12px; font-size: 19px; line-height: 1.35; padding: 8px 0 8px 14px; border-left: 5px solid var(--ke); background: linear-gradient(90deg, var(--accent-soft), transparent 80%); border-radius: 0 10px 10px 0; color: var(--text-primary); scroll-margin-top: 90px; }
-.kosp-isi h3 { margin: 24px 0 8px; font-size: 16.5px; color: var(--accent); scroll-margin-top: 90px; }
-.kosp-isi h4 { margin: 18px 0 6px; font-size: 15px; color: var(--text-primary); font-weight: 800; }
+.kosp-isi { padding: 14px 40px 0; font-size: 15.5px; line-height: 1.8; color: var(--text-primary); }
+.kosp-isi > :first-child { margin-top: 18px; }
+.kosp-isi p { margin: 0 0 12px; text-align: justify; hyphens: auto; }
+.kosp-isi p.kd-li { padding-left: 26px; text-indent: -20px; text-align: left; margin-bottom: 8px; }
+.kosp-isi h2 { position: relative; margin: 38px 0 14px; padding: 0 0 10px; font-size: 21px; line-height: 1.3; font-weight: 800; letter-spacing: -.02em; border-bottom: 1px solid var(--k-garis); color: var(--text-primary); scroll-margin-top: 150px; }
+.kosp-isi h2::after { content: ""; position: absolute; left: 0; bottom: -1px; width: 56px; height: 3px; border-radius: 3px; background: var(--k-grad); }
+.kosp-isi h3 { margin: 28px 0 10px; font-size: 17px; font-weight: 750; letter-spacing: -.01em; color: var(--text-primary); display: flex; align-items: center; gap: 10px; scroll-margin-top: 150px; }
+.kosp-isi h3::before { content: ""; width: 4px; height: 18px; border-radius: 3px; background: var(--k-grad); flex: 0 0 auto; }
+.kosp-isi h4 { margin: 20px 0 8px; font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--k-hijau); }
 .kosp-isi img { max-width: 100%; height: auto; }
 .kosp-isi img.kd-rumus { vertical-align: middle; margin: 0 2px; }
-.kosp-isi ul, .kosp-isi ol { padding-left: 24px; margin: 0 0 11px; }
-.kd-tabel { overflow-x: auto; margin: 8px 0 18px; border: 1px solid var(--border-soft); border-radius: 12px; -webkit-overflow-scrolling: touch; }
-.kosp-isi table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 13.5px; line-height: 1.5; }
-.kosp-isi td, .kosp-isi th { border: 1px solid var(--border-soft); padding: 7px 10px; vertical-align: top; text-align: left; }
-.kosp-isi tr:first-child td, .kosp-isi th { background: var(--accent-soft); font-weight: 700; color: var(--text-primary); }
-.kosp-isi tr:nth-child(even) td { background: color-mix(in srgb, var(--nl) 55%, transparent); }
-.kosp-isi tr:first-child td { background: var(--accent-soft); }
+.kosp-isi ul, .kosp-isi ol { padding-left: 24px; margin: 0 0 12px; }
+.kd-tabel { overflow-x: auto; margin: 10px 0 22px; border: 1px solid var(--k-garis); border-radius: 14px; -webkit-overflow-scrolling: touch; box-shadow: 0 10px 30px -24px rgba(2,6,23,.4); scrollbar-width: thin; }
+.kosp-isi table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 480px; font-size: 13.5px; line-height: 1.55; }
+.kosp-isi td, .kosp-isi th { border-bottom: 1px solid var(--k-garis); border-right: 1px solid var(--k-garis); padding: 9px 12px; vertical-align: top; text-align: left; }
+.kosp-isi tr > :last-child { border-right: 0; }
+.kosp-isi tr:last-child > * { border-bottom: 0; }
+.kosp-isi tr:first-child > td, .kosp-isi th { background: var(--k-ink2); color: #e2e8f0; font-weight: 700; font-size: 12.5px; letter-spacing: .01em; }
+.kosp-isi tr:first-child > td b { color: #fff; }
+.kosp-isi tr:not(:first-child):hover > td { background: var(--k-lembut); }
 .kosp-isi td p { margin: 0; text-align: left; }
-.kosp-kosong { text-align: center !important; color: var(--text-secondary); padding: 40px 0; }
-.kosp-kilat { animation: kosp-kilat 2.2s ease; border-radius: 6px; }
-@keyframes kosp-kilat { 0%, 30% { background: rgba(253,230,138,.85); box-shadow: 0 0 0 6px rgba(253,230,138,.85); } 100% { background: transparent; box-shadow: 0 0 0 6px transparent; } }
-.kosp-nav { display: flex; justify-content: space-between; gap: 10px; padding: 20px 34px 0; margin-top: 18px; border-top: 1px dashed var(--border-soft); }
-.kosp-nav button { flex: 1; max-width: 48%; text-align: left; border: 1px solid var(--border-soft); background: var(--nl); color: var(--text-primary); border-radius: 12px; padding: 10px 14px; cursor: pointer; font: inherit; }
-.kosp-nav button.kanan { text-align: right; margin-left: auto; }
-.kosp-nav button:hover { border-color: var(--accent); }
-.kosp-nav small { display: block; color: var(--text-secondary); font-size: 11.5px; }
-.kosp-nav b { font-size: 13px; }
-.kosp-progres { position: fixed; left: 0; right: 0; top: 0; height: 3px; z-index: 60; pointer-events: none; }
-.kosp-progres i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--ke), var(--accent)); transition: width .1s; }
+.kosp-isi p.kd-gambar { text-align: center !important; margin: 12px 0 18px; }
+.kosp-isi p.kd-gambar img { border-radius: 12px; border: 1px solid var(--k-garis); }
+.kosp-isi [data-k] { scroll-margin-top: 150px; }
+.kosp-kosong { text-align: center !important; color: var(--text-secondary); padding: 50px 0; }
+.kosp-kilat { animation: kosp-kilat 2.4s ease; border-radius: 8px; }
+@keyframes kosp-kilat { 0%, 35% { background: rgba(245,196,81,.32); box-shadow: 0 0 0 6px rgba(245,196,81,.32); } 100% { background: transparent; box-shadow: 0 0 0 6px transparent; } }
 
-/* unggah */
+.kosp-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 22px 40px 0; margin-top: 22px; border-top: 1px solid var(--k-garis); }
+.kosp-nav button { display: flex; align-items: center; gap: 12px; text-align: left; border: 1px solid var(--k-garis); background: transparent; color: var(--text-primary); border-radius: 14px; padding: 14px 16px; cursor: pointer; font: inherit; transition: all .18s; }
+.kosp-nav button.kanan { grid-column: 2; justify-content: flex-end; text-align: right; }
+.kosp-nav button:hover { border-color: var(--k-hijau); background: var(--k-lembut); }
+.kosp-nav button .kosp-ik { color: var(--k-hijau); }
+.kosp-nav small { display: block; color: var(--text-secondary); font-size: 11px; font-weight: 600; letter-spacing: .04em; }
+.kosp-nav b { font-size: 14px; }
+.kosp-progres { position: fixed; left: 0; right: 0; top: 0; height: 3px; z-index: 60; pointer-events: none; }
+.kosp-progres i { display: block; height: 100%; width: 0; background: var(--k-grad); box-shadow: 0 0 12px rgba(6,182,212,.7); transition: width .1s; }
+
+/* ─── Unggah & riwayat ─── */
 .kosp-u-info { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 6px; font-size: 12px; }
 .kosp-u-info span { background: var(--accent-soft); border-radius: 99px; padding: 3px 10px; font-weight: 600; }
 .kosp-u-pratinjau { max-height: 46vh; overflow: auto; border: 1px solid var(--border-soft); border-radius: 12px; padding: 6px 16px; font-size: 14px; background: var(--bg); }
@@ -139,34 +226,42 @@
 .kosp-riwayat { display: flex; flex-direction: column; gap: 8px; }
 .kosp-riwayat > div { background: var(--nl); border-radius: 10px; padding: 8px 12px; font-size: 13px; }
 
-/* ─── HP ─── */
-@media (max-width: 900px) {
-  .kosp-depan { grid-template-columns: 1fr; }
-  .kosp-depan-kiri { position: static; max-width: 330px; margin: 0 auto; width: 100%; }
+/* ─── Tablet & HP ─── */
+@media (max-width: 980px) {
+  .kosp-hero { grid-template-columns: 1fr; padding: 32px 26px; }
+  .kosp-hero-dok { display: none; }
+  .kosp-statistik { grid-template-columns: repeat(4, 1fr); }
+  .kosp-statistik .lebar { grid-column: 1 / -1; }
   .kosp-baca { grid-template-columns: 1fr; }
-  .kosp-toc { position: fixed; top: 0; bottom: 0; left: 0; width: min(84vw, 320px); max-height: none; padding-bottom: 90px; border-radius: 0 16px 16px 0; z-index: 80; transform: translateX(-105%); transition: transform .25s; }
-  .kosp-baca.toc-buka .kosp-toc { transform: none; }
-  .kosp-baca.toc-buka .kosp-toc-latar { display: block; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 79; }
-  .kosp-toc-tutup { display: block; border: 0; background: transparent; font-size: 16px; cursor: pointer; color: var(--text-secondary); }
-  .kosp-toc-buka { display: block; position: sticky; top: 64px; z-index: 5; margin: 10px 12px -46px auto; border: 1px solid rgba(255,255,255,.35); background: rgba(15,61,46,.75); color: #fff; border-radius: 99px; padding: 6px 12px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .kosp-toc { position: fixed; top: 0; bottom: 0; left: 0; width: min(86vw, 330px); max-height: none; border-radius: 0 20px 20px 0; z-index: 80; transform: translateX(-105%); transition: transform .28s cubic-bezier(.2,.8,.2,1); padding-bottom: 90px; }
+  .kosp-baca.toc-buka .kosp-toc { transform: none; box-shadow: 30px 0 60px -20px rgba(2,6,23,.5); }
+  .kosp-baca.toc-buka .kosp-toc-latar { display: block; position: fixed; inset: 0; background: rgba(2,6,23,.45); backdrop-filter: blur(2px); z-index: 79; }
+  .kosp-toc-tutup { display: block; border: 0; background: var(--k-lembut); width: 28px; height: 28px; border-radius: 8px; cursor: pointer; color: var(--text-secondary); }
+  .kosp-toc-buka { display: inline-flex !important; }
 }
 @media (max-width: 640px) {
-  .kosp-bar { padding: 8px; gap: 6px; border-radius: 14px; }
-  .kosp-tb span { display: none; }
+  .kosp-bar { padding: 6px; gap: 6px; border-radius: 14px; }
+  .kosp-tb span, .kosp-merek b { display: none; }
+  .kosp-tb { padding: 0 10px; }
+  .kosp-bk-aksi .kosp-tb { padding: 0 11px; }
   .kosp-cari { order: 3; flex-basis: 100%; }
+  .kosp-cari kbd { display: none; }
   .kosp-bar-kanan { margin-left: auto; }
-  .kosp-hasil { top: 108px; }
-  .kosp-bab-kepala { padding: 22px 16px 16px; }
-  .kosp-isi { padding: 6px 16px 0; font-size: 15px; line-height: 1.7; }
+  .kosp-hasil { top: 104px; }
+  .kosp-hero { padding: 24px 18px; border-radius: 20px; }
+  .kosp-hero h1 { font-size: 28px; }
+  .kosp-hero p { font-size: 14px; }
+  .kosp-cta, .kosp-cta2 { flex: 1; justify-content: center; padding: 0 12px; font-size: 14px; }
+  .kosp-statistik { grid-template-columns: repeat(2, 1fr); }
+  .kosp-statistik b { font-size: 20px; }
+  .kosp-daftar { grid-template-columns: 1fr; }
+  .kosp-bab-kepala { padding: 20px 18px 18px; }
+  .kosp-bab-kepala h1 { max-width: 100%; }
+  .kosp-bk-angka { font-size: 100px; right: 10px; bottom: -12px; }
+  .kosp-isi { padding: 6px 18px 0; font-size: 15px; line-height: 1.72; }
   .kosp-isi p { text-align: left; }
-  .kosp-nav { padding: 16px 16px 0; flex-direction: column; }
-  .kosp-nav button { max-width: none; }
-  .kosp-kartu { padding: 10px; gap: 10px; }
-  .kosp-k-no { flex-basis: 44px; height: 54px; }
-  .kosp-k-aksi { flex-direction: row; }
-  .kosp-kartu { flex-wrap: wrap; }
-  .kosp-k-aksi { width: 100%; justify-content: flex-end; }
+  .kosp-nav { grid-template-columns: 1fr; padding: 18px 18px 0; }
+  .kosp-nav button.kanan { grid-column: auto; }
 }
-.kosp-isi [data-k] { scroll-margin-top: 150px; }
-.kosp-isi h2, .kosp-isi h3 { scroll-margin-top: 150px; }
-.kosp-isi p.kd-gambar { text-align: center !important; margin: 10px 0 16px; }
+@media (prefers-reduced-motion: reduce) { .kosp *, .kosp *::before { animation: none !important; transition: none !important; } }
+.kosp-cta, .kosp-cta2 { white-space: nowrap; }

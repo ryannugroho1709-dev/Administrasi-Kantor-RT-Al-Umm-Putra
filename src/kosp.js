@@ -99,20 +99,34 @@ async function kospBuka(n, opsi = {}) {
   KOSP.n = n || 0;
   _kospRender(sec, opsi);
 }
+// ── Ikon garis (gaya antarmuka modern) ──
+const KOSP_SVG = {
+  cari: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>', unduh: '<path d="M12 4v11m0 0-4-4m4 4 4-4"/><path d="M5 19h14"/>', cetak: '<path d="M7 9V4h10v5"/><rect x="4" y="9" width="16" height="8" rx="2"/><path d="M7 14h10v6H7z"/>',
+  atur: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
+  kiri: '<path d="m15 18-6-6 6-6"/>', kanan: '<path d="m9 18 6-6-6-6"/>', panah: '<path d="M7 17 17 7M8 7h9v9"/>', unggah: '<path d="M12 20V9m0 0-4 4m4-4 4 4"/><path d="M5 5h14"/>',
+  lampir: '<path d="m21 11-8.5 8.5a5 5 0 0 1-7-7L14 4a3.3 3.3 0 0 1 4.7 4.7l-8.6 8.6a1.7 1.7 0 0 1-2.4-2.4L15.5 7"/>', riwayat: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>',
+  daftar: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>', buku: '<path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2zM22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/>', grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+  b1: '<circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/>', b2: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>', b3: '<path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>',
+  b4: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6M9 18h3"/>', b5: '<path d="M3 20h18M6 16v-4M11 16V8M16 16v-6M21 4l-5 4-4-2-5 4"/>', b6: '<path d="m21 11-8.5 8.5a5 5 0 0 1-7-7L14 4a3.3 3.3 0 0 1 4.7 4.7l-8.6 8.6a1.7 1.7 0 0 1-2.4-2.4L15.5 7"/>',
+};
+const _kIk = (n, c = "") => `<svg class="kosp-ik ${c}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${KOSP_SVG[n] || ""}</svg>`;
+const _kDua = (n) => (n === 6 ? "L" : String(n).padStart(2, "0"));
+function _kospStat(b) { const t = document.createElement("div"); t.innerHTML = b.html || ""; return { bagian: t.querySelectorAll("h2,h3").length, tabel: t.querySelectorAll("table").length, kata: (t.textContent.match(/\S+/g) || []).length, judul: [...t.querySelectorAll("h2,h3")].map((h) => h.textContent.replace(/^[A-Z0-9]+[.)]\s*/, "")) }; }
+
 function _kospRender(sec, opsi = {}) {
   sec = sec || document.getElementById("page-rg"); if (!sec) return;
   const th = KOSP.tahun, kelola = _kospBolehKelola(), daftarTh = kospDaftarTahun();
   sec.innerHTML = `<div class="kosp">
     <div class="kosp-bar">
       <div class="kosp-bar-kiri">
-        ${KOSP.n ? `<button class="kosp-tb" onclick="kospBuka(0)" title="Sampul & Daftar Bab">📚 <span>Sampul</span></button>` : ""}
-        <label class="kosp-th" title="Tahun Pelajaran">TP <select onchange="kospGantiTahun(this.value)">${daftarTh.map((t) => `<option ${t === th ? "selected" : ""}>${t}</option>`).join("")}</select></label>
+        ${KOSP.n ? `<button class="kosp-tb" onclick="kospBuka(0)" title="Beranda KOSP">${_kIk("grid")}<span>Beranda KOSP</span></button>` : `<span class="kosp-merek">${_kIk("buku")}<b>KOSP</b></span>`}
+        <label class="kosp-th" title="Tahun Pelajaran"><span>TP</span><select onchange="kospGantiTahun(this.value)">${daftarTh.map((t) => `<option ${t === th ? "selected" : ""}>${t}</option>`).join("")}</select></label>
       </div>
-      <div class="kosp-cari"><span>🔍</span><input id="kosp-q" type="search" placeholder="Cari di KOSP… (mis. tahfizh, SKK, IHT)" value="${_kE(KOSP.q)}" oninput="kospKetikCari(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();kospCari(this.value,true)}"></div>
+      <div class="kosp-cari">${_kIk("cari")}<input id="kosp-q" type="search" autocomplete="off" placeholder="Cari kata di seluruh KOSP…" value="${_kE(KOSP.q)}" oninput="kospKetikCari(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();kospCari(this.value,true)}"><kbd>Ctrl K</kbd></div>
       <div class="kosp-bar-kanan">
-        <button class="kosp-tb" onclick="kospUnduhSemua()" title="Unduh seluruh KOSP (Word)">⬇️ <span>Unduh Word</span></button>
-        <button class="kosp-tb" onclick="kospCetak()" title="Cetak / simpan PDF">🖨️ <span>Cetak / PDF</span></button>
-        ${kelola ? `<button class="kosp-tb" onclick="kospKelola()" title="Kelola KOSP">⚙️ <span>Kelola</span></button>` : ""}
+        <button class="kosp-tb" onclick="kospUnduhSemua()" title="Unduh seluruh KOSP (Word)">${_kIk("unduh")}<span>Word</span></button>
+        <button class="kosp-tb" onclick="kospCetak()" title="Cetak / simpan PDF">${_kIk("cetak")}<span>PDF</span></button>
+        ${kelola ? `<button class="kosp-tb" onclick="kospKelola()" title="Kelola KOSP">${_kIk("atur")}<span>Kelola</span></button>` : ""}
       </div>
     </div>
     <div id="kosp-hasil" class="kosp-hasil" hidden></div>
@@ -121,89 +135,106 @@ function _kospRender(sec, opsi = {}) {
   if (opsi.k == null) { const pc = document.getElementById("page-container"); if (pc) pc.scrollTo({ top: 0, behavior: "instant" }); }
   if (KOSP.n) _kospSetelBaca(opsi);
   if (KOSP.q && KOSP.q.length >= 2) kospCari(KOSP.q);
+  if (!KOSP._tombolK) { KOSP._tombolK = true; document.addEventListener("keydown", (e) => { const q = document.getElementById("kosp-q"); if (!q) return; if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); q.focus(); q.select(); } }); }
 }
 async function kospGantiTahun(th) { KOSP.tahun = th; KOSP.indeks = null; await kospMuat(); _kospRender(); }
 
-// ── Sampul + daftar bab ──
+// ── Beranda KOSP: hero + statistik + kartu bab ──
 function _kospHtmlSampulKartu(th) {
   const logo = window.LOGO_PKBM_DEFAULT || (typeof urlLogoSekolah === "function" ? urlLogoSekolah() : "") || "assets/logo-pkbm-default.png";
-  return `<div class="kosp-sampul">
-    <div class="kosp-sp-pola"></div>
-    <div class="kosp-sp-isi">
-      <div class="kosp-sp-atas">Dokumen Kurikulum</div>
-      <img class="kosp-sp-logo" src="${_kE(logo)}" alt="" onerror="this.style.display='none'">
-      <h1>Kurikulum Operasional<br>Satuan Pendidikan</h1>
-      <div class="kosp-sp-kode">KOSP</div>
-      <div class="kosp-sp-garis"><i></i><b>✦</b><i></i></div>
-      <div class="kosp-sp-lembaga">PKBM AL UMM BARABAI</div>
-      <div class="kosp-sp-prog"><span>Paket A</span><span>Paket B</span><span>Paket C</span></div>
-      <div class="kosp-sp-th">Tahun Pelajaran ${_kE(th)}</div>
-      <div class="kosp-sp-alamat">${_kE(KOSP_ALAMAT)}</div>
-    </div>
+  return `<div class="kosp-dok"><div class="kosp-dok-kilau"></div>
+    <div class="kosp-dok-atas"><img src="${_kE(logo)}" alt="" onerror="this.style.display='none'"><div><b>PKBM Al Umm Barabai</b><small>Satuan Pendidikan Kesetaraan</small></div></div>
+    <div class="kosp-dok-kode">KOSP</div>
+    <div class="kosp-dok-sub">Kurikulum Operasional<br>Satuan Pendidikan</div>
+    <div class="kosp-dok-prog"><span>Paket A</span><span>Paket B</span><span>Paket C</span></div>
+    <div class="kosp-dok-bawah"><span>Tahun Pelajaran</span><b>${_kE(th)}</b></div>
   </div>`;
 }
 function _kospTerakhir() { try { return JSON.parse(localStorage.getItem("kosp:terakhir") || "null"); } catch (e) { return null; } }
 function _kospHtmlSampul() {
   const th = KOSP.tahun, bab = kospSemuaBab(th), kelola = _kospBolehKelola(), ter = _kospTerakhir();
   const lanjut = ter && ter.th === th && ter.n ? bab.find((b) => b.no === ter.n) : null;
-  const kartu = bab.map((b) => {
-    const tmp = document.createElement("div"); tmp.innerHTML = b.html || "";
-    const bagian = tmp.querySelectorAll("h2,h3").length, tabel = tmp.querySelectorAll("table").length;
-    const ringkas = [...tmp.querySelectorAll("h2,h3")].slice(0, 4).map((h) => h.textContent.replace(/^[A-Z0-9]+[.)]\s*/, "")).join(" · ");
-    const status = b.sumber === "unggah" ? `<span class="kosp-lbl ok">Diperbarui ${_kE(_kTglTampil(b.diubah))}</span>` : b.sumber === "warisan" ? `<span class="kosp-lbl warn">Isi TP ${_kE(b.asal)}</span>` : b.sumber === "kosong" ? `<span class="kosp-lbl">Belum ada</span>` : `<span class="kosp-lbl">Draf ${_kE(th)}</span>`;
-    return `<div class="kosp-kartu ${b.html ? "" : "kosong"}" ${b.html ? `onclick="kospBuka(${b.no})"` : ""}>
-      <div class="kosp-k-no"><small>${b.no === 6 ? "" : "BAB"}</small><b>${b.no === 6 ? "📎" : KOSP_ROMAWI[b.no]}</b></div>
-      <div class="kosp-k-isi"><h3>${KOSP_IKON[b.no]} ${_kE(b.judul)}</h3><p>${_kE(ringkas || (b.html ? "" : "Belum diunggah"))}</p>
-        <div class="kosp-k-meta">${status}${b.html ? `<span>${bagian} bagian</span>${tabel ? `<span>${tabel} tabel</span>` : ""}` : ""}</div></div>
+  const st = bab.map(_kospStat), tot = st.reduce((a, s) => ({ bagian: a.bagian + s.bagian, tabel: a.tabel + s.tabel, kata: a.kata + s.kata }), { bagian: 0, tabel: 0, kata: 0 });
+  const baru = bab.filter((b) => b.sumber === "unggah").map((b) => b.diubah).sort().pop();
+  const kartu = bab.map((b, i) => {
+    const s = st[i];
+    const status = b.sumber === "unggah" ? `<span class="kosp-lbl ok"><i></i>Diperbarui ${_kE(_kTglTampil(b.diubah))}</span>` : b.sumber === "warisan" ? `<span class="kosp-lbl warn"><i></i>Isi TP ${_kE(b.asal)}</span>` : b.sumber === "kosong" ? `<span class="kosp-lbl"><i></i>Belum ada</span>` : `<span class="kosp-lbl draf"><i></i>Draf ${_kE(th)}</span>`;
+    const persen = tot.kata ? Math.max(4, Math.round((s.kata / tot.kata) * 100)) : 0;
+    return `<div class="kosp-kartu ${b.html ? "" : "kosong"}" style="--i:${i}" ${b.html ? `onclick="kospBuka(${b.no})"` : ""}>
+      <div class="kosp-k-atas"><span class="kosp-k-ikon">${_kIk("b" + b.no)}</span><span class="kosp-k-no">${_kDua(b.no)}</span></div>
+      <div class="kosp-k-bab">${_kE(_kNamaBab(b.no))}</div>
+      <h3>${_kE(b.judul)}</h3>
+      <p>${_kE(s.judul.slice(0, 3).join(" · ") || (b.html ? "" : "Belum diunggah"))}</p>
+      <div class="kosp-k-meta">${status}${b.html ? `<span>${s.bagian} bagian</span>${s.tabel ? `<span>${s.tabel} tabel</span>` : ""}` : ""}</div>
+      <div class="kosp-k-bar" title="Porsi isi dari seluruh KOSP"><i style="width:${persen}%"></i></div>
       <div class="kosp-k-aksi" onclick="event.stopPropagation()">
-        ${b.html ? `<button class="kosp-ib" title="Unduh bab ini (Word)" onclick="kospUnduhBab(${b.no})">⬇️</button>` : ""}
-        ${b.berkas ? `<button class="kosp-ib" title="Berkas asli yang diunggah" onclick="kospBerkasAsli(${b.no})">📎</button>` : ""}
-        ${kelola ? `<button class="kosp-ib" title="Unggah bab ini (.docx)" onclick="kospUnggah(${b.no})">⬆️</button>` : ""}
+        ${b.html ? `<button class="kosp-ib" title="Unduh bab ini (Word)" onclick="kospUnduhBab(${b.no})">${_kIk("unduh")}</button>` : ""}
+        ${b.berkas ? `<button class="kosp-ib" title="Berkas asli yang diunggah" onclick="kospBerkasAsli(${b.no})">${_kIk("lampir")}</button>` : ""}
+        ${kelola ? `<button class="kosp-ib" title="Unggah bab ini (.docx)" onclick="kospUnggah(${b.no})">${_kIk("unggah")}</button>` : ""}
+        ${b.html ? `<span class="kosp-k-buka" onclick="kospBuka(${b.no})">Baca ${_kIk("panah")}</span>` : ""}
       </div></div>`;
   }).join("");
   const cat = kelola ? _kospHtmlCatatan(th, bab) : "";
-  return `<div class="kosp-depan">
-    <div class="kosp-depan-kiri">${_kospHtmlSampulKartu(th)}
-      <button class="btn btn-accent kosp-mulai" onclick="kospBuka(${lanjut ? lanjut.no : 1})">${lanjut ? `▶ Lanjut Membaca ${_kE(_kNamaBab(lanjut.no))}` : "📖 Mulai Membaca"}</button></div>
-    <div class="kosp-depan-kanan">
-      <div class="kosp-pengantar"><b>Dasar kurikulum PKBM Al Umm Barabai</b> untuk semua jenjang — Paket A, Paket B & C Putra, dan Paket B & C Putri. Ketuk bab untuk membaca, atau ketik kata di kotak 🔍 untuk langsung menemukan letaknya.</div>
-      <div class="kosp-daftar">${kartu}</div>
-      ${kelola && !bab.some((b) => b.no === 6) ? `<button class="btn btn-ghost kosp-tambah" onclick="kospUnggah(6)">📎 Tambah Lampiran (.docx)</button>` : ""}
-      ${cat}
-    </div></div>`;
+  return `<section class="kosp-hero">
+      <div class="kosp-hero-grid"></div><div class="kosp-hero-glow a"></div><div class="kosp-hero-glow b"></div>
+      <div class="kosp-hero-teks">
+        <span class="kosp-chip"><i></i>Dokumen Kurikulum Resmi · TP ${_kE(th)}</span>
+        <h1>Kurikulum Operasional <em>Satuan Pendidikan</em></h1>
+        <p>Dasar penyelenggaraan pembelajaran PKBM Al Umm Barabai untuk semua jenjang — Paket A, Paket B &amp; C Putra, dan Paket B &amp; C Putri.</p>
+        <div class="kosp-hero-aksi">
+          <button class="kosp-cta" onclick="kospBuka(${lanjut ? lanjut.no : 1})">${_kIk("buku")}${lanjut ? `Lanjut ${_kE(_kNamaBab(lanjut.no))}` : "Mulai Membaca"}</button>
+          <button class="kosp-cta2" onclick="document.getElementById('kosp-q').focus()">${_kIk("cari")}Cari Isi</button>
+        </div>
+      </div>
+      <div class="kosp-hero-dok">${_kospHtmlSampulKartu(th)}</div>
+    </section>
+    <div class="kosp-statistik">
+      <div><b>${bab.filter((b) => b.html).length}</b><span>Bab</span></div>
+      <div><b>${tot.bagian}</b><span>Bagian</span></div>
+      <div><b>${tot.tabel}</b><span>Tabel</span></div>
+      <div><b>${(tot.kata / 1000).toFixed(1).replace(".", ",")}rb</b><span>Kata</span></div>
+      <div class="lebar"><b>${baru ? _kE(_kTglTampil(baru)) : "Draf Awal"}</b><span>Pembaruan Terakhir</span></div>
+    </div>
+    <div class="kosp-sekat"><h2>Struktur Dokumen</h2><span>Ketuk kartu untuk membaca · cari kata untuk langsung ke letaknya</span></div>
+    <div class="kosp-daftar">${kartu}
+      ${kelola && !bab.some((b) => b.no === 6) ? `<button class="kosp-kartu kosp-tambah" onclick="kospUnggah(6)"><span class="kosp-k-ikon">${_kIk("lampir")}</span><h3>Tambah Lampiran</h3><p>Unggah berkas .docx (kalender pendidikan, SK tim, dll.)</p></button>` : ""}
+    </div>
+    ${cat}`;
 }
 function _kospHtmlCatatan(th, bab) {
   const c = KOSP_CATATAN[th]; if (!c) return "";
   const grup = Object.entries(c).filter(([n]) => +n === 0 || (bab.find((b) => b.no === +n) || {}).sumber === "bawaan");
   if (!grup.length) return "";
   const jml = grup.reduce((a, [, x]) => a + x.length, 0);
-  return `<details class="kosp-catatan"><summary>📋 Catatan Penyempurnaan Draf <span>${jml}</span><small>hanya terlihat oleh pengelola</small></summary>
-    ${grup.map(([n, x]) => `<div class="kosp-cat-grup"><b>${+n ? _kE(_kNamaBab(+n) + " · " + KOSP_BAB_BAKU[n]) : "Umum"}</b><ul>${x.map((t) => `<li>${_kE(t)}</li>`).join("")}</ul></div>`).join("")}
+  return `<details class="kosp-catatan"><summary><span class="kosp-cat-ikon">!</span><b>Catatan Penyempurnaan Draf</b><span class="kosp-cat-jml">${jml}</span><small>hanya terlihat oleh pengelola</small></summary>
+    <div class="kosp-cat-isi">${grup.map(([n, x]) => `<div class="kosp-cat-grup"><b>${+n ? _kE(_kNamaBab(+n) + " · " + KOSP_BAB_BAKU[n]) : "Umum"}</b><ul>${x.map((t) => `<li>${_kE(t)}</li>`).join("")}</ul></div>`).join("")}</div>
     <p class="kosp-ket">Catatan sebuah bab hilang otomatis setelah bab itu diunggah ulang.</p></details>`;
 }
 
 // ── Membaca satu bab ──
 function _kospHtmlBaca(n) {
   const th = KOSP.tahun, b = kospBab(th, n), semua = kospSemuaBab(th), kelola = _kospBolehKelola();
-  const i = semua.findIndex((x) => x.no === n), seb = semua[i - 1], ses = semua[i + 1];
-  const sumber = b.sumber === "unggah" ? `Diperbarui ${_kE(_kTglTampil(b.diubah))}${b.oleh ? ` oleh ${_kE(b.oleh)}` : ""}` : b.sumber === "warisan" ? `Masih memakai isi TP ${_kE(b.asal)} — belum diunggah untuk TP ${_kE(th)}` : b.sumber === "bawaan" ? `Draf TP ${_kE(th)}` : "Belum ada isi";
-  const tocBab = semua.map((x) => `<a class="kosp-toc-bab ${x.no === n ? "aktif" : ""}" onclick="kospBuka(${x.no})"><b>${x.no === 6 ? "📎" : KOSP_ROMAWI[x.no]}</b><span>${_kE(x.judul)}</span></a>${x.no === n ? `<div id="kosp-toc-sub" class="kosp-toc-sub"></div>` : ""}`).join("");
+  const i = semua.findIndex((x) => x.no === n), seb = semua[i - 1], ses = semua[i + 1], s = _kospStat(b);
+  const sumber = b.sumber === "unggah" ? `Diperbarui ${_kE(_kTglTampil(b.diubah))}${b.oleh ? ` · ${_kE(b.oleh)}` : ""}` : b.sumber === "warisan" ? `Memakai isi TP ${_kE(b.asal)}` : b.sumber === "bawaan" ? `Draf TP ${_kE(th)}` : "Belum ada isi";
+  const tocBab = semua.map((x) => `<a class="kosp-toc-bab ${x.no === n ? "aktif" : ""}" onclick="kospBuka(${x.no})"><b>${_kDua(x.no)}</b><span>${_kE(x.judul)}</span></a>${x.no === n ? `<div id="kosp-toc-sub" class="kosp-toc-sub"></div>` : ""}`).join("");
   return `<div class="kosp-baca">
-    <aside class="kosp-toc" id="kosp-toc"><div class="kosp-toc-judul">Daftar Isi <button class="kosp-toc-tutup" onclick="kospToc(false)">✕</button></div>${tocBab}</aside>
+    <aside class="kosp-toc" id="kosp-toc"><div class="kosp-toc-judul">${_kIk("daftar")}<span>Daftar Isi</span><span class="kosp-toc-persen" id="kosp-persen">0%</span><button class="kosp-toc-tutup" onclick="kospToc(false)">✕</button></div>${tocBab}</aside>
     <div class="kosp-toc-latar" onclick="kospToc(false)"></div>
     <article class="kosp-artikel">
-      <button class="kosp-toc-buka" onclick="kospToc(true)">☰ Daftar Isi</button>
-      <header class="kosp-bab-kepala"><div class="kosp-bk-no">${_kE(_kNamaBab(n))}</div><h1>${_kE(b.judul)}</h1>
-        <div class="kosp-bk-meta">${sumber}</div>
+      <header class="kosp-bab-kepala"><div class="kosp-hero-grid"></div><div class="kosp-hero-glow a"></div><div class="kosp-bk-angka">${_kDua(n)}</div>
+        <div class="kosp-bk-jejak"><a onclick="kospBuka(0)">KOSP</a>${_kIk("kanan")}<span>TP ${_kE(th)}</span>${_kIk("kanan")}<span>${_kE(_kNamaBab(n))}</span></div>
+        <h1>${_kE(b.judul)}</h1>
+        <div class="kosp-bk-meta"><span class="kosp-bk-status"><i></i>${sumber}</span>${b.html ? `<span>${s.bagian} bagian</span><span>${s.tabel} tabel</span><span>± ${Math.max(1, Math.round(s.kata / 200))} menit baca</span>` : ""}</div>
         <div class="kosp-bk-aksi">
-          ${b.html ? `<button class="kosp-tb" onclick="kospUnduhBab(${n})">⬇️ Unduh Bab Ini</button>` : ""}
-          ${b.berkas ? `<button class="kosp-tb" onclick="kospBerkasAsli(${n})">📎 Berkas Asli</button>` : ""}
-          ${kelola ? `<button class="kosp-tb" onclick="kospUnggah(${n})">⬆️ Unggah Pengganti</button>` : ""}
-          ${kelola && b.sumber === "unggah" ? `<button class="kosp-tb" onclick="kospRiwayat(${n})">🕘 Riwayat</button>` : ""}
+          <button class="kosp-tb kosp-toc-buka" onclick="kospToc(true)">${_kIk("daftar")}Daftar Isi</button>
+          ${b.html ? `<button class="kosp-tb" onclick="kospUnduhBab(${n})">${_kIk("unduh")}Unduh Bab</button>` : ""}
+          ${b.berkas ? `<button class="kosp-tb" onclick="kospBerkasAsli(${n})">${_kIk("lampir")}Berkas Asli</button>` : ""}
+          ${kelola ? `<button class="kosp-tb" onclick="kospUnggah(${n})">${_kIk("unggah")}Unggah Pengganti</button>` : ""}
+          ${kelola && b.sumber === "unggah" ? `<button class="kosp-tb" onclick="kospRiwayat(${n})">${_kIk("riwayat")}Riwayat</button>` : ""}
         </div></header>
-      <div class="kosp-isi" id="kosp-isi">${b.html || `<p class="kosp-kosong">Bab ini belum diisi.${kelola ? " Tekan ⬆️ Unggah untuk menambahkan berkas .docx." : ""}</p>`}</div>
-      <nav class="kosp-nav">${seb ? `<button onclick="kospBuka(${seb.no})"><small>← Sebelumnya</small><b>${_kE(_kNamaBab(seb.no))} · ${_kE(seb.judul)}</b></button>` : "<span></span>"}
-        ${ses ? `<button class="kanan" onclick="kospBuka(${ses.no})"><small>Berikutnya →</small><b>${_kE(_kNamaBab(ses.no))} · ${_kE(ses.judul)}</b></button>` : `<button class="kanan" onclick="kospBuka(0)"><small>Selesai</small><b>Kembali ke Sampul</b></button>`}</nav>
+      <div class="kosp-isi" id="kosp-isi">${b.html || `<p class="kosp-kosong">Bab ini belum diisi.${kelola ? " Tekan Unggah untuk menambahkan berkas .docx." : ""}</p>`}</div>
+      <nav class="kosp-nav">${seb ? `<button onclick="kospBuka(${seb.no})">${_kIk("kiri")}<span><small>Sebelumnya · ${_kE(_kNamaBab(seb.no))}</small><b>${_kE(seb.judul)}</b></span></button>` : "<span></span>"}
+        ${ses ? `<button class="kanan" onclick="kospBuka(${ses.no})"><span><small>Berikutnya · ${_kE(_kNamaBab(ses.no))}</small><b>${_kE(ses.judul)}</b></span>${_kIk("kanan")}</button>` : `<button class="kanan" onclick="kospBuka(0)"><span><small>Selesai</small><b>Kembali ke Beranda KOSP</b></span>${_kIk("grid")}</button>`}</nav>
     </article>
     <div class="kosp-progres"><i id="kosp-progres"></i></div>
   </div>`;
@@ -230,7 +261,7 @@ function _kospSetelBaca(opsi = {}) {
 function _kospGulir() {
   const bar = document.getElementById("kosp-progres"), art = document.querySelector(".kosp-artikel"); if (!bar || !art) return;
   const r = art.getBoundingClientRect(), tot = r.height - window.innerHeight;
-  bar.style.width = Math.max(0, Math.min(100, tot > 0 ? (-r.top / tot) * 100 : 100)) + "%";
+  const p = Math.max(0, Math.min(100, tot > 0 ? (-r.top / tot) * 100 : 100)); bar.style.width = p + "%"; const ps = document.getElementById("kosp-persen"); if (ps) ps.textContent = Math.round(p) + "%";
 }
 function kospLompat(i) { const h = document.getElementById("kosp-j" + i); if (!h) return; kospToc(false); h.scrollIntoView({ behavior: "smooth", block: "start" }); }
 function kospToc(buka) { document.querySelector(".kosp-baca")?.classList.toggle("toc-buka", !!buka); }
@@ -264,7 +295,7 @@ function kospCari(q, enter) {
   const grup = {}; hasil.slice(0, 60).forEach((x) => { (grup[x.n] = grup[x.n] || []).push(x); });
   box.hidden = false;
   box.innerHTML = `<div class="kosp-h-kepala"><b>${hasil.length ? `${hasil.length} temuan` : "Tidak ditemukan"}</b> untuk “${_kE(q)}”${hasil.length > 60 ? " · 60 teratas" : ""}<button onclick="kospTutupCari()">✕</button></div>
-    ${hasil.length ? Object.entries(grup).map(([n, xs]) => `<div class="kosp-h-grup"><div class="kosp-h-bab">${KOSP_IKON[n]} ${_kE(_kNamaBab(+n))} · ${_kE(xs[0].bab)} <span>${hasil.filter((x) => x.n === +n).length}</span></div>
+    ${hasil.length ? Object.entries(grup).map(([n, xs]) => `<div class="kosp-h-grup"><div class="kosp-h-bab">${_kIk("b" + n)}${_kE(_kNamaBab(+n))} · ${_kE(xs[0].bab)} <span>${hasil.filter((x) => x.n === +n).length}</span></div>
       ${xs.map((x) => `<button class="kosp-h-item" onclick="kospBukaHasil(${x.n},${x.k})">${x.judul && x.judul !== x.t ? `<small>${_kE(x.judul)}</small>` : ""}<span>${_kospCuplikan(x.t, kata)}</span></button>`).join("")}</div>`).join("") : `<p class="kosp-ket">Coba kata lain atau lebih pendek, mis. “tahfizh”, “SKK”, “ekstrakurikuler”.</p>`}`;
 }
 function _kospCuplikan(t, kata) {
