@@ -185,10 +185,36 @@ function _khSegarPesan() {
   let b = document.getElementById("kh-pesan");
   if (!b) { const l = document.getElementById("kt-layar"); if (!l) return; l.insertAdjacentHTML("beforeend", `<button id="kh-pesan" class="kh-pesan" hidden onclick="khTogelPesan()">💬 <span>Lihat Pesan</span></button>`); b = document.getElementById("kh-pesan"); }
   const p = document.getElementById("kt-panel"), rapat = !!(KT.sesi && KT.sesi.aktif), terbuka = !!(p && !p.hidden && p.innerHTML.trim());
-  const tampil = _khHP() && (rapat || KHD.adaPesan || terbuka);
+  const tampil = _khHP() && !rapat && (KHD.adaPesan || terbuka); // saat rapat: tombol ada di bilah rapat
   b.hidden = !tampil; if (!tampil) return;
   b.classList.toggle("buka", terbuka);
   b.innerHTML = terbuka ? `🙈 <span>Sembunyikan ${rapat ? "Percakapan" : "Pesan"}</span>` : `💬 <span>${rapat ? "Lihat Percakapan Rapat" : "Lihat Pesan"}</span>`;
+}
+// Bilah rapat tetap (PC & HP): judul rapat + 💬 Diskusi Rapat + 🔚 Akhiri Rapat — selalu terlihat selama rapat
+function _khBarRapat() {
+  const l = document.getElementById("kt-layar"); if (!l) return;
+  let b = document.getElementById("kh-rapat-bar"); const aktif = !!(KT.sesi && KT.sesi.aktif);
+  if (!aktif) { if (b) b.hidden = true; return; }
+  if (!b) { l.insertAdjacentHTML("beforeend", `<div id="kh-rapat-bar" class="kh-rapat-bar"><span class="kh-rb-judul"></span><button class="kh-rb-diskusi" onclick="khDiskusiRapat()">💬 <span>Diskusi Rapat</span></button><button class="kh-rb-akhiri" onclick="khAkhiriRapat()">🔚 <span>Akhiri Rapat</span></button></div>`); b = document.getElementById("kh-rapat-bar"); }
+  b.hidden = false; const j = "🪑 " + (KT.sesi.judul || "Rapat") + " · " + (KT.sesi.ids ? KT.sesi.ids.size : 0) + " hadir";
+  const el = b.querySelector(".kh-rb-judul"); if (el.textContent !== j) el.textContent = j;
+  b.querySelector(".kh-rb-akhiri").hidden = !!KT.penonton;
+  const p = document.getElementById("kt-panel"), buka = !!(p && !p.hidden && p.querySelector(".kt-obrolan")), d = b.querySelector(".kh-rb-diskusi"), lbl = buka ? "🙈 <span>Tutup Diskusi</span>" : "💬 <span>Diskusi Rapat</span>";
+  if (d.innerHTML !== lbl) d.innerHTML = lbl;
+}
+function khDiskusiRapat() {
+  if (!(KT.sesi && KT.sesi.aktif)) return;
+  const p0 = document.getElementById("kt-panel"); if (p0 && !p0.hidden && p0.querySelector(".kt-obrolan")) { p0.hidden = true; setTimeout(() => typeof _ktUkur === "function" && _ktUkur(), 30); _khBarRapat(); return; }
+  KHD.paksa = true;
+  try { if (typeof ktPanelRapat === "function") ktPanelRapat(); const p = document.getElementById("kt-panel"); if (p) { p.hidden = false; setTimeout(() => { if (typeof _ktUkur === "function") _ktUkur(); p.scrollTop = p.scrollHeight; }, 30); } }
+  finally { KHD.paksa = false; KHD.adaPesan = false; _khSegarPesan(); _khBarRapat(); }
+}
+async function khAkhiriRapat() {
+  if (!(KT.sesi && KT.sesi.aktif) || KT.penonton) return;
+  const ok = typeof konfirmasiTema === "function" ? await konfirmasiTema("Akhiri rapat \"" + (KT.sesi.judul || "Rapat") + "\" sekarang? Semua peserta kembali ke ruangan masing-masing.", { judul: "Akhiri Rapat", teksOk: "Akhiri" }) : true;
+  if (!ok) return;
+  if (typeof ktAkhiriRapat === "function") await ktAkhiriRapat();
+  _khBarRapat(); toast("Rapat diakhiri", "ok");
 }
 function khTogelPesan() {
   const p = document.getElementById("kt-panel");
@@ -330,7 +356,7 @@ async function _khSholatTertib(nama = "Berjamaah") {
         _khRapikanSaf(); await _khMuatJam(); _khSiapkanSlot(); await _khPerbarui(true); _khSasaran();
         clearInterval(KHD.iv); clearInterval(KHD.ivRapat);
         KHD.iv = setInterval(() => { if (!KT.buka) return clearInterval(KHD.iv); _khPerbarui(false); }, 30000);
-        clearInterval(KHD.ivPesan); KHD.ivPesan = setInterval(() => { if (!KT.buka) return clearInterval(KHD.ivPesan); try { _khSegarPesan(); } catch (e) {} }, 1000);
+        clearInterval(KHD.ivPesan); KHD.ivPesan = setInterval(() => { if (!KT.buka) return clearInterval(KHD.ivPesan); try { _khSegarPesan(); _khBarRapat(); } catch (e) {} }, 1000);
         KHD.ivRapat = setInterval(() => {
           if (!KT.buka) return clearInterval(KHD.ivRapat);
           if (KT.sesi && KT.sesi.aktif) { if (_khHP() && !KHD.petunjuk) { KHD.petunjuk = true; toast("Rapat dimulai — ketuk layar rapat atau tombol 💬 untuk melihat percakapan", "info"); } return; }

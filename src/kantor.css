@@ -296,3 +296,13 @@ body.ks-menyeret .ks-puncak{display:block}
 @media (hover: none), (max-width: 900px) { .kjl-bantu { display: none; } .kjl-atas button span { display: none; } }
 @media (hover: hover) and (min-width: 901px) { .kjl-joy { opacity: .75; } }
 #kantor-ai.kjl-on .kt-sorot, #kantor-ai.kjl-on .kt-putar, #kantor-ai.kjl-on .km-ruang, #kantor-ai.kjl-on .km-kualitas, #kantor-ai.kjl-on #kh-pesan { display: none !important; }
+/* v12 — bilah rapat tetap: Diskusi & Akhiri Rapat selalu terlihat */
+.kh-rapat-bar { position: absolute; left: 50%; top: 58px; transform: translateX(-50%); z-index: 5; display: flex; align-items: center; gap: 6px; padding: 6px 6px 6px 14px; border-radius: 999px; background: rgba(11,48,38,.92); border: 1px solid rgba(198,164,92,.7); box-shadow: 0 10px 26px rgba(0,0,0,.35); backdrop-filter: blur(8px); max-width: calc(100% - 24px); }
+.kh-rapat-bar[hidden], .kh-rapat-bar [hidden] { display: none !important; }
+.kh-rb-judul { color: #fde68a; font-weight: 800; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.kh-rapat-bar button { flex: 0 0 auto; border: 0; border-radius: 999px; padding: 8px 14px; font: inherit; font-size: 12.5px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+.kh-rb-diskusi { background: linear-gradient(135deg, #fde68a, #c6a45c); color: #0b3026; }
+.kh-rb-akhiri { background: linear-gradient(135deg, #dc2626, #7f1d1d); color: #fff; }
+@media (max-width: 900px) { .kh-rapat-bar { top: 52px; } .kh-rb-judul { max-width: 120px; } }
+@media (max-width: 420px) { .kh-rapat-bar button span { display: none; } .kh-rapat-bar button { padding: 8px 12px; font-size: 15px; } }
+#kantor-ai.kjl-on .kh-rapat-bar { top: 54px; }
