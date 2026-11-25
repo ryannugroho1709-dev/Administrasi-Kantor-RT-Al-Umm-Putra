@@ -234,3 +234,20 @@ body.ks-menyeret .ks-puncak{display:block}
 .kt-label, .kt-gelembung { will-change: auto !important; backface-visibility: visible !important; -webkit-font-smoothing: antialiased; }
 .kt-label.ks-belum { opacity: 1 !important; filter: none !important; }
 .kt-label.ks-belum::before { content: ""; position: absolute; left: -3px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; box-shadow: 0 0 0 2px #fff; }
+/* v8 — kehidupan kantor */
+.kt-label[data-lampu]::after, .kt-label.ks-belum::before { display: none !important; }
+.kh-pesan { position: absolute; left: 50%; bottom: 62px; transform: translateX(-50%); z-index: 5; border: 0; border-radius: 999px; padding: 9px 16px; background: linear-gradient(135deg, #14532d, #0f766e); color: #fff; font-weight: 800; font-size: 13px; box-shadow: 0 6px 18px rgba(0,0,0,.3); cursor: pointer; animation: khDenyut 1.8s ease-in-out infinite; }
+.kh-pesan[hidden] { display: none; }
+@keyframes khDenyut { 0%,100% { box-shadow: 0 6px 18px rgba(0,0,0,.3), 0 0 0 0 rgba(20,83,45,.5); } 50% { box-shadow: 0 6px 18px rgba(0,0,0,.3), 0 0 0 8px rgba(20,83,45,0); } }
+.kh-jam { display: flex; flex-direction: column; gap: 6px; margin: 6px 0; }
+.kh-jam-kepala, .kh-jam-baris { display: grid; grid-template-columns: 1fr 92px 92px; gap: 6px; align-items: center; font-size: 12.5px; }
+.kh-jam-kepala b { font-size: 11px; color: #64748b; text-align: center; }
+.kh-jam-baris span { font-weight: 700; }
+.kh-jam-baris input { border: 1px solid #cbd5e1; border-radius: 8px; padding: 5px 4px; font: inherit; font-size: 12.5px; width: 100%; }
+.kh-terpilih { font-size: 12px; line-height: 1.9; margin: 4px 0 8px; padding: 8px 10px; border-radius: 12px; background: #f0fdf4; border: 1px solid #bbf7d0; }
+.kh-terpilih i { color: #64748b; }
+.kh-chip { display: inline-flex; align-items: center; gap: 4px; background: #fff; border: 1px solid #86efac; border-radius: 999px; padding: 1px 4px 1px 9px; margin: 0 3px 3px 0; font-weight: 700; color: #14532d; }
+.kh-chip button { border: 0; background: #dcfce7; color: #166534; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; cursor: pointer; }
+.kt-nonton-daftar label.dipilih { background: #f0fdf4; border-radius: 8px; }
+.kt-nonton-daftar label.dipilih span { font-weight: 800; color: #14532d; }
+.kh-pesan span { color: #fff !important; }

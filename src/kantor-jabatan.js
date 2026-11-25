@@ -5,7 +5,7 @@
 //  • Penyelenggara: selempang / pin warna jenjang, map warna jenjang di meja, cincin warna jenjang
 //  • Admin        : rompi biru, kartu tanda pengenal, headset, layar kedua, cincin biru
 //    (ustadzah tetap gamis hitam syar'i + cadar — pembeda hanya pin, kartu, headset & barang di meja)
-//  • Lampu meja: hijau = sudah absen mengajar hari ini, kuning = ada jadwal tapi belum absen, putih redup = tidak ada jadwal
+//  • Lampu meja: menyala hijau = sedang online di aplikasi; padam = tidak online
 //  • Dzikir Pagi & Tilawah 07.00 di Musholla (otomatis sekali sehari, bisa juga diperintah Kepala)
 //  • Papan "Hari Ini" di depan pintu masuk: ujian hari ini + pengawas, agenda Kalender Akademik
 // ============================================================
@@ -106,16 +106,14 @@ function _kjLampu(id, k) {
   const sinar = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 10), new THREE.MeshBasicMaterial({ color: 0xe5e7eb, transparent: true, opacity: 0.18, depthWrite: false })); sinar.position.y = 1.05; g.add(sinar);
   KT.scene.add(g); KJ.lampu[id] = { bola, sinar, status: "" };
 }
-async function _kjPerbaruiLampu() {
+// lampu meja: hijau menyala = sedang online di aplikasi saat ini; selain itu padam
+function _kjPerbaruiLampu() {
   if (!KT.buka) return;
-  const ids = Object.keys(KJ.lampu); if (!ids.length) return;
-  let rows = [];
-  try { const db = typeof supaSemua !== "undefined" ? supaSemua : supa; const r = await db.from("absensi_sesi").select("guru_id,jam_masuk,status_kehadiran,dihapus").eq("tanggal", tanggalISO()).in("guru_id", ids); rows = (r.data || []).filter((x) => !x.dihapus); } catch (e) { return; }
-  ids.forEach((id) => {
-    const milik = rows.filter((x) => x.guru_id === id), sudah = milik.some((x) => x.jam_masuk || /hadir|tepat|telat|terlambat/i.test(x.status_kehadiran || ""));
-    const st = !milik.length ? "kosong" : sudah ? "sudah" : "belum", w = { kosong: 0xe5e7eb, sudah: 0x22c55e, belum: 0xfacc15 }[st], L = KJ.lampu[id];
-    L.status = st; L.bola.material.color.setHex(w); L.sinar.material.color.setHex(w); L.sinar.material.opacity = st === "kosong" ? 0.12 : 0.32;
-    const lb = KT.label[id]; if (lb) { lb.dataset.lampu = st; lb.title = lb.title.replace(/ · (Sudah|Belum|Tidak ada jadwal).*$/, "") + " · " + { sudah: "Sudah absen mengajar hari ini", belum: "Belum absen mengajar hari ini", kosong: "Tidak ada jadwal mengajar hari ini" }[st]; }
+  let online = new Set(); try { online = typeof _ksOnline === "function" ? _ksOnline() : new Set(Object.keys(KT_HADIR.kanal ? KT_HADIR.kanal.presenceState() : {})); } catch (e) {}
+  if (STATE.guruId) online.add(STATE.guruId);
+  Object.entries(KJ.lampu).forEach(([id, L]) => {
+    const st = online.has(id) ? "online" : "mati", w = st === "online" ? 0x22c55e : 0x9ca3af; L.status = st;
+    L.bola.material.color.setHex(w); L.sinar.material.color.setHex(w); L.sinar.material.opacity = st === "online" ? 0.35 : 0;
   });
 }
 
@@ -214,8 +212,8 @@ async function ktHariIni() {
   _ktPanel(`<div class="km-info"><small>PAPAN DEPAN</small><h3>📋 Hari Ini</h3><p class="kt-ket">${e(new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" }))}</p>
     <h4>📝 Ujian Hari Ini</h4>${d.ujian.length ? d.ujian.map((u) => `<div class="kj-ujian"><b>Sesi ${u.sesi} · ${e(u.jam)}</b>${u.isi.map((z) => `<div><span>Kelas ${e(z.kelas)}</span> ${e(z.mapel)}<small>${e(z.p.join(", ") || "Belum ada pengawas")}</small></div>`).join("")}</div>`).join("") : `<p class="kt-ket">Tidak ada ujian hari ini.</p>`}
     <h4>📅 Agenda Kalender Akademik</h4>${d.agenda.length ? `<ul class="kt-ul">${d.agenda.map((a) => `<li>${e(a.judul)}</li>`).join("")}</ul>` : `<p class="kt-ket">Tidak ada agenda hari ini.</p>`}
-    <h4>💡 Lampu Meja</h4><p class="kt-ket">🟢 sudah absen mengajar · 🟡 ada jadwal, belum absen · ⚪ tidak ada jadwal hari ini</p>
-    ${lampu.length ? `<ul class="kt-ul">${lampu.map((x) => `<li>${{ sudah: "🟢", belum: "🟡" }[x.st] || "⚪"} ${e(x.n)}</li>`).join("")}</ul>` : ""}
+    <h4>💡 Lampu Meja</h4><p class="kt-ket">🟢 menyala = sedang online di aplikasi · ⚫ padam = tidak online</p>
+    ${lampu.length ? `<ul class="kt-ul">${lampu.map((x) => `<li>${x.st === "online" ? "🟢" : "⚫"} ${e(x.n)}</li>`).join("")}</ul>` : ""}
     ${KT.pemilik ? `<button class="kt-salin" onclick="ksDzikirPagi()">📿 Dzikir Pagi & Tilawah Sekarang</button>` : ""}</div>`);
 }
 
@@ -239,7 +237,7 @@ function _kjPasang() {
   if (atas && !document.getElementById("kj-tombol")) atas.insertAdjacentHTML("afterbegin", `<button id="kj-tombol" onclick="ktHariIni()" title="Ujian, agenda & lampu meja hari ini">📋<span class="kt-sembunyi-hp"> Hari Ini</span></button>`);
   _kjMuatHariIni().then(_kjGambarPapan); _kjPerbaruiLampu();
   clearInterval(KJ.iv); let n = 0;
-  KJ.iv = setInterval(() => { if (!KT.buka) { clearInterval(KJ.iv); return; } n++; _kjCekDzikir(); if (n % 4 === 0) _kjPerbaruiLampu(); if (n % 10 === 0) _kjMuatHariIni().then(_kjGambarPapan); }, 30000);
+  KJ.iv = setInterval(() => { if (!KT.buka) { clearInterval(KJ.iv); return; } n++; _kjCekDzikir(); _kjPerbaruiLampu(); if (n % 10 === 0) _kjMuatHariIni().then(_kjGambarPapan); }, 30000);
   setTimeout(_kjCekDzikir, 8000);
 }
 (function () {
