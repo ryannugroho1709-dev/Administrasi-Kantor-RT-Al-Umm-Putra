@@ -210,3 +210,23 @@ body.ks-menyeret .ks-puncak{display:block}
   .kt-gelembung { max-width: 170px; font-size: 11px; padding: 6px 9px; }
   .kt-gelembung .kt-g-isi { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 }
+/* v6 — label khusus jabatan */
+.kt-label .jb-ikon { margin-right: 3px; font-size: 10px; }
+.kt-label.jb-yayasan { background: linear-gradient(180deg, #fffbeb, #fde68a); border: 2px solid #b8860b; box-shadow: 0 0 0 2px rgba(255,255,255,.7), 0 4px 14px rgba(184,134,11,.45); padding: 3px 10px 4px; }
+.kt-label.jb-yayasan b { color: #7c5a00; font-size: 11.5px; }
+.kt-label.jb-yayasan small { color: #5b4300 !important; font-size: 9.5px; }
+.kt-label.jb-kepala { background: linear-gradient(180deg, #14532d, #0f3d2e); border: 2px solid #c9a227; box-shadow: 0 4px 14px rgba(15,61,46,.45); padding: 3px 10px 4px; }
+.kt-label.jb-kepala b { color: #fde68a; font-size: 11px; }
+.kt-label.jb-kepala b i { color: #fef3c7; }
+.kt-label.jb-kepala small { color: #ecfdf5 !important; }
+.kt-label.jb-peny { border: 2px solid var(--jr, var(--w)); box-shadow: inset 4px 0 0 var(--jr, var(--w)), 0 3px 10px rgba(15,23,42,.2); }
+.kt-label.jb-peny b { color: var(--jr, var(--w)); }
+.kt-label.jb-admin { background: #eff6ff; border: 2px solid #2563eb; }
+.kt-label.jb-admin b { color: #1d4ed8; }
+.kt-label[data-lampu="sudah"]::after, .kt-label[data-lampu="belum"]::after { content: ""; position: absolute; right: -3px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 2px #fff; }
+.kt-label[data-lampu="belum"]::after { background: #facc15; }
+.kj-ujian { border: 1px solid #e2e8f0; border-radius: 12px; padding: 8px 10px; margin-bottom: 8px; font-size: 12.5px; }
+.kj-ujian > b { display: block; color: #14532d; margin-bottom: 4px; }
+.kj-ujian div { padding: 3px 0; border-top: 1px dashed #e2e8f0; }
+.kj-ujian div span { display: inline-block; min-width: 56px; font-weight: 800; color: #334155; }
+.kj-ujian div small { display: block; color: #64748b; font-size: 11px; }
