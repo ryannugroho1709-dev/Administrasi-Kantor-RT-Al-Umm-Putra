@@ -503,7 +503,7 @@ function _ktPergi(t, tujuan, opsi = {}) {
   });
 }
 function _kdGerak(t, dt, kini) {
-  const u = t.userData;
+  const u = t.userData; if (u.dikendalikan) return; // dikendalikan pengguna (Mode Jalan)
   if (!u.jalur) { if (u.bicara) u.badan.position.y = (u.duduk ? (u.jk === "P" ? -0.3 : -0.28) : 0) + Math.abs(Math.sin(kini / 140)) * 0.03; return; }
   const p = u.jalur[0];
   if (!p) { // tiba
@@ -542,14 +542,16 @@ function _ktJalan() {
   if (Math.abs(KT.zoom - f.zoom) > 0.002) { KT.zoom += (f.zoom - KT.zoom) * a; _ktProyeksi(); }
   const k = KT.kamera, jarak = KT.jarak ?? 34; k.position.set(p.x + Math.sin(KT.sudut) * jarak, KT.tinggi ?? 21, p.z + Math.cos(KT.sudut) * jarak); k.lookAt(p.x, 0.5, p.z);
   Object.values(KT.tokoh).forEach((t) => _kdGerak(t, dt, kini));
-  if (KT.pintu) { const pp = KT.pintuPos || { x: 0, z: -2 }, dekat = Object.values(KT.tokoh).some((t) => Math.hypot(t.position.x - pp.x, t.position.z - pp.z) < 1.9 && t.userData.jalur); const tuju = dekat ? -Math.PI / 2 : 0; KT.pintu.rotation.y += (tuju - KT.pintu.rotation.y) * Math.min(1, dt * 6); }
+  if (KT.pintu) { const pp = KT.pintuPos || { x: 0, z: -2 }, dekat = Object.values(KT.tokoh).some((t) => Math.hypot(t.position.x - pp.x, t.position.z - pp.z) < 1.9 && t.userData.jalur); const tuju = dekat || KT.pintuPaksa ? -Math.PI / 2 : 0; KT.pintu.rotation.y += (tuju - KT.pintu.rotation.y) * Math.min(1, dt * 6); }
   // layar laptop yang "bekerja" berkedip pelan
   Object.values(KT.layar || {}).forEach((l) => { if (l.userData.status === "kerja") l.material.color.setHSL(0.6, 0.9, 0.55 + Math.sin(kini / 300) * 0.08); });
   if (kini - (KT.tvT || 0) > (KT.tv.mode === "rapat" ? 60 : 1000)) { KT.tvT = kini; _kdTvGambar(kini); }
-  KT.renderer.render(KT.scene, k);
+  const kr = (typeof KT.kameraHook === "function" && KT.kameraHook(dt, kini)) || k; // Mode Jalan: kamera di belakang tokoh
+  KT.renderer.render(KT.scene, kr);
   const w = KT.renderer.domElement.clientWidth, h = KT.renderer.domElement.clientHeight, v = new THREE.Vector3();
   Object.entries(KT.tokoh).forEach(([id, t]) => {
-    v.set(t.position.x, 2.1, t.position.z).project(k);
+    v.set(t.position.x, 2.1, t.position.z).project(kr);
+    if (KT.label[id]) KT.label[id].style.visibility = v.z > 1 || Math.abs(v.x) > 1.3 ? "hidden" : "";
     const x = (v.x * 0.5 + 0.5) * w, y = (-v.y * 0.5 + 0.5) * h, lb = KT.label[id], gb = KT.gelembung[id];
     // label tidak bergetar: posisi baru dipakai hanya bila bergeser ≥ 1,5 px (getaran 1 px di layar HP diabaikan)
     if (lb) { if (lb._x == null || Math.abs(x - lb._x) >= 1.5 || Math.abs(y - lb._y) >= 1.5) { lb._x = Math.round(x); lb._y = Math.round(y); } if (!lb._tu || kini - lb._tu > 1000) { lb._tu = kini; lb._ow = lb.offsetWidth; lb._oh = lb.offsetHeight; } lb.style.transform = `translate(${lb._x - Math.round((lb._ow || 0) / 2)}px,${lb._y - (lb._oh || 0)}px)`; } // piksel bulat: tulisan tetap tajam
