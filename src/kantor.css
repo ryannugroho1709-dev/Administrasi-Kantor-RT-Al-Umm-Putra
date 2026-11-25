@@ -251,3 +251,16 @@ body.ks-menyeret .ks-puncak{display:block}
 .kt-nonton-daftar label.dipilih { background: #f0fdf4; border-radius: 8px; }
 .kt-nonton-daftar label.dipilih span { font-weight: 800; color: #14532d; }
 .kh-pesan span { color: #fff !important; }
+/* v9 — papan nama, laporan harian, cuaca */
+#kantor-ai.kt-tanpa-label .kt-hamparan .kt-label { display: none !important; }
+#khr-label.mati { opacity: .55; text-decoration: line-through; }
+#khr-cuaca span { font-size: 12px; font-weight: 800; }
+#kantor-ai.kt-hujan .kt-layar::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(30,41,59,.22), rgba(51,65,85,.12)); z-index: 1; }
+.khr-angka { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 6px 0 4px; }
+.khr-angka span { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 8px 6px; text-align: center; }
+.khr-angka b { display: block; font-size: 17px; color: #14532d; }
+.khr-angka small { font-size: 10.5px; color: #475569; line-height: 1.2; display: block; }
+@media (max-width: 480px) { .khr-angka { grid-template-columns: 1fr 1fr; } }
+.khr-tabel { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.khr-tabel th, .khr-tabel td { padding: 5px 6px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+.khr-tabel th { color: #64748b; font-size: 11px; }
