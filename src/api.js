@@ -1518,17 +1518,33 @@ async function apiAutoTutupPengajuanKadaluarsa() {
 //    absen sama sekali) dianggap Tidak Hadir (alpha) begitu hari sudah berganti — mensimulasikan
 //    "reset jam 00:00" tanpa server yang selalu menyala. Sesi yang sudah lengkap (hadir+jurnal)
 //    atau sudah izin/sakit/alpha tidak disentuh.
+// Tanggal tanpa KBM (libur Kaldik + hari UJIAN: UAS/UTS/Ujian Tahfizh) dalam rentang → Set "YYYY-MM-DD".
+// Pada tanggal ini tidak ada kewajiban absen mengajar maupun jurnal, jadi tidak boleh ada Alpha.
+async function apiTanggalTanpaKbm(dari, sampai) {
+  const hasil = new Set(); if (!dari || !sampai) return hasil;
+  try {
+    const rows = unwrap(await supa.from("kaldik_item").select("judul,jenis,keterangan,tanggal_mulai,tanggal_selesai").lte("tanggal_mulai", sampai)
+      .or(`tanggal_selesai.gte.${dari},and(tanggal_selesai.is.null,tanggal_mulai.gte.${dari})`));
+    const daftar = typeof _kaldikTanpaKbm === "function" ? _kaldikTanpaKbm(rows) : rows.filter((k) => k.jenis === "libur");
+    daftar.forEach((k) => { const d = new Date(k.tanggal_mulai + "T00:00:00"), akhir = new Date((k.tanggal_selesai || k.tanggal_mulai) + "T00:00:00"); for (; d <= akhir; d.setDate(d.getDate() + 1)) hasil.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`); });
+  } catch (e) { console.warn("Kaldik tanpa KBM:", e); }
+  return hasil;
+}
 async function apiAutoAlphakanSesiKadaluarsa() {
   try {
     const hariIni = tanggalISOFallback();
     const kandidat = unwrap(
       await supa
         .from("absensi_sesi")
-        .select("id,jam_masuk,jam_pulang,jurnal_id,status_kehadiran")
+        .select("id,tanggal,jam_masuk,jam_pulang,jurnal_id,status_kehadiran")
         .lt("tanggal", hariIni)
         .or("status_kehadiran.in.(belum_absen,hadir),status_kehadiran.is.null")
     );
+    // hari libur & hari UJIAN (termasuk Ujian Tahfizh) tidak pernah di-Alpha-kan
+    const tgl = kandidat.map((s) => s.tanggal).filter(Boolean).sort();
+    const tanpaKbm = tgl.length ? await apiTanggalTanpaKbm(tgl[0], tgl[tgl.length - 1]) : new Set();
     const idBelumLengkap = kandidat
+      .filter((s) => !tanpaKbm.has(s.tanggal))
       .filter((s) => !(s.jam_masuk && s.jam_pulang && s.jurnal_id))
       .map((s) => s.id);
     if (!idBelumLengkap.length) return [];
@@ -1742,7 +1758,8 @@ async function apiGetAlphaPerluKlarifikasi(guruId, dariTanggal) {
     if (!sesi.length) return [];
     const aju = unwrap(await supa.from("pengajuan_jurnal_terlambat").select("sesi_id").eq("guru_id", guruId).eq("status_verifikasi", "menunggu"));
     const sudah = new Set(aju.map((a) => a.sesi_id));
-    return sesi.filter((s) => !s.hadir_bersyarat && !sudah.has(s.id));
+    const tgl = sesi.map((s) => s.tanggal).sort(), tanpaKbm = await apiTanggalTanpaKbm(tgl[0], tgl[tgl.length - 1]);
+    return sesi.filter((s) => !s.hadir_bersyarat && !sudah.has(s.id) && !tanpaKbm.has(s.tanggal)); // hari ujian/libur: tidak perlu klarifikasi
   } catch (e) {
     throw new Error(_pesanErrorRamah(e) || e.message);
   }
