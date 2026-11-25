@@ -221,12 +221,16 @@ function _kmRapikanLabel() {
     urut.forEach((b) => {
       const [w, h] = L.ukuran[b.id]; let tingkat = 0;
       const tabrak = (y) => kotak.some((k) => Math.abs(k.x - b.x) < (k.w + w) / 2 + 2 && Math.abs(k.y - y) < (k.h + h) / 2);
-      while (tingkat < 2 && tabrak(b.y - tingkat * (h + 2))) tingkat++;
+      // pertahankan tingkat sebelumnya selama masih tidak bertabrakan (label tidak melompat-lompat)
+      const lalu = (L.tingkat || (L.tingkat = {}))[b.id] || 0;
+      if (lalu && !tabrak(b.y - lalu * (h + 2)) && tabrak(b.y)) tingkat = lalu;
+      else while (tingkat < 2 && tabrak(b.y - tingkat * (h + 2))) tingkat++;
+      L.tingkat[b.id] = tingkat;
       L.target[b.id] = tingkat * (h + 2); kotak.push({ x: b.x, y: b.y - L.target[b.id], w, h });
     });
   }
   data.forEach((b) => {
-    const tg = L.target[b.id] || 0, kini2 = L.geser[b.id] || 0, baru = Math.abs(tg - kini2) < 0.5 ? tg : kini2 + (tg - kini2) * 0.18;
+    const tg = L.target[b.id] || 0, kini2 = L.geser[b.id] || 0, baru = Math.abs(tg - kini2) < 1 ? tg : kini2 + (tg - kini2) * 0.25;
     L.geser[b.id] = baru;
     if (baru) b.l.style.transform = `translate(${Math.round(b.x)}px,${Math.round(b.y - baru)}px) translate(-50%,-100%)`;
   });

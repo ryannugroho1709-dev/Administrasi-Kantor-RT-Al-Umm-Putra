@@ -542,15 +542,17 @@ function _ktJalan() {
   Object.entries(KT.tokoh).forEach(([id, t]) => {
     v.set(t.position.x, 2.1, t.position.z).project(k);
     const x = (v.x * 0.5 + 0.5) * w, y = (-v.y * 0.5 + 0.5) * h, lb = KT.label[id], gb = KT.gelembung[id];
-    if (lb) lb.style.transform = `translate(${Math.round(x)}px,${Math.round(y)}px) translate(-50%,-100%)`;
-    if (gb && !gb.hidden) gb.style.transform = `translate(${x}px,${y - 40}px) translate(-50%,-100%)`;
+    // label tidak bergetar: posisi baru dipakai hanya bila bergeser ≥ 1,5 px (getaran 1 px di layar HP diabaikan)
+    if (lb) { if (lb._x == null || Math.abs(x - lb._x) >= 1.5 || Math.abs(y - lb._y) >= 1.5) { lb._x = Math.round(x); lb._y = Math.round(y); } lb.style.transform = `translate(${lb._x}px,${lb._y}px) translate(-50%,-100%)`; }
+    if (gb && !gb.hidden) gb.style.transform = `translate(${lb && lb._x != null ? lb._x : Math.round(x)}px,${(lb && lb._y != null ? lb._y : Math.round(y)) - 40}px) translate(-50%,-100%)`;
   });
 }
 const _ktTunggu = (ms) => new Promise((r) => setTimeout(r, ms));
 function _ktBicara(id, teks, ms = 4200) {
   if (typeof _ktSiar === "function") _ktSiar("bicara", { id, teks, ms });
   const gb = KT.gelembung[id], t = KT.tokoh[id]; if (!gb || !t || !t.visible) return _ktTunggu(0);
-  gb.hidden = false; gb.textContent = teks.length > 160 ? teks.slice(0, 157) + "…" : teks; t.userData.bicara = true;
+  gb.hidden = false; const maks = window.innerWidth <= 900 ? 90 : 160; // di HP gelembung dibuat ringkas (isi lengkap ada di panel rapat)
+  const isi = teks.length > maks ? teks.slice(0, maks - 3) + "…" : teks; gb.innerHTML = `<span class="kt-g-isi">${String(isi).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" })[c])}</span>`; t.userData.bicara = true;
   return _ktTunggu(ms).then(() => { gb.hidden = true; t.userData.bicara = false; });
 }
 

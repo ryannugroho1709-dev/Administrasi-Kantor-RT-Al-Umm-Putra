@@ -133,7 +133,9 @@ async function _ksPerbaruiKehadiran(awal) {
   const yid = (KT.peran.yayasan || [])[0];
   for (const s of KT.staf || []) {
     const t = KT.tokoh[s.id]; if (!t || s.id === yid || s.id === STATE.guruId) continue;
-    if (awal) { if (!hadir.has(s.id)) _ksKeluar(t, s.id); continue; }
+    // jam kerja: semua tetap di mejanya (yang belum masuk akun hari ini labelnya dibuat samar); setelah jam pulang baru yang tidak hadir tidak ada
+    const lb0 = KT.label[s.id]; if (lb0) lb0.classList.toggle("ks-belum", !hadir.has(s.id) && !online.has(s.id));
+    if (awal) { if (!hadir.has(s.id) && lewatPulang) _ksKeluar(t, s.id); continue; }
     if (t.userData.ksDiLuar && hadir.has(s.id) && !lewatPulang) { // datang
       t.userData.ksDiLuar = false; t.visible = true; t.position.set(KS_PINTU.x, 0, KS_PINTU.z); const lb = KT.label[s.id]; if (lb) lb.hidden = false;
       _ktPergi(t, t.userData.meja).then(() => _ktBicara(s.id, "Assalamu'alaikum, bismillah mulai bekerja.", 2400));
