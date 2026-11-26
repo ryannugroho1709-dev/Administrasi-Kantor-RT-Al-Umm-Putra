@@ -61,7 +61,7 @@ window.I18N = {
     menuRaporDiniyyah: "Rapor Diniyyah",
     menuInputNilai: "Input Nilai Rapor",
     menuRapor: "Fitur Rapor (Wali Kelas)",
-    menuSilabus: "CP-ATP (Silabus)",
+    menuSilabus: "Silabus & Prosem",
     menuModulAjar: "Modul Ajar",
     menuUjian: "Ujian Online",
     menuJadwalUjian: "Jadwal Ujian",
