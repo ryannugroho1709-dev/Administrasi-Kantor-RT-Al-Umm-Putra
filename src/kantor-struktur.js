@@ -49,7 +49,7 @@ function ksPilihAtasan(k) {
     ${opsi.map((x) => `<button class="${induk[k] === x ? "ks-dipilih" : ""}" onclick="ksSetAtasan('${k}','${x}')"><span><b>${_ktPeran(x).ikon} ${_ktE(_ktPeran(x).nama)}</b><small>${_ktE((KT.peran[x] || []).map((id) => (KT.staf.find((s) => s.id === id) || {}).nama || "").filter(Boolean).join(", ") || "belum ditetapkan")}</small></span></button>`).join("")}</div>
     <button class="kt-salin" onclick="kmDirektori('struktur')">‹ Kembali</button></div>`);
 }
-async function ksBawaan() { if (!KT.pemilik || !confirm("Kembalikan susunan struktur ke bawaan?")) return; await ksSimpan({ ...KS_BAWAAN }); }
+async function ksBawaan() { if (!KT.pemilik || !(await konfirmasiTema("Kembalikan susunan struktur ke bawaan?"))) return; await ksSimpan({ ...KS_BAWAAN }); }
 
 // ── tekan lama & seret ──
 function _ksMulai(e) {

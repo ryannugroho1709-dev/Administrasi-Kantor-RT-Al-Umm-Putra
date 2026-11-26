@@ -320,7 +320,7 @@ function ujeGeser(j, i, d) { const a = UJE.m.bagian[j].soal, t = i + d; if (t < 
 function ujeGanda(j, i) { const a = UJE.m.bagian[j].soal; a.splice(i + 1, 0, JSON.parse(JSON.stringify(a[i]))); _ujeGambar(); }
 async function ujeHapus(j, i) {
   const s = UJE.m.bagian[j].soal[i];
-  if ((s.t || "").trim() && !confirm(`Hapus soal nomor ${i + 1}?`)) return;
+  if ((s.t || "").trim() && !(await konfirmasiTema(`Hapus soal nomor ${i + 1}?`))) return;
   UJE.m.bagian[j].soal.splice(i, 1); _ujeGambar();
 }
 function ujeUbahBS(i, aktif) {

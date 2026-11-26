@@ -845,8 +845,8 @@ function _mvTambahTanda() {
   MV.meta.tanda.sort((a, b) => a.dari - b.dari);
   _maSimpanMeta(); _mvPanel("tanda");
 }
-function _mvHapusTanda(id) {
-  if (!confirm("Hapus penanda ini?")) return;
+async function _mvHapusTanda(id) {
+  if (!(await konfirmasiTema("Hapus penanda ini?"))) return;
   MV.meta.tanda = (MV.meta.tanda || []).filter((x) => x.id !== id);
   if (MV.tandaAktif && MV.tandaAktif.id === id) MV.tandaAktif = null;
   _maSimpanMeta(); _mvPanel("tanda");

@@ -30,7 +30,7 @@ async function alArsipSimpan() {
   const v = (k) => (document.getElementById("ali-" + k)?.value || "").trim();
   const z = { tp: v("tp"), paket: v("paket"), rg: v("rg"), url: v("url"), judul: v("judul"), t: Date.now(), oleh: STATE.guruNama || "" };
   if (!/^https:\/\//i.test(z.url)) return toast("Tautan harus diawali https://", "err");
-  if (alArsipIjazah().some((a) => a.tp === z.tp && a.paket === z.paket && a.rg === z.rg && !confirm(`Sudah ada berkas Paket ${z.paket} ${_AL_NM_RG[z.rg]} TP ${z.tp}. Tetap tambahkan?`))) return;
+  if (alArsipIjazah().some((a) => a.tp === z.tp && a.paket === z.paket && a.rg === z.rg) && !(await konfirmasiTema(`Sudah ada berkas Paket ${z.paket} ${_AL_NM_RG[z.rg]} TP ${z.tp}. Tetap tambahkan?`, { judul: "Berkas Sudah Ada", teksYa: "Tetap Tambahkan" }))) return;
   const id = "ij" + Date.now().toString(36);
   try {
     await _bspGabungUmum(AL_KUNCI, { _ijazah: { [id]: z } });
@@ -39,7 +39,7 @@ async function alArsipSimpan() {
   } catch (e) { toast("Gagal: " + (e.message || e), "err"); }
 }
 async function alArsipHapus(id) {
-  if (!alBolehUbah() || !confirm("Hapus tautan berkas ini dari arsip? Berkas di Google Drive tidak ikut terhapus.")) return;
+  if (!alBolehUbah() || !(await konfirmasiTema("Hapus tautan berkas ini dari arsip? Berkas di Google Drive tidak ikut terhapus."))) return;
   try { await _bspGabungUmum(AL_KUNCI, { _ijazah: { [id]: null } }); if (AL.data._ijazah) delete AL.data._ijazah[id]; _alSegar(); }
   catch (e) { toast("Gagal: " + (e.message || e), "err"); }
 }

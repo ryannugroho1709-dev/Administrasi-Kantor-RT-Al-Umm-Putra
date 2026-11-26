@@ -19,12 +19,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Amiri:wght@400;700&family=Playfair+Display:wght@600;700;800&display=swap&family=Anton&family=Great+Vibes" rel="stylesheet">
 <!-- Tema elegan + pilihan palet (menu ✨ di topbar). "klasik" = tampilan hijau lama. Dipasang
      sedini mungkin supaya tidak sempat "berkedip" tampilan lain dulu. Disimpan per perangkat. -->
-<link rel="stylesheet" href="src/tema-elegan.css?v=50">
+<link rel="stylesheet" href="src/tema-elegan.css?v=51">
 <link rel="stylesheet" href="src/bosp-rkas.css?v=4">
 <link rel="stylesheet" href="src/kantor.css?v=28">
 <link rel="stylesheet" href="src/silabus-prosem.css?v=5">
 <link rel="stylesheet" href="src/cp-kurikulum.css?v=2">
-<link rel="stylesheet" href="src/buku-klaper.css?v=2">
+<link rel="stylesheet" href="src/buku-klaper.css?v=3">
 <link rel="stylesheet" href="src/sop.css?v=5">
 <link rel="stylesheet" href="src/cari-fitur.css?v=1">
 <link rel="stylesheet" href="src/kosp.css?v=3">
@@ -3188,7 +3188,7 @@ async function testPushNotifikasi() {
 }
 // Nonaktifkan notifikasi — unsubscribe dari push manager dan hapus subscription dari Supabase
 async function nonaktifkanNotifikasi() {
-  if (!confirm("Nonaktifkan notifikasi? Kamu tidak akan menerima pengingat absen lagi sampai diaktifkan kembali.")) return;
+  if (!(await konfirmasiTema("Nonaktifkan notifikasi? Kamu tidak akan menerima pengingat absen lagi sampai diaktifkan kembali."))) return;
   try {
     if ("serviceWorker" in navigator && "PushManager" in window) {
       const reg = await navigator.serviceWorker.ready;
@@ -3810,7 +3810,7 @@ async function bukaKedisiplinan(periode) {
 }
 let _REKAP_DISIPLIN_TEKS = "";
 function _salinRekapDisiplin() {
-  (navigator.clipboard ? navigator.clipboard.writeText(_REKAP_DISIPLIN_TEKS) : Promise.reject()).then(() => toast("Rekap disalin — tempel di grup WA", "ok")).catch(() => prompt("Salin teks berikut:", _REKAP_DISIPLIN_TEKS));
+  (navigator.clipboard ? navigator.clipboard.writeText(_REKAP_DISIPLIN_TEKS) : Promise.reject()).then(() => toast("Rekap disalin — tempel di grup WA", "ok")).catch(() => salinTema("Salin Teks", _REKAP_DISIPLIN_TEKS));
 }
 // Guru menyatakan sesi Alpha memang tidak diajar → tidak ditanyakan lagi (status tetap Alpha)
 async function _konfirmasiTidakHadir(sesiId) {
@@ -6546,7 +6546,7 @@ async function simpanTemplateBaru() {
 }
 
 async function aktivasiTemplate(templateId) {
-  if (!confirm("Aktifkan template ini? Jadwal yang sedang aktif akan dinonaktifkan.\n\nRiwayat absensi lama tetap aman karena tersimpan berdasarkan ID jadwal masing-masing.")) return;
+  if (!(await konfirmasiTema("Aktifkan template ini? Jadwal yang sedang aktif akan dinonaktifkan.\n\nRiwayat absensi lama tetap aman karena tersimpan berdasarkan ID jadwal masing-masing."))) return;
   try {
     // Set semua template jadi tidak aktif
     unwrap(await supa.from("jadwal_template").update({ aktif: false }).not("id", "is", null));
@@ -6719,7 +6719,7 @@ async function simpanCellBuilder(hari, jamMulai, jamSelesai) {
 }
 
 async function hapusCellEntry(jadwalId) {
-  if (!confirm("Hapus baris jadwal ini dari template?")) return;
+  if (!(await konfirmasiTema("Hapus baris jadwal ini dari template?"))) return;
   try {
     unwrap(await supa.from("jadwal_pelajaran").delete().eq("id", jadwalId));
     JB_JADWAL_CACHE = JB_JADWAL_CACHE.filter((j) => j.id !== jadwalId);
@@ -6735,7 +6735,7 @@ async function hapusSlotBuilder(jamMulai, jamSelesai) {
   const msg = entries.length
     ? `Hapus slot jam ${jamMulai?.slice(0,5)}–${jamSelesai?.slice(0,5)} beserta ${entries.length} jadwal di dalamnya?`
     : `Hapus baris kosong slot jam ${jamMulai?.slice(0,5)}–${jamSelesai?.slice(0,5)}?`;
-  if (!confirm(msg)) return;
+  if (!(await konfirmasiTema(msg))) return;
   if (entries.length) {
     try {
       const ids = entries.map((j) => j.id);
@@ -16182,7 +16182,7 @@ async function handleImportSiswa(evt) {
 <script src="src/bop-data.js?v=2"></script>
 <script src="src/kontak-google.js?v=1"></script>
 <script src="src/kuliah.js?v=21"></script>
-<script src="src/modul-baca.js?v=11"></script>
+<script src="src/modul-baca.js?v=12"></script>
 <script src="src/modul-gulir.js?v=1"></script>
 <script src="src/sampul.js?v=1"></script>
 <script src="src/presentasi-absen.js?v=4"></script>
@@ -16194,12 +16194,12 @@ async function handleImportSiswa(evt) {
 <script src="src/kelengkapan-nilai.js?v=2"></script>
 <script src="src/pengumuman.js?v=5"></script>
 <script src="src/pengumuman-isi.js?v=1"></script>
-<script src="src/kesimpulan.js?v=3"></script>
+<script src="src/kesimpulan.js?v=4"></script>
 <script src="src/profil.js?v=7"></script>
-<script src="src/kaldik-desain.js?v=6"></script>
+<script src="src/kaldik-desain.js?v=7"></script>
 <script src="src/nilai-uraian.js?v=1"></script>
 <script src="src/ujian.js?v=23"></script>
-<script src="src/ujian-editor.js?v=17"></script>
+<script src="src/ujian-editor.js?v=18"></script>
 <script src="src/jurnal-otomatis.js?v=6"></script>
 <script src="src/hp.js?v=8"></script>
 <script src="src/leger-nilai.js?v=5"></script>
@@ -16225,8 +16225,8 @@ async function handleImportSiswa(evt) {
 <script src="src/siswa-tampil.js?v=4"></script>
 <script src="src/pengelola.js?v=4"></script>
 <script src="src/bosp-data.js?v=2"></script>
-<script src="src/bosp.js?v=12"></script>
-<script src="src/bosp-plus.js?v=1"></script>
+<script src="src/bosp.js?v=13"></script>
+<script src="src/bosp-plus.js?v=2"></script>
 <script src="src/rapi-tampil.js?v=2"></script>
 <script src="src/wajib-profil.js?v=2"></script>
 <script src="src/beranda.js?v=4"></script>
@@ -16244,7 +16244,7 @@ async function handleImportSiswa(evt) {
 <script src="src/kantor-rapi.js?v=1"></script>
 <script src="src/kantor-mewah.js?v=8"></script>
 <script src="src/kantor-istirahat.js?v=4"></script>
-<script src="src/kantor-struktur.js?v=1"></script>
+<script src="src/kantor-struktur.js?v=2"></script>
 <script src="src/kantor-kebersihan.js?v=2"></script>
 <script src="src/kantor-suasana.js?v=5"></script>
 <script src="src/kantor-jabatan.js?v=3"></script>
@@ -16258,13 +16258,14 @@ async function handleImportSiswa(evt) {
 <script src="src/atp-kelas.js?v=1"></script>
 <script src="src/cari-halaman.js?v=1"></script>
 <script src="src/cp-kurikulum.js?v=3"></script>
+<script src="src/dialog-tema.js?v=1"></script>
 <script src="src/cari-fitur.js?v=2"></script>
 <script src="src/sop-data.js?v=1"></script>
-<script src="src/sop.js?v=2"></script>
+<script src="src/sop.js?v=3"></script>
 <script src="src/kosp.js?v=3"></script>
-<script src="src/alumni.js?v=4"></script>
-<script src="src/alumni-ijazah.js?v=1"></script>
-<script src="src/buku-induk.js?v=2"></script>
+<script src="src/alumni.js?v=5"></script>
+<script src="src/alumni-ijazah.js?v=2"></script>
+<script src="src/buku-induk.js?v=4"></script>
 <script src="src/bosp-rkas-real.js?v=2"></script>
 <script src="src/akun-data.js?v=1"></script>
 </body>

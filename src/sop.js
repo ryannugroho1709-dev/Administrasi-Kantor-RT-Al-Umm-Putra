@@ -203,7 +203,7 @@ async function sopCentang(key, i, el) {
 }
 async function sopCatatan(key, i) {
   const f = (sopJab(key.split("@")[0]).rutin[i] || [])[0], per = sopPeriode(f), k = _sopKunciCek(STATE.guruId, key, per, i), c = SOP.ceklis[k]; if (!c) return;
-  const cat = prompt("Catatan singkat (misal: laporan sudah dikirim ke grup WA):", c.cat || ""); if (cat === null) return;
+  const cat = (await promptTema("Catatan singkat (misal: laporan sudah dikirim ke grup WA):", c.cat || "")); if (cat === null) return;
   const baru = { ...c, cat: cat.trim().slice(0, 200) };
   try { await _bspGabungUmum(`bosp:sop:ceklis:${_sopEmber(per)}:${STATE.guruId}`, { [k]: baru }); SOP.ceklis[k] = baru; _sopRender(); } catch (e) { toast("Gagal menyimpan catatan: " + (e.message || e), "err"); }
 }
@@ -251,7 +251,7 @@ async function sopSimpanUbah(kode) {
   catch (e) { toast("Gagal menyimpan: " + (e.message || e), "err"); }
 }
 async function sopKembalikan(kode) {
-  if (!confirm("Kembalikan SOP ini ke isi bawaan?")) return;
+  if (!(await konfirmasiTema("Kembalikan SOP ini ke isi bawaan?"))) return;
   try { await _bspGabungUmum("bosp:sop:induk", { [kode]: null }); delete SOP.induk[kode]; toast("Dikembalikan ke bawaan", "ok"); sopBuka("sop"); } catch (e) { toast("Gagal: " + (e.message || e), "err"); }
 }
 

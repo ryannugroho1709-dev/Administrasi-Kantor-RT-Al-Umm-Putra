@@ -174,7 +174,7 @@ function _kbTeks() {
 }
 function _kbSalin() {
   const t = _kbTeks();
-  (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast("Kesimpulan disalin — tempel di grup WA", "ok")).catch(() => prompt("Salin teks berikut:", t));
+  (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast("Kesimpulan disalin — tempel di grup WA", "ok")).catch(() => salinTema("Salin Teks", t));
 }
 function _kbCetak() {
   const isi = qs("kb-wrap"); if (!isi) return;

@@ -247,7 +247,7 @@ async function _kdSimpanDaftarTemplate() {
 }
 async function _kdSimpanTemplate() {
   if (!_KD_DRAFT || !_KD_DRAFT.tema || _KD_DRAFT.tema === "asli") { toast("Pilih tema dulu (selain Bawaan Aplikasi) sebelum menyimpan template", "err"); return; }
-  const nama = (prompt("Nama template:", "Desain " + (_kdSemester() === "genap" ? "Genap" : "Ganjil") + " " + new Date().getFullYear()) || "").trim();
+  const nama = ((await promptTema("Nama template:", "Desain " + (_kdSemester() === "genap" ? "Genap" : "Ganjil") + " " + new Date().getFullYear())) || "").trim();
   if (!nama) return;
   try {
     _KD_TEMPLATE.unshift({ id: Date.now().toString(36), nama, d: JSON.parse(JSON.stringify(_KD_DRAFT)), t: Date.now() });
@@ -366,10 +366,10 @@ function _kdTerapPipet() {
 }
 function _kdSalinKode() {
   const kode = "KALDIK1:" + btoa(unescape(encodeURIComponent(JSON.stringify(_KD_DRAFT))));
-  (navigator.clipboard ? navigator.clipboard.writeText(kode) : Promise.reject()).then(() => toast("Kode desain disalin — tempel di perangkat lain lewat 📥 Tempel kode", "ok")).catch(() => prompt("Salin kode desain berikut:", kode));
+  (navigator.clipboard ? navigator.clipboard.writeText(kode) : Promise.reject()).then(() => toast("Kode desain disalin — tempel di perangkat lain lewat 📥 Tempel kode", "ok")).catch(() => salinTema("Salin Teks", kode));
 }
-function _kdTempelKode() {
-  const kode = (prompt("Tempel kode desain (diawali KALDIK1:)") || "").trim(); if (!kode) return;
+async function _kdTempelKode() {
+  const kode = ((await promptTema("Tempel kode desain (diawali KALDIK1:)")) || "").trim(); if (!kode) return;
   try {
     if (!kode.startsWith("KALDIK1:")) throw new Error("format");
     const d = JSON.parse(decodeURIComponent(escape(atob(kode.slice(8)))));

@@ -133,21 +133,21 @@ async function alSimpan(id) {
   if (!x.nama) return toast("Nama wajib diisi", "err");
   if (x.url_ijazah && !/^https:\/\//i.test(x.url_ijazah)) return toast("Tautan e-Ijazah harus diawali https://", "err");
   const ganda = _alDaftar().find((y) => y.id !== id && ((x.nik && _alDigit(y.nik) === x.nik) || (x.nisn && _alDigit(y.nisn) === x.nisn)));
-  if (ganda && !confirm(`NIK/NISN ini sudah dipakai oleh ${ganda.nama}. Tetap simpan?`)) return;
-  const c = alCekNik(x); if (c.length && !confirm("Perlu dicek:\n• " + c.join("\n• ") + "\n\nTetap simpan?")) return;
+  if (ganda && !(await konfirmasiTema(`NIK/NISN ini sudah dipakai oleh ${ganda.nama}. Tetap simpan?`))) return;
+  const c = alCekNik(x); if (c.length && !(await konfirmasiTema("Perlu dicek:\n• " + c.join("\n• ") + "\n\nTetap simpan?"))) return;
   const kunci = id || "al" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   try { await _bspGabungUmum(AL_KUNCI, { [kunci]: x }); AL.data[kunci] = x; toast("Data alumni tersimpan", "ok"); if (typeof _rgLog === "function") _rgLog("simpan-alumni", { nama: x.nama }); alBuka(); }
   catch (e) { toast("Gagal menyimpan: " + (e.message || e), "err"); }
 }
 async function alHapus(id) {
-  const x = AL.data[id]; if (!x || !confirm(`Hapus ${x.nama} dari daftar alumni?`)) return;
+  const x = AL.data[id]; if (!x || !(await konfirmasiTema(`Hapus ${x.nama} dari daftar alumni?`))) return;
   try { await _bspGabungUmum(AL_KUNCI, { [id]: null }); delete AL.data[id]; toast("Dihapus", "ok"); if (typeof _rgLog === "function") _rgLog("hapus-alumni", { nama: x.nama, nik: x.nik }); alBuka(); }
   catch (e) { toast("Gagal: " + (e.message || e), "err"); }
 }
 
 async function alAturFolder() {
   const lama = ((AL.data || {})._folder || {}).url || "";
-  const url = prompt("Tempel tautan folder Google Drive berisi e-Ijazah dari Dinas:", lama); if (url === null) return;
+  const url = (await promptTema("Tempel tautan folder Google Drive berisi e-Ijazah dari Dinas:", lama)); if (url === null) return;
   const v = url.trim(); if (v && !/^https:\/\//i.test(v)) return toast("Tautan harus diawali https://", "err");
   try { const isi = v ? { url: v, t: Date.now(), oleh: STATE.guruNama || "" } : null; await _bspGabungUmum(AL_KUNCI, { _folder: isi }); if (isi) AL.data._folder = isi; else delete AL.data._folder; toast(v ? "Folder e-Ijazah tersimpan" : "Tautan folder dihapus", "ok"); _alSegar(); }
   catch (e) { toast("Gagal: " + (e.message || e), "err"); }
@@ -183,7 +183,7 @@ async function alImpor(el) {
     });
     const n = Object.keys(potong).length;
     if (!n) return toast("Tidak ada baris yang bisa dibaca", "err");
-    if (!confirm(`Impor ${f.name}:\n• ${baru} alumni baru\n• ${ubah} alumni diperbarui (cocok NIK/NISN)\n${lewat ? `• ${lewat} baris dilewati (tanpa nama)\n` : ""}\nKolom dikenali: ${Object.entries(peta).map(([h, k]) => `${h}→${k}`).join(", ")}\n\nLanjutkan?`)) return;
+    if (!(await konfirmasiTema(`Impor ${f.name}:\n• ${baru} alumni baru\n• ${ubah} alumni diperbarui (cocok NIK/NISN)\n${lewat ? `• ${lewat} baris dilewati (tanpa nama)\n` : ""}\nKolom dikenali: ${Object.entries(peta).map(([h, k]) => `${h}→${k}`).join(", ")}\n\nLanjutkan?`))) return;
     await _bspGabungUmum(AL_KUNCI, potong); Object.assign(AL.data, potong);
     if (typeof _rgLog === "function") _rgLog("impor-alumni", { berkas: f.name, baru, ubah });
     toast(`${baru} alumni baru, ${ubah} diperbarui`, "ok"); _alSegar();

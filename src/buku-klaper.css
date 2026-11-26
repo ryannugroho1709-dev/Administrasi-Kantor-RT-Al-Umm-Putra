@@ -58,3 +58,36 @@
   .bk2-hero h2 { font-size: 20px; } .bk2-jml { margin-left: 0; }
 }
 @media (prefers-color-scheme: dark) { .bk2-mono { color: #cbd5e1; } .bk2-st.mutasi, .bk2-baris.k-mutasi .bk2-av { background: #334155; color: #cbd5e1; } }
+/* 📘 Tabel Buku Induk & Klaper — kolom tetap, sejajar, nama utuh */
+.bi2-wadah { background: var(--bg-card, #fff); border: 1px solid rgba(148, 163, 184, .28); border-radius: 18px; overflow-x: auto; }
+.bi2-wadah.tipis { border: 0; border-radius: 0; background: transparent; }
+.bi2-tabel { width: 100%; min-width: 760px; border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: 13px; }
+.bi2-tabel th { position: sticky; top: 0; z-index: 1; background: color-mix(in srgb, var(--bk) 8%, var(--bg-card, #fff)); color: color-mix(in srgb, var(--bk) 70%, #1f2937); font-size: 10.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; text-align: left; padding: 10px 10px; border-bottom: 2px solid color-mix(in srgb, var(--bk) 30%, transparent); white-space: nowrap; }
+.bi2-tabel td { padding: 9px 10px; vertical-align: middle; text-align: left; border-bottom: 1px solid rgba(148, 163, 184, .2); line-height: 1.35; }
+.bi2-tabel th.c, .bi2-tabel td.c { text-align: center; }
+.bi2-tabel tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--bk) 3%, transparent); }
+.bi2-tabel tbody tr:hover td { background: color-mix(in srgb, var(--bk) 8%, transparent); }
+.bi2-tabel tr.klik { cursor: pointer; }
+.bi2-tabel tr.k-mutasi td, .bi2-tabel tr.k-lulus td { color: #64748b; }
+.bi2-tabel td.nama { white-space: normal; overflow-wrap: anywhere; }
+.bi2-tabel td.nama b { font-weight: 700; color: var(--text-primary, #1f2937); }
+.bi2-tabel td.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; letter-spacing: .02em; white-space: nowrap; }
+.bi2-tabel td.redup { color: #94a3b8; font-size: 12px; }
+.bi2-nm { display: flex; align-items: center; gap: 10px; }
+.bi2-nm b { min-width: 0; }
+.bi2-ganda { display: block; width: fit-content; margin-top: 2px; font-style: normal; font-size: 10px; font-weight: 800; color: #b91c1c; background: #fee2e2; border-radius: 6px; padding: 0 6px; }
+.bi2-rg { font-style: normal; font-size: 11px; font-weight: 800; color: var(--rw); background: color-mix(in srgb, var(--rw) 12%, transparent); border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+.bi2-lengkap { display: flex; align-items: center; gap: 8px; }
+.bi2-lengkap i { flex: 1; height: 7px; border-radius: 999px; background: #e2e8f0; overflow: hidden; } .bi2-lengkap s { display: block; height: 100%; border-radius: 999px; text-decoration: none; }
+.bi2-lengkap small { font-size: 11.5px; font-weight: 700; color: #475569; min-width: 34px; text-align: right; }
+.bi2-buka { border: 1px solid color-mix(in srgb, var(--bk) 45%, transparent); background: transparent; color: var(--bk); border-radius: 9px; padding: 5px 12px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.bi2-buka:hover { background: var(--bk); color: #fff; }
+.bi2-ringkas { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.bi2-kotak { padding: 12px 14px; border-radius: 16px; background: var(--bg-card, #fff); border: 1px solid rgba(148, 163, 184, .28); border-left: 4px solid #16a34a; display: grid; gap: 3px; }
+.bi2-kotak.kuning { border-left-color: #d97706; } .bi2-kotak.merah { border-left-color: #dc2626; }
+.bi2-kotak span { font-size: 11.5px; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .04em; }
+.bi2-kotak b { font-size: 24px; } .bi2-kotak b small { font-size: 13px; color: var(--text-secondary); font-weight: 600; }
+.bi2-kotak > small { font-size: 11.5px; color: var(--text-secondary); }
+.bi2-bar { height: 6px; border-radius: 999px; background: #e2e8f0; overflow: hidden; } .bi2-bar s { display: block; height: 100%; background: #16a34a; text-decoration: none; }
+.bk2-grup .bi2-tabel th { position: static; }
+@media (prefers-color-scheme: dark) { .bi2-tabel td.nama b { color: #f1f5f9; } .bi2-lengkap i, .bi2-bar { background: #334155; } }

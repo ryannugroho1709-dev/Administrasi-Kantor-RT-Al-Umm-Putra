@@ -308,8 +308,8 @@ function _bspDaftarRek(q) {
   el.innerHTML = urut.map((i) => BSP_REK[i]).filter((r) => !s || r.nama.toLowerCase().includes(s)).map((r) => { const j = BSP_JENIS[r.jenis]; return `<button class="bsp-opsi" onclick="_bspPilihRek(${BSP_REK.indexOf(r)})"><span class="bsp-jenis-chip" style="--jw:${j[1]}">${j[0]}</span><span><b>${_bspE(r.nama)}</b>${r.kode ? `<small>${r.kode}</small>` : ""}</span></button>`; }).join("")
     + `<button class="bsp-opsi" onclick="_bspRekLain()"><span class="bsp-jenis-chip" style="--jw:#94a3b8">Lainnya</span><span><b>Rekening lain (ketik sendiri)</b><small>Kode lengkapnya diisi Bendahara</small></span></button>`;
 }
-function _bspRekLain() {
-  const nama = prompt("Nama rekening belanja (sesuai ARKAS):"); if (!nama) return;
+async function _bspRekLain() {
+  const nama = (await promptTema("Nama rekening belanja (sesuai ARKAS):")); if (!nama) return;
   const jenis = /modal/i.test(nama) ? "modal" : /tenaga pendidik|honor/i.test(nama) ? "pegawai" : "barang";
   BSP.draf.rek = nama.trim(); BSP.draf.jenis = jenis; bspIsiDetail(null);
 }
@@ -715,7 +715,7 @@ async function bspSimpanPengelola() {
 }
 async function bspHapusPengelola(id) {
   const p = _bspPengelola().find((x) => x.id === id); if (!p) return;
-  if (!confirm(`Hapus honor ${p.jabatan} — ${p.nama}?`)) return;
+  if (!(await konfirmasiTema(`Hapus honor ${p.jabatan} — ${p.nama}?`))) return;
   try { BSP.umum = await _bspGabungUmum(_bspKunciUmum(BSP.th), { pengelola: { [id]: { dihapus: true, t: Date.now(), oleh: STATE.guruNama || "" } } }); toast("Dihapus", "ok"); bspKelolaPengelola(); _bspGambarGab(); }
   catch (e) { toast("Gagal: " + e.message, "err"); }
 }
@@ -732,7 +732,7 @@ async function bspSimpanKodeRek(ruang, id, kode) {
 }
 async function bspPutuskan(ruang, status) {
   let catatan = "";
-  if (status === "dikembalikan") { catatan = prompt(`Catatan untuk ${_bspNamaRuang(ruang)} (apa yang perlu diperbaiki?):`) || ""; if (!catatan.trim()) { toast("Tulis catatan perbaikannya", "warn"); return; } }
+  if (status === "dikembalikan") { catatan = (await promptTema(`Catatan untuk ${_bspNamaRuang(ruang)} (apa yang perlu diperbaiki?):`)) || ""; if (!catatan.trim()) { toast("Tulis catatan perbaikannya", "warn"); return; } }
   else if (!(await konfirmasiTema(`Sahkan Kertas Kerja ${_bspNamaRuang(ruang)} ${BSP.th}? Usulan ruang terkunci.`, { judul: "Sahkan Usulan", ikon: "✅", teksYa: "Ya, Sahkan" }))) return;
   try {
     BSP.umum = await _bspGabungUmum(_bspKunciUmum(BSP.th), { keputusan: { [ruang]: { status, catatan: catatan.trim(), oleh: STATE.guruNama || "", t: Date.now() } } });

@@ -322,7 +322,7 @@ async function bspImporSSH(input) {
     if (!n) throw new Error("Tidak ada baris harga yang terbaca.");
     const ganti = await konfirmasiTema(`${n} barang/jasa terbaca dari "${f.name}". Ganti seluruh Data SSH lama dengan data ini? (Pilih Batal untuk membatalkan.)`, { judul: "Impor Data SSH", ikon: "⬆", teksYa: "Ya, Ganti Semua" });
     if (!ganti) return;
-    const tahun = prompt("Tahun berlaku SSH ini:", String(_bspTahunAwal())) || "";
+    const tahun = (await promptTema("Tahun berlaku SSH ini:", String(_bspTahunAwal()))) || "";
     await _bspGabungUmum("bosp:ssh", { items: null });
     BSP.ssh = await _bspGabungUmum("bosp:ssh", { items, tahun, sumber: f.name, oleh: STATE.guruNama || "", t: Date.now() });
     toast(`${n} data SSH tersimpan`, "ok"); _bspGambarSSH();
@@ -347,7 +347,7 @@ async function bspSimpanSSH(id) {
   catch (e) { toast("Gagal: " + e.message, "err"); }
 }
 async function bspHapusSSH(id) {
-  if (!confirm("Hapus data SSH ini?")) return;
+  if (!(await konfirmasiTema("Hapus data SSH ini?"))) return;
   try { BSP.ssh = await _bspGabungUmum("bosp:ssh", { items: { [id]: { dihapus: true } } }); _bspGambarSSH(); } catch (e) { toast("Gagal: " + e.message, "err"); }
 }
 

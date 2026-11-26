@@ -12,7 +12,7 @@ const BI = { siswa: null, kelas: [], tambah: {}, guru: null, t: 0, f: { rg: "Pa"
 const _biE = (s) => escapeHtml(s == null ? "" : String(s));
 const _biTgl = (d) => (d ? new Date(d + (String(d).length === 10 ? "T00:00:00" : "")).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "");
 const BI_RG = ["A", "Pa", "Pi"];
-const _biNamaRg = (r) => ({ A: "Paket A", Pa: "Paket B & C Putra", Pi: "Paket B & C Putri" }[r] || r);
+const _biNamaRg = (r) => ({ A: "Paket A", Pa: "Paket B & C Putra", Pi: "Paket B & C Putri", semua: "Semua Jenjang" }[r] || r);
 const biBolehUbah = () => (typeof isAdmin === "function" && isAdmin()) || (typeof rgAkses === "function" && rgAkses("Pg") === "U");
 
 async function biMuat(paksa) {
@@ -46,11 +46,13 @@ const BI_WAJIB = [["nis", "No. Induk"], ["nisn", "NISN"], ["nik", "NIK"], ["temp
 function biKurang(x) { const t = BI.tambah[x.id] || {}; return BI_WAJIB.filter(([k]) => { if (k === "t:jk") return !biJk(x); return k.startsWith("t:") ? !t[k.slice(2)] : !x[k]; }).map(([, n]) => n); }
 function _biSaring(f) {
   const q = (f.cari || "").toLowerCase().trim();
-  return (BI.siswa || []).filter((x) => x.ruang_id === f.rg && (f.status === "semua" || biKeadaan(x).kode === f.status || (f.status === "keluar" && biKeadaan(x).kode !== "aktif"))
+  return (BI.siswa || []).filter((x) => (f.rg === "semua" || x.ruang_id === f.rg) && (f.status === "semua" || biKeadaan(x).kode === f.status || (f.status === "keluar" && biKeadaan(x).kode !== "aktif"))
     && (!q || [x.nama, x.nis, x.nisn, x.nik].some((v) => String(v || "").toLowerCase().includes(q))));
 }
-const _biUrutInduk = (a, b) => String(a.nis || "~").localeCompare(String(b.nis || "~"), "id", { numeric: true }) || a.nama.localeCompare(b.nama, "id");
-const _biTabRg = (aktif, fn) => `<div class="rg-tab">${BI_RG.map((r) => `<button class="${aktif === r ? "aktif" : ""}" onclick="${fn}('${r}')">${_biE(_biNamaRg(r))}</button>`).join("")}</div>`;
+const _biUrutInduk = (a, b) => (BI_RG.indexOf(a.ruang_id) - BI_RG.indexOf(b.ruang_id)) * (BI.f.rg === "semua" ? 1 : 0) || String(a.nis || "~").localeCompare(String(b.nis || "~"), "id", { numeric: true }) || a.nama.localeCompare(b.nama, "id");
+const BI_WARNA_RG = { A: "#047857", Pa: "#1d4ed8", Pi: "#be185d", semua: "#8a5523" };
+const _biTabRg = (aktif, fn) => `<div class="bk2-jenjang">${["semua", ...BI_RG].map((r) => `<button class="${aktif === r ? "on" : ""}" style="--rw:${BI_WARNA_RG[r]}" onclick="${fn}('${r}')">${r === "semua" ? "🏫 " : ""}${_biE(_biNamaRg(r))}<small>${(BI.siswa || []).filter((x) => r === "semua" || x.ruang_id === r).length} santri</small></button>`).join("")}</div>`;
+const _biPillRg = (r) => `<em class="bi2-rg" style="--rw:${BI_WARNA_RG[r] || "#64748b"}">${_biE({ A: "Paket A", Pa: "Putra", Pi: "Putri" }[r] || r)}</em>`;
 
 // ── BUKU INDUK ──
 async function biBukaInduk(muatUlang) {
@@ -65,29 +67,33 @@ function _biSegar(id, fn, fokus) {
   if (fokus) { const i = w.querySelector(".bi-cari"); if (i) { i.focus(); try { i.setSelectionRange(pos, pos); } catch (e) {} } }
 }
 function _biHtmlInduk() {
-  const f = BI.f, d = _biSaring(f).sort(_biUrutInduk), semua = (BI.siswa || []).filter((x) => x.ruang_id === f.rg);
-  const nisGanda = new Set(), lihat = {}; semua.forEach((x) => { if (!x.nis) return; if (lihat[x.nis]) nisGanda.add(x.nis); lihat[x.nis] = 1; });
-  const lengkap = semua.filter((x) => !biKurang(x).length).length;
-  return `${_biTabRg(f.rg, "biRgInduk")}
-    <div class="pg-kartu-baris al-kartu">
-      <div class="pg-angka total"><span>Tercatat di Buku Induk</span><b>${semua.length}</b><small>aktif ${semua.filter((x) => biKeadaan(x).kode === "aktif").length} · lulus ${semua.filter((x) => biKeadaan(x).kode === "lulus").length} · keluar ${semua.filter((x) => biKeadaan(x).kode === "mutasi").length}</small></div>
-      <div class="pg-angka"><span>Data Lengkap</span><b>${lengkap}</b><small>${semua.length ? Math.round((lengkap / semua.length) * 100) : 0}% isian wajib terisi</small></div>
-      <div class="pg-angka" ${semua.filter((x) => !x.nis).length ? 'style="--rw:#d97706"' : ""}><span>Belum Ada No. Induk</span><b>${semua.filter((x) => !x.nis).length}</b><small>isi NIS di Data Siswa</small></div>
-      <div class="pg-angka" ${nisGanda.size ? 'style="--rw:#dc2626"' : ""}><span>No. Induk Ganda</span><b>${nisGanda.size}</b><small>satu nomor dipakai dua santri</small></div>
+  const f = BI.f, d = _biSaring(f).sort(_biUrutInduk), semua = (BI.siswa || []).filter((x) => f.rg === "semua" || x.ruang_id === f.rg), gabung = f.rg === "semua";
+  const nisGanda = new Set(), lihat = {}; semua.forEach((x) => { if (!x.nis) return; const k = x.ruang_id + "|" + x.nis; if (lihat[k]) nisGanda.add(k); lihat[k] = 1; });
+  const lengkap = semua.filter((x) => !biKurang(x).length).length, tanpaNis = semua.filter((x) => !x.nis).length;
+  const hit = (kode) => semua.filter((x) => biKeadaan(x).kode === kode).length;
+  return `<div class="bk2" style="--bk:${BI_WARNA_RG[f.rg] || "#8a5523"}">
+    <div class="bk2-hero"><div><small>📘 BUKU INDUK PESERTA DIDIK</small><h2>${_biE(_biNamaRg(f.rg))}</h2><p>Catatan resmi seluruh peserta didik — aktif, lulus, dan keluar — beserta kelengkapan isian wajib Buku Induk.</p></div>
+      <div class="bk2-angka"><div><b>${semua.length}</b><span>Tercatat</span></div><div><b>${hit("aktif")}</b><span>Aktif</span></div><div><b>${hit("lulus")}</b><span>Lulus</span></div><div><b>${hit("mutasi")}</b><span>Keluar</span></div></div></div>
+    ${_biTabRg(f.rg, "biRgInduk")}
+    <div class="bi2-ringkas">
+      <div class="bi2-kotak"><span>Data Lengkap</span><b>${lengkap}<small>/${semua.length}</small></b><i class="bi2-bar"><s style="width:${semua.length ? Math.round((lengkap / semua.length) * 100) : 0}%"></s></i><small>${semua.length ? Math.round((lengkap / semua.length) * 100) : 0}% isian wajib terisi</small></div>
+      <div class="bi2-kotak ${tanpaNis ? "kuning" : ""}"><span>Belum Ada No. Induk</span><b>${tanpaNis}</b><small>isi NIS di Data Siswa jenjangnya</small></div>
+      <div class="bi2-kotak ${nisGanda.size ? "merah" : ""}"><span>No. Induk Ganda</span><b>${nisGanda.size}</b><small>satu nomor dipakai dua santri</small></div>
     </div>
-    <div class="card pg-alat">
-      <input class="input bi-cari" placeholder="Cari nama, No. Induk, NISN, NIK…" value="${_biE(f.cari)}" oninput="BI.f.cari=this.value;_biSegar('bi-wrap',_biHtmlInduk,true)">
-      <div class="ua-saring">${[["aktif", "Aktif"], ["lulus", "Lulus"], ["mutasi", "Keluar/Mutasi"], ["semua", "Semua"]].map(([k, n]) => `<button class="ua-saring-b ${f.status === k ? "aktif" : ""}" onclick="BI.f.status='${k}';_biSegar('bi-wrap',_biHtmlInduk)">${n}</button>`).join("")}</div>
-      <span class="pg-jml">${d.length} santri</span>
-      <button class="btn btn-accent" onclick="biUnduhInduk()">Unduh Excel</button>
-    </div>
-    <div class="card" style="overflow-x:auto"><table class="table pg-tabel"><thead><tr><th>No. Induk</th><th>NISN</th><th>Nama</th><th>L/P</th><th>Tempat, Tgl Lahir</th><th>Masuk</th><th>Keadaan</th><th>Kelengkapan</th><th></th></tr></thead><tbody>
-    ${d.map((x) => { const k = biKeadaan(x), kurang = biKurang(x), p = Math.round(((BI_WAJIB.length - kurang.length) / BI_WAJIB.length) * 100);
-      return `<tr><td class="al-mono"><b>${_biE(x.nis || "—")}</b>${nisGanda.has(x.nis) ? '<div class="al-peringatan">ganda</div>' : ""}</td><td class="al-mono">${_biE(x.nisn || "—")}</td><td><b>${_biE(x.nama)}</b></td><td>${_biE(biJk(x) || "—")}</td>
-        <td>${_biE([x.tempat_lahir, _biTgl(x.tanggal_lahir)].filter(Boolean).join(", ") || "—")}</td><td>${_biE(biTahunMasuk(x) || "—")}</td><td><span class="bi-keadaan bi-k-${k.kode}">${_biE(k.teks)}</span></td>
-        <td><div class="bi-lengkap" title="${_biE(kurang.length ? "Belum: " + kurang.join(", ") : "Lengkap")}"><i style="width:${p}%;background:${p === 100 ? "#16a34a" : p >= 70 ? "#d97706" : "#dc2626"}"></i></div><small>${p}%</small></td>
-        <td><button class="btn btn-sm btn-secondary" onclick="biLembar('${x.id}')">Buka</button></td></tr>`; }).join("") || `<tr><td colspan="9" class="empty-state">Tidak ada data.</td></tr>`}
-    </tbody></table></div>`;
+    <div class="bk2-alat">
+      <div class="bk2-cari">🔎<input class="bi-cari" placeholder="Cari nama, No. Induk, NISN, NIK…" value="${_biE(f.cari)}" oninput="BI.f.cari=this.value;_biSegar('bi-wrap',_biHtmlInduk,true)"></div>
+      <div class="bk2-chip">${[["aktif", "🟢 Aktif"], ["lulus", "🎓 Lulus"], ["mutasi", "↪️ Keluar/Mutasi"], ["semua", "Semua"]].map(([k, n]) => `<button class="${f.status === k ? "on" : ""}" onclick="BI.f.status='${k}';_biSegar('bi-wrap',_biHtmlInduk)">${n}</button>`).join("")}</div>
+      <span class="bk2-jml">${d.length} santri</span>
+      <button class="bk2-btn utama" onclick="biUnduhInduk()">⬇️ Unduh Excel${gabung ? " (Semua Jenjang)" : ""}</button></div>
+    <div class="bi2-wadah"><table class="bi2-tabel" style="min-width:${gabung ? 1290 : 1200}px"><colgroup><col style="width:44px"><col style="width:92px"><col style="width:118px"><col>${gabung ? '<col style="width:92px">' : ""}<col style="width:52px"><col style="width:190px"><col style="width:70px"><col style="width:150px"><col style="width:128px"><col style="width:76px"></colgroup>
+      <thead><tr><th class="c">No</th><th>No. Induk</th><th>NISN</th><th>Nama Lengkap</th>${gabung ? "<th>Jenjang</th>" : ""}<th class="c">L/P</th><th>Tempat, Tanggal Lahir</th><th class="c">Masuk</th><th>Keadaan</th><th>Kelengkapan</th><th></th></tr></thead><tbody>
+    ${d.map((x, i) => { const k = biKeadaan(x), kurang = biKurang(x), p = Math.round(((BI_WAJIB.length - kurang.length) / BI_WAJIB.length) * 100), jk = biJk(x);
+      return `<tr class="k-${k.kode}"><td class="c redup">${i + 1}</td><td class="mono"><b>${_biE(x.nis || "—")}</b>${nisGanda.has(x.ruang_id + "|" + x.nis) ? '<em class="bi2-ganda">ganda</em>' : ""}</td><td class="mono">${_biE(x.nisn || "—")}</td>
+        <td class="nama"><b>${_biE(x.nama)}</b></td>${gabung ? `<td>${_biPillRg(x.ruang_id)}</td>` : ""}<td class="c"><em class="bk2-jk ${jk === "P" ? "p" : "l"}">${_biE(jk || "—")}</em></td>
+        <td>${_biE([x.tempat_lahir, _biTgl(x.tanggal_lahir)].filter(Boolean).join(", ") || "—")}</td><td class="c">${_biE(biTahunMasuk(x) || "—")}</td><td><em class="bk2-st ${k.kode}">${_biE(k.teks)}</em></td>
+        <td><div class="bi2-lengkap" title="${_biE(kurang.length ? "Belum diisi: " + kurang.join(", ") : "Lengkap")}"><i><s style="width:${p}%;background:${p === 100 ? "#16a34a" : p >= 70 ? "#d97706" : "#dc2626"}"></s></i><small>${p}%</small></div></td>
+        <td class="c"><button class="bi2-buka" onclick="biLembar('${x.id}')">Buka</button></td></tr>`; }).join("") || `<tr><td colspan="${gabung ? 11 : 10}" class="c redup" style="padding:28px">Tidak ada data.</td></tr>`}
+    </tbody></table></div></div>`;
 }
 const BI_TAMBAH = [
   ["A", "jk", "Jenis Kelamin", "pilih:L=Laki-laki,P=Perempuan"], ["A", "agama", "Agama", "pilih:Islam,Kristen,Katolik,Hindu,Buddha,Konghucu"], ["A", "kewarganegaraan", "Kewarganegaraan", "pilih:WNI,WNA"],
@@ -174,7 +180,7 @@ function _biXlsx(baris, lembar, nama) {
 }
 function biUnduhInduk() {
   const d = _biSaring(BI.f).sort(_biUrutInduk);
-  _biXlsx(d.map((x) => { const t = BI.tambah[x.id] || {}, k = biKeadaan(x); return { "No Induk": x.nis || "", NISN: x.nisn || "", NIK: x.nik || "", "No KK": x.no_kk || "", Nama: x.nama, "L/P": biJk(x), "Tempat Lahir": x.tempat_lahir || "", "Tanggal Lahir": x.tanggal_lahir || "", Agama: t.agama || "", Kewarganegaraan: t.kewarganegaraan || "WNI", "Anak Ke": t.anak_ke || "", "Jumlah Saudara": t.jml_saudara || "", "Status Anak": t.status_anak || "", Alamat: x.alamat_asal || "", "Tinggal Dengan": t.tinggal_dengan || "", "Sekolah Asal": x.sekolah_asal || "", "Diterima Kelas": t.diterima_kelas || "", "Tanggal Diterima": t.tgl_diterima || "", "Nama Ayah": x.nama_ayah || "", "Pekerjaan Ayah": x.pekerjaan_ayah || "", "Nama Ibu": x.nama_ibu || "", "Pekerjaan Ibu": x.pekerjaan_ibu || "", "Nama Wali": t.nama_wali || "", Keadaan: k.teks, "Alasan Keluar": x.status_aktif === false ? x.alasan_mutasi || "" : "", "No Seri Ijazah": t.no_ijazah || "", "Belum Diisi": biKurang(x).join("; ") }; }), "Buku Induk", `Buku Induk ${_biNamaRg(BI.f.rg)} ${tanggalISO()}.xlsx`);
+  _biXlsx(d.map((x) => { const t = BI.tambah[x.id] || {}, k = biKeadaan(x); return { Jenjang: _biNamaRg(x.ruang_id), "No Induk": x.nis || "", NISN: x.nisn || "", NIK: x.nik || "", "No KK": x.no_kk || "", Nama: x.nama, "L/P": biJk(x), "Tempat Lahir": x.tempat_lahir || "", "Tanggal Lahir": x.tanggal_lahir || "", Agama: t.agama || "", Kewarganegaraan: t.kewarganegaraan || "WNI", "Anak Ke": t.anak_ke || "", "Jumlah Saudara": t.jml_saudara || "", "Status Anak": t.status_anak || "", Alamat: x.alamat_asal || "", "Tinggal Dengan": t.tinggal_dengan || "", "Sekolah Asal": x.sekolah_asal || "", "Diterima Kelas": t.diterima_kelas || "", "Tanggal Diterima": t.tgl_diterima || "", "Nama Ayah": x.nama_ayah || "", "Pekerjaan Ayah": x.pekerjaan_ayah || "", "Nama Ibu": x.nama_ibu || "", "Pekerjaan Ibu": x.pekerjaan_ibu || "", "Nama Wali": t.nama_wali || "", Keadaan: k.teks, "Alasan Keluar": x.status_aktif === false ? x.alasan_mutasi || "" : "", "No Seri Ijazah": t.no_ijazah || "", "Belum Diisi": biKurang(x).join("; ") }; }), "Buku Induk", `Buku Induk ${_biNamaRg(BI.f.rg)} ${tanggalISO()}.xlsx`);
   if (typeof _rgLog === "function") _rgLog("unduh-buku-induk", { ruang: BI.f.rg, jumlah: d.length });
 }
 
@@ -190,38 +196,36 @@ const _biHuruf = (n) => (String(n || "").trim()[0] || "#").toUpperCase().replace
 const _biInisial = (n) => String(n || "?").trim().split(/\s+/).slice(0, 2).map((w) => w[0] || "").join("").toUpperCase();
 function _biHtmlKlaper() {
   const d = _biDataKlaper(), kel = {}; d.forEach((x) => (kel[_biHuruf(x.nama)] = kel[_biHuruf(x.nama)] || []).push(x));
-  const huruf = Object.keys(kel).sort(), semua = (BI.siswa || []).filter((x) => x.ruang_id === BI.k.rg);
+  const huruf = Object.keys(kel).sort(), gabung = BI.k.rg === "semua", semua = (BI.siswa || []).filter((x) => gabung || x.ruang_id === BI.k.rg);
   const hit = (kode) => semua.filter((x) => biKeadaan(x).kode === kode).length, L = semua.filter((x) => biJk(x) === "L").length, P = semua.filter((x) => biJk(x) === "P").length;
-  const warnaRg = { A: "#047857", Pa: "#1d4ed8", Pi: "#be185d" }[BI.k.rg] || "#0f5132";
-  return `<div class="bk2" style="--bk:${warnaRg}">
+  return `<div class="bk2" style="--bk:${BI_WARNA_RG[BI.k.rg] || "#8a5523"}">
     <div class="bk2-hero"><div><small>📇 BUKU KLAPER · INDEKS ABJAD PESERTA DIDIK</small><h2>${_biE(_biNamaRg(BI.k.rg))}</h2><p>Daftar seluruh peserta didik menurut abjad — aktif, lulus, dan keluar — beserta No. Induk dan NISN.</p></div>
       <div class="bk2-angka"><div><b>${semua.length}</b><span>Tercatat</span></div><div><b>${hit("aktif")}</b><span>Aktif</span></div><div><b>${hit("lulus")}</b><span>Lulus</span></div><div><b>${hit("mutasi")}</b><span>Keluar</span></div><div><b>${L}<i>/</i>${P}</b><span>L / P</span></div></div></div>
-    <div class="bk2-jenjang">${BI_RG.map((r) => `<button class="${BI.k.rg === r ? "on" : ""}" style="--rw:${{ A: "#047857", Pa: "#1d4ed8", Pi: "#be185d" }[r]}" onclick="biRgKlaper('${r}')">${_biE(_biNamaRg(r))}<small>${(BI.siswa || []).filter((x) => x.ruang_id === r).length} santri</small></button>`).join("")}</div>
+    ${_biTabRg(BI.k.rg, "biRgKlaper")}
     <div class="bk2-alat">
       <div class="bk2-cari">🔎<input class="bi-cari" placeholder="Cari nama, No. Induk, NISN…" value="${_biE(BI.k.cari || "")}" oninput="BI.k.cari=this.value;_biSegar('bk-wrap',_biHtmlKlaper,true)"></div>
       <div class="bk2-chip">${[["semua", "Semua"], ["aktif", "🟢 Aktif"], ["keluar", "🎓 Lulus & Keluar"]].map(([k, n]) => `<button class="${BI.k.status === k ? "on" : ""}" onclick="BI.k.status='${k}';_biSegar('bk-wrap',_biHtmlKlaper)">${n}</button>`).join("")}</div>
       <span class="bk2-jml">${d.length} santri</span>
-      <button class="bk2-btn" onclick="biCetakKlaper()">🖨️ Cetak</button><button class="bk2-btn utama" onclick="biUnduhKlaper()">⬇️ Unduh Excel</button></div>
+      <button class="bk2-btn" onclick="biCetakKlaper()">🖨️ Cetak</button><button class="bk2-btn utama" onclick="biUnduhKlaper()">⬇️ Unduh Excel${gabung ? " (Semua Jenjang)" : ""}</button></div>
     <div class="bk2-abjad">${"ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map((h) => kel[h] ? `<a href="#bk-${h}" onclick="event.preventDefault();document.getElementById('bk-${h}').scrollIntoView({behavior:'smooth',block:'start'})">${h}</a>` : `<span>${h}</span>`).join("")}</div>
     ${huruf.map((h) => `<section class="bk2-grup" id="bk-${h}"><header><span class="bk2-hrf">${h}</span><small>${kel[h].length} santri</small></header>
-      <div class="bk2-kepala"><span>No</span><span>Nama</span><span>No. Induk</span><span>NISN</span><span>L/P</span><span>Masuk</span><span>Keadaan</span></div>
-      ${kel[h].map((x, i) => { const k = biKeadaan(x), jk = biJk(x); return `<div class="bk2-baris k-${k.kode}" onclick="biLembar('${x.id}')">
-        <span class="bk2-no">${i + 1}</span>
-        <span class="bk2-nama"><i class="bk2-av">${_biE(_biInisial(x.nama))}</i><b>${_biE(x.nama)}</b></span>
-        <span class="bk2-mono" data-l="No. Induk">${_biE(x.nis || "—")}</span><span class="bk2-mono" data-l="NISN">${_biE(x.nisn || "—")}</span>
-        <span data-l="L/P"><em class="bk2-jk ${jk === "P" ? "p" : "l"}">${_biE(jk || "—")}</em></span><span data-l="Masuk">${_biE(biTahunMasuk(x) || "—")}</span>
-        <span><em class="bk2-st ${k.kode}">${_biE(k.teks)}</em></span></div>`; }).join("")}</section>`).join("") || `<div class="bk2-kosong">Tidak ada santri yang cocok.</div>`}
+      <div class="bi2-wadah tipis"><table class="bi2-tabel" style="min-width:${gabung ? 920 : 830}px"><colgroup><col style="width:44px"><col><col style="width:96px"><col style="width:120px">${gabung ? '<col style="width:92px">' : ""}<col style="width:56px"><col style="width:70px"><col style="width:170px"></colgroup>
+        <thead><tr><th class="c">No</th><th>Nama Lengkap</th><th>No. Induk</th><th>NISN</th>${gabung ? "<th>Jenjang</th>" : ""}<th class="c">L/P</th><th class="c">Masuk</th><th>Keadaan</th></tr></thead><tbody>
+        ${kel[h].map((x, i) => { const k = biKeadaan(x), jk = biJk(x); return `<tr class="klik k-${k.kode}" onclick="biLembar('${x.id}')"><td class="c redup">${i + 1}</td>
+          <td class="nama"><span class="bi2-nm"><i class="bk2-av">${_biE(_biInisial(x.nama))}</i><b>${_biE(x.nama)}</b></span></td><td class="mono">${_biE(x.nis || "—")}</td><td class="mono">${_biE(x.nisn || "—")}</td>
+          ${gabung ? `<td>${_biPillRg(x.ruang_id)}</td>` : ""}<td class="c"><em class="bk2-jk ${jk === "P" ? "p" : "l"}">${_biE(jk || "—")}</em></td><td class="c">${_biE(biTahunMasuk(x) || "—")}</td><td><em class="bk2-st ${k.kode}">${_biE(k.teks)}</em></td></tr>`; }).join("")}
+      </tbody></table></div></section>`).join("") || `<div class="bk2-kosong">Tidak ada santri yang cocok.</div>`}
   </div>`;
 }
 function biCetakKlaper() {
-  const d = _biDataKlaper(), kel = {}; d.forEach((x) => (kel[_biHuruf(x.nama)] = kel[_biHuruf(x.nama)] || []).push(x));
+  const d = _biDataKlaper(), kel = {}, gabung = BI.k.rg === "semua"; d.forEach((x) => (kel[_biHuruf(x.nama)] = kel[_biHuruf(x.nama)] || []).push(x));
   _biCetak("Buku Klaper " + _biNamaRg(BI.k.rg), `<h2>BUKU KLAPER PESERTA DIDIK</h2><p style="text-align:center;margin-top:-6px">${_biE(_biNamaRg(BI.k.rg))}</p>
-    <table><tr><th>No</th><th>Nama</th><th>No. Induk</th><th>NISN</th><th>L/P</th><th>Masuk</th><th>Keadaan</th></tr>
-    ${Object.keys(kel).sort().map((h) => `<tr><td class="huruf" colspan="7">${h}</td></tr>${kel[h].map((x, i) => `<tr><td>${i + 1}</td><td>${_biE(x.nama)}</td><td>${_biE(x.nis || "")}</td><td>${_biE(x.nisn || "")}</td><td>${_biE(biJk(x))}</td><td>${_biE(biTahunMasuk(x))}</td><td>${_biE(biKeadaan(x).teks)}</td></tr>`).join("")}`).join("")}</table>`);
+    <table><tr><th>No</th><th>Nama</th><th>No. Induk</th><th>NISN</th>${gabung ? "<th>Jenjang</th>" : ""}<th>L/P</th><th>Masuk</th><th>Keadaan</th></tr>
+    ${Object.keys(kel).sort().map((h) => `<tr><td class="huruf" colspan="${gabung ? 8 : 7}">${h}</td></tr>${kel[h].map((x, i) => `<tr><td>${i + 1}</td><td>${_biE(x.nama)}</td><td>${_biE(x.nis || "")}</td><td>${_biE(x.nisn || "")}</td>${gabung ? `<td>${_biE(_biNamaRg(x.ruang_id))}</td>` : ""}<td>${_biE(biJk(x))}</td><td>${_biE(biTahunMasuk(x))}</td><td>${_biE(biKeadaan(x).teks)}</td></tr>`).join("")}`).join("")}</table>`);
 }
 function biUnduhKlaper() {
   const d = _biDataKlaper();
-  _biXlsx(d.map((x, i) => ({ No: i + 1, Huruf: _biHuruf(x.nama), Nama: x.nama, "No Induk": x.nis || "", NISN: x.nisn || "", "L/P": biJk(x), "Tahun Masuk": biTahunMasuk(x) || "", Keadaan: biKeadaan(x).teks })), "Buku Klaper", `Buku Klaper ${_biNamaRg(BI.k.rg)} ${tanggalISO()}.xlsx`);
+  _biXlsx(d.map((x, i) => ({ No: i + 1, Huruf: _biHuruf(x.nama), Nama: x.nama, Jenjang: _biNamaRg(x.ruang_id), "No Induk": x.nis || "", NISN: x.nisn || "", "L/P": biJk(x), "Tahun Masuk": biTahunMasuk(x) || "", Keadaan: biKeadaan(x).teks })), "Buku Klaper", `Buku Klaper ${_biNamaRg(BI.k.rg)} ${tanggalISO()}.xlsx`);
 }
 
 // ── PENCARIAN CEPAT ──
