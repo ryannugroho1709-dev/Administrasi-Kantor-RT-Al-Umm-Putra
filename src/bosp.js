@@ -110,19 +110,33 @@ const BSP_JABATAN_PG = ["Kepala PKBM", "Sekretaris PKBM", "Bendahara BOSP", "Ope
 const _bspPengelola = () => Object.entries((BSP.umum || {}).pengelola || {}).filter(([, p]) => p && !p.dihapus).map(([id, p]) => ({ id, ...p })).sort((a, b) => (a.t || 0) - (b.t || 0));
 const bspPengelolaBulan = (m) => _bspPengelola().reduce((a, p) => a + ((p.bulan || []).includes(m) ? Number(p.honor) || 0 : 0), 0);
 const bspTotalPengelola = () => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].reduce((a, m) => a + bspPengelolaBulan(m), 0);
-function _bspRasio() {
-  const pagu = (BSP.umum || {}).pagu || {}, s = BSP_RUANG.reduce((a, r) => a + (Number(pagu[r]) || 0), 0);
-  const rata = (BSP.umum || {}).bagi_pengelola === "rata" || !s;
+// Cara membagi: "pagu" (sebanding pagu), "rata", atau "atur" = iuran per bulan tiap jenjang diatur Bendahara (bagi_atur {A,Pa,Pi}
+// untuk bulan penuh; jumlahnya harus pas dengan kebutuhan honor sebulan). Fungsi *Dari(u) murni → dipakai juga oleh Kantor Maya.
+const BSP_12 = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+const _bspHonorBulanDari = (u, m) => Object.values((u || {}).pengelola || {}).filter((p) => p && !p.dihapus).reduce((a, p) => a + ((p.bulan || []).includes(m) ? Number(p.honor) || 0 : 0), 0);
+const bspPuncakDari = (u) => Math.max(0, ...BSP_12.map((m) => _bspHonorBulanDari(u, m)));
+function _bspRasioPagu(u) {
+  const pagu = (u || {}).pagu || {}, s = BSP_RUANG.reduce((a, r) => a + (Number(pagu[r]) || 0), 0);
+  const rata = (u || {}).bagi_pengelola === "rata" || !s;
   return Object.fromEntries(BSP_RUANG.map((r) => [r, rata ? 1 / BSP_RUANG.length : (Number(pagu[r]) || 0) / s]));
 }
+function _bspAturDari(u) { const a = (u || {}).bagi_atur; if ((u || {}).bagi_pengelola !== "atur" || !a) return null; const v = { A: Number(a.A) || 0, Pa: Number(a.Pa) || 0, Pi: Number(a.Pi) || 0 }; return v.A + v.Pa + v.Pi > 0 ? v : null; }
+const bspAturPas = (u) => { const a = _bspAturDari(u); return !a || a.A + a.Pa + a.Pi === bspPuncakDari(u); };
+const bspCaraBagi = (u) => (_bspAturDari(u) ? "diatur Bendahara" : (u || {}).bagi_pengelola === "rata" ? "dibagi rata" : "sebanding pagu");
 // bagian tiap ruang pada bulan m — dibulatkan, jumlahnya tetap pas dengan total bulan itu
-function bspBagiPengelola(m) { const t = bspPengelolaBulan(m), q = _bspRasio(), A = Math.round(t * q.A), Pa = Math.round(t * q.Pa); return { A, Pa, Pi: t - A - Pa }; }
+function bspBagiDari(u, m) {
+  const t = _bspHonorBulanDari(u, m), a = _bspAturDari(u);
+  if (a && t === a.A + a.Pa + a.Pi) return { ...a }; // bulan penuh: tepat iuran yang diatur (angka genap)
+  const s = a ? a.A + a.Pa + a.Pi : 0, q = a ? { A: a.A / s, Pa: a.Pa / s, Pi: a.Pi / s } : _bspRasioPagu(u);
+  const A = Math.round(t * q.A), Pa = Math.round(t * q.Pa); return { A, Pa, Pi: t - A - Pa };
+}
+function bspBagiPengelola(m) { return bspBagiDari(BSP.umum || {}, m); }
 const bspBagianTahun = (r) => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].reduce((a, m) => a + bspBagiPengelola(m)[r], 0);
 function _bspBarisPengelolaRuang(r) {
   const bulan = {};
   for (let m = 1; m <= 12; m++) { const v = bspBagiPengelola(m)[r]; if (v) bulan[m] = { jml: v, sat: "Rupiah" }; }
   if (!Object.keys(bulan).length) return [];
-  return [{ id: "pg-honor", otomatis: true, kode: "07.12.03", kegiatan: "Honor Pengelola PKBM (bagian ruang)", rek: "Honor Pengelola — rincian di ruang Pengelola", jenis: "pegawai", uraian: `Honor Pengelola PKBM, bagian ${_bspNamaRuang(r)} (${(BSP.umum || {}).bagi_pengelola === "rata" ? "dibagi rata" : "sebanding pagu"}) — otomatis dari Bendahara`, harga: 1, bulan, t: 0 }];
+  return [{ id: "pg-honor", otomatis: true, kode: "07.12.03", kegiatan: "Honor Pengelola PKBM (bagian ruang)", rek: "Honor Pengelola — rincian di ruang Pengelola", jenis: "pegawai", uraian: `Honor Pengelola PKBM, bagian ${_bspNamaRuang(r)} (${bspCaraBagi(BSP.umum)}) — otomatis dari Bendahara`, harga: 1, bulan, t: 0 }];
 }
 const _bspBarisRuang = (kk, r) => _bspPengelola().length ? _bspBarisPengelolaRuang(r).concat(_bspBaris(kk)) : _bspBaris(kk);
 
@@ -495,16 +509,106 @@ function _bspCekPagu() {
   el.textContent = `Jumlah pagu ruang ${bspRp(bagi)}${total ? (bagi === total ? " — sama dengan total ✓" : ` — selisih ${bspRp(total - bagi)} dari total`) : ""}. `;
 }
 function _bspKartuPengelola(bend) {
-  const orang = _bspPengelola(), total = bspTotalPengelola(), mode = (BSP.umum || {}).bagi_pengelola === "rata" ? "rata" : "pagu";
+  const u = BSP.umum || {}, orang = _bspPengelola(), total = bspTotalPengelola(), mode = _bspAturDari(u) ? "atur" : u.bagi_pengelola === "rata" ? "rata" : "pagu";
+  const puncak = bspPuncakDari(u), perBln = puncak ? bspBagiDari({ ...u, pengelola: { x: { honor: puncak, bulan: [1] } } }, 1) : null; // iuran pada bulan penuh
+  const nmMode = { pagu: "Dibagi sebanding pagu tiap jenjang", rata: "Dibagi rata 3 jenjang", atur: "Iuran diatur Bendahara (genap)" }[mode];
   return `<div class="card bsp-ruang bsp-ruang-pg" style="--rw:#b45309"><div class="bsp-ruang-h"><b>Pengelola</b><em style="--st:#b45309">Honor Pengelola</em></div>
     <div class="bsp-ruang-angka"><span>Total setahun <b>${bspRp(total)}</b></span><span>${orang.length} orang</span></div>
-    <div class="bsp-pg-bagi">${BSP_RUANG.map((r) => `<span><i style="background:${(typeof rgRuang === "function" ? rgRuang(r) : {}).warna || "#64748b"}"></i>${_bspE(_bspNamaRuang(r))}<b>${bspRp(bspBagianTahun(r))}</b></span>`).join("")}</div>
-    ${bend ? `<div class="bsp-ruang-aksi"><select onchange="bspUbahBagi(this.value)"><option value="pagu" ${mode === "pagu" ? "selected" : ""}>Dibagi sebanding pagu</option><option value="rata" ${mode === "rata" ? "selected" : ""}>Dibagi rata 3 jenjang</option></select>
-      <button class="btn btn-sm btn-accent" onclick="bspKelolaPengelola()">Kelola Honor Pengelola</button></div>` : `<small>${mode === "rata" ? "Dibagi rata 3 jenjang" : "Dibagi sebanding pagu tiap jenjang"}</small>`}</div>`;
+    <div class="bsp-pg-bagi">${BSP_RUANG.map((r) => `<span><i style="background:${(typeof rgRuang === "function" ? rgRuang(r) : {}).warna || "#64748b"}"></i>${_bspE(_bspNamaRuang(r))}${perBln ? `<small class="bsp-pg-bln">${bspRp(perBln[r])}/bln</small>` : ""}<b>${bspRp(bspBagianTahun(r))}</b></span>`).join("")}</div>
+    ${mode === "atur" && !bspAturPas(u) ? `<small class="bsp-dpk-no">Honor pengelola berubah — iuran per jenjang perlu disesuaikan ulang</small>` : ""}
+    ${bend ? `<div class="bsp-ruang-aksi"><select onchange="bspUbahBagi(this.value)"><option value="pagu" ${mode === "pagu" ? "selected" : ""}>Dibagi sebanding pagu</option><option value="rata" ${mode === "rata" ? "selected" : ""}>Dibagi rata 3 jenjang</option><option value="atur" ${mode === "atur" ? "selected" : ""}>Diatur sendiri (genap)</option></select>
+      <button class="btn btn-sm btn-ghost" onclick="bspAturIuran()" title="Ubah iuran per jenjang & genapkan">Atur & Genapkan</button>
+      <button class="btn btn-sm btn-accent" onclick="bspKelolaPengelola()">Kelola Honor Pengelola</button></div>` : `<small>${nmMode}</small>`}</div>`;
 }
 async function bspUbahBagi(mode) {
+  if (mode === "atur") { if (_bspAturDari(BSP.umum)) return; bspAturIuran(); _bspGambarGab(); return; } // disimpan setelah diatur di jendela
   try { BSP.umum = await _bspGabungUmum(_bspKunciUmum(BSP.th), { bagi_pengelola: mode }); toast(mode === "rata" ? "Honor pengelola dibagi rata" : "Honor pengelola dibagi sebanding pagu", "ok"); _bspGambarGab(); }
   catch (e) { toast("Gagal: " + e.message, "err"); }
+}
+// ── Atur iuran honor pengelola per jenjang: ubah satu, yang lain ikut menyesuaikan; genapkan ──
+function bspAturIuran() {
+  if (!bspBendahara()) return;
+  const u = BSP.umum || {}, T = bspPuncakDari(u); if (!T) { toast("Isi dulu honor pengelola", "info"); return; }
+  const nBln = BSP_12.filter((m) => _bspHonorBulanDari(u, m) === T).length;
+  const acuan = bspBagiDari({ ...u, bagi_pengelola: "pagu", pengelola: { x: { honor: T, bulan: [1] } } }, 1);
+  const awal = _bspAturDari(u) && bspAturPas(u) ? _bspAturDari(u) : bspBagiDari({ ...u, pengelola: { x: { honor: T, bulan: [1] } } }, 1);
+  BSP.iur = { T, nBln, acuan, v: { ...awal }, kunci: [] };
+  const pagu = u.pagu || {};
+  openModal(`<div class="bsp-modal"><h3>Iuran Honor Pengelola per Jenjang ${BSP.th}</h3>
+    <p class="bsp-ket">Kebutuhan honor pengelola <b>${bspRp(T)} per bulan</b>${nBln < 12 ? ` (bulan penuh: ${nBln} bulan)` : " × 12 bulan"}. Ubah iuran satu jenjang — jenjang lain ikut menyesuaikan sehingga jumlahnya <b>pas</b>, tidak kurang dan tidak lebih. Jenjang yang baru diubah dikunci 🔒.</p>
+    <div class="table-wrap"><table class="bsp-tabel kecil bsp-iur"><thead><tr><th>Jenjang</th><th>Pagu</th><th>Acuan Sebanding Pagu</th><th>Iuran per Bulan</th><th>Setahun</th><th></th></tr></thead><tbody>
+      ${BSP_RUANG.map((r) => `<tr><td><b>${_bspE(_bspNamaRuang(r))}</b></td><td>${bspRp(pagu[r])}</td><td>${bspRp(acuan[r])}/bln</td>
+        <td><input id="biu-${r}" class="input" inputmode="numeric" oninput="_bspIurUbah('${r}',this.value,'bln')"></td>
+        <td><input id="biut-${r}" class="input" inputmode="numeric" oninput="_bspIurUbah('${r}',this.value,'thn')" onchange="_bspIurTampil()"></td>
+        <td><button id="biuk-${r}" class="btn btn-sm btn-ghost" onclick="_bspIurKunci('${r}')" title="Kunci/buka kunci">🔓</button></td></tr>`).join("")}
+      <tr><td colspan="3"><b>Jumlah</b></td><td><b id="biu-jml"></b></td><td><b id="biut-jml"></b></td><td></td></tr></tbody></table></div>
+    <div id="biu-cek" class="bsp-iur-cek"></div>
+    <div class="bsp-iur-genap"><span>Genapkan iuran per bulan ke kelipatan</span><select id="biu-kel" class="input">${[1000, 5000, 10000, 50000, 100000].map((k) => `<option value="${k}" ${k === 50000 ? "selected" : ""}>${bspRp(k)}</option>`).join("")}</select><button class="btn btn-sm btn-accent" onclick="bspIurGenapkan()">✨ Genapkan</button><button class="btn btn-sm btn-ghost" onclick="bspIurAcuan()">Kembali ke Sebanding Pagu</button></div>
+    <p class="bsp-ket">Angka setahun = iuran per bulan × ${nBln} bulan, jadi bila iuran per bulan genap, angka setahunnya ikut genap dan mudah dilaporkan.</p>
+    <div class="bsp-aksi-bawah"><button class="btn btn-outline" onclick="closeModal()">Tutup</button><button id="biu-simpan" class="btn bsp-hitam" onclick="bspSimpanIuran()">Simpan Iuran</button></div></div>`, { lebar: true });
+  _bspIurTampil();
+}
+function _bspIurTampil(kecuali) {
+  const I = BSP.iur; if (!I) return; const jml = BSP_RUANG.reduce((a, r) => a + I.v[r], 0), sel = I.T - jml;
+  BSP_RUANG.forEach((r) => {
+    const b = qs("biu-" + r), t = qs("biut-" + r), k = qs("biuk-" + r);
+    if (b && kecuali !== "biu-" + r) b.value = formatRibuan(I.v[r]);
+    if (t && kecuali !== "biut-" + r) t.value = formatRibuan(I.v[r] * I.nBln);
+    if (k) { const on = I.kunci.includes(r); k.textContent = on ? "🔒" : "🔓"; k.classList.toggle("aktif", on); }
+  });
+  qs("biu-jml").textContent = bspRp(jml); qs("biut-jml").textContent = bspRp(jml * I.nBln);
+  const c = qs("biu-cek"); c.className = "bsp-iur-cek " + (sel ? "kurang" : "pas");
+  c.innerHTML = sel ? `⚠️ Jumlah iuran ${sel > 0 ? "<b>kurang " + bspRp(sel) + "</b>" : "<b>lebih " + bspRp(-sel) + "</b>"} per bulan dari kebutuhan honor ${bspRp(I.T)} — buka kunci 🔓 salah satu jenjang agar ikut menyesuaikan.` : `✓ Pas: ${bspRp(jml)}/bulan = kebutuhan honor pengelola (setahun ${bspRp(jml * I.nBln)}).`;
+  const s = qs("biu-simpan"); if (s) s.disabled = !!sel;
+}
+// bagi sisa ke jenjang yang tidak dikunci, sebanding acuan (pagu); sisa pembulatan ke yang terbesar
+function _bspIurSeimbang(kel) {
+  const I = BSP.iur, bebas = BSP_RUANG.filter((r) => !I.kunci.includes(r)); if (!bebas.length) return;
+  const sisa = I.T - BSP_RUANG.filter((r) => I.kunci.includes(r)).reduce((a, r) => a + I.v[r], 0);
+  if (sisa <= 0) { bebas.forEach((r) => (I.v[r] = 0)); return; }
+  const s = bebas.reduce((a, r) => a + (I.acuan[r] || 0), 0) || bebas.length, k = kel || 1;
+  bebas.forEach((r) => (I.v[r] = Math.floor((sisa * ((I.acuan[r] || (s === bebas.length ? 1 : 0)) / s)) / k) * k));
+  const besar = bebas.slice().sort((a, b) => I.v[b] - I.v[a])[0]; I.v[besar] += sisa - bebas.reduce((a, r) => a + I.v[r], 0);
+}
+function _bspIurUbah(r, nilai, jenis) {
+  const I = BSP.iur, n = _bspAngka(nilai); I.v[r] = jenis === "thn" ? Math.round(n / I.nBln) : n;
+  I.kunci = I.kunci.filter((x) => x !== r).concat(r); if (I.kunci.length > BSP_RUANG.length - 1) I.kunci.shift(); // yang paling lama dikunci dibuka lagi
+  _bspIurSeimbang(); _bspIurTampil((jenis === "thn" ? "biut-" : "biu-") + r);
+  const el = qs((jenis === "thn" ? "biut-" : "biu-") + r); if (el) el.value = formatRibuan(n);
+}
+function _bspIurKunci(r) { const I = BSP.iur; I.kunci = I.kunci.includes(r) ? I.kunci.filter((x) => x !== r) : I.kunci.concat(r); if (I.kunci.length < BSP_RUANG.length) _bspIurSeimbang(); _bspIurTampil(); }
+function bspIurGenapkan() {
+  const I = BSP.iur, k = Number(qs("biu-kel").value) || 1000;
+  const kunci = I.kunci.filter((r) => I.v[r] % k === 0); // yang sudah genap tetap
+  const bebas = BSP_RUANG.filter((r) => !kunci.includes(r));
+  if (!bebas.length) { _bspIurTampil(); toast("Semua iuran sudah genap", "info"); return; }
+  bebas.forEach((r) => (I.v[r] = Math.round(I.v[r] / k) * k));
+  // sisa pembulatan diberikan ke jenjang bebas yang terbesar (tetap genap bila kebutuhan sebulan kelipatan k)
+  const sisa = I.T - BSP_RUANG.reduce((a, r) => a + I.v[r], 0), besar = bebas.slice().sort((a, b) => I.v[b] - I.v[a])[0]; I.v[besar] += sisa;
+  _bspIurTampil();
+  toast(I.T % k ? `Digenapkan — kebutuhan ${bspRp(I.T)} bukan kelipatan ${bspRp(k)}, sisa ${bspRp(((I.T % k) + k) % k)} ditanggung ${_bspNamaRuang(besar)}` : `Iuran per bulan digenapkan ke kelipatan ${bspRp(k)}`, "ok");
+}
+function bspIurAcuan() { const I = BSP.iur; I.v = { ...I.acuan }; I.kunci = []; _bspIurTampil(); }
+async function bspSimpanIuran() {
+  const I = BSP.iur; if (!I) return; const jml = BSP_RUANG.reduce((a, r) => a + I.v[r], 0);
+  if (jml !== I.T) { toast("Jumlah iuran belum pas dengan kebutuhan honor", "err"); return; }
+  if (BSP_RUANG.some((r) => I.v[r] < 0)) { toast("Iuran tidak boleh minus", "err"); return; }
+  try {
+    BSP.umum = await _bspGabungUmum(_bspKunciUmum(BSP.th), { bagi_pengelola: "atur", bagi_atur: { A: I.v.A, Pa: I.v.Pa, Pi: I.v.Pi, oleh: STATE.guruNama || "", t: Date.now() } });
+    if (typeof _rgLog === "function") _rgLog("bosp-iuran-pengelola", { ...I.v });
+    toast("Iuran honor pengelola per jenjang disimpan", "ok"); closeModal(); _bspGambarGab();
+  } catch (e) { toast("Gagal: " + e.message, "err"); }
+}
+// tabel iuran per bulan dari tiap jenjang (bulan yang sama angkanya digabung)
+function _bspHtmlIuranBulan() {
+  const grup = [];
+  BSP_12.forEach((m) => { const b = bspBagiPengelola(m), t = bspPengelolaBulan(m), kunci = [t, b.A, b.Pa, b.Pi].join("|"), g = grup[grup.length - 1]; if (g && g.kunci === kunci && g.akhir === m - 1) g.akhir = m; else grup.push({ kunci, awal: m, akhir: m, t, b }); });
+  const nm = (g) => (g.awal === 1 && g.akhir === 12 ? "Setiap bulan (Jan–Des)" : g.awal === g.akhir ? BSP_BULAN[g.awal - 1] : `${BSP_BULAN[g.awal - 1].slice(0, 3)}–${BSP_BULAN[g.akhir - 1].slice(0, 3)}`);
+  return `<h4 style="margin:14px 0 6px">Iuran per Bulan dari Tiap Jenjang <small class="bsp-ket" style="font-weight:400">(${bspCaraBagi(BSP.umum)})</small></h4>
+    <div class="table-wrap"><table class="bsp-tabel kecil"><thead><tr><th>Bulan</th>${BSP_RUANG.map((r) => `<th>${_bspE(_bspNamaRuang(r))}</th>`).join("")}<th>Total Honor</th></tr></thead><tbody>
+      ${grup.filter((g) => g.t).map((g) => `<tr><td>${nm(g)}</td>${BSP_RUANG.map((r) => `<td>${bspRp(g.b[r])}</td>`).join("")}<td><b>${bspRp(g.t)}</b></td></tr>`).join("")}
+      <tr><td><b>Setahun</b></td>${BSP_RUANG.map((r) => `<td><b>${bspRp(bspBagianTahun(r))}</b></td>`).join("")}<td><b>${bspRp(bspTotalPengelola())}</b></td></tr></tbody></table></div>
+    <div class="bsp-aksi-bawah" style="justify-content:flex-start;margin-top:6px"><button class="btn btn-sm btn-ghost" onclick="closeModal();bspAturIuran()">Atur & Genapkan Iuran</button></div>`;
 }
 // Daftar & formulir honor pengelola (Bendahara)
 async function bspKelolaPengelola(editId) {
@@ -515,11 +619,11 @@ async function bspKelolaPengelola(editId) {
   BSP.pgEdit = { id: editId || null, bulan: [...(d.bulan || [])] };
   const orang = _bspPengelola();
   openModal(`<div class="bsp-modal"><h3>Honor Pengelola PKBM ${BSP.th}</h3>
-    <p class="bsp-ket">Honor bulanan pengelola PKBM. Totalnya otomatis dibebankan ke Paket A, Putra, dan Putri (${(BSP.umum || {}).bagi_pengelola === "rata" ? "dibagi rata" : "sebanding pagu"}) dan langsung mengurangi sisa pagu Kertas Kerja tiap jenjang.</p>
+    <p class="bsp-ket">Honor bulanan pengelola PKBM. Totalnya otomatis dibebankan ke Paket A, Putra, dan Putri (${bspCaraBagi(BSP.umum)}) dan langsung mengurangi sisa pagu Kertas Kerja tiap jenjang.</p>
     ${orang.length ? `<div class="table-wrap"><table class="bsp-tabel kecil"><thead><tr><th>Nama</th><th>Jabatan</th><th>Kegiatan</th><th>Honor/Bulan</th><th>Bulan</th><th>Setahun</th><th></th></tr></thead><tbody>
       ${orang.map((x) => `<tr class="${x.id === editId ? "sisip" : ""}"><td>${_bspE(x.nama)}${_bspDpkPg(x.nama)}</td><td>${_bspE(x.jabatan)}</td><td>${_bspE(x.kode)}</td><td>${bspRp(x.honor)}</td><td>${(x.bulan || []).length} bln</td><td><b>${bspRp((Number(x.honor) || 0) * (x.bulan || []).length)}</b></td>
         <td style="white-space:nowrap"><button class="btn btn-sm btn-ghost" onclick="bspKelolaPengelola('${x.id}')">Ubah</button><button class="btn btn-sm btn-ghost" onclick="bspHapusPengelola('${x.id}')">Hapus</button></td></tr>`).join("")}
-      <tr><td colspan="5"><b>Total</b></td><td colspan="2"><b>${bspRp(bspTotalPengelola())}</b></td></tr></tbody></table></div>` : ""}
+      <tr><td colspan="5"><b>Total</b></td><td colspan="2"><b>${bspRp(bspTotalPengelola())}</b></td></tr></tbody></table></div>${_bspHtmlIuranBulan()}` : ""}
     <h4 style="margin:12px 0 6px">${p ? "Ubah" : "Tambah"} Pengelola</h4>
     <div class="bsp-baris2"><label class="bsp-f"><span>Nama</span><input id="bpg-nama" class="input" list="bpg-guru" value="${_bspE(d.nama)}" placeholder="Pilih dari Data Guru atau ketik"><datalist id="bpg-guru">${BSP.guruNama.map((x) => `<option value="${_bspE(x.nama)}">`).join("")}</datalist></label>
       <label class="bsp-f"><span>Jabatan</span><input id="bpg-jabatan" class="input" list="bpg-jab" value="${_bspE(d.jabatan)}" placeholder="mis. Kepala PKBM, Operator Dapodik"><datalist id="bpg-jab">${BSP_JABATAN_PG.map((x) => `<option value="${x}">`).join("")}</datalist></label></div>

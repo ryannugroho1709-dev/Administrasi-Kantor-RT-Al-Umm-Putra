@@ -38,7 +38,7 @@ function _rkHonorPengelola() {
     const bulanRp = {}; let tot = 0;
     for (let m = 1; m <= 12; m++) { const v = bspBagiPengelola(m)[RK.ruang] || 0; if (v) { bulanRp[m] = v; tot += v; } }
     if (!tot) return null;
-    const cara = ((BSP.umum || {}).bagi_pengelola === "rata") ? "dibagi rata" : "sebanding pagu";
+    const cara = typeof bspCaraBagi === "function" ? bspCaraBagi(BSP.umum) : "sebanding pagu";
     return { id: "__pg-honor", kel: "__pg", uraian: `Honor Pengelola PKBM — bagian jenjang ini (${cara})`, vol: 1, sat: "tahun", harga: tot, frek: 1, manual: true, bulanRp, otomatis: true, u: 1 };
   } catch (e) { return null; }
 }

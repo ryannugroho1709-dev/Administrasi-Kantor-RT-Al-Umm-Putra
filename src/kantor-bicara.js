@@ -21,7 +21,7 @@ async function _ktDataBosp() {
   const honorBulan = (m) => pengelola.reduce((a, p) => a + ((p.bulan || []).includes(m) ? Number(p.honor) || 0 : 0), 0);
   const honorTahun = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].reduce((a, m) => a + honorBulan(m), 0);
   const pagu = umum.pagu || {}, sumPagu = KT_RG.reduce((a, r) => a + (Number(pagu[r]) || 0), 0), rata = umum.bagi_pengelola === "rata" || !sumPagu;
-  const bagian = (r) => Math.round(honorTahun * (rata ? 1 / 3 : (Number(pagu[r]) || 0) / sumPagu));
+  const bagian = (r) => (typeof bspBagiDari === "function" ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].reduce((a, m) => a + bspBagiDari(umum, m)[r], 0) : Math.round(honorTahun * (rata ? 1 / 3 : (Number(pagu[r]) || 0) / sumPagu)));
   const bi = typeof _rkrBulanIni === "function" ? _rkrBulanIni(th) : Math.min(12, _ktBulanIni()), bln = Math.min(12, bi), hasil = { th, bulanBerjalan: bi, pagu, honorTahun, rata, nPengelola: pengelola.length, jenjang: {}, perbaiki: 0 };
   Object.entries(cek || {}).forEach(([, v]) => { if (v && v.status === "perbaiki") hasil.perbaiki++; });
   KT_RG.forEach((r, i) => {

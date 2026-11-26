@@ -1083,3 +1083,10 @@ html .dash-hero.br-hero.br-ada-foto .dash-hero-deco{display:none}
 .rg-absen-sakelar{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid #dcfce7;border-radius:12px;padding:6px 10px;font-weight:700;font-size:12.5px}
 .rg-absen-sakelar .rg-ft-sakelar{width:auto}
 .rg-absen-sakelar small{font-weight:600;color:var(--text-secondary);font-size:11px}
+/* Iuran honor pengelola per jenjang (Atur & Genapkan) */
+.bsp-pg-bagi .bsp-pg-bln{margin-left:auto;font-size:10.5px;color:var(--text-muted,#94a3b8);white-space:nowrap}.bsp-pg-bagi .bsp-pg-bln+b{margin-left:10px}
+.bsp-iur input.input{min-width:120px;text-align:right;font-variant-numeric:tabular-nums;padding:6px 10px}
+.bsp-iur button.aktif{background:#fde68a}
+.bsp-iur-cek{margin:8px 0;padding:8px 12px;border-radius:10px;font-size:13px}.bsp-iur-cek.pas{background:#dcfce7;color:#166534}.bsp-iur-cek.kurang{background:#fef3c7;color:#92400e}
+.bsp-iur-genap{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:6px 0;font-size:13px}.bsp-iur-genap select.input{width:auto;padding:6px 10px}
+.bsp-ruang-pg .bsp-ruang-aksi{flex-wrap:wrap}
