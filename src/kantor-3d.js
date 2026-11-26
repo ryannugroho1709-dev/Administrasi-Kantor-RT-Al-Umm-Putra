@@ -498,7 +498,9 @@ function _ktPergi(t, tujuan, opsi = {}) {
   return new Promise((res) => {
     const u = t.userData; _ktDuduk(t, false);
     u.jalur = _kdCari({ x: t.position.x, z: t.position.z }, tujuan); u.tujuan = tujuan; u.berdiri = !!opsi.berdiri;
-    if (u.jalur.putus) { const e = u.jalur[u.jalur.length - 1]; u.tujuan = { x: e.x, z: e.z, hadap: tujuan.hadap }; u.berdiri = true; } // tak terjangkau: berhenti di depan halangan, tidak menembus u.selesai = res; u.tunggu = 0;
+    if (u.jalur.putus) { const e = u.jalur[u.jalur.length - 1]; u.tujuan = { x: e.x, z: e.z, hadap: tujuan.hadap }; u.berdiri = true; } // tak terjangkau: berhenti di depan halangan, tidak menembus
+    if (u.selesai) { const lama = u.selesai; u.selesai = null; lama(); } // perjalanan sebelumnya dianggap selesai (tidak menggantung)
+    u.selesai = res; u.tunggu = 0;
     if (typeof _ktSiar === "function" && u.staf) _ktSiar("pergi", { id: u.staf.id, tujuan, berdiri: !!opsi.berdiri });
   });
 }

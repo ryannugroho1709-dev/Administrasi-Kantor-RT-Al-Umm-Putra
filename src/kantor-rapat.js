@@ -26,9 +26,14 @@ async function ktSesiPastikan(kodes, judul, tv, ticker, topik) {
   const datang = ids.filter((id) => !KT.sesi.ids.has(id));
   // ustadzah lebih dulu, baru ustadz
   const akhawat = datang.filter((id) => (_ktStafId(id) || {}).jk === "P"), ikhwan = datang.filter((id) => (_ktStafId(id) || {}).jk !== "P");
+  // tiap orang dihitung hadir begitu duduk; bila 45 detik belum sampai (terhalang), langsung didudukkan di kursinya
+  const keKursi = (id, i) => _ktTunggu(i * 380).then(() => Promise.race([_ktPergi(KT.tokoh[id], _ktKursiUntuk(id)), _ktTunggu(45000).then(() => "lama")])).then((h) => {
+    const t = KT.tokoh[id], k = _ktKursiUntuk(id);
+    if (h === "lama" && t && k && KT.sesi.aktif) { t.userData.jalur = null; t.userData.selesai = null; t.position.set(k.x, 0, k.z); if (k.hadap != null) t.rotation.y = k.hadap; _ktDuduk(t, true); }
+    if (KT.sesi.aktif) KT.sesi.ids.add(id);
+  });
   for (const kelompok of [akhawat, ikhwan]) {
-    await Promise.all(kelompok.map((id, i) => _ktTunggu(i * 380).then(() => _ktPergi(KT.tokoh[id], _ktKursiUntuk(id)))));
-    kelompok.forEach((id) => KT.sesi.ids.add(id));
+    await Promise.all(kelompok.map(keKursi));
     if (kelompok.length) kdMinuman(kelompok.map(_ktKursiUntuk), true);
   }
   // Ketua Yayasan ikut menyimak rapat inti
