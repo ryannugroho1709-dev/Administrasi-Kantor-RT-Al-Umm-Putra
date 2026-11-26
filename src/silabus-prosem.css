@@ -138,3 +138,24 @@
 .sp-lengkap ul ul { margin: 2px 0 0; padding-left: 16px; color: #78350f; }
 .sp-l-mapel { color: #14532d; }
 @media (prefers-color-scheme: dark) { .sp-lengkap { background: rgba(245, 158, 11, .1); } .sp-lengkap ul ul { color: inherit; } }
+/* 🎯 ATP di rincian mapel */
+.atp-blok { --as: #64748b; margin-top: 14px; padding: 12px 14px; border-radius: 16px; background: linear-gradient(180deg, rgba(198, 164, 92, .08), transparent); border: 1px solid rgba(198, 164, 92, .35); }
+.atp-kepala { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.atp-kepala h4 { margin: 0; font-size: 15px; }
+.atp-kepala em { font-style: normal; font-size: 11px; font-weight: 800; color: #fff; background: var(--as); border-radius: 999px; padding: 2px 10px; }
+.atp-kepala small { font-size: 11px; color: var(--text-secondary); }
+.atp-info { margin: 8px 0; padding: 8px 12px; border-radius: 10px; background: #eff6ff; color: #1e3a8a; font-size: 12.5px; }
+.atp-tanda { background: #fef3c7; color: #92400e; border-radius: 4px; padding: 0 5px; font-weight: 700; }
+.atp-bab { margin-top: 10px; }
+.atp-bab-j { font-weight: 800; font-size: 13px; color: #14532d; } .atp-bab-j small { font-weight: 500; color: var(--text-secondary); margin-left: 6px; }
+.atp-bab ol { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 6px; }
+.atp-bab li { display: flex; gap: 10px; padding: 8px 10px; border-radius: 12px; background: var(--bg-card, #fff); border: 1px solid rgba(148, 163, 184, .3); font-size: 13px; }
+.atp-bab li > b { flex: none; min-width: 42px; color: #b45309; font-size: 12px; }
+.atp-bab li span small { display: block; font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+.atp-bab li.cek { border-style: dashed; border-color: #f59e0b; background: #fffbeb; }
+.atp-bab li.cek > span::after { content: " · perlu dicek"; font-size: 10.5px; font-weight: 800; color: #92400e; }
+.atp-aksi { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; margin-top: 10px; }
+.atp-ed { display: grid; gap: 8px; max-height: 58vh; overflow: auto; margin-bottom: 8px; }
+.atp-ed-b { display: grid; grid-template-columns: 64px 1fr; gap: 6px; padding: 8px; border: 1px solid rgba(148, 163, 184, .35); border-radius: 12px; }
+.atp-ed-k { grid-column: 1 / -1; display: flex; gap: 6px; } .atp-ed-k select { width: auto; } .atp-ed-k input { flex: 1; }
+@media (prefers-color-scheme: dark) { .atp-bab li.cek { background: rgba(245, 158, 11, .1); } .atp-info { background: rgba(37, 99, 235, .12); color: inherit; } }

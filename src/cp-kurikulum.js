@@ -47,11 +47,11 @@ const _cpJudulRapi = (s) => String(s || "").toLowerCase().replace(/\b(\p{L})/gu,
 
 async function _cpMuatIndeks(versi = CPK.versi) {
   const v = _cpVer(versi); if (CPK.indeks && CPK.indeks._v === v.id) return CPK.indeks;
-  const r = await fetch(`${v.folder}/_indeks.json?v=1`); const d = await r.json(); d._v = v.id; CPK.indeks = d; return d;
+  const r = await fetch(`${v.folder}/_indeks.json?v=2`); const d = await r.json(); d._v = v.id; CPK.indeks = d; return d;
 }
 async function _cpMuatMapel(id, versi = CPK.versi) {
   const k = versi + "/" + id; if (CPK.data[k]) return CPK.data[k];
-  const r = await fetch(`${_cpVer(versi).folder}/${id}.json?v=1`); if (!r.ok) return null; return (CPK.data[k] = await r.json());
+  const r = await fetch(`${_cpVer(versi).folder}/${id}.json?v=2`); if (!r.ok) return null; return (CPK.data[k] = await r.json());
 }
 async function _cpMuatAktif() {
   const ruang = CPK.pengelola ? ["A", "Pa", "Pi"] : [CPK.ruang];
