@@ -73,7 +73,7 @@ function _alHtml() {
   const nikGanda = new Set(), lihat = {}; semua.forEach((x) => { const k = _alDigit(x.nik); if (!k) return; if (lihat[k]) nikGanda.add(k); lihat[k] = 1; });
   const per = (r) => semua.filter((x) => x.rg === r).length, cek = masalah + nikGanda.size;
   const angka = (k, label, n) => `<div class="bn-${k}"><b data-n="${n}">${n}</b><span>${label}</span></div>`;
-  const chip = (nilai, pilihan, aksi) => pilihan.map(([k, l]) => `<button class="${nilai === k ? "on" : ""}" onclick="${aksi}='${k}';_alSegar()">${l}</button>`).join("");
+  const chip = (nilai, pilihan, aksi) => pilihan.map(([k, l]) => `<button class="${nilai === k ? "on" : ""}" style="--cw:${typeof _biCw === "function" ? _biCw(k) : "#475569"}" onclick="${aksi}='${k}';_alSegar()">${l}</button>`).join("");
   return `<div class="bk2" style="--bk:#6d28d9">
     <div class="bk2-hero"><div><small>🎓 ALUMNI PKBM AL-UMM BARABAI</small><h2>Alumni Paket C</h2><p>Santri yang resmi lulus Paket C (kelas 12), lengkap dengan pendataan alumni Dinas dan tautan e-Ijazah angkatannya.</p></div>
       <div class="bk2-angka">${angka("catat", "Alumni", semua.length)}${angka("aktif", "Sudah Mengisi", sudah)}${angka("keluar", "Belum Mengisi", semua.length - sudah)}${angka("l", "Putra", per("Pa"))}${angka("p", "Putri", per("Pi"))}</div></div>
@@ -88,7 +88,7 @@ function _alHtml() {
       ${ubah ? `<button class="bk2-btn" onclick="alForm()">➕ Tambah Alumni</button><button class="bk2-btn" onclick="document.getElementById('al-berkas').click()">📥 Impor Excel</button><input type="file" id="al-berkas" accept=".xlsx,.xls,.csv" hidden onchange="alImpor(this)">` : ""}
       ${(AL.data || {})._folder && AL.data._folder.url ? `<a class="bk2-btn" href="${_alE(AL.data._folder.url)}" target="_blank" rel="noopener">📂 Folder e-Ijazah</a>` : ""}${ubah ? `<button class="bk2-btn" onclick="alAturFolder()">⚙️ Atur Folder</button>` : ""}
       <button class="bk2-btn utama" onclick="alUnduh()">⬇️ Unduh Excel</button></div>
-    <div class="bi2-wadah"><table class="bi2-tabel" style="min-width:980px"><colgroup><col style="width:44px"><col><col style="width:170px"><col style="width:120px"><col style="width:74px"><col style="width:140px"><col style="width:150px"><col style="width:150px"></colgroup>
+    <div class="bi2-wadah"><table class="bi2-tabel" style="min-width:1150px"><colgroup><col style="width:44px"><col><col style="width:170px"><col style="width:120px"><col style="width:74px"><col style="width:140px"><col style="width:150px"><col style="width:150px"></colgroup>
       <thead><tr><th class="c">No</th><th>Nama Lengkap</th><th>NIK</th><th>NISN</th><th class="c">Lulus</th><th>No. HP</th><th>Pendataan</th><th class="c">Aksi</th></tr></thead><tbody>
       ${d.map((x, i) => { const c = alCekNik(x), ganda = nikGanda.has(_alDigit(x.nik)), u = alUrlIjazah(x); return `<tr class="${c.length || ganda ? "al2-salah" : ""}"><td class="c redup">${i + 1}</td>
         <td class="nama"><span class="bi2-nm"><i class="bk2-av">${_alE(String(x.nama).trim().split(/\s+/).slice(0, 2).map((w) => w[0] || "").join("").toUpperCase())}</i><span><b>${_alE(x.nama)}</b><small class="al2-sub">${x.jk === "P" ? "Perempuan" : x.jk === "L" ? "Laki-laki" : "-"} · ${_alE(x.tgl_lahir ? new Date(x.tgl_lahir + "T00:00:00").toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "-")} · ${x.rg === "Pa" ? "Putra" : x.rg === "Pi" ? "Putri" : "-"}</small>

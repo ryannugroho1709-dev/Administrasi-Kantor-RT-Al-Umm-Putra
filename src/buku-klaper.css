@@ -146,3 +146,9 @@
   .bi2-tabel tr.al2-salah { border-color: #fecaca; background: #fff1f2 !important; }
   .bi2-tabel td.mono { white-space: normal; overflow-wrap: anywhere; }
 }
+/* 🎨 Saringan berwarna bermakna (jenjang · status · tahun) */
+.bk2-chip button { --cw: var(--bk); display: inline-flex; align-items: center; gap: 6px; transition: background .15s, color .15s, box-shadow .15s; }
+.bk2-chip button::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--cw); flex: none; }
+.bk2-chip button:hover { background: color-mix(in srgb, var(--cw) 12%, transparent); color: var(--cw); }
+.bk2-chip button.on { background: var(--cw) !important; color: #fff !important; font-weight: 700; box-shadow: 0 4px 12px color-mix(in srgb, var(--cw) 35%, transparent); }
+.bk2-chip button.on::before { background: #fff; }

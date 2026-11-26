@@ -66,6 +66,10 @@ const BI_WARNA_RG = { A: "#047857", Pa: "#1d4ed8", Pi: "#be185d", semua: "#8a552
 const _biTabRg = (aktif, fn) => `<div class="bk2-jenjang">${["semua", ...BI_RG].map((r) => `<button class="${aktif === r ? "on" : ""}" style="--rw:${BI_WARNA_RG[r]}" onclick="${fn}('${r}')">${r === "semua" ? "🏫 " : ""}${_biE(_biNamaRg(r))}<small>${(BI.siswa || []).filter((x) => r === "semua" || x.ruang_id === r).length} santri</small></button>`).join("")}</div>`;
 const _biPillRg = (r) => `<em class="bi2-rg" style="--rw:${BI_WARNA_RG[r] || "#64748b"}">${_biE({ A: "Paket A", Pa: "Putra", Pi: "Putri" }[r] || r)}</em>`;
 
+// warna bermakna untuk pilihan saringan: jenjang, status, tahun
+const BI_CW = { semua: "#475569", "": "#475569", aktif: "#16a34a", sudah: "#16a34a", belum: "#d97706", lulus: "#7c3aed", mutasi: "#e11d48", keluar: "#e11d48", nonaktif: "#e11d48", A: "#047857", Pa: "#1d4ed8", Pi: "#be185d" };
+const BI_CW_TAHUN = ["#0284c7", "#ea580c", "#0d9488", "#c026d3", "#65a30d", "#dc2626", "#4f46e5"];
+function _biCw(k) { if (BI_CW[k]) return BI_CW[k]; const n = Number(String(k).replace(/D/g, "")); return n ? BI_CW_TAHUN[n % BI_CW_TAHUN.length] : "#475569"; }
 // label kolom untuk tampilan kartu di HP (dari judul tabel), kolom terakhir tanpa judul = aksi
 function _bi2Label(akar) { (akar || document).querySelectorAll(".bi2-tabel").forEach((t) => { const h = [...t.querySelectorAll("thead th")].map((x) => x.textContent.trim()); t.querySelectorAll("tbody tr").forEach((r) => [...r.children].forEach((td, i) => { if (td.colSpan > 1) return; if (h[i]) td.setAttribute("data-l", h[i]); else td.classList.add("aksi"); if (/^aksi$/i.test(h[i] || "")) td.classList.add("aksi"); })); }); }
 // ── Kartu angka berwarna + animasi hitung naik (0 → angka tujuan) ──
@@ -102,7 +106,7 @@ function _biHtmlGuru() {
     <div class="bk2-jenjang">${["semua", ...BI_RG].map((r) => `<button class="${f.rg === r ? "on" : ""}" style="--rw:${BI_WARNA_RG[r]}" onclick="BI.g.rg='${r}';BI._kunciAnim='';_biSegar('bi-wrap',_biHtmlGuru)">${r === "semua" ? "🏫 " : ""}${_biE(_biNamaRg(r))}<small>${(BI.guru || []).filter((g) => r === "semua" || _biRgGuru(g).includes(r)).length} orang</small></button>`).join("")}</div>
     <div class="bk2-alat">
       <div class="bk2-cari">🔎<input class="bi-cari" placeholder="Cari nama, NIP/NIK, jabatan, no. WA…" value="${_biE(f.cari)}" oninput="BI.g.cari=this.value;_biSegar('bi-wrap',_biHtmlGuru,true)"></div>
-      <div class="bk2-chip">${[["semua", "Semua"], ["aktif", "🟢 Aktif"], ["nonaktif", "⏸️ Nonaktif"]].map(([k, n]) => `<button class="${f.status === k ? "on" : ""}" onclick="BI.g.status='${k}';_biSegar('bi-wrap',_biHtmlGuru)">${n}</button>`).join("")}</div>
+      <div class="bk2-chip">${[["semua", "Semua"], ["aktif", "Aktif"], ["nonaktif", "Nonaktif"]].map(([k, n]) => `<button class="${f.status === k ? "on" : ""}" style="--cw:${_biCw(k)}" onclick="BI.g.status='${k}';_biSegar('bi-wrap',_biHtmlGuru)">${n}</button>`).join("")}</div>
       <span class="bk2-jml">${d.length} orang</span>
       <button class="bk2-btn utama" onclick="biUnduhGuru()">⬇️ Unduh Excel</button></div>
     <div class="bi2-wadah"><table class="bi2-tabel" style="min-width:1080px"><colgroup><col style="width:44px"><col><col style="width:170px"><col style="width:180px"><col style="width:150px"><col style="width:190px"><col style="width:110px"></colgroup>
@@ -148,7 +152,7 @@ function _biHtmlInduk() {
     </div>
     <div class="bk2-alat">
       <div class="bk2-cari">🔎<input class="bi-cari" placeholder="Cari nama, No. Induk, NISN, NIK…" value="${_biE(f.cari)}" oninput="BI.f.cari=this.value;_biSegar('bi-wrap',_biHtmlInduk,true)"></div>
-      <div class="bk2-chip">${[["aktif", "🟢 Aktif"], ["lulus", "🎓 Lulus"], ["mutasi", "↪️ Keluar/Mutasi"], ["semua", "Semua"]].map(([k, n]) => `<button class="${f.status === k ? "on" : ""}" onclick="BI.f.status='${k}';_biSegar('bi-wrap',_biHtmlInduk)">${n}</button>`).join("")}</div>
+      <div class="bk2-chip">${[["aktif", "Aktif"], ["lulus", "Lulus"], ["mutasi", "Keluar/Mutasi"], ["semua", "Semua"]].map(([k, n]) => `<button class="${f.status === k ? "on" : ""}" style="--cw:${_biCw(k)}" onclick="BI.f.status='${k}';_biSegar('bi-wrap',_biHtmlInduk)">${n}</button>`).join("")}</div>
       <span class="bk2-jml">${d.length} santri</span>
       <button class="bk2-btn utama" onclick="biUnduhInduk()">⬇️ Unduh Excel${gabung ? " (Semua Jenjang)" : ""}</button></div>
     <div class="bi2-wadah"><table class="bi2-tabel" style="min-width:${gabung ? 1290 : 1200}px"><colgroup><col style="width:44px"><col style="width:92px"><col style="width:118px"><col>${gabung ? '<col style="width:92px">' : ""}<col style="width:52px"><col style="width:190px"><col style="width:70px"><col style="width:150px"><col style="width:128px"><col style="width:76px"></colgroup>
@@ -270,7 +274,7 @@ function _biHtmlKlaper() {
     ${_biTabRg(BI.k.rg, "biRgKlaper")}
     <div class="bk2-alat">
       <div class="bk2-cari">🔎<input class="bi-cari" placeholder="Cari nama, No. Induk, NISN…" value="${_biE(BI.k.cari || "")}" oninput="BI.k.cari=this.value;_biSegar('bk-wrap',_biHtmlKlaper,true)"></div>
-      <div class="bk2-chip">${[["semua", "Semua"], ["aktif", "🟢 Aktif"], ["keluar", "🎓 Lulus & Keluar"]].map(([k, n]) => `<button class="${BI.k.status === k ? "on" : ""}" onclick="BI.k.status='${k}';_biSegar('bk-wrap',_biHtmlKlaper)">${n}</button>`).join("")}</div>
+      <div class="bk2-chip">${[["semua", "Semua"], ["aktif", "Aktif"], ["keluar", "Lulus & Keluar"]].map(([k, n]) => `<button class="${BI.k.status === k ? "on" : ""}" style="--cw:${_biCw(k)}" onclick="BI.k.status='${k}';_biSegar('bk-wrap',_biHtmlKlaper)">${n}</button>`).join("")}</div>
       <span class="bk2-jml">${d.length} santri</span>
       <button class="bk2-btn" onclick="biCetakKlaper()">🖨️ Cetak</button><button class="bk2-btn utama" onclick="biUnduhKlaper()">⬇️ Unduh Excel${gabung ? " (Semua Jenjang)" : ""}</button></div>
     <div class="bk2-abjad">${"ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map((h) => kel[h] ? `<a href="#bk-${h}" onclick="event.preventDefault();document.getElementById('bk-${h}').scrollIntoView({behavior:'smooth',block:'start'})">${h}</a>` : `<span>${h}</span>`).join("")}</div>
