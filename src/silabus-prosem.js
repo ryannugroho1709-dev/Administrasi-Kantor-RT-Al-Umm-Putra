@@ -34,15 +34,52 @@ const SP_BAWAAN = {
     "Matematika": [[1, "Bilangan Bulat", 61], [2, "Bilangan Rasional", 65], [3, "Rasio", 30], [4, "", null, "isi"]],
     "PJOK": [[1, "Aktivitas Permainan Bola Basket", 25], [2, "Aktivitas Permainan Bola Voli", 24], [3, "Aktivitas Permainan Kasti", 22], [4, "Aktivitas Bela Diri Pencak Silat", 21], [5, "Lari Jarak Pendek", null, "File PDF Bab 5 belum ada di Modul Ajar"], [6, "Aktivitas Senam Lantai", 23], [7, "Aktivitas Gerak Berirama", 24], [8, "Aktivitas Kebugaran untuk Kesehatan", 33], [9, "Pola Makan Sehat, Bergizi, dan Seimbang", 27]],
     "PPKN/Seni Budaya": [[1, "Sejarah Kelahiran Pancasila", 39, null, "PPKn"], [2, "Penerapan Nilai-Nilai Pancasila", 34, null, "PPKn"], [3, "Patuh terhadap Norma", 37, null, "PPKn"], [4, "", null, "isi", "PPKn"],
-      [1, "Menggambar", 73, null, "Seni Rupa"], [2, "Mendesain", 61, null, "Seni Rupa"], [3, "Membuat Tipografi dan Logo", 59, null, "Seni Rupa"], [4, "Berkarya Seni untuk Perubahan", null, null, "Seni Rupa"]],
+      [1, "Menggambar", 73, null, "Seni Rupa"], [2, "Mendesain", 61, null, "Seni Rupa"], [3, "Membuat Tipografi dan Logo", 59, null, "Seni Rupa"], [4, "Berkarya Seni untuk Perubahan", null, "File PDF Bab 4 belum ada di Modul Ajar", "Seni Rupa"]],
+  },
+};
+// Sub-bab kelas 7 hasil pembacaan (OCR) halaman buku di Modul Ajar, 26 Nov 2026. Hanya judul yang benar-benar terbaca;
+// salah baca huruf yang jelas dibetulkan. Kunci "Mapel|Buku|No". [daftar sub-bab, catatan bila belum lengkap]
+const SP_SUB_BAWAAN = {
+  "Kelas 7": {
+    "Bahasa Indonesia||1": [["A. Memahami Isi Teks Deskripsi", "B. Memahami Unsur Bahasa dalam Teks Deskripsi", "C. Menganalisis Informasi Lisan", "D. Menyunting Teks Deskripsi", "E. Menyajikan Teks Deskripsi Sederhana"]],
+    "Bahasa Indonesia||2": [["A. Mengenal dan Mengidentifikasi Unsur Puisi Rakyat", "B. Mengidentifikasi Elemen dalam Teks Naratif", "Menulis Cerita Fantasi Sederhana"], "Sub-bab ketiga (hal. 31–33, menulis cerita fantasi) judulnya tidak terbaca jelas — mohon dicek"],
+    "Bahasa Inggris||1": [[], "Buku berbahasa Inggris tidak memakai penomoran A/B sehingga sub-bab tidak terbaca otomatis — mohon diisi"],
+    "Bahasa Inggris||2": [[], "Buku berbahasa Inggris tidak memakai penomoran A/B sehingga sub-bab tidak terbaca otomatis — mohon diisi"],
+    "Bahasa Inggris||3": [[], "Buku berbahasa Inggris tidak memakai penomoran A/B sehingga sub-bab tidak terbaca otomatis — mohon diisi"],
+    "IPA||1": [["Sains Ada di Sekitar Kita", "Laboratorium IPA", "Pengamatan dalam Sains", "Prosedur Percobaan", "Pengukuran", "Pelaporan Hasil Percobaan"], "Judul sub-bab pertama tidak terbaca; sebagian diambil dari judul bagian — mohon dicek"],
+    "IPA||2": [["A. Wujud Zat dan Model Partikel", "B. Perubahan Wujud Zat", "C. Kerapatan Zat"]],
+    "IPA||3": [["A. Suhu", "B. Kalor (termasuk Perpindahan Kalor & Pemuaian Zat)", "C. Pemanfaatan Energi Kalor"]],
+    "IPA||5": [["Ciri-Ciri Makhluk Hidup", "Kunci Klasifikasi dan Determinasi", "Urutan Takson Makhluk Hidup", "Klasifikasi Makhluk Hidup Lima Kingdom"], "Judul sub-bab utama tidak terbaca; disusun dari judul bagian — mohon dicek"],
+    "IPA||6": [["Komponen Lingkungan Biotik", "Tingkatan Organisasi Kehidupan dalam Ekologi dan Interaksinya", "Aliran Energi", "Daur Biogeokimia", "Pertanian dan Produksi Pangan", "Perubahan Iklim, Polusi, dan Kerusakan Habitat", "Metode dan Manfaat Konservasi"], "Sebagian besar disusun dari judul bagian — mohon dicek"],
+    "IPA||7": [["A. Sistem Tata Surya", "B. Pengaruh Pergerakan Bumi dan Benda Langit Lainnya terhadap Kehidupan"]],
+    "IPS||1": [["Mengenal Lokasi Tempat Tinggal", "Konektivitas Antarruang", "Perubahan Iklim", "Potensi Bencana Alam di Indonesia", "Interaksi Sosial", "Konsep Dasar Ilmu Sejarah"]],
+    "IPS||2": [["Berkenalan dengan Lingkungan Sekitar", "Pembiasaan Diri untuk Melestarikan Lingkungan", "Pembangunan Berkelanjutan", "Masalah Pokok Ekonomi"], "Ada bagian tentang dinamika sosial (hal. 30) dan zaman praaksara (hal. 81) yang judul sub-babnya tidak terbaca — mohon dicek"],
+    "Matematika||1": [["A. Memahami Bilangan Bulat", "B. Operasi Hitung Bilangan Bulat", "C. Faktor Bilangan Bulat (FPB dan KPK)"]],
+    "Matematika||2": [["Pengertian Bilangan Rasional", "Membandingkan Bilangan Rasional", "Penjumlahan dan Pengurangan Bilangan Rasional", "Perkalian dan Pembagian Bilangan Rasional", "Operasi Hitung Campuran Bilangan Rasional", "Penerapan Operasi Hitung Bilangan Rasional"], "Diambil dari judul bagian (sub-bab utama hanya terbaca sebagian)"],
+    "Matematika||3": [["A. Konsep Rasio", "B. Skala"]],
+    "PJOK||1": [["Sejarah Permainan Bola Basket", "Variasi Melempar dan Menangkap", "Pivot", "Menembak Bola (Shooting)", "Rebound", "Bermain Bola Basket dengan Aturan Sederhana"], "Teknik menggiring (dribble) tidak terbaca — mohon dicek"],
+    "PJOK||2": [["Passing Bawah dan Passing Atas", "Servis Bawah dan Servis Atas", "Pukulan Spike", "Bendungan (Blocking)", "Bermain Bola Voli dengan Aturan Sederhana"]],
+    "PJOK||3": [["Menangkap dan Lempar Tangkap Bola", "Variasi Gerak Memukul", "Memukul dan Berlari Menuju Tiang Hinggap", "Bermain Kasti dengan Aturan Sederhana"], "Judul sub-bab utama tidak terbaca; disusun dari judul bagian — mohon dicek"],
+    "PJOK||4": [["Sejarah Pencak Silat", "Teknik Pukulan dan Tendangan", "Tangkisan dan Elakan"]],
+    "PJOK||6": [["A. Pengertian Senam Lantai", "B. Gerakan Senam Lantai (Rol Depan & Rol Belakang)"]],
+    "PJOK||7": [["A. Hakikat Aktivitas Gerak Berirama", "B. Pembelajaran Macam-Macam Langkah Kaki", "C. Pembelajaran Kombinasi Langkah Kaki dan Ayunan Lengan"]],
+    "PJOK||8": [["Komposisi Tubuh", "Pengukuran Komponen Kebugaran Terkait Kesehatan (IMT, Kekuatan & Daya Tahan Otot, Kelenturan)"], "Sub-bab pertama (hal. 5–21) tidak terbaca — mohon dicek"],
+    "PJOK||9": [["A. Pola Makan Sehat dan Bergizi Seimbang", "B. Pedoman Gizi Seimbang"]],
+    "PPKN/Seni Budaya|PPKn|1": [["A. Kelahiran Pancasila dalam Sidang BPUPK", "B. Perumusan Pancasila oleh Panitia Sembilan", "Pembentukan PPKI dan Penetapan Pancasila sebagai Dasar Negara"], "Sub-bab ketiga diambil dari judul bagian — mohon dicek"],
+    "PPKN/Seni Budaya|PPKn|2": [["A. Makna Sila-Sila Pancasila", "B. Penerapan Pancasila dalam Kehidupan Bermasyarakat"]],
+    "PPKN/Seni Budaya|PPKn|3": [["A. Manusia sebagai Makhluk Tuhan Yang Maha Esa, Makhluk Individu, dan Makhluk Sosial", "B. Pengertian Norma", "C. Macam-Macam Norma", "D. Mari Bertindak Sesuai Norma"]],
+    "PPKN/Seni Budaya|Seni Rupa|1": [["A. Komposisi Bentuk Geometris", "B. Karya Alam Benda"]],
+    "PPKN/Seni Budaya|Seni Rupa|2": [["A. Desain Ragam Hias", "B. Ragam Hias Organis dan Geometris", "C. Aplikasi Desain Pola Organis dan Geometris pada Benda"]],
+    "PPKN/Seni Budaya|Seni Rupa|3": [["A. Sejarah Tipografi", "B. Mengenal Dasar Tipografi", "Mengenal dan Membuat Logo"], "Sub-bab tentang logo diambil dari judul bagian — mohon dicek"],
   },
 };
 function _spDariBawaan(namaKelas, namaMapel) {
   const d = ((SP_BAWAAN[namaKelas] || {})[namaMapel]) || null; if (!d) return null;
-  const bab = {};
+  const bab = {}, subK = SP_SUB_BAWAAN[namaKelas] || {};
   d.forEach(([no, judul, hal, cat, buku], i) => {
-    const isi = cat === "isi";
-    bab["w" + i] = { no, judul: isi ? "" : judul, buku: buku || "", sem: no <= 3 ? "ganjil" : "genap", hal: hal || null, sub: [], jp: null, isi, catatan: isi ? "Buku semester genap belum ada di Modul Ajar — judul bab perlu diisi" : cat || "", u: i };
+    const isi = cat === "isi", s = subK[`${namaMapel}|${buku || ""}|${no}`] || [[], ""];
+    const catatan = isi ? "Buku semester genap belum ada di Modul Ajar — judul bab perlu diisi" : [cat, s[1]].filter(Boolean).join(" · ");
+    bab["w" + i] = { no, judul: isi ? "" : judul, buku: buku || "", sem: no <= 3 ? "ganjil" : "genap", hal: hal || null, sub: [...s[0]], jp: null, isi, catatan, u: i };
   });
   return { bab, asesmen: 1, cadangan: 0, bawaan: true };
 }
@@ -150,20 +187,27 @@ function _spRencana(mapelId, sem) {
 }
 // ── Capaian dari jurnal ──
 const _spNorm = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9؀-ۿ ]/g, " ").replace(/\s+/g, " ").trim();
-const SP_KATA_UMUM = new Set("dan di ke dari yang untuk pada dengan dalam serta atau bab materi pembelajaran tentang the of in a an to is are my".split(" "));
+const SP_KATA_UMUM = new Set(("dan di ke dari yang untuk pada dengan dalam serta atau bab materi pembelajaran tentang the of in a an to is are my " +
+  "kehidupan sehari hari lanjutan melanjutkan mengulang penugasan pengenalan dasar contoh soal latihan tugas koreksi bersama memahami mengenal pengertian").split(" "));
+const _spKata = (s) => [...new Set(_spNorm(s).split(" ").filter((x) => x.length > 2 && !SP_KATA_UMUM.has(x)))];
+// kata jurnal dianggap sama bila persis, atau (≥4 huruf) yang satu memuat yang lain: "pengoperasian" ~ "operasi"
+const _spSama = (a, b) => a === b || (a.length >= 4 && b.length >= 4 && (a.includes(b) || b.includes(a)));
 function _spCocokBab(materi, bab) {
   const m = _spNorm(materi); if (!m) return -1;
   const nomor = m.match(/\b(?:bab|chapter|unit)\s*(\d{1,2})\b/);
   if (nomor) { const i = bab.findIndex((b) => Number(b.no) === Number(nomor[1])); if (i >= 0) return i; }
-  const kataM = new Set(m.split(" ").filter((x) => x.length > 2 && !SP_KATA_UMUM.has(x)));
-  let terbaik = -1, skor = 0;
-  bab.forEach((b, i) => {
-    const kata = _spNorm([b.judul, ...(b.sub || [])].join(" ")).split(" ").filter((x) => x.length > 2 && !SP_KATA_UMUM.has(x));
-    const cocok = [...new Set(kata)].filter((x) => kataM.has(x)).length;
-    const s = cocok / Math.max(2, Math.min(5, new Set(kata).size));
-    if (cocok >= 1 && s > skor) { skor = s; terbaik = i; }
+  const kataM = _spKata(m); if (!kataM.length) return -1;
+  const vocab = bab.map((b) => ({ j: _spKata(b.judul), s: _spKata((b.sub || []).join(" ")) }));
+  // bobot: kata di judul bab ×2, di sub-bab ×1, dibagi jumlah bab yang memuat kata itu (kata umum di banyak bab bernilai kecil)
+  const skor = vocab.map(() => 0);
+  kataM.forEach((t) => {
+    const ada = vocab.map((v) => (v.j.some((x) => _spSama(t, x)) ? 2 : v.s.some((x) => _spSama(t, x)) ? 1 : 0));
+    const df = ada.filter(Boolean).length; if (!df) return;
+    ada.forEach((w, i) => { if (w) skor[i] += w / df; });
   });
-  return skor >= 0.34 ? terbaik : -1;
+  const maks = Math.max(...skor); if (maks < 0.6) return -1;
+  const juara = skor.map((s, i) => (s === maks ? i : -1)).filter((i) => i >= 0);
+  return juara.length === 1 ? juara[0] : -1; // seri → belum bisa dipastikan
 }
 function _spCapaian(mapelId, sem, rc) {
   const r = rc.p.rentang, hariIni = _spHariIni();
@@ -236,6 +280,7 @@ function _spGambar() {
   }).join("");
   w.innerHTML = kepala + infoSem + `<div class="sp-cari"><span>🔎</span><input type="search" id="sp-cari" placeholder="Cari bab / sub-bab di semua mapel kelas ini… mis. pecahan, pancasila, voli" value="${_spE(SP.cari || "")}" oninput="spCari(this.value)" autocomplete="off"><div id="sp-cari-hasil"></div></div><div class="sp-alat">${boleh ? `<button class="btn btn-sm btn-ghost" onclick="spUnduhTemplate()">⬇️ Unduh Template Excel</button><label class="btn btn-sm btn-ghost">⬆️ Unggah Excel<input type="file" accept=".xlsx,.xls" hidden onchange="spUnggah(this)"></label>` : ""}<button class="btn btn-sm btn-ghost" onclick="spCetak()">🖨️ Cetak Prosem Kelas</button>
     <span class="sp-legenda">${[["sesuai", "Sesuai"], ["cepat", "Lebih Cepat"], ["telat", "Tertinggal"], ["tak", "Jurnal Belum Terbaca"], ["kosong", "Belum Ada Jurnal"]].map(([k, l]) => `<i style="--sw:${SP_WARNA[k]}"></i>${l}`).join("")}</span></div>
+    ${_spHtmlLengkap(mapelIds)}
     <div class="sp-grid">${kartu || `<div class="card empty-state">Belum ada jadwal pelajaran untuk kelas ini.</div>`}</div>
     <div id="sp-rinci">${SP.mapelId ? _spHtmlRinci(SP.mapelId) : `<div class="sp-petunjuk">Ketuk salah satu mapel untuk melihat pembagian bab, tanggal pertemuan, dan capaiannya.</div>`}</div>`;
 }
@@ -267,6 +312,27 @@ function _spHtmlRinci(id) {
     ${rc.cadangan.length ? `<div class="sp-cad">± ${rc.cadangan.length} pertemuan cadangan: ${rc.cadangan.map((t) => _spTgl(t)).join(", ")}</div>` : ""}
     ${tanpaBab.length ? `<details class="sp-jr luar"><summary>📓 ${tanpaBab.length} jurnal belum bisa dicocokkan dengan bab mana pun</summary>${tanpaBab.map((j) => `<div>${_spTgl(j.tanggal)} — ${_spE(j.materi_pokok || "(materi kosong)")}</div>`).join("")}<small>Tips: tulis materi jurnal dengan judul bab/sub-bab, mis. "Bab 2 Bilangan Rasional – penjumlahan pecahan".</small></details>` : ""}
     <div class="sp-r-aksi">${boleh ? `<button class="btn btn-accent" onclick="spUbah('${id}')">✏️ Ubah Bab & Sub-bab</button>` : ""}<button class="btn btn-ghost" onclick="spPilih('mapel','')">Tutup</button></div></div>`;
+}
+
+// ── Catatan kelengkapan silabus satu kelas (kedua semester) ──
+function _spHtmlLengkap(mapelIds) {
+  const kls = _spKelas(SP.kelasId).nama_kelas || "", baris = [], tanpaBab = [];
+  mapelIds.forEach((id) => {
+    const nm = _spMapel(id).nama_mapel || "?", d = _spMapelData(id), semua = ["ganjil", "genap"].flatMap((s) => _spBabSem(d, s));
+    if (!semua.length) { tanpaBab.push(nm); return; }
+    const isi = [];
+    semua.forEach((b) => {
+      const label = `${b.buku ? b.buku + " " : ""}Bab ${b.no}${b.judul ? " " + b.judul : ""} (${b.sem === "ganjil" ? "Ganjil" : "Genap"})`;
+      if (b.isi) isi.push(`<b>${_spE(label)}</b>: judul bab & sub-bab perlu diisi (buku semester genap belum ada di Modul Ajar)`);
+      else if (!(b.sub || []).length) isi.push(`<b>${_spE(label)}</b>: sub-bab belum diisi${b.catatan ? ` — ${_spE(b.catatan)}` : ""}`);
+      else if (b.catatan) isi.push(`<b>${_spE(label)}</b>: ${_spE(b.catatan)}`);
+    });
+    if (isi.length) baris.push(`<li><b class="sp-l-mapel">${_spE(nm)}</b><ul>${isi.map((x) => `<li>${x}</li>`).join("")}</ul></li>`);
+  });
+  ["ganjil", "genap"].forEach((s) => { const r = _spRentang(s); if (!r.awal || !r.akhir) baris.push(`<li><b class="sp-l-mapel">Kalender Akademik</b><ul><li>Tanggal ${!r.awal ? "awal" : "akhir"} KBM semester ${s} ${SP.th} belum ada — isi di Kalender Akademik atau tombol Atur Tanggal</li></ul></li>`); });
+  if (tanpaBab.length) baris.push(`<li><b class="sp-l-mapel">Belum ada daftar bab</b><ul><li>${tanpaBab.map(_spE).join(", ")} — belum ada buku di Modul Ajar (mapel diniyah menyusul)</li></ul></li>`);
+  const n = baris.length; if (!n) return `<div class="sp-lengkap ok">✓ Silabus ${_spE(kls)} lengkap untuk kedua semester.</div>`;
+  return `<details class="sp-lengkap"><summary>⚠️ Catatan Kelengkapan Silabus ${_spE(kls)} — ${n} hal perlu dilengkapi</summary><ul>${baris.join("")}</ul></details>`;
 }
 
 // ── Cari bab & sub-bab di semua mapel (kedua semester) ──
