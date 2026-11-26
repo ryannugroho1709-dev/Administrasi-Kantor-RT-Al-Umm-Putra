@@ -25,6 +25,7 @@
 <link rel="stylesheet" href="src/silabus-prosem.css?v=5">
 <link rel="stylesheet" href="src/cp-kurikulum.css?v=2">
 <link rel="stylesheet" href="src/buku-klaper.css?v=8">
+<link rel="stylesheet" href="src/jadwal-susun.css?v=1">
 <link rel="stylesheet" href="src/sop.css?v=5">
 <link rel="stylesheet" href="src/cari-fitur.css?v=1">
 <link rel="stylesheet" href="src/kosp.css?v=3">
@@ -1413,6 +1414,7 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
             <button class="btn btn-outline" id="jd-view-daftar" onclick="setJadwalView('daftar')" style="font-size:12px;">📋 Daftar</button>
             <button class="btn btn-ghost" id="jd-view-tabel" onclick="setJadwalView('tabel')" style="font-size:12px;">📊 Tabel Besar</button>
             <button class="btn btn-outline admin-only" style="display:none;" id="jb-toggle-btn" onclick="toggleJadwalMode()" title="Buka mode visual builder untuk menyusun jadwal lewat tabel">🏗️ Builder</button>
+            <button class="btn btn-accent admin-only" style="display:none;" onclick="jsuBuka()" title="Susun jadwal semester baru: jam belajar, penugasan guru per mapel, susun otomatis, lalu aktifkan">🗓️ Susun Jadwal Semester</button>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
             <div id="jadwal-list-btns" style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -1432,6 +1434,7 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
         <div id="jadwal-grid"></div>
         <div id="jadwal-tabel-besar" style="display:none;"></div>
         <div id="jadwal-builder" style="display:none;"></div>
+        <div id="jadwal-susun" style="display:none;"></div>
       </section>
 
       <!-- ══ MONITOR HARIAN ══ -->
@@ -16260,6 +16263,7 @@ async function handleImportSiswa(evt) {
 <script src="src/cp-kurikulum.js?v=3"></script>
 <script src="src/dialog-tema.js?v=1"></script>
 <script src="src/kop-amplop.js?v=2"></script>
+<script src="src/jadwal-susun.js?v=1"></script>
 <script src="src/cari-fitur.js?v=3"></script>
 <script src="src/sop-data.js?v=1"></script>
 <script src="src/sop.js?v=3"></script>
