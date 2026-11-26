@@ -185,18 +185,33 @@ async function biBukaKlaper(muatUlang) {
   catch (e) { sec.innerHTML = `<div class="card">Gagal memuat: ${_biE(e.message)}</div>`; }
 }
 function biRgKlaper(r) { BI.k.rg = r; _biSegar("bk-wrap", _biHtmlKlaper); }
-function _biDataKlaper() { return _biSaring({ rg: BI.k.rg, status: BI.k.status, cari: "" }).sort((a, b) => a.nama.localeCompare(b.nama, "id")); }
+function _biDataKlaper() { return _biSaring({ rg: BI.k.rg, status: BI.k.status, cari: BI.k.cari || "" }).sort((a, b) => a.nama.localeCompare(b.nama, "id")); }
 const _biHuruf = (n) => (String(n || "").trim()[0] || "#").toUpperCase().replace(/[^A-Z]/, "#");
+const _biInisial = (n) => String(n || "?").trim().split(/\s+/).slice(0, 2).map((w) => w[0] || "").join("").toUpperCase();
 function _biHtmlKlaper() {
   const d = _biDataKlaper(), kel = {}; d.forEach((x) => (kel[_biHuruf(x.nama)] = kel[_biHuruf(x.nama)] || []).push(x));
-  const huruf = Object.keys(kel).sort();
-  return `${_biTabRg(BI.k.rg, "biRgKlaper")}
-    <div class="card pg-alat"><div class="ua-saring">${[["semua", "Semua"], ["aktif", "Aktif"], ["keluar", "Lulus & Keluar"]].map(([k, n]) => `<button class="ua-saring-b ${BI.k.status === k ? "aktif" : ""}" onclick="BI.k.status='${k}';_biSegar('bk-wrap',_biHtmlKlaper)">${n}</button>`).join("")}</div>
-      <span class="pg-jml">${d.length} santri</span><button class="btn btn-secondary" onclick="biCetakKlaper()">🖨️ Cetak</button><button class="btn btn-accent" onclick="biUnduhKlaper()">Unduh Excel</button></div>
-    <div class="card bk-huruf">${huruf.map((h) => `<a href="#bk-${h}" onclick="event.preventDefault();document.getElementById('bk-${h}').scrollIntoView({behavior:'smooth'})">${h}</a>`).join("")}</div>
-    ${huruf.map((h) => `<div class="card bk-grup" id="bk-${h}"><div class="bk-h">${h}</div><div style="overflow-x:auto"><table class="table pg-tabel"><thead><tr><th>No</th><th>Nama</th><th>No. Induk</th><th>NISN</th><th>L/P</th><th>Masuk</th><th>Keadaan</th></tr></thead><tbody>
-      ${kel[h].map((x, i) => { const k = biKeadaan(x); return `<tr><td>${i + 1}</td><td><a href="#" onclick="event.preventDefault();biLembar('${x.id}')"><b>${_biE(x.nama)}</b></a></td><td class="al-mono">${_biE(x.nis || "—")}</td><td class="al-mono">${_biE(x.nisn || "—")}</td><td>${_biE(biJk(x) || "—")}</td><td>${_biE(biTahunMasuk(x) || "—")}</td><td><span class="bi-keadaan bi-k-${k.kode}">${_biE(k.teks)}</span></td></tr>`; }).join("")}
-    </tbody></table></div></div>`).join("") || `<div class="card empty-state">Tidak ada data.</div>`}`;
+  const huruf = Object.keys(kel).sort(), semua = (BI.siswa || []).filter((x) => x.ruang_id === BI.k.rg);
+  const hit = (kode) => semua.filter((x) => biKeadaan(x).kode === kode).length, L = semua.filter((x) => biJk(x) === "L").length, P = semua.filter((x) => biJk(x) === "P").length;
+  const warnaRg = { A: "#047857", Pa: "#1d4ed8", Pi: "#be185d" }[BI.k.rg] || "#0f5132";
+  return `<div class="bk2" style="--bk:${warnaRg}">
+    <div class="bk2-hero"><div><small>📇 BUKU KLAPER · INDEKS ABJAD PESERTA DIDIK</small><h2>${_biE(_biNamaRg(BI.k.rg))}</h2><p>Daftar seluruh peserta didik menurut abjad — aktif, lulus, dan keluar — beserta No. Induk dan NISN.</p></div>
+      <div class="bk2-angka"><div><b>${semua.length}</b><span>Tercatat</span></div><div><b>${hit("aktif")}</b><span>Aktif</span></div><div><b>${hit("lulus")}</b><span>Lulus</span></div><div><b>${hit("mutasi")}</b><span>Keluar</span></div><div><b>${L}<i>/</i>${P}</b><span>L / P</span></div></div></div>
+    <div class="bk2-jenjang">${BI_RG.map((r) => `<button class="${BI.k.rg === r ? "on" : ""}" style="--rw:${{ A: "#047857", Pa: "#1d4ed8", Pi: "#be185d" }[r]}" onclick="biRgKlaper('${r}')">${_biE(_biNamaRg(r))}<small>${(BI.siswa || []).filter((x) => x.ruang_id === r).length} santri</small></button>`).join("")}</div>
+    <div class="bk2-alat">
+      <div class="bk2-cari">🔎<input class="bi-cari" placeholder="Cari nama, No. Induk, NISN…" value="${_biE(BI.k.cari || "")}" oninput="BI.k.cari=this.value;_biSegar('bk-wrap',_biHtmlKlaper,true)"></div>
+      <div class="bk2-chip">${[["semua", "Semua"], ["aktif", "🟢 Aktif"], ["keluar", "🎓 Lulus & Keluar"]].map(([k, n]) => `<button class="${BI.k.status === k ? "on" : ""}" onclick="BI.k.status='${k}';_biSegar('bk-wrap',_biHtmlKlaper)">${n}</button>`).join("")}</div>
+      <span class="bk2-jml">${d.length} santri</span>
+      <button class="bk2-btn" onclick="biCetakKlaper()">🖨️ Cetak</button><button class="bk2-btn utama" onclick="biUnduhKlaper()">⬇️ Unduh Excel</button></div>
+    <div class="bk2-abjad">${"ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map((h) => kel[h] ? `<a href="#bk-${h}" onclick="event.preventDefault();document.getElementById('bk-${h}').scrollIntoView({behavior:'smooth',block:'start'})">${h}</a>` : `<span>${h}</span>`).join("")}</div>
+    ${huruf.map((h) => `<section class="bk2-grup" id="bk-${h}"><header><span class="bk2-hrf">${h}</span><small>${kel[h].length} santri</small></header>
+      <div class="bk2-kepala"><span>No</span><span>Nama</span><span>No. Induk</span><span>NISN</span><span>L/P</span><span>Masuk</span><span>Keadaan</span></div>
+      ${kel[h].map((x, i) => { const k = biKeadaan(x), jk = biJk(x); return `<div class="bk2-baris k-${k.kode}" onclick="biLembar('${x.id}')">
+        <span class="bk2-no">${i + 1}</span>
+        <span class="bk2-nama"><i class="bk2-av">${_biE(_biInisial(x.nama))}</i><b>${_biE(x.nama)}</b></span>
+        <span class="bk2-mono" data-l="No. Induk">${_biE(x.nis || "—")}</span><span class="bk2-mono" data-l="NISN">${_biE(x.nisn || "—")}</span>
+        <span data-l="L/P"><em class="bk2-jk ${jk === "P" ? "p" : "l"}">${_biE(jk || "—")}</em></span><span data-l="Masuk">${_biE(biTahunMasuk(x) || "—")}</span>
+        <span><em class="bk2-st ${k.kode}">${_biE(k.teks)}</em></span></div>`; }).join("")}</section>`).join("") || `<div class="bk2-kosong">Tidak ada santri yang cocok.</div>`}
+  </div>`;
 }
 function biCetakKlaper() {
   const d = _biDataKlaper(), kel = {}; d.forEach((x) => (kel[_biHuruf(x.nama)] = kel[_biHuruf(x.nama)] || []).push(x));
