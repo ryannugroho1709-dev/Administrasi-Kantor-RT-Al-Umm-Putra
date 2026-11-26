@@ -330,6 +330,16 @@ async function _khSholatTertib(nama = "Berjamaah") {
   } finally { peserta.forEach((p) => { _khPoseSholat(p.t, 0, 0); p.t.userData.antre = false; }); KS2.sholat = false; }
 }
 
+// ── pengaman: tanda "Kepala sedang sibuk" tidak boleh tertahan (lepas sendiri bila > 2 menit) ──
+(function () {
+  let nilai = !!KT.sibuk, sejak = 0;
+  Object.defineProperty(KT, "sibuk", { configurable: true, enumerable: true, get: () => nilai, set: (v) => { nilai = !!v; sejak = nilai ? Date.now() : 0; } });
+  setInterval(() => {
+    if (!nilai) return;
+    const giat = Object.values(KT.tokoh || {}).some((t) => t.userData && t.userData.jalur) || Object.values(KT.gelembung || {}).some((g) => g && !g.hidden);
+    if (giat) { sejak = Date.now(); return; } // masih ada yang berjalan/berbicara → memang sedang sibuk
+    if (sejak && Date.now() - sejak > 120000) { nilai = false; sejak = 0; const b = document.getElementById("kt-tombol-kirim"); if (b) b.disabled = false; } }, 5000);
+})();
 // ── pemasangan ──
 (function () {
   // _ktPergi: orang yang sedang di luar kantor hanya datang bila dipanggil RAPAT (naik kendaraan); selain itu tetap di luar
