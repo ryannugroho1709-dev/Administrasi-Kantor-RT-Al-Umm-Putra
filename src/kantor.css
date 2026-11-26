@@ -306,3 +306,12 @@ body.ks-menyeret .ks-puncak{display:block}
 @media (max-width: 900px) { .kh-rapat-bar { top: 52px; } .kh-rb-judul { max-width: 120px; } }
 @media (max-width: 420px) { .kh-rapat-bar button span { display: none; } .kh-rapat-bar button { padding: 8px 12px; font-size: 15px; } }
 #kantor-ai.kjl-on .kh-rapat-bar { top: 54px; }
+/* Laporan rinci (Kabar Baru & Rapat BOSP) */
+.kt-ul-rinci{margin:3px 0 4px;padding-left:16px;font-size:12px}.kt-ul-rinci li{margin:2px 0}.kt-ul-rinci small{color:#64748b}
+.kt-rinci{margin:6px 0;border:1px solid rgba(148,163,184,.35);border-radius:10px;background:rgba(248,250,252,.7)}
+.kt-rinci summary{cursor:pointer;padding:6px 10px;font-size:12.5px;list-style:none}.kt-rinci summary::before{content:"▸ ";color:#b45309}.kt-rinci[open] summary::before{content:"▾ "}
+.kt-rinci-isi{max-height:320px;overflow:auto;padding:0 6px 6px}
+.kt-tabel{width:100%;border-collapse:collapse;font-size:11.5px}.kt-tabel th{position:sticky;top:0;background:#f1f5f9;text-align:left;padding:4px 6px}
+.kt-tabel td{padding:3px 6px;border-top:1px solid rgba(148,163,184,.25);vertical-align:top}.kt-tabel td:last-child,.kt-tabel th:last-child{text-align:right;white-space:nowrap}
+.kt-tabel-grup td{background:#fef3c7;font-weight:700;color:#92400e}.kt-tabel-jml td{font-weight:800;border-top:2px solid #94a3b8}
+.kt-rinci-kosong{font-size:12px;color:#64748b;margin:4px 0}
