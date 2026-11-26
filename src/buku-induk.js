@@ -17,12 +17,14 @@ const biBolehUbah = () => (typeof isAdmin === "function" && isAdmin()) || (typeo
 
 async function biMuat(paksa) {
   if (BI.siswa && !paksa && Date.now() - BI.t < 120000) return;
-  const [s, k, t, al, gr] = await Promise.all([
+  const [s, k, t, al, gr, dk, jd] = await Promise.all([
     supaSemua.from("siswa").select("id,nama,nis,nisn,nik,no_kk,no_bpjs,no_kip,tempat_lahir,tanggal_lahir,angkatan,status_aktif,tanggal_mutasi,alasan_mutasi,nama_ayah,pekerjaan_ayah,nama_ibu,pekerjaan_ibu,no_wa_ayah,no_wa_ibu,alamat_asal,sekolah_asal,kelas_id,ruang_id,foto_url,created_at").order("nama"),
     supaSemua.from("kelas").select("id,nama_kelas,ruang_id"),
     supaSemua.from("kuliah_pengaturan").select("kunci,nilai").eq("ruang_id", "*").like("kunci", "bosp:induk:%"),
     supaSemua.from("kuliah_pengaturan").select("nilai").eq("kunci", "bosp:alumni").eq("ruang_id", "*").maybeSingle(),
-    supaSemua.from("guru").select("id,nama,nip_nik,jenis_guru,jabatan,no_wa,email,tempat_lahir,tanggal_lahir,tmt,status_aktif,ruang,ruang_utama,ruang_nonaktif,foto_url,created_at").order("nama"),
+    supaSemua.from("guru").select("id,nama,nip_nik,jenis_guru,jabatan,no_wa,email,tempat_lahir,tanggal_lahir,tmt,status_aktif,ruang,ruang_utama,ruang_nonaktif,foto_url,created_at,auth_user_id,akun_menunggu").order("nama"),
+    supaSemua.from("kuliah_pengaturan").select("nilai").eq("kunci", "dapodik:ptk").eq("ruang_id", "*").maybeSingle(),
+    supaSemua.from("jadwal_pelajaran").select("guru_id,ruang_id").eq("aktif", true),
   ]);
   if (s.error) throw s.error;
   BI.kelas = k.data || [];
@@ -38,6 +40,8 @@ async function biMuat(paksa) {
   });
   BI.siswa.sort((a, b) => a.nama.localeCompare(b.nama, "id"));
   BI.guru = (gr.data || []).filter((g) => g.nama);
+  BI.dpk = (dk && dk.data && dk.data.nilai) || null; BI.jadwalGuru = {};
+  ((jd && jd.data) || []).forEach((x) => { if (!x.guru_id) return; const o = (BI.jadwalGuru[x.guru_id] = BI.jadwalGuru[x.guru_id] || {}); o[x.ruang_id] = (o[x.ruang_id] || 0) + 1; });
   BI.tambah = {}; (t.data || []).forEach((r) => { const id = r.kunci.split(":").slice(3).join(":"); BI.tambah[id] = r.nilai || {}; });
   BI.t = Date.now();
 }
@@ -87,44 +91,67 @@ function _biHitungNaik(akar) {
 // pilihan isi Buku Induk: Peserta Didik / Guru & PTK
 const _biModeTab = () => `<div class="bi3-mode">${[["pd", "🎓 Peserta Didik"], ["guru", "👳 Guru & PTK"]].map(([k, l]) => `<button class="${(BI.mode || "pd") === k ? "on" : ""}" onclick="biGantiMode('${k}')">${l}</button>`).join("")}</div>`;
 function biGantiMode(m) { BI.mode = m; BI._kunciAnim = ""; _biSegar("bi-wrap", m === "guru" ? _biHtmlGuru : _biHtmlInduk); }
-// ── Buku Induk Guru & PTK: aktif dan nonaktif (Data Guru di jenjang hanya yang aktif) ──
-BI.g = { rg: "semua", status: "semua", cari: "" };
+// ── Buku Induk Guru & PTK: aktif dan nonaktif, status Dapodik, jadwal per jenjang, akun ──
+BI.g = { rg: "semua", status: "semua", tanda: "", jenis: "", cari: "" };
+const BI_JENIS_GURU = { dalam: "Guru Dalam", luar: "Guru Luar", afiliasi: "Afiliasi", sukarelawan: "Sukarelawan", ekskul: "Ekskul" };
 const _biRgGuru = (g) => { const r = new Set([...(Array.isArray(g.ruang) ? g.ruang : []), g.ruang_utama].filter((x) => BI_RG.includes(x))); return [...r]; };
 const _biGuruAktif = (g) => g.status_aktif !== false;
+const _biDpk = (g) => ((BI.dpk && BI.dpk.ptk) || []).find((d) => d.guru_id === g.id) || null;
+const _biJadwal = (g) => (BI.jadwalGuru || {})[g.id] || {};
+const _biJmlJadwal = (g) => Object.values(_biJadwal(g)).reduce((a, b) => a + b, 0);
 function _biDataGuru() {
   const f = BI.g, q = (f.cari || "").toLowerCase().trim();
   return (BI.guru || []).filter((g) => (f.rg === "semua" || _biRgGuru(g).includes(f.rg)) && (f.status === "semua" || (f.status === "aktif") === _biGuruAktif(g))
-    && (!q || [g.nama, g.nip_nik, g.jabatan, g.no_wa].some((v) => String(v || "").toLowerCase().includes(q))));
+    && (!f.jenis || g.jenis_guru === f.jenis)
+    && (!f.tanda || (f.tanda === "dapodik" ? !!_biDpk(g) : f.tanda === "bukan" ? !_biDpk(g) : !_biJmlJadwal(g)))
+    && (!q || [g.nama, g.nip_nik, g.jabatan, g.no_wa, g.email].some((v) => String(v || "").toLowerCase().includes(q))));
+}
+// PTK yang terdaftar di Dapodik tetapi belum ada / nonaktif di aplikasi
+function _biHtmlDpkLuar() {
+  const ptk = (BI.dpk && BI.dpk.ptk) || []; if (!ptk.length) return "";
+  const belum = ptk.filter((d) => !d.guru_id), nonaktif = ptk.filter((d) => d.guru_id && (BI.guru || []).some((g) => g.id === d.guru_id && g.status_aktif === false));
+  if (!belum.length && !nonaktif.length) return "";
+  return `<details class="bi3-dpk"><summary>🗂️ Cek Dapodik — ${belum.length ? `${belum.length} belum ada di aplikasi` : ""}${belum.length && nonaktif.length ? " · " : ""}${nonaktif.length ? `${nonaktif.length} nonaktif di aplikasi` : ""}</summary>
+    <small>Potret ${_biE(BI.dpk.sumber || "Dapodik")}${BI.dpk.diambil ? ", " + _biE(BI.dpk.diambil) : ""}.</small>
+    ${belum.length ? `<p>Terdaftar di Dapodik, <b>belum ada di aplikasi</b>:</p><div class="bi3-dpk-nama">${belum.map((d) => `<em>${_biE(d.nama)}${d.jenis ? " · " + _biE(d.jenis) : ""}</em>`).join("")}</div>` : ""}
+    ${nonaktif.length ? `<p>Terdaftar di Dapodik tetapi <b>nonaktif di aplikasi</b> — perbarui di Dapodik bila sudah tidak bertugas:</p><div class="bi3-dpk-nama">${nonaktif.map((d) => `<em>${_biE(d.nama)}</em>`).join("")}</div>` : ""}</details>`;
 }
 function _biHtmlGuru() {
   const f = BI.g, d = _biDataGuru(), semua = (BI.guru || []).filter((g) => f.rg === "semua" || _biRgGuru(g).includes(f.rg));
-  const aktif = semua.filter(_biGuruAktif).length;
+  const aktif = semua.filter(_biGuruAktif), dpk = aktif.filter((g) => _biDpk(g)).length, akun = aktif.filter((g) => g.auth_user_id).length;
+  const chip = (nilai, pilihan, kunci) => pilihan.map(([k, l, w]) => `<button class="${nilai === k ? "on" : ""}" style="--cw:${w || _biCw(k)}" onclick="BI.g.${kunci}='${k}';_biSegar('bi-wrap',_biHtmlGuru)">${l}</button>`).join("");
   return `<div class="bk2" style="--bk:${BI_WARNA_RG[f.rg] || "#8a5523"}">
-    ${_biModeTab()}
-    <div class="bk2-hero"><div><small>👳 BUKU INDUK GURU & TENAGA KEPENDIDIKAN</small><h2>${_biE(_biNamaRg(f.rg))}</h2><p>Catatan seluruh guru dan PTK — yang aktif maupun yang sudah tidak bertugas. Menu Data Guru di jenjang hanya menampilkan yang aktif.</p></div>
-      ${_biAngka([["catat", "Tercatat", semua.length], ["aktif", "Aktif", aktif], ["keluar", "Nonaktif", semua.length - aktif]])}</div>
-    <div class="bk2-jenjang">${["semua", ...BI_RG].map((r) => `<button class="${f.rg === r ? "on" : ""}" style="--rw:${BI_WARNA_RG[r]}" onclick="BI.g.rg='${r}';BI._kunciAnim='';_biSegar('bi-wrap',_biHtmlGuru)">${r === "semua" ? "🏫 " : ""}${_biE(_biNamaRg(r))}<small>${(BI.guru || []).filter((g) => r === "semua" || _biRgGuru(g).includes(r)).length} orang</small></button>`).join("")}</div>
+    <div class="bk2-hero"><div><small>👳 BUKU INDUK GURU & TENAGA KEPENDIDIKAN</small><h2>${_biE(_biNamaRg(f.rg))}</h2><p>Catatan seluruh guru dan PTK — yang aktif maupun yang sudah tidak bertugas — beserta status Dapodik, jadwal mengajar, dan akun aplikasi.</p></div>
+      ${_biAngka([["catat", "Tercatat", semua.length], ["aktif", "Aktif", aktif.length], ["keluar", "Nonaktif", semua.length - aktif.length], ["lulus", "Di Dapodik", dpk], ["l", "Punya Akun", akun]])}</div>
+    <div class="bk2-jenjang">${["semua", ...BI_RG].map((r) => `<button class="${f.rg === r ? "on" : ""}" style="--rw:${BI_WARNA_RG[r]}" onclick="BI.g.rg='${r}';BI._kunciAnim='';_biSegar('bi-wrap',_biHtmlGuru)">${r === "semua" ? "🏫 " : ""}${_biE(_biNamaRg(r))}<small>${(BI.guru || []).filter((g) => (r === "semua" || _biRgGuru(g).includes(r)) && _biGuruAktif(g)).length} aktif</small></button>`).join("")}</div>
+    ${_biHtmlDpkLuar()}
     <div class="bk2-alat">
-      <div class="bk2-cari">🔎<input class="bi-cari" placeholder="Cari nama, NIP/NIK, jabatan, no. WA…" value="${_biE(f.cari)}" oninput="BI.g.cari=this.value;_biSegar('bi-wrap',_biHtmlGuru,true)"></div>
-      <div class="bk2-chip">${[["semua", "Semua"], ["aktif", "Aktif"], ["nonaktif", "Nonaktif"]].map(([k, n]) => `<button class="${f.status === k ? "on" : ""}" style="--cw:${_biCw(k)}" onclick="BI.g.status='${k}';_biSegar('bi-wrap',_biHtmlGuru)">${n}</button>`).join("")}</div>
+      <div class="bk2-cari">🔎<input class="bi-cari" placeholder="Cari nama, NIP/NIK, jabatan, no. WA, email…" value="${_biE(f.cari)}" oninput="BI.g.cari=this.value;_biSegar('bi-wrap',_biHtmlGuru,true)"></div>
+      <div class="bk2-chip">${chip(f.status, [["semua", "Semua"], ["aktif", "Aktif"], ["nonaktif", "Nonaktif"]], "status")}</div>
+      <div class="bk2-chip">${chip(f.tanda, [["", "Semua Tanda", "#475569"], ["dapodik", "Terdaftar Dapodik", "#16a34a"], ["bukan", "Belum di Dapodik", "#d97706"], ["jadwal", "Tanpa Jadwal", "#e11d48"]], "tanda")}</div>
+      <div class="bk2-chip">${chip(f.jenis, [["", "Semua Jenis", "#475569"], ...Object.entries(BI_JENIS_GURU).map(([k, n], i) => [k, n, BI_CW_TAHUN[i]])], "jenis")}</div>
       <span class="bk2-jml">${d.length} orang</span>
       <button class="bk2-btn utama" onclick="biUnduhGuru()">⬇️ Unduh Excel</button></div>
-    <div class="bi2-wadah"><table class="bi2-tabel" style="min-width:1080px"><colgroup><col style="width:44px"><col><col style="width:170px"><col style="width:180px"><col style="width:150px"><col style="width:190px"><col style="width:110px"></colgroup>
-      <thead><tr><th class="c">No</th><th>Nama Lengkap</th><th>NIP / NIK</th><th>Jabatan</th><th>Jenis</th><th>Jenjang</th><th>Status</th></tr></thead><tbody>
-      ${d.map((g, i) => { const on = _biGuruAktif(g); return `<tr class="${on ? "" : "k-mutasi"}"><td class="c redup">${i + 1}</td>
-        <td class="nama"><span class="bi2-nm"><i class="bk2-av">${_biE(_biInisial(g.nama))}</i><b>${_biE(g.nama)}</b></span></td><td class="mono">${_biE(g.nip_nik || "—")}</td>
-        <td>${_biE(g.jabatan || "—")}</td><td>${_biE(g.jenis_guru ? g.jenis_guru[0].toUpperCase() + g.jenis_guru.slice(1) : "—")}</td><td>${_biRgGuru(g).map(_biPillRg).join(" ") || "—"}</td>
-        <td><em class="bk2-st ${on ? "aktif" : "mutasi"}">${on ? "Aktif" : "Nonaktif"}</em></td></tr>`; }).join("") || `<tr><td colspan="7" class="c redup" style="padding:28px">Tidak ada data.</td></tr>`}
+    <div class="bi2-wadah"><table class="bi2-tabel" style="min-width:1240px"><colgroup><col style="width:44px"><col><col style="width:170px"><col style="width:150px"><col style="width:170px"><col style="width:150px"><col style="width:170px"><col style="width:90px"><col style="width:100px"></colgroup>
+      <thead><tr><th class="c">No</th><th>Nama Lengkap</th><th>Jabatan</th><th>Jenis</th><th>Bertugas Di</th><th>Dapodik</th><th>Jadwal Mengajar</th><th class="c">Akun</th><th>Status</th></tr></thead><tbody>
+      ${d.map((g, i) => { const on = _biGuruAktif(g), dp = _biDpk(g), jw = _biJadwal(g); return `<tr class="${on ? "" : "k-mutasi"}"><td class="c redup">${i + 1}</td>
+        <td class="nama"><span class="bi2-nm"><i class="bk2-av">${_biE(_biInisial(g.nama))}</i><span><b>${_biE(g.nama)}</b>${g.nip_nik ? `<small class="al2-sub">NIK/NIP ${_biE(g.nip_nik)}</small>` : ""}</span></span></td>
+        <td>${_biE(g.jabatan || "—")}</td><td>${_biE(BI_JENIS_GURU[g.jenis_guru] || g.jenis_guru || "—")}</td>
+        <td>${_biRgGuru(g).map(_biPillRg).join(" ") || "—"}</td>
+        <td>${dp ? `<em class="bk2-st aktif" title="${_biE([dp.nuptk ? "NUPTK " + dp.nuptk : "", dp.nip ? "NIP " + dp.nip : "", dp.golongan, dp.tugas].filter(Boolean).join(" · "))}">✓ ${_biE(dp.status || "Terdaftar")}</em>` : `<em class="bk2-st belum">Belum</em>`}</td>
+        <td>${Object.keys(jw).length ? Object.entries(jw).map(([r, n]) => `<em class="bi2-rg" style="--rw:${BI_WARNA_RG[r] || "#64748b"}">${_biE({ A: "Paket A", Pa: "Putra", Pi: "Putri" }[r] || r)} ${n}</em>`).join(" ") : `<span class="redup">Tanpa jadwal</span>`}</td>
+        <td class="c">${g.auth_user_id ? (g.akun_menunggu ? `<em class="bk2-st belum">Menunggu</em>` : "✅") : `<span class="redup">Belum</span>`}</td>
+        <td><em class="bk2-st ${on ? "aktif" : "mutasi"}">${on ? "Aktif" : "Nonaktif"}</em></td></tr>`; }).join("") || `<tr><td colspan="9" class="c redup" style="padding:28px">Tidak ada data.</td></tr>`}
       </tbody></table></div></div>`;
 }
 function biUnduhGuru() {
   const d = _biDataGuru();
-  _biXlsx(d.map((g, i) => ({ No: i + 1, Nama: g.nama, "NIP/NIK": g.nip_nik || "", Jabatan: g.jabatan || "", "Jenis Guru": g.jenis_guru || "", Jenjang: _biRgGuru(g).map(_biNamaRg).join(", "), "Tempat Lahir": g.tempat_lahir || "", "Tanggal Lahir": g.tanggal_lahir || "", TMT: g.tmt || "", "No WA": g.no_wa || "", Email: g.email || "", Status: _biGuruAktif(g) ? "Aktif" : "Nonaktif" })), "Guru & PTK", `Buku Induk Guru & PTK ${_biNamaRg(BI.g.rg)} ${tanggalISO()}.xlsx`);
+  _biXlsx(d.map((g, i) => { const dp = _biDpk(g); return { No: i + 1, Nama: g.nama, "NIP/NIK": g.nip_nik || "", Jabatan: g.jabatan || "", "Jenis Guru": BI_JENIS_GURU[g.jenis_guru] || g.jenis_guru || "", "Bertugas Di": _biRgGuru(g).map(_biNamaRg).join(", "), "Tempat Lahir": g.tempat_lahir || "", "Tanggal Lahir": g.tanggal_lahir || "", TMT: g.tmt || "", "No WA": g.no_wa || "", Email: g.email || "", Dapodik: dp ? "Terdaftar" : "Belum", "Status Kepegawaian": dp?.status || "", NUPTK: dp?.nuptk || "", NIP: dp?.nip || "", "Jumlah Jadwal": _biJmlJadwal(g), Akun: g.auth_user_id ? (g.akun_menunggu ? "Menunggu" : "Ada") : "Belum", Status: _biGuruAktif(g) ? "Aktif" : "Nonaktif" }; }), "Guru & PTK", `Buku Induk Guru & PTK ${_biNamaRg(BI.g.rg)} ${tanggalISO()}.xlsx`);
 }
 
 // ── BUKU INDUK ──
 async function biBukaInduk(muatUlang) {
-  const sec = _rgBukaHal("pg-induk", "Buku Induk", `<div class="card"><div class="rg-memuat">Memuat Buku Induk…</div></div>`);
+  const sec = _rgBukaHal(BI.mode === "guru" ? "pg-induk-guru" : "pg-induk", BI.mode === "guru" ? "Buku Induk Guru & PTK" : "Buku Induk Siswa", `<div class="card"><div class="rg-memuat">Memuat Buku Induk…</div></div>`);
   try { await biMuat(muatUlang); BI._kunciAnim = ""; sec.innerHTML = `<div id="bi-wrap"></div>`; _biSegar("bi-wrap", BI.mode === "guru" ? _biHtmlGuru : _biHtmlInduk); }
   catch (e) { sec.innerHTML = `<div class="card">Gagal memuat: ${_biE(e.message)}</div>`; }
 }
@@ -141,7 +168,6 @@ function _biHtmlInduk() {
   const lengkap = semua.filter((x) => !biKurang(x).length).length, tanpaNis = semua.filter((x) => !x.nis).length;
   const hit = (kode) => semua.filter((x) => biKeadaan(x).kode === kode).length;
   return `<div class="bk2" style="--bk:${BI_WARNA_RG[f.rg] || "#8a5523"}">
-    ${_biModeTab()}
     <div class="bk2-hero"><div><small>📘 BUKU INDUK PESERTA DIDIK</small><h2>${_biE(_biNamaRg(f.rg))}</h2><p>Catatan resmi seluruh peserta didik — aktif, lulus, dan keluar — beserta kelengkapan isian wajib Buku Induk.</p></div>
       ${_biAngka([["catat", "Tercatat", semua.length], ["aktif", "Aktif", hit("aktif")], ["lulus", "Lulus", hit("lulus")], ["keluar", "Keluar", hit("mutasi")]])}</div>
     ${_biTabRg(f.rg, "biRgInduk")}
@@ -327,6 +353,7 @@ function _biCariTampil() {
 (function biPasang() {
   if (typeof RG_IKON !== "undefined") {
     RG_IKON["pg-induk"] = '<path d="M4 4h12a3 3 0 0 1 3 3v13H7a3 3 0 0 1-3-3z"/><path d="M4 17a3 3 0 0 1 3-3h12"/><path d="M9 8h6"/>';
+    RG_IKON["pg-induk-guru"] = '<circle cx="9" cy="7" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4h5M16 8h5M16 12h3"/>';
     RG_IKON["pg-klaper"] = '<path d="M5 4h14v16H5z"/><path d="M9 4v16"/><path d="M12 9h4M12 13h4"/>';
     RG_IKON["pg-cari"] = '<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>';
   }
@@ -334,12 +361,13 @@ function _biCariTampil() {
     const g = RG_MENU_PENGELOLA.find((x) => x.group === "Data");
     if (g) {
       if (!g.items.some((x) => x[0] === "pg-cari")) g.items.unshift(["pg-cari", "", "Pencarian Cepat"]);
-      [["pg-induk", "Buku Induk"], ["pg-klaper", "Buku Klaper"]].forEach(([k, n]) => { if (!g.items.some((x) => x[0] === k)) g.items.push([k, "", n]); });
+      g.items = g.items.filter((x) => x[0] !== "pg-pd" && x[0] !== "pg-ptk");
+      [["pg-induk", "Buku Induk Siswa"], ["pg-induk-guru", "Buku Induk Guru & PTK"], ["pg-klaper", "Buku Klaper"]].forEach(([k, n]) => { if (!g.items.some((x) => x[0] === k)) g.items.push([k, "", n]); });
     }
   }
-  if (typeof PG_MODUL_SIAP !== "undefined") ["pg-cari", "pg-induk", "pg-klaper"].forEach((k) => { if (!PG_MODUL_SIAP.includes(k)) PG_MODUL_SIAP.push(k); });
+  if (typeof PG_MODUL_SIAP !== "undefined") ["pg-cari", "pg-induk", "pg-induk-guru", "pg-klaper"].forEach((k) => { if (!PG_MODUL_SIAP.includes(k)) PG_MODUL_SIAP.push(k); });
   if (typeof rgBukaPengelola === "function") {
     const a = rgBukaPengelola;
-    rgBukaPengelola = async function (key) { if (key === "pg-induk") return biBukaInduk(); if (key === "pg-klaper") return biBukaKlaper(); if (key === "pg-cari") return biBukaCari(); return a.apply(this, arguments); };
+    rgBukaPengelola = async function (key) { if (key === "pg-induk" || key === "pg-pd") { BI.mode = "pd"; return biBukaInduk(); } if (key === "pg-induk-guru" || key === "pg-ptk") { BI.mode = "guru"; return biBukaInduk(); } if (key === "pg-klaper") return biBukaKlaper(); if (key === "pg-cari") return biBukaCari(); return a.apply(this, arguments); };
   }
 })();

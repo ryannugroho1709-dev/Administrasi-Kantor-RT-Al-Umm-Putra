@@ -63,7 +63,7 @@ const CF_FITUR = [
   { j: "Draft RKAS & Realisasi", i: "🗂️", l: "Menu kiri › Draft RKAS", k: "draft rkas realisasi nota belanja bosp bulan kegiatan", s: () => typeof _rkBoleh === "function" && _rkBoleh(), a: () => rkBuka() },
   // Pengelola
   { j: "Pencarian Cepat Data", i: "🔎", l: "Ruang Pengelola › Data › Pencarian Cepat", k: "cari santri alumni guru nik nisn no induk hp", pg: "pg-cari" },
-  { j: "Buku Induk", i: "📘", l: "Ruang Pengelola › Data › Buku Induk", k: "buku induk lembar induk no induk nis kelengkapan data", pg: "pg-induk" },
+  { j: "Buku Induk Siswa", i: "📘", l: "Ruang Pengelola › Data › Buku Induk Siswa", k: "buku induk lembar induk no induk nis kelengkapan data", pg: "pg-induk" },
   { j: "Buku Klaper", i: "🔤", l: "Ruang Pengelola › Data › Buku Klaper", k: "buku klaper abjad indeks siswa", pg: "pg-klaper" },
   { j: "Alumni", i: "🎖️", l: "Ruang Pengelola › Data › Alumni", k: "alumni lulusan paket c tracer pendataan dinas", pg: "pg-alumni" },
   { j: "Arsip e-Ijazah", i: "📄", l: "Ruang Pengelola › Data › Alumni › Arsip e-Ijazah", k: "ijazah e-ijazah eijazah pdf ijazah folder drive", pg: "pg-alumni" },
@@ -72,8 +72,8 @@ const CF_FITUR = [
   { j: "Rancangan BOSP (ARKAS)", i: "💰", l: "Ruang Pengelola › Keuangan › Rancangan BOSP", k: "rancangan bosp arkas pagu honor pengelola bendahara", pg: "pg-bosp" },
   { j: "Draft RKAS Semua Jenjang", i: "🗂️", l: "Ruang Pengelola › Keuangan › Draft RKAS Jenjang", k: "rkas jenjang pantau realisasi", pg: "pg-rkas" },
   { j: "Data SSH (Batas Harga)", i: "🏷️", l: "Ruang Pengelola › Keuangan › Data SSH", k: "ssh standar harga batas harga satuan", pg: "pg-ssh" },
-  { j: "Peserta Didik Semua Jenjang", i: "🎓", l: "Ruang Pengelola › Data › Peserta Didik", k: "peserta didik rekap siswa semua jenjang unduh excel", pg: "pg-pd" },
-  { j: "Guru & PTK", i: "👤", l: "Ruang Pengelola › Data › Guru & PTK", k: "ptk guru dapodik nuptk honda", pg: "pg-ptk" },
+  { j: "Buku Induk Siswa (Semua Jenjang)", i: "🎓", l: "Ruang Pengelola › Data › Buku Induk Siswa", k: "peserta didik rekap siswa semua jenjang unduh excel buku induk aktif nonaktif lulus", pg: "pg-induk" },
+  { j: "Buku Induk Guru & PTK", i: "👤", l: "Ruang Pengelola › Data › Buku Induk Guru & PTK", k: "ptk guru dapodik nuptk honda akun jadwal nonaktif", pg: "pg-induk-guru" },
   // Kantor Maya (admin / yang diizinkan menonton)
   { j: "Kantor Maya PKBM", i: "🏢", l: "Menu kiri › Kantor PKBM", k: "kantor maya virtual 3d headquarters rapat petugas", s: _cfAdmin, a: () => ktBuka() },
   { j: "Struktur Organisasi (ubah sendiri)", i: "🧭", l: "Kantor PKBM › 🏢 Direktori › Struktur", k: "struktur organisasi bagan atasan bawahan susunan", s: _cfAdmin, a: async () => { await ktBuka(); await _cfTunggu(() => KT.staf && KT.staf.length && typeof kmDirektori === "function"); kmDirektori("struktur"); } },
