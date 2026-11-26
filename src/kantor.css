@@ -276,7 +276,7 @@ body.ks-menyeret .ks-puncak{display:block}
 .kh-pesan.buka { background: linear-gradient(135deg, #334155, #0f172a); animation: none; }
 @media (max-width: 640px) { .kt-judul b { font-size: 12.5px; line-height: 1.15; max-width: 92px; } .kt-atas { gap: 6px; padding-left: 10px; padding-right: 8px; } }
 /* v11 — Mode Jalan (kamera di belakang tokoh, joystick, pintu) */
-#kjl-btn.on { background: #c6a45c !important; color: #0b3026 !important; }
+#kjl-btn.on, #ksr-ikut.on { background: #c6a45c !important; color: #0b3026 !important; }
 .kjl-hud { position: absolute; inset: 0; z-index: 6; pointer-events: none; }
 .kjl-lihat { position: absolute; inset: 0; pointer-events: auto; touch-action: none; cursor: grab; }
 .kjl-lihat:active { cursor: grabbing; }

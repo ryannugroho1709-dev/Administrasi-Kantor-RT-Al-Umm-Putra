@@ -98,7 +98,8 @@ function ktModeJalan(nyala) {
 function _kjlSelesai() {
   if (!KJL.aktif) return;
   const t = KJL.t, u = t && t.userData;
-  KJL.aktif = false; KT.kameraHook = _kjlKamera; KT.pintuPaksa = false; // kait tetap ada untuk pintu (KT.pintuJalan || []).forEach((p) => { p.buka = false; });
+  KJL.aktif = false; KT.kameraHook = _kjlKamera; KT.pintuPaksa = false; // kait tetap ada untuk pintu
+  (KT.pintuJalan || []).forEach((p) => { p.buka = false; });
   if (t) {
     t.traverse((o) => { if (o.isMesh) o.visible = true; });
     if (KJL.tamu) { KT.scene.remove(t); delete KT.tokoh[KJL.id]; KT.label[KJL.id]?.remove(); KT.gelembung[KJL.id]?.remove(); delete KT.label[KJL.id]; delete KT.gelembung[KJL.id]; }
