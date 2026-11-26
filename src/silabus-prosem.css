@@ -101,3 +101,19 @@
   .sp-bab.ok { background: rgba(22, 163, 74, .12); } .sp-bab.jalan { background: rgba(245, 158, 11, .12); }
   .sp-rentang.kurang { background: rgba(245, 158, 11, .12); }
 }
+/* 📓 Jurnal ↔ Silabus (formulir jurnal) */
+.js-kotak { background: linear-gradient(180deg, rgba(20, 83, 45, .06), transparent); border: 1px solid rgba(20, 83, 45, .18); border-radius: 12px; padding: 10px; }
+.js-jenis { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+.js-jenis button { border: 1px solid var(--border-soft, #e2e8f0); background: var(--bg-card, #fff); color: inherit; border-radius: 999px; padding: 5px 10px; font: inherit; font-size: 11.5px; cursor: pointer; }
+.js-jenis button.on { background: #14532d; border-color: #14532d; color: #fff; font-weight: 700; }
+.js-baris { display: flex; flex-wrap: wrap; gap: 8px; }
+.js-baris label { flex: 1 1 200px; display: grid; gap: 3px; font-size: 11px; color: var(--text-secondary); }
+.js-sub { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; align-items: center; }
+.js-sub > span { flex-basis: 100%; font-size: 11px; color: var(--text-secondary); }
+.js-sub label { display: inline-flex; gap: 5px; align-items: center; border: 1px solid var(--border-soft, #e2e8f0); border-radius: 9px; padding: 5px 9px; font-size: 12px; cursor: pointer; background: var(--bg-card, #fff); }
+.js-sub label.on { border-color: #c6a45c; background: #fef9c3; color: #713f12; font-weight: 700; }
+.js-sub input { margin: 0; }
+.js-catat { display: block; margin-top: 6px; font-size: 11.5px; color: #b45309; }
+.js-catat.biru { color: #1d4ed8; }
+.js-pratinjau { margin-top: 8px; font-size: 12px; color: var(--text-secondary); }
+.js-pratinjau b { color: #14532d; }
