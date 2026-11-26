@@ -91,3 +91,58 @@
 .bi2-bar { height: 6px; border-radius: 999px; background: #e2e8f0; overflow: hidden; } .bi2-bar s { display: block; height: 100%; background: #16a34a; text-decoration: none; }
 .bk2-grup .bi2-tabel th { position: static; }
 @media (prefers-color-scheme: dark) { .bi2-tabel td.nama b { color: #f1f5f9; } .bi2-lengkap i, .bi2-bar { background: #334155; } }
+/* Kartu angka berwarna (Tercatat · Aktif · Lulus · Keluar) */
+.bk2-angka { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 8px; min-width: min(100%, 440px); }
+.bk2-angka div { position: relative; overflow: hidden; border-radius: 16px; padding: 12px 14px 10px; border: 1px solid rgba(255, 255, 255, .18); background: rgba(255, 255, 255, .08); }
+.bk2-angka div::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 4px; background: var(--bnw, #e8c77d); }
+.bk2-angka b { font-size: 26px; font-variant-numeric: tabular-nums; }
+.bk2-angka .bn-catat { --bnw: #e8c77d; background: rgba(232, 199, 125, .16); }
+.bk2-angka .bn-aktif { --bnw: #4ade80; background: rgba(34, 197, 94, .22); border-color: rgba(74, 222, 128, .45); }
+.bk2-angka .bn-aktif span { color: #bbf7d0; }
+.bk2-angka .bn-lulus { --bnw: #c4b5fd; background: rgba(139, 92, 246, .22); border-color: rgba(196, 181, 253, .4); }
+.bk2-angka .bn-lulus span { color: #ddd6fe; }
+.bk2-angka .bn-keluar { --bnw: #fda4af; background: rgba(244, 63, 94, .18); border-color: rgba(253, 164, 175, .35); }
+.bk2-angka .bn-keluar span { color: #fecdd3; }
+.bk2-angka .bn-l { --bnw: #93c5fd; background: rgba(59, 130, 246, .18); } .bk2-angka .bn-p { --bnw: #f9a8d4; background: rgba(236, 72, 153, .18); }
+.bi3-mode { display: inline-flex; gap: 4px; padding: 4px; border-radius: 14px; background: var(--bg-card, #fff); border: 1px solid rgba(148, 163, 184, .3); width: fit-content; }
+.bi3-mode button { border: 0; background: transparent; color: inherit; border-radius: 10px; padding: 8px 16px; font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+.bi3-mode button.on { background: linear-gradient(135deg, #5b3417, #8a5523); color: #fff; box-shadow: 0 6px 14px rgba(91, 52, 23, .3); }
+@media (max-width: 760px) {
+  .bk2-hero { padding: 18px 16px; } .bk2-hero p { font-size: 12.5px; }
+  .bk2-angka { grid-template-columns: repeat(2, 1fr); min-width: 100%; } .bk2-angka b { font-size: 22px; }
+  .bk2-jenjang { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; } .bk2-jenjang button { flex: none; }
+  .bk2-alat { padding: 10px; } .bk2-chip { overflow-x: auto; max-width: 100%; } .bk2-chip button { white-space: nowrap; }
+  .bi3-mode { width: 100%; } .bi3-mode button { flex: 1; }
+}
+/* 🎓 Alumni (tema sama dengan Buku Induk) */
+.al2-cek { padding: 10px 14px; border-radius: 14px; background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; font-size: 13px; }
+.al2-tombol { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.al2-tombol .bk2-btn { text-decoration: none; display: inline-flex; align-items: center; gap: 4px; background: var(--bg-card, #fff); }
+.al2-tombol .bk2-btn.utama { background: var(--bk); }
+.al2-sub { display: block; font-size: 11.5px; color: var(--text-secondary); font-weight: 500; margin-top: 2px; }
+.al2-peringatan { display: block; margin-top: 4px; font-size: 11.5px; color: #b91c1c; font-weight: 600; }
+.bi2-tabel tr.al2-salah td { background: #fff1f2 !important; }
+.al2-wa { color: #15803d; font-weight: 700; text-decoration: none; } .al2-wa:hover { text-decoration: underline; }
+.al2-ijazah { display: inline-block; margin-left: 4px; font-size: 11.5px; font-weight: 700; color: #6d28d9; text-decoration: none; background: #ede9fe; border-radius: 999px; padding: 2px 8px; }
+.al2-aksi { display: inline-flex; gap: 6px; }
+@media (max-width: 760px) { .al2-tombol { justify-content: stretch; } .al2-tombol .bk2-btn { flex: 1 1 45%; justify-content: center; } }
+@media (prefers-color-scheme: dark) { .bi2-tabel tr.al2-salah td { background: rgba(244, 63, 94, .12) !important; } .al2-cek { background: rgba(244, 63, 94, .12); color: #fecdd3; } }
+/* 📱 HP: tabel data berubah jadi kartu berlabel, angka 3 kolom */
+@media (max-width: 760px) {
+  .bk2-angka { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .bk2-angka div { padding: 9px 10px 8px; border-radius: 12px; } .bk2-angka b { font-size: 20px; } .bk2-angka span { font-size: 10.5px; }
+  .bi2-wadah { overflow: visible; border: 0; background: transparent; border-radius: 0; }
+  .bi2-tabel { min-width: 0 !important; table-layout: auto; }
+  .bi2-tabel colgroup, .bi2-tabel thead { display: none; }
+  .bi2-tabel, .bi2-tabel tbody { display: block; }
+  .bi2-tabel tr { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; padding: 12px 14px; margin-bottom: 10px; border-radius: 16px; background: var(--bg-card, #fff) !important; border: 1px solid rgba(148, 163, 184, .3); box-shadow: 0 4px 12px rgba(15, 23, 42, .04); }
+  .bk2-grup .bi2-tabel tr { box-shadow: none; }
+  .bi2-tabel td { display: block; padding: 0; border: 0; background: none !important; text-align: left !important; min-width: 0; }
+  .bi2-tabel td.nama { grid-column: 1 / -1; order: -1; padding-bottom: 6px; border-bottom: 1px dashed rgba(148, 163, 184, .35); }
+  .bi2-tabel td:first-child.redup { display: none; }
+  .bi2-tabel td[data-l]::before { content: attr(data-l); display: block; font-size: 10px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 2px; }
+  .bi2-tabel td.nama::before, .bi2-tabel td.aksi::before { display: none; }
+  .bi2-tabel td.aksi { grid-column: 1 / -1; } .bi2-tabel td.aksi .al2-aksi, .bi2-tabel td.aksi .bi2-buka { width: 100%; } .al2-aksi .bi2-buka { flex: 1; }
+  .bi2-tabel tr.al2-salah { border-color: #fecaca; background: #fff1f2 !important; }
+  .bi2-tabel td.mono { white-space: normal; overflow-wrap: anywhere; }
+}

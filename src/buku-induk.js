@@ -17,21 +17,33 @@ const biBolehUbah = () => (typeof isAdmin === "function" && isAdmin()) || (typeo
 
 async function biMuat(paksa) {
   if (BI.siswa && !paksa && Date.now() - BI.t < 120000) return;
-  const [s, k, t] = await Promise.all([
+  const [s, k, t, al, gr] = await Promise.all([
     supaSemua.from("siswa").select("id,nama,nis,nisn,nik,no_kk,no_bpjs,no_kip,tempat_lahir,tanggal_lahir,angkatan,status_aktif,tanggal_mutasi,alasan_mutasi,nama_ayah,pekerjaan_ayah,nama_ibu,pekerjaan_ibu,no_wa_ayah,no_wa_ibu,alamat_asal,sekolah_asal,kelas_id,ruang_id,foto_url,created_at").order("nama"),
     supaSemua.from("kelas").select("id,nama_kelas,ruang_id"),
     supaSemua.from("kuliah_pengaturan").select("kunci,nilai").eq("ruang_id", "*").like("kunci", "bosp:induk:%"),
+    supaSemua.from("kuliah_pengaturan").select("nilai").eq("kunci", "bosp:alumni").eq("ruang_id", "*").maybeSingle(),
+    supaSemua.from("guru").select("id,nama,nip_nik,jenis_guru,jabatan,no_wa,email,tempat_lahir,tanggal_lahir,tmt,status_aktif,ruang,ruang_utama,ruang_nonaktif,foto_url,created_at").order("nama"),
   ]);
   if (s.error) throw s.error;
   BI.kelas = k.data || [];
   const kl = Object.fromEntries(BI.kelas.map((x) => [x.id, x.nama_kelas]));
   BI.siswa = (s.data || []).filter((x) => BI_RG.includes(x.ruang_id)).map((x) => ({ ...x, kelas: kl[x.kelas_id] || "" }));
-  BI.tambah = {}; (t.data || []).forEach((r) => { const id = r.kunci.split(":").pop(); BI.tambah[id] = r.nilai || {}; });
+  // Alumni (lulus Paket C) dari menu Alumni ikut tercatat di Buku Induk sebagai "Lulus" bila belum ada di Data Siswa
+  const dg = (v) => String(v || "").replace(/\D/g, "");
+  Object.entries((al.data && al.data.nilai) || {}).forEach(([id, a]) => {
+    if (!a || typeof a !== "object" || !a.nama || id.startsWith("_")) return;
+    const sama = BI.siswa.find((x) => (a.nisn && dg(x.nisn) && dg(x.nisn).padStart(10, "0") === dg(a.nisn).padStart(10, "0")) || (a.nik && dg(x.nik) === dg(a.nik)));
+    if (sama) { if (sama.status_aktif === false && !sama.alasan_mutasi) { sama.alasan_mutasi = "Lulus Paket C"; sama.tanggal_mutasi = sama.tanggal_mutasi || (a.lulus ? a.lulus + "-06-30" : null); } return; }
+    BI.siswa.push({ id: "alumni:" + id, alumni: true, nama: a.nama, nisn: a.nisn || "", nik: a.nik || "", tanggal_lahir: a.tgl_lahir || "", tempat_lahir: a.tempat_lahir || "", ruang_id: BI_RG.includes(a.rg) ? a.rg : "Pi", status_aktif: false, alasan_mutasi: "Lulus Paket C", tanggal_mutasi: a.lulus ? a.lulus + "-06-30" : null, kelas: "", angkatan: "", nis: a.nis || "", sekolah_asal: "", jk_alumni: a.jk || "" });
+  });
+  BI.siswa.sort((a, b) => a.nama.localeCompare(b.nama, "id"));
+  BI.guru = (gr.data || []).filter((g) => g.nama);
+  BI.tambah = {}; (t.data || []).forEach((r) => { const id = r.kunci.split(":").slice(3).join(":"); BI.tambah[id] = r.nilai || {}; });
   BI.t = Date.now();
 }
 // Jenis kelamin: isian Buku Induk → NIK (tanggal +40 = perempuan) → jenjang (Putra/Putri)
 function biJk(x) {
-  const t = BI.tambah[x.id] || {}; if (t.jk) return t.jk;
+  const t = BI.tambah[x.id] || {}; if (t.jk) return t.jk; if (x.jk_alumni) return x.jk_alumni;
   const nik = String(x.nik || "").replace(/\D/g, ""); if (nik.length === 16) return +nik.slice(6, 8) > 40 ? "P" : "L";
   return x.ruang_id === "Pa" ? "L" : x.ruang_id === "Pi" ? "P" : "";
 }
@@ -54,16 +66,69 @@ const BI_WARNA_RG = { A: "#047857", Pa: "#1d4ed8", Pi: "#be185d", semua: "#8a552
 const _biTabRg = (aktif, fn) => `<div class="bk2-jenjang">${["semua", ...BI_RG].map((r) => `<button class="${aktif === r ? "on" : ""}" style="--rw:${BI_WARNA_RG[r]}" onclick="${fn}('${r}')">${r === "semua" ? "🏫 " : ""}${_biE(_biNamaRg(r))}<small>${(BI.siswa || []).filter((x) => r === "semua" || x.ruang_id === r).length} santri</small></button>`).join("")}</div>`;
 const _biPillRg = (r) => `<em class="bi2-rg" style="--rw:${BI_WARNA_RG[r] || "#64748b"}">${_biE({ A: "Paket A", Pa: "Putra", Pi: "Putri" }[r] || r)}</em>`;
 
+// label kolom untuk tampilan kartu di HP (dari judul tabel), kolom terakhir tanpa judul = aksi
+function _bi2Label(akar) { (akar || document).querySelectorAll(".bi2-tabel").forEach((t) => { const h = [...t.querySelectorAll("thead th")].map((x) => x.textContent.trim()); t.querySelectorAll("tbody tr").forEach((r) => [...r.children].forEach((td, i) => { if (td.colSpan > 1) return; if (h[i]) td.setAttribute("data-l", h[i]); else td.classList.add("aksi"); if (/^aksi$/i.test(h[i] || "")) td.classList.add("aksi"); })); }); }
+// ── Kartu angka berwarna + animasi hitung naik (0 → angka tujuan) ──
+const _biAngka = (daftar) => `<div class="bk2-angka">${daftar.map(([k, label, n]) => `<div class="bn-${k}"><b data-n="${n}">${n}</b><span>${label}</span></div>`).join("")}</div>`;
+function _biHitungNaik(akar) {
+  if (!akar) return;
+  akar.querySelectorAll(".bk2-angka b[data-n]").forEach((el) => {
+    const tuju = Number(el.dataset.n) || 0, mulai = performance.now(), lama = Math.min(1400, 500 + tuju * 6);
+    if (!tuju) { el.textContent = "0"; return; }
+    el.textContent = "0";
+    const langkah = (k) => { const p = Math.min(1, (k - mulai) / lama), e = 1 - Math.pow(1 - p, 3); el.textContent = String(Math.round(tuju * e)); if (p < 1) requestAnimationFrame(langkah); };
+    requestAnimationFrame(langkah);
+  });
+}
+// pilihan isi Buku Induk: Peserta Didik / Guru & PTK
+const _biModeTab = () => `<div class="bi3-mode">${[["pd", "🎓 Peserta Didik"], ["guru", "👳 Guru & PTK"]].map(([k, l]) => `<button class="${(BI.mode || "pd") === k ? "on" : ""}" onclick="biGantiMode('${k}')">${l}</button>`).join("")}</div>`;
+function biGantiMode(m) { BI.mode = m; BI._kunciAnim = ""; _biSegar("bi-wrap", m === "guru" ? _biHtmlGuru : _biHtmlInduk); }
+// ── Buku Induk Guru & PTK: aktif dan nonaktif (Data Guru di jenjang hanya yang aktif) ──
+BI.g = { rg: "semua", status: "semua", cari: "" };
+const _biRgGuru = (g) => { const r = new Set([...(Array.isArray(g.ruang) ? g.ruang : []), g.ruang_utama].filter((x) => BI_RG.includes(x))); return [...r]; };
+const _biGuruAktif = (g) => g.status_aktif !== false;
+function _biDataGuru() {
+  const f = BI.g, q = (f.cari || "").toLowerCase().trim();
+  return (BI.guru || []).filter((g) => (f.rg === "semua" || _biRgGuru(g).includes(f.rg)) && (f.status === "semua" || (f.status === "aktif") === _biGuruAktif(g))
+    && (!q || [g.nama, g.nip_nik, g.jabatan, g.no_wa].some((v) => String(v || "").toLowerCase().includes(q))));
+}
+function _biHtmlGuru() {
+  const f = BI.g, d = _biDataGuru(), semua = (BI.guru || []).filter((g) => f.rg === "semua" || _biRgGuru(g).includes(f.rg));
+  const aktif = semua.filter(_biGuruAktif).length;
+  return `<div class="bk2" style="--bk:${BI_WARNA_RG[f.rg] || "#8a5523"}">
+    ${_biModeTab()}
+    <div class="bk2-hero"><div><small>👳 BUKU INDUK GURU & TENAGA KEPENDIDIKAN</small><h2>${_biE(_biNamaRg(f.rg))}</h2><p>Catatan seluruh guru dan PTK — yang aktif maupun yang sudah tidak bertugas. Menu Data Guru di jenjang hanya menampilkan yang aktif.</p></div>
+      ${_biAngka([["catat", "Tercatat", semua.length], ["aktif", "Aktif", aktif], ["keluar", "Nonaktif", semua.length - aktif]])}</div>
+    <div class="bk2-jenjang">${["semua", ...BI_RG].map((r) => `<button class="${f.rg === r ? "on" : ""}" style="--rw:${BI_WARNA_RG[r]}" onclick="BI.g.rg='${r}';BI._kunciAnim='';_biSegar('bi-wrap',_biHtmlGuru)">${r === "semua" ? "🏫 " : ""}${_biE(_biNamaRg(r))}<small>${(BI.guru || []).filter((g) => r === "semua" || _biRgGuru(g).includes(r)).length} orang</small></button>`).join("")}</div>
+    <div class="bk2-alat">
+      <div class="bk2-cari">🔎<input class="bi-cari" placeholder="Cari nama, NIP/NIK, jabatan, no. WA…" value="${_biE(f.cari)}" oninput="BI.g.cari=this.value;_biSegar('bi-wrap',_biHtmlGuru,true)"></div>
+      <div class="bk2-chip">${[["semua", "Semua"], ["aktif", "🟢 Aktif"], ["nonaktif", "⏸️ Nonaktif"]].map(([k, n]) => `<button class="${f.status === k ? "on" : ""}" onclick="BI.g.status='${k}';_biSegar('bi-wrap',_biHtmlGuru)">${n}</button>`).join("")}</div>
+      <span class="bk2-jml">${d.length} orang</span>
+      <button class="bk2-btn utama" onclick="biUnduhGuru()">⬇️ Unduh Excel</button></div>
+    <div class="bi2-wadah"><table class="bi2-tabel" style="min-width:1080px"><colgroup><col style="width:44px"><col><col style="width:170px"><col style="width:180px"><col style="width:150px"><col style="width:190px"><col style="width:110px"></colgroup>
+      <thead><tr><th class="c">No</th><th>Nama Lengkap</th><th>NIP / NIK</th><th>Jabatan</th><th>Jenis</th><th>Jenjang</th><th>Status</th></tr></thead><tbody>
+      ${d.map((g, i) => { const on = _biGuruAktif(g); return `<tr class="${on ? "" : "k-mutasi"}"><td class="c redup">${i + 1}</td>
+        <td class="nama"><span class="bi2-nm"><i class="bk2-av">${_biE(_biInisial(g.nama))}</i><b>${_biE(g.nama)}</b></span></td><td class="mono">${_biE(g.nip_nik || "—")}</td>
+        <td>${_biE(g.jabatan || "—")}</td><td>${_biE(g.jenis_guru ? g.jenis_guru[0].toUpperCase() + g.jenis_guru.slice(1) : "—")}</td><td>${_biRgGuru(g).map(_biPillRg).join(" ") || "—"}</td>
+        <td><em class="bk2-st ${on ? "aktif" : "mutasi"}">${on ? "Aktif" : "Nonaktif"}</em></td></tr>`; }).join("") || `<tr><td colspan="7" class="c redup" style="padding:28px">Tidak ada data.</td></tr>`}
+      </tbody></table></div></div>`;
+}
+function biUnduhGuru() {
+  const d = _biDataGuru();
+  _biXlsx(d.map((g, i) => ({ No: i + 1, Nama: g.nama, "NIP/NIK": g.nip_nik || "", Jabatan: g.jabatan || "", "Jenis Guru": g.jenis_guru || "", Jenjang: _biRgGuru(g).map(_biNamaRg).join(", "), "Tempat Lahir": g.tempat_lahir || "", "Tanggal Lahir": g.tanggal_lahir || "", TMT: g.tmt || "", "No WA": g.no_wa || "", Email: g.email || "", Status: _biGuruAktif(g) ? "Aktif" : "Nonaktif" })), "Guru & PTK", `Buku Induk Guru & PTK ${_biNamaRg(BI.g.rg)} ${tanggalISO()}.xlsx`);
+}
+
 // ── BUKU INDUK ──
 async function biBukaInduk(muatUlang) {
   const sec = _rgBukaHal("pg-induk", "Buku Induk", `<div class="card"><div class="rg-memuat">Memuat Buku Induk…</div></div>`);
-  try { await biMuat(muatUlang); sec.innerHTML = `<div id="bi-wrap">${_biHtmlInduk()}</div>`; }
+  try { await biMuat(muatUlang); BI._kunciAnim = ""; sec.innerHTML = `<div id="bi-wrap"></div>`; _biSegar("bi-wrap", BI.mode === "guru" ? _biHtmlGuru : _biHtmlInduk); }
   catch (e) { sec.innerHTML = `<div class="card">Gagal memuat: ${_biE(e.message)}</div>`; }
 }
 function biRgInduk(r) { BI.f.rg = r; _biSegar("bi-wrap", _biHtmlInduk); }
 function _biSegar(id, fn, fokus) {
   const w = document.getElementById(id); if (!w) return;
   const pos = fokus ? w.querySelector(".bi-cari")?.selectionStart : null; w.innerHTML = fn();
+  const kunci = id + "|" + (fn === _biHtmlGuru ? "g" + BI.g.rg : fn === _biHtmlKlaper ? "k" + BI.k.rg : "i" + BI.f.rg); if (BI._kunciAnim !== kunci) { BI._kunciAnim = kunci; _biHitungNaik(w); } _bi2Label(w);
   if (fokus) { const i = w.querySelector(".bi-cari"); if (i) { i.focus(); try { i.setSelectionRange(pos, pos); } catch (e) {} } }
 }
 function _biHtmlInduk() {
@@ -72,8 +137,9 @@ function _biHtmlInduk() {
   const lengkap = semua.filter((x) => !biKurang(x).length).length, tanpaNis = semua.filter((x) => !x.nis).length;
   const hit = (kode) => semua.filter((x) => biKeadaan(x).kode === kode).length;
   return `<div class="bk2" style="--bk:${BI_WARNA_RG[f.rg] || "#8a5523"}">
+    ${_biModeTab()}
     <div class="bk2-hero"><div><small>📘 BUKU INDUK PESERTA DIDIK</small><h2>${_biE(_biNamaRg(f.rg))}</h2><p>Catatan resmi seluruh peserta didik — aktif, lulus, dan keluar — beserta kelengkapan isian wajib Buku Induk.</p></div>
-      <div class="bk2-angka"><div><b>${semua.length}</b><span>Tercatat</span></div><div><b>${hit("aktif")}</b><span>Aktif</span></div><div><b>${hit("lulus")}</b><span>Lulus</span></div><div><b>${hit("mutasi")}</b><span>Keluar</span></div></div></div>
+      ${_biAngka([["catat", "Tercatat", semua.length], ["aktif", "Aktif", hit("aktif")], ["lulus", "Lulus", hit("lulus")], ["keluar", "Keluar", hit("mutasi")]])}</div>
     ${_biTabRg(f.rg, "biRgInduk")}
     <div class="bi2-ringkas">
       <div class="bi2-kotak"><span>Data Lengkap</span><b>${lengkap}<small>/${semua.length}</small></b><i class="bi2-bar"><s style="width:${semua.length ? Math.round((lengkap / semua.length) * 100) : 0}%"></s></i><small>${semua.length ? Math.round((lengkap / semua.length) * 100) : 0}% isian wajib terisi</small></div>
@@ -187,7 +253,7 @@ function biUnduhInduk() {
 // ── BUKU KLAPER (indeks abjad) ──
 async function biBukaKlaper(muatUlang) {
   const sec = _rgBukaHal("pg-klaper", "Buku Klaper", `<div class="card"><div class="rg-memuat">Memuat Buku Klaper…</div></div>`);
-  try { await biMuat(muatUlang); sec.innerHTML = `<div id="bk-wrap">${_biHtmlKlaper()}</div>`; }
+  try { await biMuat(muatUlang); BI._kunciAnim = ""; sec.innerHTML = `<div id="bk-wrap"></div>`; _biSegar("bk-wrap", _biHtmlKlaper); }
   catch (e) { sec.innerHTML = `<div class="card">Gagal memuat: ${_biE(e.message)}</div>`; }
 }
 function biRgKlaper(r) { BI.k.rg = r; _biSegar("bk-wrap", _biHtmlKlaper); }
@@ -200,7 +266,7 @@ function _biHtmlKlaper() {
   const hit = (kode) => semua.filter((x) => biKeadaan(x).kode === kode).length, L = semua.filter((x) => biJk(x) === "L").length, P = semua.filter((x) => biJk(x) === "P").length;
   return `<div class="bk2" style="--bk:${BI_WARNA_RG[BI.k.rg] || "#8a5523"}">
     <div class="bk2-hero"><div><small>📇 BUKU KLAPER · INDEKS ABJAD PESERTA DIDIK</small><h2>${_biE(_biNamaRg(BI.k.rg))}</h2><p>Daftar seluruh peserta didik menurut abjad — aktif, lulus, dan keluar — beserta No. Induk dan NISN.</p></div>
-      <div class="bk2-angka"><div><b>${semua.length}</b><span>Tercatat</span></div><div><b>${hit("aktif")}</b><span>Aktif</span></div><div><b>${hit("lulus")}</b><span>Lulus</span></div><div><b>${hit("mutasi")}</b><span>Keluar</span></div><div><b>${L}<i>/</i>${P}</b><span>L / P</span></div></div></div>
+      ${_biAngka([["catat", "Tercatat", semua.length], ["aktif", "Aktif", hit("aktif")], ["lulus", "Lulus", hit("lulus")], ["keluar", "Keluar", hit("mutasi")], ["l", "Laki-laki", L], ["p", "Perempuan", P]])}</div>
     ${_biTabRg(BI.k.rg, "biRgKlaper")}
     <div class="bk2-alat">
       <div class="bk2-cari">🔎<input class="bi-cari" placeholder="Cari nama, No. Induk, NISN…" value="${_biE(BI.k.cari || "")}" oninput="BI.k.cari=this.value;_biSegar('bk-wrap',_biHtmlKlaper,true)"></div>

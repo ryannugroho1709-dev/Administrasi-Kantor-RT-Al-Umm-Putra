@@ -12,7 +12,7 @@ function _alHtmlArsipIjazah(ubah) {
     <td>${ubah ? `<button class="btn btn-sm btn-secondary" onclick="alArsipHapus('${z.id}')">Hapus</button>` : ""}</td></tr>`).join("");
   return `<div class="card"><div class="al-arsip-h"><b>📄 Arsip e-Ijazah per Angkatan</b>${ubah ? `<button class="btn btn-sm btn-secondary" onclick="alArsipForm()">+ Tambah Berkas</button>` : ""}</div>
     <p class="rg-ket">PDF e-Ijazah gabungan dari Dinas (satu berkas per tahun pelajaran & paket). Alumni Paket C otomatis tersambung ke berkas angkatannya bila belum punya tautan sendiri.</p>
-    ${d.length ? `<div style="overflow-x:auto"><table class="table pg-tabel"><thead><tr><th>Tahun Pelajaran</th><th>Paket</th><th>Jenjang</th><th>Berkas</th><th></th></tr></thead><tbody>${baris}</tbody></table></div>` : `<div class="empty-state">Belum ada berkas e-Ijazah.</div>`}</div>`;
+    ${d.length ? `<div class="bi2-wadah" style="--bk:#6d28d9"><table class="bi2-tabel" style="min-width:560px"><thead><tr><th>Tahun Pelajaran</th><th>Paket</th><th>Jenjang</th><th>Berkas</th><th></th></tr></thead><tbody>${baris}</tbody></table></div>` : `<div class="empty-state">Belum ada berkas e-Ijazah.</div>`}</div>`;
 }
 function alArsipForm() {
   const th = new Date().getFullYear(), tp = [];

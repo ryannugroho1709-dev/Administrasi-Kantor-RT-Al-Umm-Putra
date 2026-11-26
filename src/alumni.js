@@ -57,13 +57,13 @@ function _alSaring() {
 
 async function alBuka(muatUlang) {
   const sec = _rgBukaHal("pg-alumni", "Alumni", `<div class="card"><div class="rg-memuat">Memuat data alumni…</div></div>`);
-  try { await alMuat(muatUlang); sec.innerHTML = `<div id="al-wrap">${_alHtml()}</div>`; }
+  try { await alMuat(muatUlang); sec.innerHTML = `<div id="al-wrap">${_alHtml()}</div>`; if (typeof _biHitungNaik === "function") _biHitungNaik(sec); if (typeof _bi2Label === "function") _bi2Label(sec); }
   catch (e) { sec.innerHTML = `<div class="card">Gagal memuat alumni: ${_alE(e.message)}</div>`; }
 }
 function _alSegar(fokus) {
   const w = document.getElementById("al-wrap"); if (!w) return;
   const pos = fokus ? w.querySelector(".al-cari")?.selectionStart : null;
-  w.innerHTML = _alHtml();
+  w.innerHTML = _alHtml(); if (typeof _bi2Label === "function") _bi2Label(w);
   if (fokus) { const i = w.querySelector(".al-cari"); if (i) { i.focus(); try { i.setSelectionRange(pos, pos); } catch (e) {} } }
 }
 function _alHtml() {
@@ -71,33 +71,36 @@ function _alHtml() {
   const sudah = semua.filter((x) => x.isi === "sudah").length, tahun = [...new Set(semua.map((x) => String(x.lulus || "")).filter(Boolean))].sort().reverse();
   const masalah = semua.filter((x) => alCekNik(x).length).length;
   const nikGanda = new Set(), lihat = {}; semua.forEach((x) => { const k = _alDigit(x.nik); if (!k) return; if (lihat[k]) nikGanda.add(k); lihat[k] = 1; });
-  const per = (r) => semua.filter((x) => x.rg === r).length;
-  return `<div class="pg-kartu-baris al-kartu">
-      <div class="pg-angka total"><span>Alumni Paket C</span><b>${semua.length}</b><small>Putra ${per("Pa")} · Putri ${per("Pi")}</small></div>
-      <button class="pg-angka" onclick="AL.f.isi=AL.f.isi==='sudah'?'':'sudah';_alSegar()"><span>Sudah Mengisi Pendataan</span><b>${sudah}</b><small>${semua.length ? Math.round((sudah / semua.length) * 100) : 0}% dari seluruh alumni</small></button>
-      <button class="pg-angka" onclick="AL.f.isi=AL.f.isi==='belum'?'':'belum';_alSegar()"><span>Belum Mengisi</span><b>${semua.length - sudah}</b><small>perlu dihubungi</small></button>
-      ${masalah || nikGanda.size ? `<div class="pg-angka" style="--rw:#dc2626"><span>Perlu Dicek</span><b>${masalah + nikGanda.size}</b><small>NIK/NISN/tanggal lahir tidak cocok atau ganda</small></div>` : ""}
-    </div>
-    <div class="card pg-alat">
-      <input class="input al-cari" placeholder="Cari nama, NIK, NISN, HP, no. ijazah…" value="${_alE(f.cari)}" oninput="AL.f.cari=this.value;_alSegar(true)">
-      <select class="input" onchange="AL.f.th=this.value;_alSegar()"><option value="">Semua Tahun Lulus</option>${tahun.map((t) => `<option ${f.th === t ? "selected" : ""}>${t}</option>`).join("")}</select>
-      <select class="input" onchange="AL.f.rg=this.value;_alSegar()"><option value="">Putra & Putri</option><option value="Pa" ${f.rg === "Pa" ? "selected" : ""}>Paket C Putra</option><option value="Pi" ${f.rg === "Pi" ? "selected" : ""}>Paket C Putri</option></select>
-      <select class="input" onchange="AL.f.isi=this.value;_alSegar()"><option value="">Semua Status</option><option value="sudah" ${f.isi === "sudah" ? "selected" : ""}>Sudah Mengisi</option><option value="belum" ${f.isi === "belum" ? "selected" : ""}>Belum Mengisi</option></select>
-      <span class="pg-jml">${d.length} alumni</span>
-      ${ubah ? `<button class="btn btn-primary" onclick="alForm()">+ Tambah Alumni</button><button class="btn btn-secondary" onclick="document.getElementById('al-berkas').click()">📥 Impor Excel</button><input type="file" id="al-berkas" accept=".xlsx,.xls,.csv" hidden onchange="alImpor(this)">` : ""}
-      ${(AL.data || {})._folder && AL.data._folder.url ? `<a class="btn btn-secondary" href="${_alE(AL.data._folder.url)}" target="_blank" rel="noopener">📂 Folder e-Ijazah</a>` : ""}${ubah ? `<button class="btn btn-secondary" onclick="alAturFolder()" title="Tautan folder Google Drive berisi e-Ijazah">⚙️ Folder e-Ijazah</button>` : ""}
-      <button class="btn btn-accent" onclick="alUnduh()">Unduh Excel</button>
-    </div>
-    <div class="card" style="overflow-x:auto"><table class="table pg-tabel al-tabel"><thead><tr><th>No</th><th>Nama</th><th>NIK / NISN</th><th>Lulus</th><th>HP</th><th>Pendataan</th><th></th></tr></thead><tbody>
-    ${d.map((x, i) => { const c = alCekNik(x), ganda = nikGanda.has(_alDigit(x.nik)); return `<tr class="${c.length || ganda ? "al-cek" : ""}"><td>${i + 1}</td>
-      <td><b>${_alE(x.nama)}</b><br><small>${_alE(x.jk || "-")} · ${_alE(x.tgl_lahir || "-")} · ${x.rg === "Pa" ? "Putra" : x.rg === "Pi" ? "Putri" : "-"}</small>${c.length || ganda ? `<div class="al-peringatan">⚠️ ${_alE([...c, ganda ? "NIK ganda" : ""].filter(Boolean).join(" · "))}</div>` : ""}</td>
-      <td class="al-mono">${_alE(x.nik || "-")}<br><small>${_alE(x.nisn || "-")}</small></td><td>${_alE(x.lulus || "-")}</td>
-      <td class="al-mono">${x.hp ? `<a href="https://wa.me/62${_alE(_alHp(x.hp).slice(1))}" target="_blank" rel="noopener">${_alE(x.hp)}</a>` : "-"}</td>
-      <td>${x.isi === "sudah" ? '<span class="al-ok">✓ Sudah</span>' : '<span class="al-belum">Belum</span>'}${(() => { const u = alUrlIjazah(x); return u ? ` <a href="${_alE(u.url)}" target="_blank" rel="noopener" title="${u.gabung ? "e-Ijazah angkatan (PDF gabungan)" : "Buka e-Ijazah"}">📄</a>` : ""; })()}</td>
-      <td style="white-space:nowrap"><button class="btn btn-sm btn-secondary" onclick="alDetail('${x.id}')">Lihat</button>${ubah ? ` <button class="btn btn-sm btn-secondary" onclick="alForm('${x.id}')">Ubah</button>` : ""}</td></tr>`; }).join("") || `<tr><td colspan="7" class="empty-state">${semua.length ? "Tidak ada yang cocok." : "Belum ada data alumni. Tekan Impor Excel atau + Tambah Alumni."}</td></tr>`}
-    </tbody></table></div>
+  const per = (r) => semua.filter((x) => x.rg === r).length, cek = masalah + nikGanda.size;
+  const angka = (k, label, n) => `<div class="bn-${k}"><b data-n="${n}">${n}</b><span>${label}</span></div>`;
+  const chip = (nilai, pilihan, aksi) => pilihan.map(([k, l]) => `<button class="${nilai === k ? "on" : ""}" onclick="${aksi}='${k}';_alSegar()">${l}</button>`).join("");
+  return `<div class="bk2" style="--bk:#6d28d9">
+    <div class="bk2-hero"><div><small>🎓 ALUMNI PKBM AL-UMM BARABAI</small><h2>Alumni Paket C</h2><p>Santri yang resmi lulus Paket C (kelas 12), lengkap dengan pendataan alumni Dinas dan tautan e-Ijazah angkatannya.</p></div>
+      <div class="bk2-angka">${angka("catat", "Alumni", semua.length)}${angka("aktif", "Sudah Mengisi", sudah)}${angka("keluar", "Belum Mengisi", semua.length - sudah)}${angka("l", "Putra", per("Pa"))}${angka("p", "Putri", per("Pi"))}</div></div>
+    ${cek ? `<div class="al2-cek">⚠️ <b>${cek} data perlu dicek</b> — NIK/NISN/tanggal lahir tidak cocok atau ganda. Baris yang bermasalah ditandai merah muda.</div>` : ""}
+    <div class="bk2-alat">
+      <div class="bk2-cari">🔎<input class="al-cari" placeholder="Cari nama, NIK, NISN, HP, no. ijazah…" value="${_alE(f.cari)}" oninput="AL.f.cari=this.value;_alSegar(true)"></div>
+      <div class="bk2-chip">${chip(f.rg, [["", "Putra & Putri"], ["Pa", "Putra"], ["Pi", "Putri"]], "AL.f.rg")}</div>
+      <div class="bk2-chip">${chip(f.isi, [["", "Semua"], ["sudah", "✓ Sudah Mengisi"], ["belum", "Belum"]], "AL.f.isi")}</div>
+      ${tahun.length ? `<div class="bk2-chip">${chip(f.th, [["", "Semua Tahun"], ...tahun.map((t) => [t, "Lulus " + t])], "AL.f.th")}</div>` : ""}
+      <span class="bk2-jml">${d.length} alumni</span></div>
+    <div class="al2-tombol">
+      ${ubah ? `<button class="bk2-btn" onclick="alForm()">➕ Tambah Alumni</button><button class="bk2-btn" onclick="document.getElementById('al-berkas').click()">📥 Impor Excel</button><input type="file" id="al-berkas" accept=".xlsx,.xls,.csv" hidden onchange="alImpor(this)">` : ""}
+      ${(AL.data || {})._folder && AL.data._folder.url ? `<a class="bk2-btn" href="${_alE(AL.data._folder.url)}" target="_blank" rel="noopener">📂 Folder e-Ijazah</a>` : ""}${ubah ? `<button class="bk2-btn" onclick="alAturFolder()">⚙️ Atur Folder</button>` : ""}
+      <button class="bk2-btn utama" onclick="alUnduh()">⬇️ Unduh Excel</button></div>
+    <div class="bi2-wadah"><table class="bi2-tabel" style="min-width:980px"><colgroup><col style="width:44px"><col><col style="width:170px"><col style="width:120px"><col style="width:74px"><col style="width:140px"><col style="width:150px"><col style="width:150px"></colgroup>
+      <thead><tr><th class="c">No</th><th>Nama Lengkap</th><th>NIK</th><th>NISN</th><th class="c">Lulus</th><th>No. HP</th><th>Pendataan</th><th class="c">Aksi</th></tr></thead><tbody>
+      ${d.map((x, i) => { const c = alCekNik(x), ganda = nikGanda.has(_alDigit(x.nik)), u = alUrlIjazah(x); return `<tr class="${c.length || ganda ? "al2-salah" : ""}"><td class="c redup">${i + 1}</td>
+        <td class="nama"><span class="bi2-nm"><i class="bk2-av">${_alE(String(x.nama).trim().split(/\s+/).slice(0, 2).map((w) => w[0] || "").join("").toUpperCase())}</i><span><b>${_alE(x.nama)}</b><small class="al2-sub">${x.jk === "P" ? "Perempuan" : x.jk === "L" ? "Laki-laki" : "-"} · ${_alE(x.tgl_lahir ? new Date(x.tgl_lahir + "T00:00:00").toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "-")} · ${x.rg === "Pa" ? "Putra" : x.rg === "Pi" ? "Putri" : "-"}</small>
+          ${c.length || ganda ? `<small class="al2-peringatan">⚠️ ${_alE([...c, ganda ? "NIK ganda" : ""].filter(Boolean).join(" · "))}</small>` : ""}</span></span></td>
+        <td class="mono">${_alE(x.nik || "—")}</td><td class="mono">${_alE(x.nisn || "—")}</td><td class="c"><b>${_alE(x.lulus || "—")}</b></td>
+        <td class="mono">${x.hp ? `<a class="al2-wa" href="https://wa.me/62${_alE(_alHp(x.hp).slice(1))}" target="_blank" rel="noopener">${_alE(x.hp)}</a>` : "—"}</td>
+        <td><em class="bk2-st ${x.isi === "sudah" ? "aktif" : "mutasi"}">${x.isi === "sudah" ? "✓ Sudah" : "Belum"}</em>${u ? ` <a class="al2-ijazah" href="${_alE(u.url)}" target="_blank" rel="noopener" title="${u.gabung ? "e-Ijazah angkatan " + _alE(u.tp) : "e-Ijazah"}">📄 Ijazah</a>` : ""}</td>
+        <td class="c"><span class="al2-aksi"><button class="bi2-buka" onclick="alDetail('${x.id}')">Lihat</button>${ubah ? `<button class="bi2-buka" onclick="alForm('${x.id}')">Ubah</button>` : ""}</span></td></tr>`; }).join("") || `<tr><td colspan="8" class="c redup" style="padding:28px">Belum ada alumni.${ubah ? " Tambahkan atau impor dari berkas pendataan Dinas." : ""}</td></tr>`}
+      </tbody></table></div>
     ${_alHtmlArsipIjazah(ubah)}
-    <p class="rg-ket">Alumni = santri yang resmi <b>lulus Paket C (kelas 12)</b> dari PKBM Al-Umm Barabai. Lulusan Paket A dan B tidak dicatat di sini.</p>`;
+    <p class="rg-ket">Alumni = santri yang resmi <b>lulus Paket C (kelas 12)</b> dari PKBM Al-Umm Barabai. Alumni juga tercatat sebagai <b>Lulus</b> di Buku Induk jenjangnya.</p>
+  </div>`;
 }
 function alDetail(id) {
   const x = (AL.data || {})[id]; if (!x) return;
