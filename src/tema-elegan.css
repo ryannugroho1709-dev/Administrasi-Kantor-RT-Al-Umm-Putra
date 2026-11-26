@@ -1091,3 +1091,11 @@ html .dash-hero.br-hero.br-ada-foto .dash-hero-deco{display:none}
 .bsp-iur-genap{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:6px 0;font-size:13px}.bsp-iur-genap select.input{width:auto;padding:6px 10px}
 .bsp-ruang-pg .bsp-ruang-aksi{flex-wrap:wrap}
 .bsp-iur-catat{display:block;font-size:10.5px;color:#92400e;margin-top:2px;white-space:nowrap}
+/* 🔎 Cari di halaman (Juknis, Silabus) */
+.ch-bar{position:sticky;top:6px;z-index:5;display:flex;align-items:center;gap:6px;margin:0 0 12px;padding:7px 10px;border-radius:14px;background:var(--bg-card,#fff);border:1px solid rgba(148,163,184,.4);box-shadow:0 6px 18px rgba(15,23,42,.08)}
+.ch-bar.kosong{border-color:#f59e0b}
+.ch-ikon{font-size:15px}.ch-input{flex:1;min-width:0;border:0;outline:0;background:transparent;font:inherit;font-size:14px;color:inherit;padding:4px 2px}
+.ch-info{font-size:11.5px;color:var(--text-secondary);white-space:nowrap}
+.ch-nav{border:1px solid rgba(148,163,184,.4);background:transparent;border-radius:8px;width:28px;height:28px;cursor:pointer;color:inherit}
+mark.ch-sorot{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}mark.ch-sorot.kini{background:#f59e0b;color:#fff}
+.ch-sembunyi{display:none!important}

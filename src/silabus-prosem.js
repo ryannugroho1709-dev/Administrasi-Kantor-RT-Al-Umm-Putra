@@ -234,7 +234,7 @@ function _spGambar() {
       <div class="sp-bar" title="Garis = rencana sampai hari ini"><i style="width:${Math.min(100, pct)}%"></i><s style="left:${Math.min(100, pctR)}%"></s></div>
       ${d.kosong ? `<small class="sp-k-catat">Belum ada daftar bab</small>` : nIsi ? `<small class="sp-k-catat">${nIsi} bab perlu diisi</small>` : d.bawaan ? `<small class="sp-k-catat biru">Bawaan dari buku — belum disimpan</small>` : ""}</button>`;
   }).join("");
-  w.innerHTML = kepala + infoSem + `<div class="sp-alat">${boleh ? `<button class="btn btn-sm btn-ghost" onclick="spUnduhTemplate()">⬇️ Unduh Template Excel</button><label class="btn btn-sm btn-ghost">⬆️ Unggah Excel<input type="file" accept=".xlsx,.xls" hidden onchange="spUnggah(this)"></label>` : ""}<button class="btn btn-sm btn-ghost" onclick="spCetak()">🖨️ Cetak Prosem Kelas</button>
+  w.innerHTML = kepala + infoSem + `<div class="sp-cari"><span>🔎</span><input type="search" id="sp-cari" placeholder="Cari bab / sub-bab di semua mapel kelas ini… mis. pecahan, pancasila, voli" value="${_spE(SP.cari || "")}" oninput="spCari(this.value)" autocomplete="off"><div id="sp-cari-hasil"></div></div><div class="sp-alat">${boleh ? `<button class="btn btn-sm btn-ghost" onclick="spUnduhTemplate()">⬇️ Unduh Template Excel</button><label class="btn btn-sm btn-ghost">⬆️ Unggah Excel<input type="file" accept=".xlsx,.xls" hidden onchange="spUnggah(this)"></label>` : ""}<button class="btn btn-sm btn-ghost" onclick="spCetak()">🖨️ Cetak Prosem Kelas</button>
     <span class="sp-legenda">${[["sesuai", "Sesuai"], ["cepat", "Lebih Cepat"], ["telat", "Tertinggal"], ["tak", "Jurnal Belum Terbaca"], ["kosong", "Belum Ada Jurnal"]].map(([k, l]) => `<i style="--sw:${SP_WARNA[k]}"></i>${l}`).join("")}</span></div>
     <div class="sp-grid">${kartu || `<div class="card empty-state">Belum ada jadwal pelajaran untuk kelas ini.</div>`}</div>
     <div id="sp-rinci">${SP.mapelId ? _spHtmlRinci(SP.mapelId) : `<div class="sp-petunjuk">Ketuk salah satu mapel untuk melihat pembagian bab, tanggal pertemuan, dan capaiannya.</div>`}</div>`;
@@ -267,6 +267,38 @@ function _spHtmlRinci(id) {
     ${rc.cadangan.length ? `<div class="sp-cad">± ${rc.cadangan.length} pertemuan cadangan: ${rc.cadangan.map((t) => _spTgl(t)).join(", ")}</div>` : ""}
     ${tanpaBab.length ? `<details class="sp-jr luar"><summary>📓 ${tanpaBab.length} jurnal belum bisa dicocokkan dengan bab mana pun</summary>${tanpaBab.map((j) => `<div>${_spTgl(j.tanggal)} — ${_spE(j.materi_pokok || "(materi kosong)")}</div>`).join("")}<small>Tips: tulis materi jurnal dengan judul bab/sub-bab, mis. "Bab 2 Bilangan Rasional – penjumlahan pecahan".</small></details>` : ""}
     <div class="sp-r-aksi">${boleh ? `<button class="btn btn-accent" onclick="spUbah('${id}')">✏️ Ubah Bab & Sub-bab</button>` : ""}<button class="btn btn-ghost" onclick="spPilih('mapel','')">Tutup</button></div></div>`;
+}
+
+// ── Cari bab & sub-bab di semua mapel (kedua semester) ──
+function spCari(q) {
+  SP.cari = q; clearTimeout(SP.tCari);
+  SP.tCari = setTimeout(() => {
+    const w = document.getElementById("sp-cari-hasil"); if (!w) return;
+    const kata = _spNorm(q).split(" ").filter((k) => k.length >= 2 || /\d/.test(k)); if (!kata.length) { w.innerHTML = ""; return; }
+    const mapelIds = [...new Set(SP.jadwal.map((j) => j.mapel_id))].filter(Boolean), hasil = [];
+    const sorot = (t) => { let h = _spE(t); kata.forEach((k) => { h = h.replace(new RegExp("(" + k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")", "ig"), "<mark>$1</mark>"); }); return h; };
+    mapelIds.forEach((id) => {
+      const nm = _spMapel(id).nama_mapel || "";
+      ["ganjil", "genap"].forEach((sem) => {
+        _spRencana(id, sem).bab.forEach((b) => {
+          const teks = _spNorm([nm, b.buku, "bab " + b.no, b.judul, ...(b.sub || [])].join(" "));
+          if (!kata.every((k) => teks.includes(k))) return;
+          const subCocok = (b.sub || []).filter((x) => kata.some((k) => _spNorm(x).includes(k)));
+          hasil.push({ id, sem, html: `<b>${_spE(nm)}</b> · ${sorot(_spNamaBab(b))}${subCocok.length ? `<small>${subCocok.slice(0, 3).map(sorot).join(" · ")}</small>` : ""}<em>Semester ${sem === "ganjil" ? "Ganjil" : "Genap"}${b.mulai ? ` · ${_spTgl(b.mulai)}–${_spTgl(b.selesai)} · ${b.jp} pertemuan` : ""}</em>` });
+        });
+      });
+    });
+    w.innerHTML = hasil.length ? `<div class="sp-cari-daftar">${hasil.slice(0, 30).map((h) => `<button onclick="spCariBuka('${h.id}','${h.sem}')">${h.html}</button>`).join("")}${hasil.length > 30 ? `<small>… ${hasil.length - 30} hasil lain, persempit kata kuncinya</small>` : ""}</div>` : `<div class="sp-cari-daftar kosong">Tidak ditemukan di silabus kelas ini.</div>`;
+  }, 200);
+}
+function spCariBuka(id, sem) {
+  const q = SP.cari || ""; SP.sem = sem; SP.mapelId = id; SP.cari = ""; _spGambar();
+  setTimeout(() => {
+    const r = document.getElementById("sp-rinci"); if (!r) return;
+    const kata = _spNorm(q).split(" ").filter((k) => k.length >= 2);
+    const bab = [...r.querySelectorAll(".sp-bab")].find((x) => kata.every((k) => _spNorm(x.textContent).includes(k))) || [...r.querySelectorAll(".sp-bab")].find((x) => kata.some((k) => _spNorm(x.textContent).includes(k))) || r;
+    bab.classList.add("sp-kilat"); bab.scrollIntoView({ behavior: "smooth", block: "center" }); setTimeout(() => bab.classList.remove("sp-kilat"), 2600);
+  }, 80);
 }
 
 // ── Atur tanggal semester (bila Kalender Akademik belum lengkap) ──
