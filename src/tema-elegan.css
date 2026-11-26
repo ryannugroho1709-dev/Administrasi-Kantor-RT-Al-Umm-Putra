@@ -1115,3 +1115,19 @@ textarea.dlg-input{resize:vertical;min-height:90px;font-family:inherit}
 .dlg-aksi{display:flex;gap:10px;margin-top:18px}.dlg-aksi .btn{flex:1}
 .dlg-merah{background:#dc2626!important;border-color:#dc2626!important;color:#fff!important}
 @keyframes dlgMuncul{from{opacity:0}to{opacity:1}}@keyframes dlgNaik{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+/* ✉️ Kop Amplop Soal — jendela pengaturan & pratinjau */
+.ka-modal .ka-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin:8px 0}
+.ka-modal .ka-grid label{display:grid;gap:4px;font-size:12px;font-weight:700;color:var(--text-secondary)}.ka-modal .ka-grid label small{font-weight:500}
+.ka-modal .ka-grid label.lebar{grid-column:1/-1}
+.ka-identitas{margin:6px 0 10px;padding:8px 12px;border-radius:12px;border:1px solid rgba(148,163,184,.35)}.ka-identitas summary{cursor:pointer;font-weight:700;font-size:13px}
+.ka-baris{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:6px 0}.ka-baris>span{min-width:56px;font-size:12px;font-weight:800;color:var(--text-secondary)}
+.ka-baris .bk2-chip{display:flex;flex-wrap:wrap;gap:4px;background:var(--bg-soft,#f1f5f9);padding:3px;border-radius:12px}
+.ka-baris .bk2-chip button{border:0;background:transparent;color:inherit;border-radius:9px;padding:6px 11px;font:inherit;font-size:12.5px;cursor:pointer}
+.ka-ringkas{margin:10px 0;padding:9px 12px;border-radius:12px;background:#ecfdf5;color:#065f46;font-size:13px}.ka-peringatan{color:#b45309;font-weight:700}
+.ka-pratinjau{padding:10px;border-radius:12px;background:#f8fafc;border:1px dashed #94a3b8;overflow-x:auto}.ka-pratinjau>small{display:block;text-align:center;color:var(--text-secondary);font-size:11px;margin-top:4px}
+.ka-kop.pratinjau{min-width:560px;background:#fff;color:#000;border:1.5px solid #000;padding:8px 10px;font-family:"Times New Roman",Times,serif;font-size:12px}
+.ka-kop.pratinjau .ka-kepala{display:grid;grid-template-columns:64px 1fr;align-items:center;gap:6px}.ka-kop.pratinjau .ka-kepala img{width:62px;height:62px;object-fit:contain}
+.ka-kop.pratinjau .ka-teks{text-align:center;line-height:1.2;padding-right:64px}.ka-kop.pratinjau .ka-j1{font-size:17px;font-weight:700}.ka-kop.pratinjau .ka-j2{font-size:15px;font-weight:700}.ka-kop.pratinjau .ka-j3{font-size:12.5px;font-weight:700}.ka-kop.pratinjau .ka-j4{font-size:10px}.ka-kop.pratinjau .ka-j5{font-size:9px}
+.ka-kop.pratinjau .ka-garis{border-top:3px solid #000;border-bottom:1px solid #000;height:3px;margin:4px 0 6px}
+.ka-kop.pratinjau .ka-isi{display:grid;grid-template-columns:1.15fr 1fr;gap:10px}.ka-kop.pratinjau table{border-collapse:collapse;width:100%}.ka-kop.pratinjau td{padding:2px 0;font-size:13px;vertical-align:top}.ka-kop.pratinjau td.l{width:118px}.ka-kop.pratinjau td.t{width:10px}.ka-kop.pratinjau td.v{font-weight:700;border-bottom:1px dotted #999}
+.ka-cth{display:grid!important;place-items:center;gap:2px}.ka-cth span{font-size:26px;background:none!important}.ka-cth i{font-style:normal;font-size:11px;text-align:center;color:var(--text-secondary)}
