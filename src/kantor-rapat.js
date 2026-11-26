@@ -32,6 +32,9 @@ async function ktSesiPastikan(kodes, judul, tv, ticker, topik) {
     if (h === "lama" && t && k && KT.sesi.aktif) { t.userData.jalur = null; t.userData.selesai = null; t.position.set(k.x, 0, k.z); if (k.hadap != null) t.rotation.y = k.hadap; _ktDuduk(t, true); }
     if (KT.sesi.aktif) KT.sesi.ids.add(id);
   });
+  // Kepala yang sedang berdiri di luar mejanya (mis. memanggil di depan pintu Ruang Ustadzah) menyingkir & duduk lebih dulu
+  // agar tidak menghalangi pintu/jalan ustadzah; ustadz lain tetap menunggu sampai ustadzah duduk
+  if (kid && ikhwan.includes(kid) && akhawat.length) { const kp = KT.tokoh[kid], m = kp && kp.userData.meja; if (kp && (!m || Math.hypot(kp.position.x - m.x, kp.position.z - m.z) > 0.6)) { await keKursi(kid, 0); ikhwan.splice(ikhwan.indexOf(kid), 1); } }
   for (const kelompok of [akhawat, ikhwan]) {
     await Promise.all(kelompok.map(keKursi));
     if (kelompok.length) kdMinuman(kelompok.map(_ktKursiUntuk), true);
@@ -110,8 +113,8 @@ ktPanggil = async function (id) {
       await _ktBicara(id, "Na'am, insya Allah.", 1500);
       KT.sesi = { aktif: true, ids: new Set(), judul: "Laporan " + _ktPeranPendek(s.peran[0]) }; _ktTombolRapat();
       kdTvRapat(KT.sesi.judul, [], "");
-      await _ktPergi(t, _ktKursiUntuk(id)); KT.sesi.ids.add(id); // ustadzah duduk lebih dulu
-      await _ktPergi(kp, KT.kursiPimpinan); KT.sesi.ids.add(kid);
+      await _ktPergi(kp, KT.kursiPimpinan); KT.sesi.ids.add(kid); // Kepala menyingkir dari depan pintu & duduk dulu
+      await _ktPergi(t, _ktKursiUntuk(id)); KT.sesi.ids.add(id); // baru ustadzah keluar, jalan tidak terhalang
       kdMinuman([_ktKursiUntuk(id), KT.kursiPimpinan]);
       await _ktLaporPeran(s);
       KT.sibuk = false; _ktOpsiRapat(); return;

@@ -521,8 +521,9 @@ function _kdGerak(t, dt, kini) {
     if (o === t || !o.visible) return false; const ou = o.userData; if (u.antre && ou.antre) return false;
     const dBaru = Math.hypot(o.position.x - nx, o.position.z - nz); if (dBaru >= 0.62 || dBaru >= Math.hypot(o.position.x - t.position.x, o.position.z - t.position.z)) return false;
     if (ou.jalur) return ((ou.staf && ou.staf.id) || "") > aku;
-    return !ou.duduk && u.tunggu < 1.6;
+    return !ou.duduk && u.tunggu < 1.6 && !(u.lewat > kini);
   });
+  if (!halang && u.tunggu >= 1.6) u.lewat = kini + 1500; // sudah menunggu orang yang berdiri diam → lanjut melewati (tidak merayap)
   if (halang) {
     u.tunggu += dt;
     if (u.tunggu > 0.5) { const kx = t.position.x - (dz / d) * v * 0.8, kz = t.position.z + (dx / d) * v * 0.8, [i, j] = _kdSel(kx, kz); if (!_kdTerblok(i, j)) { t.position.x = kx; t.position.z = kz; } }
