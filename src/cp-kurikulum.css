@@ -7,7 +7,7 @@
 .cpk-hero h2 { margin: 4px 0 6px; font-size: 24px; color: #fff; }
 .cpk-hero p { margin: 0; max-width: 640px; font-size: 13px; color: #cbd5e1; }
 .cpk-versi { display: flex; gap: 8px; flex-wrap: wrap; }
-.cpk-versi select, .cpk-versi button { background: rgba(255, 255, 255, .1); color: #fff; border: 1px solid rgba(255, 255, 255, .25); border-radius: 10px; padding: 7px 11px; font: inherit; font-size: 12.5px; cursor: pointer; }
+.cpk-versi select, .cpk-versi button, .cpk-versi a { background: rgba(255, 255, 255, .1); color: #fff; border: 1px solid rgba(255, 255, 255, .25); border-radius: 10px; padding: 7px 11px; font: inherit; font-size: 12.5px; cursor: pointer; }
 .cpk-versi select option { color: #111; }
 .cpk-ruang { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
 .cpk-ruang button { border: 1px solid rgba(148, 163, 184, .35); background: var(--bg-card, #fff); color: inherit; border-radius: 14px; padding: 8px 14px; font: inherit; font-size: 13px; cursor: pointer; display: grid; text-align: left; border-left: 4px solid var(--rw); }
@@ -82,3 +82,4 @@
 .cpk-beda del, .cpk-modal del { background: #fee2e2; color: #991b1b; border-radius: 3px; }
 @media (max-width: 700px) { .cpk-hero h2 { font-size: 20px; } .cpk-alur-titik { grid-template-columns: 1fr; } .cpk-cabang { margin-left: 10px; padding-left: 16px; } .cpk-ranting::before { left: -21px; width: 16px; } }
 @media (prefers-color-scheme: dark) { .cpk-k-ikon, .cpk-m-ikon { background: rgba(255, 255, 255, .06); } .cpk-kel h3 small { background: #334155; color: #e2e8f0; } }
+.cpk-versi a { text-decoration: none; display: inline-flex; align-items: center; }

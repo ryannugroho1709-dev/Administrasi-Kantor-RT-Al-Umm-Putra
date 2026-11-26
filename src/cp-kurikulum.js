@@ -5,7 +5,7 @@
 //  • Status per ruang: "Dipakai" / "Tersedia" — Penyelenggara/Admin dapat mengaktifkan CP pilihan (kv "cp:aktif").
 //  • Versi: tiap terbitan CP baru ditambah di CP_VERSI; perbedaan antarversi ditampilkan per fase & elemen.
 // ============================================================
-const CP_VERSI = [{ id: "2025", judul: "CP 2025", dasar: "Keputusan Kepala BSKAP Nomor 046/H/KR/2025", tgl: "16 Juli 2025", folder: "src/cp-data/2025" }];
+const CP_VERSI = [{ id: "2025", judul: "CP 2025", dasar: "Keputusan Kepala BSKAP Nomor 046/H/KR/2025", tgl: "16 Juli 2025", folder: "src/cp-data/2025", pdf: "https://drive.google.com/file/d/1ACq0YXfquhQCZxw6gi2eHz0QR-NLjePA/view" }];
 const CP_RUANG = { A: { nama: "Paket A", fase: ["A", "B", "C"], warna: "#10b981" }, Pa: { nama: "Paket B & C Putra", fase: ["D", "E", "F"], warna: "#2563eb" }, Pi: { nama: "Paket B & C Putri", fase: ["D", "E", "F"], warna: "#db2777" } };
 const CP_FASE = { A: ["Kelas 1–2", "#f59e0b"], B: ["Kelas 3–4", "#84cc16"], C: ["Kelas 5–6", "#10b981"], D: ["Kelas 7–9", "#0ea5e9"], E: ["Kelas 10", "#6366f1"], F: ["Kelas 11–12", "#a855f7"] };
 const CP_KEL = { umum: ["📚", "Kelompok Umum"], pilihan: ["🧩", "Pilihan"], seni: ["🎨", "Seni (pilih cabang)"], prakarya: ["🛠️", "Prakarya (pilih jenis)"], pemberdayaan: ["🌱", "Muatan Pemberdayaan"], keterampilan: ["🧰", "Muatan Keterampilan"] };
@@ -92,7 +92,7 @@ function _cpGambar() {
     <div class="cpk-hero"><div><small>🎯 KURIKULUM · ${_cpE(v.dasar)}</small><h2>Capaian Pembelajaran</h2>
       <p>${CPK.pengelola ? "Semua jenjang PKBM Al-Umm Barabai" : _cpE(CP_RUANG[CPK.ruang].nama)} · Fase ${faseRuang.join(", ")}. CP mapel umum Paket A/B/C mengacu pada CP SD/SMP/SMA; muatan Pemberdayaan & Keterampilan khusus kesetaraan.</p></div>
       <div class="cpk-versi"><select onchange="cpGantiVersi(this.value)">${CP_VERSI.map((x) => `<option value="${x.id}" ${x.id === CPK.versi ? "selected" : ""}>${_cpE(x.judul)} · ${_cpE(x.tgl)}</option>`).join("")}</select>
-      <button onclick="cpBandingkan()" ${CP_VERSI.length < 2 ? "title='Baru ada satu versi CP'" : ""}>⇄ Bandingkan Versi</button></div></div>
+      ${v.pdf ? `<a href="${v.pdf}" target="_blank" rel="noopener">📄 PDF Asli</a>` : ""}<button onclick="cpBandingkan()" ${CP_VERSI.length < 2 ? "title='Baru ada satu versi CP'" : ""}>⇄ Bandingkan Versi</button></div></div>
     ${CPK.pengelola ? `<div class="cpk-ruang">${[["", "🏫 Semua Jenjang"], ["A", "Paket A"], ["Pa", "Paket B & C Putra"], ["Pi", "Paket B & C Putri"]].map(([k, l]) => `<button class="${k === CPK.ruang ? "on" : ""}" style="--rw:${k ? CP_RUANG[k].warna : "#0f5132"}" onclick="CPK.ruang='${k}';_cpGambar()">${l}${k ? `<small>${nPakai(k)} dipakai</small>` : ""}</button>`).join("")}</div>` : ""}
     <div class="cpk-alat"><div class="cpk-cari">🔎<input type="search" placeholder="Cari mapel atau elemen… mis. bilangan, menulis, kerajinan" value="${_cpE(CPK.cari)}" oninput="CPK.cari=this.value;clearTimeout(CPK.t);CPK.t=setTimeout(()=>{_cpGambar();const i=document.querySelector('.cpk-cari input');if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length);}},250)"></div>
       <div class="cpk-chip">${[["", "Semua"], ...Object.entries(CP_KEL).map(([k, [ik, l]]) => [k, ik + " " + l])].map(([k, l]) => `<button class="${k === CPK.kel ? "on" : ""}" onclick="CPK.kel='${k}';_cpGambar()">${l}</button>`).join("")}</div>
