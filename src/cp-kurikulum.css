@@ -1,0 +1,84 @@
+/* 🎯 Capaian Pembelajaran */
+.cpk { --cp-hijau: #0b3026; --cp-emas: #c6a45c; }
+.cpk-muat { padding: 40px; text-align: center; color: var(--text-secondary); }
+.cpk-hero { display: flex; flex-wrap: wrap; gap: 14px; justify-content: space-between; align-items: flex-end; padding: 22px 24px; border-radius: 20px; margin-bottom: 12px; color: #f8fafc;
+  background: radial-gradient(120% 160% at 100% 0%, #1e3a8a 0%, transparent 55%), radial-gradient(120% 140% at 0% 100%, #14532d 0%, transparent 60%), #0b1f1a; box-shadow: 0 14px 34px rgba(6, 30, 24, .28); }
+.cpk-hero small { color: var(--cp-emas); font-weight: 800; letter-spacing: .05em; font-size: 10.5px; }
+.cpk-hero h2 { margin: 4px 0 6px; font-size: 24px; color: #fff; }
+.cpk-hero p { margin: 0; max-width: 640px; font-size: 13px; color: #cbd5e1; }
+.cpk-versi { display: flex; gap: 8px; flex-wrap: wrap; }
+.cpk-versi select, .cpk-versi button { background: rgba(255, 255, 255, .1); color: #fff; border: 1px solid rgba(255, 255, 255, .25); border-radius: 10px; padding: 7px 11px; font: inherit; font-size: 12.5px; cursor: pointer; }
+.cpk-versi select option { color: #111; }
+.cpk-ruang { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.cpk-ruang button { border: 1px solid rgba(148, 163, 184, .35); background: var(--bg-card, #fff); color: inherit; border-radius: 14px; padding: 8px 14px; font: inherit; font-size: 13px; cursor: pointer; display: grid; text-align: left; border-left: 4px solid var(--rw); }
+.cpk-ruang button small { font-size: 10.5px; color: var(--text-secondary); }
+.cpk-ruang button.on { background: var(--rw); color: #fff; } .cpk-ruang button.on small { color: rgba(255, 255, 255, .85); }
+.cpk-alat { display: grid; gap: 8px; margin-bottom: 14px; }
+.cpk-cari { display: flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 14px; background: var(--bg-card, #fff); border: 1px solid rgba(148, 163, 184, .4); box-shadow: 0 6px 18px rgba(15, 23, 42, .06); }
+.cpk-cari input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: inherit; font-size: 14px; color: inherit; }
+.cpk-chip { display: flex; flex-wrap: wrap; gap: 6px; }
+.cpk-chip button { border: 1px solid rgba(148, 163, 184, .4); background: var(--bg-card, #fff); color: inherit; border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 12px; cursor: pointer; }
+.cpk-chip button.on { background: var(--cp-hijau); border-color: var(--cp-hijau); color: #fff; font-weight: 700; }
+.cpk-kel h3 { font-size: 15px; margin: 16px 0 8px; display: flex; align-items: center; gap: 8px; }
+.cpk-kel h3 small { font-size: 11px; background: #e2e8f0; color: #334155; border-radius: 999px; padding: 1px 8px; }
+.cpk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.cpk-kartu { display: flex; gap: 12px; padding: 14px; border-radius: 16px; background: var(--bg-card, #fff); border: 1px solid rgba(148, 163, 184, .3); cursor: pointer; transition: transform .15s, box-shadow .15s; }
+.cpk-kartu:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(15, 23, 42, .1); }
+.cpk-k-ikon { flex: none; width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; font-size: 24px; background: linear-gradient(135deg, #ecfdf5, #eff6ff); }
+.cpk-k-isi { display: grid; gap: 5px; min-width: 0; }
+.cpk-k-isi > b { font-size: 14px; line-height: 1.25; }
+.cpk-fase { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.cpk-fase i { font-style: normal; font-size: 10.5px; font-weight: 800; color: #fff; background: var(--fw); border-radius: 6px; padding: 1px 7px; }
+.cpk-fase small { font-size: 11px; color: var(--text-secondary); margin-left: 4px; }
+.cpk-app { font-size: 11px; color: #0f766e; }
+.cpk-cat { font-size: 11px; color: #b45309; }
+.cpk-stbar { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.cpk-st { font-size: 10.5px; font-weight: 700; border-radius: 999px; padding: 2px 8px; background: #f1f5f9; color: #64748b; }
+.cpk-st.on { background: color-mix(in srgb, var(--rw) 14%, transparent); color: var(--rw); }
+.cpk-stbar button { margin-left: auto; border: 1px solid rgba(148, 163, 184, .45); background: transparent; color: inherit; border-radius: 8px; padding: 3px 9px; font: inherit; font-size: 11px; cursor: pointer; }
+.cpk-sumber { margin-top: 16px; font-size: 11px; color: var(--text-secondary); }
+/* rincian mapel */
+.cpk-m-kepala { display: flex; gap: 14px; align-items: center; margin-bottom: 10px; }
+.cpk-m-ikon { width: 54px; height: 54px; border-radius: 16px; display: grid; place-items: center; font-size: 28px; background: linear-gradient(135deg, #ecfdf5, #eff6ff); flex: none; }
+.cpk-m-kepala small { color: var(--text-secondary); font-size: 11px; }
+.cpk-m-kepala h3 { margin: 2px 0 0; }
+.cpk-tab { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid rgba(148, 163, 184, .35); margin-bottom: 10px; }
+.cpk-tab button { border: 0; background: transparent; color: var(--text-secondary); padding: 8px 12px; font: inherit; font-size: 13px; cursor: pointer; border-bottom: 3px solid transparent; }
+.cpk-tab button.on { color: var(--text-primary, #0f172a); border-color: var(--cp-emas, #c6a45c); font-weight: 800; }
+.cpk-fase-tab { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 6px; margin-bottom: 12px; }
+.cpk-fase-tab button { border: 2px solid var(--fw); background: transparent; color: inherit; border-radius: 12px; padding: 6px 8px; cursor: pointer; display: grid; font: inherit; }
+.cpk-fase-tab button b { font-size: 13px; color: var(--fw); } .cpk-fase-tab button small { font-size: 10.5px; color: var(--text-secondary); }
+.cpk-fase-tab button.on { background: var(--fw); } .cpk-fase-tab button.on b, .cpk-fase-tab button.on small { color: #fff; }
+.cpk-fase-tab button.redup { opacity: .45; }
+.cpk-m-isi { max-height: 62vh; overflow: auto; padding-right: 4px; }
+.cpk-pohon { position: relative; }
+.cpk-akar { display: flex; gap: 10px; align-items: center; padding: 10px 14px; border-radius: 14px; background: var(--fw); color: #fff; width: fit-content; max-width: 100%; }
+.cpk-akar span { font-size: 22px; } .cpk-akar b { display: block; } .cpk-akar small { opacity: .9; font-size: 11.5px; }
+.cpk-pengantar { margin: 8px 0 0 24px; font-size: 12.5px; color: var(--text-secondary); }
+.cpk-cabang { margin-left: 22px; padding-left: 22px; border-left: 3px solid color-mix(in srgb, var(--fw) 45%, transparent); display: grid; gap: 10px; padding-top: 12px; }
+.cpk-ranting { position: relative; background: var(--bg-card, #fff); border: 1px solid rgba(148, 163, 184, .3); border-left: 5px solid var(--ew); border-radius: 14px; padding: 10px 14px; }
+.cpk-ranting::before { content: ""; position: absolute; left: -27px; top: 22px; width: 22px; height: 3px; background: color-mix(in srgb, var(--fw) 45%, transparent); }
+.cpk-r-judul { display: flex; gap: 8px; align-items: center; margin-bottom: 4px; }
+.cpk-r-judul i { font-style: normal; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--ew); color: #fff; font-size: 12px; font-weight: 800; flex: none; }
+.cpk-r-judul b { color: var(--ew); font-size: 14px; }
+.cpk-r-isi p, .cpk-alur-isi p, .cpk-teks p { margin: 4px 0; font-size: 13px; line-height: 1.55; }
+.cpk-redup { color: #94a3b8; font-size: 12.5px; }
+.cpk-pilih-el { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.cpk-pilih-el button { border: 2px solid var(--ew); background: transparent; color: var(--ew); border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.cpk-pilih-el button.on { background: var(--ew); color: #fff; }
+.cpk-alur { position: relative; display: grid; gap: 10px; padding-left: 18px; border-left: 3px dashed rgba(148, 163, 184, .5); margin-left: 8px; }
+.cpk-alur-titik { position: relative; display: grid; grid-template-columns: 96px 1fr; gap: 10px; background: var(--bg-card, #fff); border: 1px solid rgba(148, 163, 184, .3); border-radius: 14px; padding: 10px 12px; }
+.cpk-alur-titik::before { content: ""; position: absolute; left: -28px; top: 16px; width: 15px; height: 15px; border-radius: 50%; background: var(--fw); box-shadow: 0 0 0 4px color-mix(in srgb, var(--fw) 25%, transparent); }
+.cpk-alur-titik.redup { opacity: .5; }
+.cpk-alur-fase b { color: var(--fw); display: block; } .cpk-alur-fase small { font-size: 11px; color: var(--text-secondary); }
+.cpk-elemen { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.cpk-el-kartu { border-radius: 14px; padding: 12px 14px; background: color-mix(in srgb, var(--ew) 8%, var(--bg-card, #fff)); border-top: 4px solid var(--ew); }
+.cpk-el-kartu b { color: var(--ew); } .cpk-el-kartu p { font-size: 12.5px; margin: 6px 0 0; line-height: 1.5; }
+.cpk-teks h4 { margin: 14px 0 6px; color: var(--cp-hijau, #0b3026); }
+.cpk-tujuan { padding-left: 20px; font-size: 13px; line-height: 1.55; } .cpk-tujuan li { margin: 3px 0; }
+.cpk-beda { padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(148, 163, 184, .3); margin: 6px 0; font-size: 12.5px; }
+.cpk-beda.sama { opacity: .6; }
+.cpk-beda ins, .cpk-modal ins { background: #dcfce7; color: #14532d; text-decoration: none; border-radius: 3px; }
+.cpk-beda del, .cpk-modal del { background: #fee2e2; color: #991b1b; border-radius: 3px; }
+@media (max-width: 700px) { .cpk-hero h2 { font-size: 20px; } .cpk-alur-titik { grid-template-columns: 1fr; } .cpk-cabang { margin-left: 10px; padding-left: 16px; } .cpk-ranting::before { left: -21px; width: 16px; } }
+@media (prefers-color-scheme: dark) { .cpk-k-ikon, .cpk-m-ikon { background: rgba(255, 255, 255, .06); } .cpk-kel h3 small { background: #334155; color: #e2e8f0; } }
