@@ -225,9 +225,10 @@ async function ktKabar(paksaJam, otomatis) {
     if (!ada.length && !keu) { _ktPanel(`<h3>📰 Kabar Baru</h3><p class="kt-ket">Belum ada perubahan data dari guru sejak ${sejakTeks}.</p><button class="kt-salin" onclick="ktKabar(168)">Lihat 7 Hari Terakhir</button>`); return; }
     const wakil = (r) => ((KT.peran["admin-" + r] || []).length ? "admin-" + r : "peny-" + r);
     const kodes = ["kepala", ...ada.flatMap((r) => ["admin-" + r, "peny-" + r]), ...(keu || (kabar.Pg || []).length ? ["bendahara"] : [])];
-    _ktPanel(`<div class="kt-obrolan"><div class="kt-info">📰 Laporan kabar baru sejak ${sejakTeks}</div><div id="kt-jawaban"></div><div id="kt-lanjut"></div></div>`);
+    _ktPanel(`<div class="kt-obrolan"><div class="kt-info">📰 Laporan kabar baru sejak ${sejakTeks}</div><div class="kt-info" id="kt-menunggu">⏳ Peserta sedang menuju Ruang Rapat…</div><div id="kt-jawaban"></div><div id="kt-lanjut"></div></div>`);
     const tv = ada.map((r) => ({ label: { A: "Paket A", Pa: "Putra", Pi: "Putri" }[r], nilai: kabar[r].length, teks: kabar[r].length + " kabar", warna: { A: "#10b981", Pa: "#3b82f6", Pi: "#ec4899" }[r] }));
     const ids = await _ktRapat(kodes, "Laporan Kabar Baru", tv, ada.map((r) => `${KT_JENJANG[r]}: ${kabar[r].length} kabar`).join("  •  "));
+    document.getElementById("kt-menunggu")?.remove();
     const kid = (KT.peran.kepala || [])[0];
     await _ktTampilBaris({ kode: "kepala", html: "Assalamu'alaikum. Silakan laporkan perkembangan terbaru dari jenjang masing-masing.", singkat: "Silakan laporkan perkembangan terbaru." });
     for (const r of ada) {

@@ -26,8 +26,10 @@ async function ktSesiPastikan(kodes, judul, tv, ticker, topik) {
   const datang = ids.filter((id) => !KT.sesi.ids.has(id));
   // ustadzah lebih dulu, baru ustadz
   const akhawat = datang.filter((id) => (_ktStafId(id) || {}).jk === "P"), ikhwan = datang.filter((id) => (_ktStafId(id) || {}).jk !== "P");
-  // tiap orang dihitung hadir begitu duduk; bila 45 detik belum sampai (terhalang), langsung didudukkan di kursinya
-  const keKursi = (id, i) => _ktTunggu(i * 380).then(() => Promise.race([_ktPergi(KT.tokoh[id], _ktKursiUntuk(id)), _ktTunggu(45000).then(() => "lama")])).then((h) => {
+  // tiap orang dihitung hadir begitu duduk; batas tunggu SELURUH peserta 14 detik — yang belum sampai (terhalang/masih di luar)
+  // langsung didudukkan di kursinya, agar percakapan rapat tidak tertahan lama
+  const batas = Date.now() + 14000;
+  const keKursi = (id, i) => _ktTunggu(i * 380).then(() => Promise.race([_ktPergi(KT.tokoh[id], _ktKursiUntuk(id)), _ktTunggu(Math.max(800, batas - Date.now())).then(() => "lama")])).then((h) => {
     const t = KT.tokoh[id], k = _ktKursiUntuk(id);
     if (h === "lama" && t && k && KT.sesi.aktif) { t.userData.jalur = null; t.userData.selesai = null; t.position.set(k.x, 0, k.z); if (k.hadap != null) t.rotation.y = k.hadap; _ktDuduk(t, true); }
     if (KT.sesi.aktif) KT.sesi.ids.add(id);
@@ -41,7 +43,7 @@ async function ktSesiPastikan(kodes, judul, tv, ticker, topik) {
   }
   // Ketua Yayasan ikut menyimak rapat inti
   if (yid && KT.tokoh[yid] && KT_TOPIK_INTI.includes(topik) && !KT.sesi.ids.has(yid)) {
-    await kdYayasanDatang(); await _ktPergi(KT.tokoh[yid], KT.kursiYayasan); KT.sesi.ids.add(yid); kdMinuman([KT.kursiYayasan], true);
+    await Promise.race([Promise.resolve(kdYayasanDatang()).then(() => _ktPergi(KT.tokoh[yid], KT.kursiYayasan)), _ktTunggu(20000)]); KT.sesi.ids.add(yid); kdMinuman([KT.kursiYayasan], true);
   }
   _ktSimpanSiaran();
   return [...KT.sesi.ids];
