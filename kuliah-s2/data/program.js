@@ -180,7 +180,7 @@
            siap = jumlah modul pertemuan yang sudah disusun (data/<id>/p01.js … pNN.js) */
         mk: [
           {
-            id: "fiqih", hari: 6, ikon: "mosque", tema: 3, motif: "mizan", motifOpt: { l1: "الدليل", l2: "الحكم", lbl: "فقه العبادات" }, jumlah: 12, siap: 3,
+            id: "fiqih", hari: 6, ikon: "mosque", tema: 3, motif: "mizan", motifOpt: { l1: "الدليل", l2: "الحكم", lbl: "فقه العبادات" }, jumlah: 12, siap: 4,
             nama: { id: "Fiqih Ibadah", ar: "فقه العبادات" },
             kitab: { id: "Bidayah al-Mutafaqqih", ar: "بداية المتفقه" },
             penulis: { id: "Syaikh Wahid bin 'Abdussalam Bali", ar: "الشيخ وحيد بن عبد السلام بالي" },
