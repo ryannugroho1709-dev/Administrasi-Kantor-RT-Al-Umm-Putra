@@ -158,3 +158,54 @@
 .bi3-dpk small { display: block; color: var(--text-secondary); margin-top: 4px; } .bi3-dpk p { margin: 8px 0 4px; }
 .bi3-dpk-nama { display: flex; flex-wrap: wrap; gap: 5px; } .bi3-dpk-nama em { font-style: normal; font-size: 12px; background: #fff; border: 1px solid #fde68a; border-radius: 999px; padding: 2px 9px; }
 @media (prefers-color-scheme: dark) { .bi3-dpk { background: rgba(245, 158, 11, .1); } .bi3-dpk-nama em { background: transparent; } }
+/* 🪪 Lembar Buku Induk (siswa & guru) — kartu modern */
+.bil { display: grid; gap: 14px; }
+.bil-alat { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; } .bil-alat > span { flex: 1; }
+.bil-alat .bk2-btn { background: var(--bg-card, #fff); text-decoration: none; } .bil-alat .bk2-btn.utama { background: var(--bk); color: #fff; }
+.bil-hero { display: grid; grid-template-columns: auto 1fr auto; gap: 18px; align-items: center; padding: 20px 22px; border-radius: 20px; color: #f8fafc;
+  background: radial-gradient(120% 150% at 100% 0%, color-mix(in srgb, var(--bk) 55%, transparent) 0%, transparent 60%), linear-gradient(135deg, #2b1a0d 0%, #5b3417 60%, #8a5523 100%); border-bottom: 4px solid var(--bk); box-shadow: 0 14px 30px rgba(60, 35, 12, .25); }
+.bil-foto { width: 92px; height: 116px; border-radius: 16px; overflow: hidden; border: 3px solid rgba(255, 255, 255, .55); background: color-mix(in srgb, var(--bk) 55%, #1e293b); display: grid; place-items: center; box-shadow: 0 8px 18px rgba(0, 0, 0, .25); }
+.bil-foto img { width: 100%; height: 100%; object-fit: cover; } .bil-foto span { font-size: 30px; font-weight: 900; color: #fff; letter-spacing: 1px; }
+.bil-id { min-width: 0; display: grid; gap: 8px; }
+.bil-id > small { color: #e8c77d; font-weight: 800; font-size: 10.5px; letter-spacing: .08em; }
+.bil-id h2 { margin: 0; font-size: 24px; line-height: 1.25; color: #fff; overflow-wrap: anywhere; }
+.bil-chip { display: flex; flex-wrap: wrap; gap: 6px; }
+.bil-chip em { font-style: normal; font-size: 12px; font-weight: 700; padding: 3px 11px; border-radius: 999px; background: color-mix(in srgb, var(--cw) 30%, rgba(255, 255, 255, .08)); border: 1px solid color-mix(in srgb, var(--cw) 70%, #fff); color: #fff; }
+.bil-nomor { display: flex; flex-wrap: wrap; gap: 8px; }
+.bil-nomor span { display: grid; padding: 6px 12px; border-radius: 12px; background: rgba(255, 255, 255, .09); border: 1px solid rgba(255, 255, 255, .16); }
+.bil-nomor small { font-size: 10.5px; color: #cbd5e1; } .bil-nomor b { font-size: 14.5px; font-variant-numeric: tabular-nums; color: #fff; }
+.bil-lengkap { width: 104px; height: 104px; border-radius: 50%; display: grid; place-content: center; text-align: center; background: radial-gradient(closest-side, #3b2410 78%, transparent 80% 100%), conic-gradient(var(--pw) calc(var(--p) * 1%), rgba(255, 255, 255, .15) 0); }
+.bil-lengkap b { font-size: 24px; color: #fff; line-height: 1; } .bil-lengkap small { font-size: 10.5px; color: #cbd5e1; }
+.bil-catatan { display: flex; gap: 8px; align-items: flex-start; padding: 11px 14px; border-radius: 14px; background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; font-size: 13px; line-height: 1.7; }
+.bil-catatan em { font-style: normal; display: inline-block; margin: 0 0 0 6px; padding: 0 9px; border-radius: 999px; background: #ffedd5; font-weight: 700; font-size: 12px; }
+.bil-catatan.ok { background: #f0fdf4; border-color: #bbf7d0; color: #166534; font-weight: 700; }
+.bil-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.bil-kartu { background: var(--bg-card, #fff); border: 1px solid rgba(148, 163, 184, .28); border-radius: 18px; padding: 14px 16px; box-shadow: 0 4px 14px rgba(15, 23, 42, .04); }
+.bil-kartu header { display: flex; align-items: center; gap: 10px; padding-bottom: 10px; margin-bottom: 4px; border-bottom: 1px solid rgba(148, 163, 184, .25); }
+.bil-kartu header i { font-style: normal; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; font-size: 17px; background: #fdf6ec; border: 1px solid #f1e2c8; flex: none; }
+.bil-kartu header h4 { margin: 0; flex: 1; font-size: 14.5px; color: #5b3417; }
+.bil-kartu header small { font-size: 11.5px; color: var(--text-secondary); white-space: nowrap; }
+.bil-kartu dl { margin: 0; display: grid; }
+.bil-kartu dl > div { display: grid; grid-template-columns: minmax(130px, 40%) 1fr; gap: 12px; padding: 8px 2px; border-bottom: 1px dashed rgba(148, 163, 184, .3); }
+.bil-kartu dl > div:last-child { border-bottom: 0; }
+.bil-kartu dt { font-size: 12.5px; color: var(--text-secondary); font-weight: 600; line-height: 1.5; }
+.bil-kartu dd { margin: 0; font-size: 13.5px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.bil-kosong { font-size: 11.5px; font-weight: 600; color: #b45309; background: #fffbeb; border: 1px dashed #fcd34d; padding: 1px 9px; border-radius: 999px; }
+.bil-ket { margin: 0; font-size: 12.5px; color: var(--text-secondary); }
+.bil-judul { margin: 0; font-size: 18px; }
+.bil.al-form .al-grid { padding-top: 8px; } .bil.al-form .sop-aksi { display: flex; gap: 8px; }
+@media (min-width: 1100px) { .bil-kartu.lebar dl { grid-template-columns: 1fr 1fr; column-gap: 24px; } }
+@media (max-width: 760px) {
+  .bil-hero { grid-template-columns: auto 1fr; padding: 16px; gap: 14px; } .bil-foto { width: 72px; height: 92px; } .bil-foto span { font-size: 22px; }
+  .bil-id h2 { font-size: 19px; } .bil-lengkap { grid-column: 1 / -1; width: auto; height: auto; border-radius: 12px; background: rgba(255, 255, 255, .1); display: flex; gap: 8px; align-items: baseline; justify-content: center; padding: 8px; }
+  .bil-lengkap b { font-size: 18px; }
+  .bil-nomor span { flex: 1 1 40%; }
+  .bil-grid { grid-template-columns: 1fr; }
+  .bil-kartu dl > div { grid-template-columns: 1fr; gap: 2px; padding: 8px 0; }
+}
+@media (prefers-color-scheme: dark) {
+  .bil-kartu header h4 { color: #e8c77d; } .bil-kartu header i { background: rgba(232, 199, 125, .12); border-color: rgba(232, 199, 125, .25); }
+  .bil-catatan { background: rgba(234, 88, 12, .12); border-color: rgba(234, 88, 12, .35); color: #fdba74; } .bil-catatan em { background: rgba(234, 88, 12, .2); }
+  .bil-catatan.ok { background: rgba(22, 163, 74, .12); color: #86efac; border-color: rgba(22, 163, 74, .35); }
+  .bil-kosong { background: rgba(245, 158, 11, .1); color: #fcd34d; border-color: rgba(245, 158, 11, .4); }
+}

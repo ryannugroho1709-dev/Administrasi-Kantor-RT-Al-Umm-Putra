@@ -22,7 +22,7 @@ async function biMuat(paksa) {
     supaSemua.from("kelas").select("id,nama_kelas,ruang_id"),
     supaSemua.from("kuliah_pengaturan").select("kunci,nilai").eq("ruang_id", "*").like("kunci", "bosp:induk:%"),
     supaSemua.from("kuliah_pengaturan").select("nilai").eq("kunci", "bosp:alumni").eq("ruang_id", "*").maybeSingle(),
-    supaSemua.from("guru").select("id,nama,nip_nik,jenis_guru,jabatan,no_wa,email,tempat_lahir,tanggal_lahir,tmt,status_aktif,ruang,ruang_utama,ruang_nonaktif,foto_url,created_at,auth_user_id,akun_menunggu").order("nama"),
+    supaSemua.from("guru").select("id,nama,nip_nik,jenis_guru,jabatan,no_wa,email,tempat_lahir,tanggal_lahir,tmt,alamat_domisili,status_aktif,ruang,ruang_utama,ruang_nonaktif,foto_url,created_at,auth_user_id,akun_menunggu").order("nama"),
     supaSemua.from("kuliah_pengaturan").select("nilai").eq("kunci", "dapodik:ptk").eq("ruang_id", "*").maybeSingle(),
     supaSemua.from("jadwal_pelajaran").select("guru_id,ruang_id").eq("aktif", true),
   ]);
@@ -134,7 +134,7 @@ function _biHtmlGuru() {
       <button class="bk2-btn utama" onclick="biUnduhGuru()">⬇️ Unduh Excel</button></div>
     <div class="bi2-wadah"><table class="bi2-tabel" style="min-width:1240px"><colgroup><col style="width:44px"><col><col style="width:170px"><col style="width:150px"><col style="width:170px"><col style="width:150px"><col style="width:170px"><col style="width:90px"><col style="width:100px"></colgroup>
       <thead><tr><th class="c">No</th><th>Nama Lengkap</th><th>Jabatan</th><th>Jenis</th><th>Bertugas Di</th><th>Dapodik</th><th>Jadwal Mengajar</th><th class="c">Akun</th><th>Status</th></tr></thead><tbody>
-      ${d.map((g, i) => { const on = _biGuruAktif(g), dp = _biDpk(g), jw = _biJadwal(g); return `<tr class="${on ? "" : "k-mutasi"}"><td class="c redup">${i + 1}</td>
+      ${d.map((g, i) => { const on = _biGuruAktif(g), dp = _biDpk(g), jw = _biJadwal(g); return `<tr class="klik ${on ? "" : "k-mutasi"}" onclick="biLembarGuru('${g.id}')" title="Buka lembar Buku Induk"><td class="c redup">${i + 1}</td>
         <td class="nama"><span class="bi2-nm"><i class="bk2-av">${_biE(_biInisial(g.nama))}</i><span><b>${_biE(g.nama)}</b>${g.nip_nik ? `<small class="al2-sub">NIK/NIP ${_biE(g.nip_nik)}</small>` : ""}</span></span></td>
         <td>${_biE(g.jabatan || "—")}</td><td>${_biE(BI_JENIS_GURU[g.jenis_guru] || g.jenis_guru || "—")}</td>
         <td>${_biRgGuru(g).map(_biPillRg).join(" ") || "—"}</td>
@@ -214,18 +214,58 @@ function _biBarisLembar(x) {
   };
   return isi;
 }
+// ── Lembar Buku Induk (tampilan kartu modern; dipakai siswa & guru) ──
+const BI_IKON_BAGIAN = { A: "🪪", B: "🏠", C: "🎒", D: "👨‍👩‍👧", E: "🤝", F: "🎓" };
+function _bilKartu(ikon, judul, rows, lebar) {
+  const terisi = rows.filter(([, v]) => v).length;
+  return `<section class="bil-kartu ${lebar ? "lebar" : ""}"><header><i>${ikon}</i><h4>${_biE(judul)}</h4><small>${terisi}/${rows.length} terisi</small></header>
+    <dl>${rows.map(([k, v]) => `<div class="${v ? "" : "kosong"}"><dt>${_biE(k)}</dt><dd>${v ? _biE(v) : '<span class="bil-kosong">Belum diisi</span>'}</dd></div>`).join("")}</dl></section>`;
+}
+function _bilKepala(o) {
+  return `<div class="bil-hero" style="--bk:${o.warna}">
+    <div class="bil-foto">${o.foto ? `<img src="${_biE(o.foto)}" alt="">` : `<span>${_biE(_biInisial(o.nama))}</span>`}</div>
+    <div class="bil-id"><small>${_biE(o.label)}</small><h2>${_biE(o.nama)}</h2>
+      <div class="bil-chip">${o.chip.map(([t, w]) => `<em style="--cw:${w}">${t}</em>`).join("")}</div>
+      <div class="bil-nomor">${o.nomor.map(([k, v]) => `<span><small>${_biE(k)}</small><b>${_biE(v || "—")}</b></span>`).join("")}</div></div>
+    ${o.persen != null ? `<div class="bil-lengkap" style="--p:${o.persen};--pw:${o.persen === 100 ? "#4ade80" : o.persen >= 70 ? "#fbbf24" : "#f87171"}"><b>${o.persen}%</b><small>Kelengkapan</small></div>` : ""}</div>`;
+}
 function biLembar(id) {
   const x = (BI.siswa || []).find((s) => s.id === id); if (!x) return;
-  const isi = _biBarisLembar(x), kurang = biKurang(x), t = BI.tambah[x.id] || {}, ubah = biBolehUbah();
+  const isi = _biBarisLembar(x), kurang = biKurang(x), t = BI.tambah[x.id] || {}, ubah = biBolehUbah(), k = biKeadaan(x);
+  const persen = Math.round(((BI_WAJIB.length - kurang.length) / Math.max(1, BI_WAJIB.length)) * 100);
+  const wSt = { aktif: "#16a34a", lulus: "#7c3aed", mutasi: "#dc2626" }[k.kode] || "#64748b";
   const sec = document.getElementById("page-rg");
-  sec.innerHTML = `<div class="card bi-lembar">
-    <div class="bi-lembar-alat"><button class="btn btn-secondary btn-sm" onclick="${BI.dariCari ? "biBukaCari()" : "biBukaInduk()"}">‹ Kembali</button>
-      ${ubah ? `<button class="btn btn-primary btn-sm" onclick="biUbahLembar('${id}')">✏️ Lengkapi Isian</button>` : ""}<button class="btn btn-secondary btn-sm" onclick="biCetakLembar('${id}')">🖨️ Cetak</button>
-      ${t.url_ijazah ? `<a class="btn btn-secondary btn-sm" href="${_biE(t.url_ijazah)}" target="_blank" rel="noopener">📄 e-Ijazah</a>` : ""}</div>
-    <div class="bi-lembar-kepala">${x.foto_url ? `<img src="${_biE(x.foto_url)}" alt="">` : '<div class="bi-foto-kosong">FOTO<br>3×4</div>'}<div><small>LEMBAR BUKU INDUK PESERTA DIDIK · ${_biE(_biNamaRg(x.ruang_id).toUpperCase())}</small><h3>${_biE(x.nama)}</h3><span>No. Induk <b>${_biE(x.nis || "—")}</b> · NISN <b>${_biE(x.nisn || "—")}</b></span></div></div>
-    ${kurang.length ? `<div class="sop-catatan">Belum diisi: ${_biE(kurang.join(", "))}</div>` : `<div class="sop-ok">✓ Isian wajib Buku Induk lengkap</div>`}
-    ${Object.entries(isi).map(([b, rows]) => `<h4 class="bi-bagian">${BI_BAGIAN[b]}</h4><table class="table bi-tabel"><tbody>${rows.map(([k, v]) => `<tr><td>${k}</td><td>${v ? _biE(v) : '<span class="sop-redup">—</span>'}</td></tr>`).join("")}</tbody></table>`).join("")}
-    <p class="rg-ket">Isian A–F yang berasal dari Data Siswa diubah lewat menu Data Siswa di jenjangnya; isian tambahan diubah lewat <b>Lengkapi Isian</b>.</p></div>`;
+  sec.innerHTML = `<div class="bil">
+    <div class="bil-alat"><button class="bk2-btn" onclick="${BI.dariCari ? "biBukaCari()" : "biBukaInduk()"}">‹ Kembali</button><span></span>
+      ${ubah ? `<button class="bk2-btn utama" style="--bk:${BI_WARNA_RG[x.ruang_id] || "#8a5523"}" onclick="biUbahLembar('${id}')">✏️ Lengkapi Isian</button>` : ""}<button class="bk2-btn" onclick="biCetakLembar('${id}')">🖨️ Cetak</button>
+      ${t.url_ijazah ? `<a class="bk2-btn" href="${_biE(t.url_ijazah)}" target="_blank" rel="noopener">📄 e-Ijazah</a>` : ""}</div>
+    ${_bilKepala({ warna: BI_WARNA_RG[x.ruang_id] || "#8a5523", foto: x.foto_url, nama: x.nama, label: "LEMBAR BUKU INDUK PESERTA DIDIK", persen,
+      chip: [[_biE(_biNamaRg(x.ruang_id)), BI_WARNA_RG[x.ruang_id] || "#64748b"], [_biE(k.teks), wSt], ...(biJk(x) ? [[biJk(x) === "P" ? "Perempuan" : "Laki-laki", biJk(x) === "P" ? "#be185d" : "#1d4ed8"]] : [])],
+      nomor: [["No. Induk", x.nis], ["NISN", x.nisn], ["Angkatan", x.angkatan]] })}
+    ${kurang.length ? `<div class="bil-catatan">⚠️ <span><b>Belum diisi:</b> ${kurang.map((n) => `<em>${_biE(n)}</em>`).join("")}</span></div>` : `<div class="bil-catatan ok">✅ Isian wajib Buku Induk sudah lengkap</div>`}
+    <div class="bil-grid">${Object.entries(isi).map(([b, rows]) => _bilKartu(BI_IKON_BAGIAN[b], BI_BAGIAN[b], rows, b === "A" || b === "D")).join("")}</div>
+    <p class="bil-ket">Isian yang berasal dari Data Siswa diubah lewat menu Data Siswa di jenjangnya. Isian tambahan diubah lewat <b>Lengkapi Isian</b>.</p></div>`;
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+function biLembarGuru(id) {
+  const g = (BI.guru || []).find((x) => x.id === id); if (!g) return;
+  const on = _biGuruAktif(g), dp = _biDpk(g), jw = _biJadwal(g), w = BI_WARNA_RG[_biRgGuru(g)[0]] || "#8a5523";
+  const sec = document.getElementById("page-rg");
+  const nmRg = { A: "Paket A", Pa: "Putra", Pi: "Putri" };
+  sec.innerHTML = `<div class="bil">
+    <div class="bil-alat"><button class="bk2-btn" onclick="BI.mode='guru';biBukaInduk()">‹ Kembali</button><span></span></div>
+    ${_bilKepala({ warna: w, foto: g.foto_url, nama: g.nama, label: "BUKU INDUK GURU & TENAGA KEPENDIDIKAN",
+      chip: [..._biRgGuru(g).map((r) => [_biE(_biNamaRg(r)), BI_WARNA_RG[r]]), [on ? "Aktif" : "Nonaktif", on ? "#16a34a" : "#dc2626"], [dp ? "Terdaftar Dapodik" : "Belum di Dapodik", dp ? "#16a34a" : "#d97706"]],
+      nomor: [["NIK / NIP", g.nip_nik], ["NUPTK", dp && dp.nuptk], ["TMT", _biTgl(g.tmt)]] })}
+    <div class="bil-grid">
+      ${_bilKartu("🪪", "A. Identitas", [["Nama Lengkap", g.nama], ["NIK / NIP", g.nip_nik], ["Tempat, Tanggal Lahir", [g.tempat_lahir, _biTgl(g.tanggal_lahir)].filter(Boolean).join(", ")], ["Alamat", g.alamat_domisili]], true)}
+      ${_bilKartu("💼", "B. Tugas", [["Jabatan", g.jabatan], ["Jenis Guru", BI_JENIS_GURU[g.jenis_guru] || g.jenis_guru], ["Bertugas Di", _biRgGuru(g).map(_biNamaRg).join(", ")], ["Mulai Bertugas (TMT)", _biTgl(g.tmt)], ["Status", on ? "Aktif" : "Nonaktif"]])}
+      ${_bilKartu("🗂️", "C. Dapodik", [["Status Dapodik", dp ? dp.status || "Terdaftar" : ""], ["NUPTK", dp && dp.nuptk], ["NIP", dp && dp.nip], ["Golongan", dp && dp.golongan], ["Tugas Tambahan", dp && dp.tugas]])}
+      ${_bilKartu("📅", "D. Jadwal Mengajar", Object.keys(jw).length ? Object.entries(jw).map(([r, n]) => [nmRg[r] || r, n + " jam pelajaran per pekan"]) : [["Jadwal", ""]])}
+      ${_bilKartu("📱", "E. Kontak & Akun", [["No. WA", g.no_wa], ["Email", g.email], ["Akun Aplikasi", g.auth_user_id ? (g.akun_menunggu ? "Menunggu persetujuan" : "Sudah ada") : ""]])}
+    </div>
+    <p class="bil-ket">Data guru diubah lewat menu Data Guru di jenjangnya atau Profil Guru, dan otomatis tampil di sini.</p></div>`;
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 function biUbahLembar(id) {
   const x = (BI.siswa || []).find((s) => s.id === id); if (!x) return;
@@ -236,8 +276,8 @@ function biUbahLembar(id) {
     return `<label>${lbl}<input class="input" id="bi-${k}" type="${tipe}" value="${_biE(v)}"></label>`;
   };
   const sec = document.getElementById("page-rg");
-  sec.innerHTML = `<div class="card al-form"><h3>Lengkapi Buku Induk — ${_biE(x.nama)}</h3>
-    ${Object.keys(BI_BAGIAN).map((b) => { const f = BI_TAMBAH.filter((z) => z[0] === b); return f.length ? `<h4 class="bi-bagian">${BI_BAGIAN[b]}</h4><div class="al-grid">${f.map(kolom).join("")}</div>` : ""; }).join("")}
+  sec.innerHTML = `<div class="bil al-form"><h3 class="bil-judul">✏️ Lengkapi Buku Induk — ${_biE(x.nama)}</h3>
+    ${Object.keys(BI_BAGIAN).map((b) => { const f = BI_TAMBAH.filter((z) => z[0] === b); return f.length ? `<section class="bil-kartu lebar"><header><i>${BI_IKON_BAGIAN[b]}</i><h4>${BI_BAGIAN[b]}</h4></header><div class="al-grid">${f.map(kolom).join("")}</div></section>` : ""; }).join("")}
     <div class="sop-aksi"><button class="btn btn-primary" onclick="biSimpanLembar('${id}')">💾 Simpan</button><button class="btn btn-secondary" onclick="biLembar('${id}')">Batal</button></div></div>`;
 }
 async function biSimpanLembar(id) {
