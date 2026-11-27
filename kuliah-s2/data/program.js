@@ -11,6 +11,7 @@
   const links = arr => arr.map(tg);
 
   window.PROGRAM = {
+    aktif: 2, versi: 13,
     nama: { id: "Magister (S2) Ulumul Qur'an", ar: "ماجستير علوم القرآن" },
     lembaga: { id: "Akademi Syifa'ul Qulub wa Muddakir", ar: "أكاديمية شفاء القلوب ومُدَّكر" },
     naungan: { id: "Universitas Shafwah", ar: "جامعة صفوة" },
@@ -24,7 +25,7 @@
     },
     semester: [
       {
-        no: 1, status: "aktif", ar: "الفصل الدراسي الأول", tahun: "1448 H",
+        no: 1, status: "selesai", ar: "الفصل الدراسي الأول", tahun: "1448 H",
         mk: [
           {
             id: "aqidah", tglUjian: { uas: "2026-10-26" }, hari: 6, ikon: "tauhid", tema: 0, motif: "kaidah", motifOpt: { lbl: "التوحيد" }, warna: "Zamrud", jumlah: 16,
@@ -172,7 +173,60 @@
           }
         ]
       },
-      { no: 2, status: "segera", ar: "الفصل الدراسي الثاني", mk: [] },
+      {
+        no: 2, status: "aktif", ar: "الفصل الدراسي الثاني", tahun: "1448 H",
+        mulai: { id: "Jumat, 20 November 2026", ar: "الجمعة ٢٠ نوفمبر ٢٠٢٦م" },
+        /* Semester 2: 12 pertemuan per mata kuliah, dari modul (manhaj) akademi. Tanggal ujian akhir belum diumumkan.
+           siap = jumlah modul pertemuan yang sudah disusun (data/<id>/p01.js … pNN.js) */
+        mk: [
+          {
+            id: "fiqih", hari: 6, ikon: "mosque", tema: 3, motif: "mizan", motifOpt: { l1: "الدليل", l2: "الحكم", lbl: "فقه العبادات" }, jumlah: 12, siap: 1,
+            nama: { id: "Fiqih Ibadah", ar: "فقه العبادات" },
+            kitab: { id: "Bidayah al-Mutafaqqih", ar: "بداية المتفقه" },
+            penulis: { id: "Syaikh Wahid bin 'Abdussalam Bali", ar: "الشيخ وحيد بن عبد السلام بالي" },
+            dosen: { id: "Syaikh Aiman Musa", ar: "الشيخ أيمن موسى" },
+            tentang: {
+              id: "Kitab fiqih ringkas yang disusun dalam bentuk **dhabit-dhabit** (kaidah pendek yang mudah dihafal). Semester ini dikhususkan pada **fiqih ibadah**, dimulai dari **Kitab Thaharah**: air, bejana, adab buang hajat, wudhu, pembatal wudhu, mandi, tayammum, najis, dan darah wanita. Penjelasan dosen mengambil faedah dari syarahnya, *Raudhah al-Mutanazzah fi Syarh Bidayah al-Mutafaqqih*, lengkap dengan dalil Al-Qur'an, hadits, ijma', dan pendapat yang rajih.",
+              ar: "متن فقهي مختصر مصوغ في ضوابط، يتناول في هذا الفصل فقه العبادات مبتدئًا بكتاب الطهارة، مع الاستفادة من شرحه «روضة المتنزه في شرح بداية المتفقه»، بذكر الأدلة والإجماع والراجح."
+            }
+          },
+          {
+            id: "dirasat-uq", hari: 0, ikon: "quran", tema: 4, motif: "gulungan", motifOpt: { lbl: "دراسات في علوم القرآن" }, jumlah: 12, siap: 0,
+            nama: { id: "Ulumul Qur'an 2", ar: "علوم القرآن" },
+            kitab: { id: "Dirasat fi 'Ulum al-Qur'an al-Karim", ar: "دراسات في علوم القرآن الكريم" },
+            penulis: null,
+            dosen: { id: "Syaikh Sami bin Bali", ar: "الشيخ سامي بن بالي" }
+          },
+          {
+            id: "wujuh", hari: 1, ikon: "prism", tema: 5, motif: "spektrum", motifOpt: { l1: "الوجوه", l2: "النظائر" }, jumlah: 12, siap: 0,
+            nama: { id: "Al-Wujuh wan-Nazha'ir", ar: "الوجوه والنظائر" },
+            kitab: { id: "Al-Wujuh wan-Nazha'ir", ar: "الوجوه والنظائر" },
+            penulis: null,
+            dosen: { id: "Dr. Sa'd Mu'awwadh", ar: "الدكتور سعد معوض" }
+          },
+          {
+            id: "tafsir-amma", hari: 2, ikon: "lantern", tema: 8, motif: "kalam", motifOpt: { big: "عَمَّ يَتَسَاءَلُونَ", lbl: "تفسير جزء عمّ" }, jumlah: 12, siap: 0,
+            nama: { id: "Tafsir Juz 'Amma", ar: "تفسير جزء عمّ" },
+            kitab: { id: "Tafsir Ibnu Katsir (Juz 'Amma)", ar: "تفسير ابن كثير" },
+            penulis: { id: "Al-Hafizh Ibnu Katsir (w. 774 H)", ar: "الحافظ ابن كثير (ت ٧٧٤هـ)" },
+            dosen: { id: "Syaikh As-Sa'id az-Zu'aiqi", ar: "الشيخ السعيد الزعيقي" }
+          },
+          {
+            id: "sirah", hari: 3, ikon: "palm", tema: 9, motif: "sanad", motifOpt: { items: ["مكة", "الهجرة", "المدينة", "الغزوات", "الوفاة"], big: "السيرة النبوية", lbl: "الفصول في سيرة الرسول ﷺ" }, jumlah: 12, siap: 0,
+            nama: { id: "Sirah Nabawiyah", ar: "السيرة النبوية" },
+            kitab: { id: "Al-Fushul fi Sirah ar-Rasul ﷺ", ar: "الفصول في سيرة الرسول ﷺ" },
+            penulis: null,
+            dosen: { id: "Syaikh Kamal Syaraf", ar: "الشيخ كمال شرف" }
+          },
+          {
+            id: "irab", hari: 4, ikon: "harakat", tema: 10, motif: "jumlah", motifOpt: { items: [["عَمَّ", "جار ومجرور"], ["يَتَسَاءَلُونَ", "فعل وفاعل"]], lbl: "الإعراب التطبيقي" }, jumlah: 12, siap: 0,
+            nama: { id: "Nahwu: I'rab Tathbiqi", ar: "النحو: الإعراب التطبيقي" },
+            kitab: { id: "Al-I'rab at-Tathbiqi (1) — Juz 'Amma", ar: "الإعراب التطبيقي (١) لجزء عمّ" },
+            penulis: null,
+            dosen: { id: "Dr. 'Ali an-Namr", ar: "الدكتور علي النمر" }
+          }
+        ]
+      },
       { no: 3, status: "segera", ar: "الفصل الدراسي الثالث", mk: [] },
       { no: 4, status: "segera", ar: "الفصل الدراسي الرابع", mk: [] }
     ]

@@ -83,7 +83,17 @@ window.Render = (function () {
     tanya: b => '<div class="blk rv tanya"><div class="tq">' + Icon("key") + "<div>" + bi(b.q) + '</div></div><button class="btn ghost sm tanya-btn" type="button">' + Icon("eye") + label("Lihat jawaban", "أظهر الجواب") + '</button><div class="ta" hidden>' + bi(b.a) + "</div></div>",
 
     cek: (b, i) => '<div class="blk rv cek" data-j="' + b.j + '"><div class="cek-h">' + Icon("target") + label("Cek Pemahaman", "اختبر فهمك") + "</div>" + bi(b.q) +
-      '<div class="cek-o">' + b.o.map((o, k) => '<button type="button" class="cek-btn" data-k="' + k + '">' + one(o) + "</button>").join("") + '</div><div class="cek-b" hidden>' + bi(b.b) + "</div></div>",
+      '<div class="cek-o">' + U.shuffle(b.o.map((o, k) => '<button type="button" class="cek-btn" data-k="' + k + '">' + one(o) + "</button>")).join("") + '</div><div class="cek-b" hidden>' + bi(b.b) + "</div></div>",
+
+    /* Kartu hukum (semester 2): tiap butir diberi lencana hukum berwarna — wajib/sunnah/mubah/makruh/haram */
+    hukum: b => '<div class="blk rv hukum">' + (b.judul ? head(b.judul, "h3", "sub-title") : "") + '<div class="hk-list">' +
+      b.item.map((it, k) => { const h = HKM[it.h] || HKM.info; return '<div class="hk-card hk-' + (it.h || "info") + ' st" style="--i:' + k + '"><span class="hk-badge">' + Icon(h[0]) + label(h[1], h[2]) + "</span>" +
+        (it.judul ? head(it.judul, "h4", "hk-t") : "") + (it.id || it.ar ? bi(it) : "") + "</div>"; }).join("") + "</div></div>",
+
+    /* Perbedaan pendapat ulama: masalah → pendapat-pendapat (yang rajih ditandai) → alasan tarjih */
+    khilaf: b => '<div class="blk rv khilaf"><div class="kh-h">' + Icon("scale") + "<div><small>" + label("Masalah khilafiyah", "مسألة خلافية") + "</small>" + one(b.masalah) + "</div></div>" +
+      '<div class="kh-ops">' + b.pendapat.map((p, k) => '<div class="kh-op st' + (p.rajih ? " rajih" : "") + '" style="--i:' + k + '"><div class="kh-who">' + (p.rajih ? '<span class="kh-r">' + Icon("checkCircle") + label("Rajih", "الراجح") + "</span>" : '<span class="kh-n">' + num(k + 1) + "</span>") + one(p.siapa) + "</div>" + bi(p.isi) + "</div>").join("") + "</div>" +
+      (b.alasan ? '<div class="kh-why">' + Icon("bulb") + "<div>" + bi(b.alasan) + "</div></div>" : "") + "</div>",
 
     ringkasan: b => '<div class="blk rv ringkasan"><div class="rk-h">' + Icon("checkCircle") + (b.judul ? one(b.judul) : label("Ringkasan Pertemuan", "ملخص المحاضرة")) + "</div><ul>" +
       b.item.map((it, k) => '<li class="st" style="--i:' + k + '">' + Icon("check", "li-ic") + "<div>" + bi(it) + "</div></li>").join("") + "</ul></div>",
@@ -103,6 +113,7 @@ window.Render = (function () {
     video: b => '<div class="blk rv video"><iframe src="https://www.youtube-nocookie.com/embed/' + esc(b.youtube) + '" title="Video" loading="lazy" allowfullscreen></iframe></div>'
   };
 
+  const HKM = { wajib: ["seal", "Wajib", "واجب"], sunnah: ["sparkle", "Sunnah", "مستحب"], mubah: ["swap", "Mubah", "مباح"], makruh: ["info", "Makruh", "مكروه"], haram: ["xCircle", "Haram", "حرام"], sah: ["checkCircle", "Sah", "صحيح"], batal: ["x", "Batal", "باطل"], info: ["bulb", "Ketentuan", "ضابط"] };
   const HK = { raf: ["marfu'", "مرفوع"], nas: ["manshub", "منصوب"], jar: ["majrur", "مجرور"], jaz: ["majzum", "مجزوم"], bina: ["mabni", "مبني"], ism: ["isim", "اسم"], fiil: ["fi'il", "فعل"], harf: ["huruf", "حرف"] };
   function hk(h) { const x = HK[h] || HK.bina; return L() === "id" ? x[0] : '<span lang="ar">' + x[1] + "</span>"; }
 

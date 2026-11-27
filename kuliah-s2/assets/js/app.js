@@ -12,6 +12,20 @@
   const MKS = () => PROGRAM.semester.flatMap(s => s.mk.map(m => Object.assign({ semester: s.no }, m)));
   const mkById = id => MKS().find(m => m.id === id);
   const pKey = (mk, no) => mk + "/" + no;
+  /* Semester yang sedang dipelajari (bisa diganti di beranda); bawaan = PROGRAM.aktif */
+  const SEM = () => { const v = +S().set.sem; return PROGRAM.semester.some(x => x.no === v && x.mk.length) ? v : (PROGRAM.aktif || 1); };
+  const MKSEM = () => MKS().filter(m => m.semester === SEM());
+  const siapN = m => !m ? 0 : m.siap != null ? m.siap : m.jumlah || 0;
+  /* Materi tiap pertemuan dimuat saat dibutuhkan (hemat kuota & lebih cepat dibuka di HP) */
+  const DIMUAT = {};
+  function perluMuat(ids) { return ids.filter(id => !DIMUAT[id] && siapN(mkById(id)) > 0); }
+  function muatMk(ids) {
+    return Promise.all(ids.map(id => {
+      DIMUAT[id] = 1; const m = mkById(id), jml = siapN(m), tugas = [];
+      for (let i = 1; i <= jml; i++) if (!Kuliah.get(id, i)) tugas.push(U.loadScript("data/" + id + "/p" + String(i).padStart(2, "0") + ".js?v=" + (m.v || PROGRAM.versi || 1)).catch(() => {}));
+      return Promise.all(tugas);
+    }));
+  }
   const HARI = [["Ahad", "الأحد"], ["Senin", "الاثنين"], ["Selasa", "الثلاثاء"], ["Rabu", "الأربعاء"], ["Kamis", "الخميس"], ["Jumat", "الجمعة"], ["Sabtu", "السبت"]];
   let cleanup = [];
 
@@ -153,6 +167,14 @@
     if (window.speechSynthesis) speechSynthesis.cancel();
     const r = parse(), [a, b, c, d] = r.parts;
     const y = window.scrollY;
+    const ids = MKSEM().map(m => m.id); if (b && /^(mk|peta|istilah|sertifikat|arena)$/.test(a) && mkById(a === "arena" ? c : b)) ids.push(a === "arena" ? c : b);
+    if (a === "mk" && b && mkById(b) && mkById(b).semester !== SEM()) { S().set.sem = mkById(b).semester; Store.save(); }
+    const blm = perluMuat(ids);
+    if (blm.length) {
+      view.innerHTML = '<div class="wrap muat-box"><div><div class="muat-ring"></div><b>' + lab("Memuat materi…", "جارٍ تحميل المادة…") + "</b></div></div>";
+      muatMk(blm).then(() => route(keepScroll));
+      return;
+    }
     activeTab(r.raw.split("?")[0]);
     view.classList.remove("enter"); void view.offsetWidth;
     try {
@@ -190,7 +212,7 @@
   }
   function mkProgress(mkId) {
     const list = Kuliah.list(mkId);
-    const done = list.filter(p => (S().baca[pKey(mkId, p.no)] || {}).selesai).length;
+    const done = list.length ? list.filter(p => (S().baca[pKey(mkId, p.no)] || {}).selesai).length : Object.keys(S().baca).filter(k => k.startsWith(mkId + "/") && (S().baca[k] || {}).selesai).length;
     return { done, total: (mkById(mkId) || {}).jumlah || list.length, list };
   }
   function home() {
@@ -199,9 +221,9 @@
     const lr = lastRead();
     let lanjut = null;
     if (lr) { const [mk, no] = lr.k.split("/"); const p = Kuliah.get(mk, +no); if (p) { const nx = lr.v.selesai ? Kuliah.get(mk, +no + 1) || p : p; lanjut = nx; } }
-    const today = new Date().getDay(), mkHari = MKS().find(m => m.hari === today && m.semester === 1);
+    const today = new Date().getDay(), mkHari = MKS().find(m => m.hari === today && m.semester === SEM());
     if (!lanjut) { const f = mkHari && Kuliah.list(mkHari.id).length ? mkHari : adaData()[0]; lanjut = f ? Kuliah.get(f.id, 1) : null; }
-    const all = MKS().filter(m => m.semester === 1);
+    const all = MKSEM();
     const ut = adaData().reduce((s, m) => { const p = mkProgress(m.id); s.done += p.done; s.total += p.total; return s; }, { done: 0, total: 0 });
     const due = dueCards().length;
     const harian = S().harian[U.todayKey()];
@@ -231,7 +253,7 @@
       '<a class="card act-card" href="#/murajaah"><div class="ac-ic">' + Icon("cards") + "</div><div><b>" + lab("Muraja'ah Istilah", "مراجعة المصطلحات") + "</b><p>" + lab(n(due) + " kartu perlu diulang hari ini", arNum(due) + " بطاقة") + "</p></div>" + Icon("right", "ac-go") + "</a>" +
       "</div>" +
 
-      '<div class="sec-h"><h2>' + lab("Mata Kuliah Semester 1", "مقررات الفصل الأول") + '</h2><a href="#/program" class="more">' + lab("Lihat program 4 semester", "البرنامج كاملًا") + Icon("right") + "</a></div>" +
+      '<div class="sec-h with-sw"><h2>' + lab("Mata Kuliah Semester " + SEM(), "مقررات الفصل " + arNum(SEM())) + "</h2>" + semSwitch() + '<a href="#/program" class="more">' + lab("Lihat program 4 semester", "البرنامج كاملًا") + Icon("right") + "</a></div>" +
       '<div class="mk-row">' + all.map(mkCard).join("") + "</div>" +
 
       '<div class="sec-h"><h2>' + lab("Jelajahi", "استكشف") + "</h2></div>" +
@@ -242,7 +264,13 @@
     const clock = $(".clock"); const tickC = () => { if (clock) clock.textContent = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }); };
     tickC(); const ti = setInterval(tickC, 15000); cleanup.push(() => clearInterval(ti));
     hikmahRotate();
+    bindSemSwitch();
   }
+  function semSwitch() {
+    const ada = PROGRAM.semester.filter(s => s.mk.length);
+    return ada.length > 1 ? '<div class="sem-sw" role="group" aria-label="Pilih semester">' + ada.map(s => '<button type="button" data-sem="' + s.no + '" class="' + (s.no === SEM() ? "on" : "") + '">' + lab("Semester " + s.no, "الفصل " + arNum(s.no)) + "</button>").join("") + "</div>" : "";
+  }
+  function bindSemSwitch() { $$(".sem-sw button").forEach(b => b.onclick = () => { S().set.sem = +b.dataset.sem; Store.save(); Audio2.sfx("flip"); route(true); }); }
   function stat(cls, ic, big, sub, href) { return '<a class="stat ' + cls + '" href="' + href + '"><div class="st-ic">' + ic + '</div><div><b>' + big + "</b><small>" + sub + "</small></div></a>"; }
   function todayCard(mk, d) {
     if (d === 5) return '<div class="card-h">' + Icon("mosque") + lab("Hari ini: Jumat", "اليوم: الجمعة") + '</div><p class="today-t">' + lab("Tidak ada jadwal kuliah. Perbanyak shalawat, baca Al-Kahfi, dan muraja'ah materi pekan ini.", "لا محاضرات اليوم؛ أكثر من الصلاة على النبي ﷺ واقرأ سورة الكهف") + '</p><a class="btn sm" href="#/murajaah">' + Icon("cards") + lab("Muraja'ah", "راجع") + "</a>";
@@ -258,11 +286,12 @@
     draw(); const t = setInterval(draw, 11000); cleanup.push(() => clearInterval(t));
   }
   function mkCard(m) {
-    const pr = mkProgress(m.id), ada = Kuliah.list(m.id).length > 0;
-    return '<a class="mk-card t' + (m.tema || 0) + (ada ? "" : " soon") + '" href="#/mk/' + m.id + '"><div class="mk-top"><span class="mk-ic">' + Icon(m.ikon) + '</span><span class="mk-day">' + lab(HARI[m.hari][0], HARI[m.hari][1]) + "</span></div>" +
+    const pr = mkProgress(m.id), ada = Kuliah.list(m.id).length > 0 || siapN(m) > 0, s2 = (m.semester || 1) >= 2;
+    if (!Kuliah.list(m.id).length) pr.total = m.jumlah || pr.total;
+    return '<a class="mk-card t' + (m.tema || 0) + (ada ? "" : " soon") + (s2 ? " sampul" : "") + '" href="#/mk/' + m.id + '">' + (s2 ? '<div class="mk-cv">' + Art.cover(m.motif || "kaidah", m.tema, Object.assign({ static: true, cls: "mini" }, m.motifOpt)) + "</div>" : "") + '<div class="mk-top"><span class="mk-ic">' + Icon(m.ikon) + '</span><span class="mk-day">' + lab(HARI[m.hari][0], HARI[m.hari][1]) + "</span></div>" +
       '<h3 lang="ar">' + esc(m.nama.ar) + "</h3><h4>" + esc(m.nama.id) + "</h4>" +
       '<p class="mk-kitab">' + Icon("book") + one(m.kitab) + '</p><p class="mk-dosen">' + Icon("user") + one(m.dosen) + "</p>" +
-      '<div class="mk-foot">' + (ada ? '<div class="bar"><i style="width:' + Math.round(pr.done / pr.total * 100) + '%"></i></div><small>' + n(pr.done) + "/" + n(pr.total) + " " + lab("pertemuan", "محاضرة") + "</small>" : '<span class="badge-soon">' + Icon("hourglass") + lab("Modul segera hadir", "قريبًا") + "</span>") + "</div></a>";
+      '<div class="mk-foot">' + (ada ? '<div class="bar"><i style="width:' + Math.round(pr.done / pr.total * 100) + '%"></i></div><small>' + n(pr.done) + "/" + n(pr.total) + " " + lab("pertemuan", "محاضرة") + (siapN(m) < (m.jumlah || 0) ? " · " + lab(n(siapN(m)) + " modul siap", "الجاهز " + arNum(siapN(m))) : "") + "</small>" : '<span class="badge-soon">' + Icon("hourglass") + lab("Modul segera hadir", "قريبًا") + "</span>") + "</div></a>";
   }
   function footer() {
     const c = SITE.contact;
@@ -274,10 +303,10 @@
   /* ===================== PROGRAM 4 SEMESTER ===================== */
   function program() {
     view.innerHTML = '<div class="wrap"><div class="page-h">' + Icon("quran", "ph-ic") + "<div><h1>" + lab(PROGRAM.nama.id, PROGRAM.nama.ar) + '</h1><p class="muted">' + one(PROGRAM.lembaga) + " · " + one(PROGRAM.naungan) + " · " + one(PROGRAM.angkatan) + "</p></div></div>" +
-      '<div class="info-strip">' + Icon("calendar") + lab("Perkuliahan semester 1 dimulai " + PROGRAM.mulai.id + ". Kuliah Sabtu–Kamis, satu mata kuliah per hari.", "بداية الفصل الأول: " + PROGRAM.mulai.ar) +
+      '<div class="info-strip">' + Icon("calendar") + (() => { const sm = PROGRAM.semester.find(x => x.no === SEM()) || {}, mu = sm.mulai || PROGRAM.mulai; return lab("Perkuliahan semester " + SEM() + " dimulai " + mu.id + ". Kuliah Sabtu–Kamis, satu mata kuliah per hari.", "بداية " + (sm.ar || "الفصل") + ": " + mu.ar); })() +
       '<a class="btn sm ghost" target="_blank" rel="noopener" href="' + PROGRAM.kanal.pelajaran + '">' + Icon("send") + lab("Kanal kuliah", "قناة الدروس") + "</a></div>" +
-      '<ol class="sem-line">' + PROGRAM.semester.map(s => '<li class="sem ' + s.status + '"><div class="sem-dot">' + (s.status === "aktif" ? Icon("star8") : Icon("lock")) + '</div><div class="sem-b"><div class="sem-h"><h2>' + lab("Semester " + s.no, s.ar) + "</h2>" +
-        '<span class="pill ' + (s.status === "aktif" ? "on" : "") + '">' + (s.status === "aktif" ? lab("Sedang berjalan", "جارٍ الآن") : lab("Segera", "قريبًا")) + "</span></div>" +
+      '<ol class="sem-line">' + PROGRAM.semester.map(s => '<li class="sem ' + s.status + '"><div class="sem-dot">' + (s.status === "aktif" ? Icon("star8") : s.status === "selesai" ? Icon("check") : Icon("lock")) + '</div><div class="sem-b"><div class="sem-h"><h2>' + lab("Semester " + s.no, s.ar) + "</h2>" +
+        '<span class="pill ' + (s.status === "aktif" ? "on" : s.status === "selesai" ? "done" : "") + '">' + (s.status === "aktif" ? lab("Sedang berjalan", "جارٍ الآن") : s.status === "selesai" ? lab("Selesai", "انتهى") : lab("Segera", "قريبًا")) + "</span></div>" +
         (s.mk.length ? '<div class="mk-row wrap-row">' + s.mk.map(m => mkCard(Object.assign({ semester: s.no }, m))).join("") + "</div>" : '<p class="muted">' + lab("Mata kuliah semester ini akan ditambahkan ketika modulnya tersedia.", "ستضاف المقررات عند توفرها") + "</p>") + "</div></li>").join("") + "</ol></div>";
   }
 
@@ -295,7 +324,7 @@
     window.open("https://wa.me/?text=" + encodeURIComponent(txt), "_blank", "noopener");
   }
   function aturTanggalUjian() {
-    const sh = $("#sheet"), st = S().set, ujiMk = MKS().filter(m => Kuliah.list(m.id).length);
+    const sh = $("#sheet"), st = S().set, ujiMk = MKSEM().filter(m => Kuliah.list(m.id).length);
     sh.innerHTML = '<div class="sheet-bg"></div><div class="sheet-card" role="dialog" aria-modal="true"><div class="sheet-grip"></div><h3>' + Icon("calendar") + " " + lab("Tanggal ujian per mata kuliah", "مواعيد الاختبارات") + '</h3><p class="muted sm">' + lab("Terisi otomatis dari jadwal resmi; ubah bila ada perubahan.", "حسب الجدول الرسمي") + "</p>" +
       '<form class="onb-f">' + ujiMk.map(m => { const t = tglMk(m.id); return '<fieldset class="tg-fs"><legend><b lang="ar">' + esc(m.nama.ar) + "</b> · " + esc(m.nama.id) + '</legend><label>Ujian akhir (P1–' + n(m.jumlah || 16) + ')<input type="date" name="uas-' + esc(m.id) + '" value="' + esc(t.uas) + '"></label></fieldset>'; }).join("") +
       '<button class="btn gold lg" type="submit">' + Icon("check") + lab("Simpan", "حفظ") + "</button></form></div>";
@@ -313,7 +342,7 @@
   function selesaiHariIniP(mk, no) { const b = S().baca[pKey(mk, no)] || {}, t = typeof b.selesai === "number" ? b.selesai : b.terakhir; return !!(b.selesai && t && U.todayKey(new Date(t)) === U.todayKey()); }
   function rencanaUts() {
     const today = new Date(U.todayKey() + "T00:00:00"), hk = t => Math.round((new Date(t + "T00:00:00") - today) / 864e5);
-    const mk = MKS().filter(m => !m.induk && !m.tanpaUjian && Kuliah.list(m.id).length).map(m => {
+    const mk = MKSEM().filter(m => !m.induk && !m.tanpaUjian && Kuliah.list(m.id).length).map(m => {
       const t = RENC_TGL(m), r = RENC_RANGE(m), h = t ? hk(t) : null;
       const sisa = Kuliah.list(m.id).filter(p => p.no >= r[0] && p.no <= r[1] && !p.belumDisusun && (!(S().baca[pKey(m.id, p.no)] || {}).selesai || selesaiHariIniP(m.id, p.no)));
       return { m, t, h, r, sisa, sisaNyata: sisa.filter(p => !selesaiHariIniP(m.id, p.no)) };
@@ -540,7 +569,7 @@
       const lines = (Kuliah.teksDb[m.id] || {})[p.no];
       if (!lines) throw new Error("kosong");
       let metaN = lines.slice(0, 12).findIndex(l => /^\s*(ب\S*س\S*م|الحمد)/.test(l)); if (metaN < 0) metaN = 8;
-      body.innerHTML = '<div class="teks-tool"><div class="tt-l">' + Icon("scroll") + "<div><b lang=\"ar\">تفريغ المحاضرة " + arNum(p.no) + "</b><small>" + lab("Teks asli tafrigh (transkrip) kuliah, berbahasa Arab", "النص الكامل للمحاضرة") + "</small></div></div>" +
+      body.innerHTML = '<div class="teks-tool"><div class="tt-l">' + Icon("scroll") + "<div><b lang=\"ar\">" + ((m.semester || 1) >= 2 ? "مذكرة المحاضرة " : "تفريغ المحاضرة ") + arNum(p.no) + "</b><small>" + ((m.semester || 1) >= 2 ? lab("Teks asli modul (manhaj) akademi, berbahasa Arab", "نص المذكرة كاملًا") : lab("Teks asli tafrigh (transkrip) kuliah, berbahasa Arab", "النص الكامل للمحاضرة")) + "</small></div></div>" +
         '<div class="tt-r"><label class="tt-s">' + Icon("search") + '<input type="search" placeholder="ابحث في النص…" dir="rtl" class="tt-q"></label><button class="icon-btn tt-m" title="Perkecil huruf"><b class="sm">A</b>' + Icon("down") + '</button><button class="icon-btn tt-p" title="Perbesar huruf"><b>A</b>' + Icon("up") + "</button></div></div>" +
         '<article class="teks-asli" lang="ar" dir="rtl">' + lines.map((l, i) => i < metaN && l.length < 90 ? '<p class="tx-meta">' + arFmt(l) + "</p>" : fmtLine(l)).join("") + "</article>";
       let size = 1;
@@ -709,7 +738,7 @@
   /* ===================== PETA KITAB ===================== */
   function petaPilih() {
     view.innerHTML = '<div class="wrap"><div class="page-h">' + Icon("map", "ph-ic") + "<div><h1>" + lab("Peta Kitab", "خريطة الكتب") + '</h1><p class="muted">' + lab("Pilih mata kuliah untuk melihat peta bab dan pertemuannya.", "اختر المقرر لعرض خريطته") + "</p></div></div>" +
-      '<div class="mk-row wrap-row">' + MKS().filter(m => m.semester === 1).map(m => mkCard(m).replace('href="#/mk/' + m.id + '"', Kuliah.list(m.id).length ? 'href="#/peta/' + m.id + '"' : 'href="#/mk/' + m.id + '"')).join("") + "</div></div>";
+      '<div class="mk-row wrap-row">' + MKSEM().map(m => mkCard(m).replace('href="#/mk/' + m.id + '"', Kuliah.list(m.id).length ? 'href="#/peta/' + m.id + '"' : 'href="#/mk/' + m.id + '"')).join("") + "</div></div>";
   }
   function peta(mkId) {
     const m = mkById(mkId); if (!m) return notFound();
@@ -723,7 +752,7 @@
 
   /* ===================== ARENA ===================== */
   /* ---------- Pemilih mata kuliah (satu, beberapa, atau semua) ---------- */
-  const adaData = () => MKS().filter(m => Kuliah.list(m.id).length);
+  const adaData = () => MKSEM().filter(m => Kuliah.list(m.id).length);
   const asList = x => x == null ? adaData().map(m => m.id) : Array.isArray(x) ? x : [x];
   function pilihan() {
     const ada = adaData().map(m => m.id), s = (S().set.pilihMk || []).filter(id => ada.includes(id));
@@ -732,7 +761,7 @@
   const semuaDipilih = () => !(S().set.pilihMk || []).filter(id => adaData().some(m => m.id === id)).length || pilihan().length === adaData().length;
   // count(mkId) → angka di tiap chip (jumlah soal/kartu); onChange dipanggil setelah pilihan berubah
   function mkPicker(count, judul) {
-    const sel = pilihan(), all = semuaDipilih(), sem = MKS().filter(m => m.semester === 1);
+    const sel = pilihan(), all = semuaDipilih(), sem = MKSEM();
     return '<div class="mk-pick"><div class="mp-h">' + Icon("sliders") + "<b>" + (judul || lab("Pilih mata kuliah", "اختر المقررات")) + '</b><small class="muted">' + lab("bisa satu, beberapa, atau semua", "مقرر واحد أو أكثر أو الكل") + "</small></div>" +
       '<div class="mp-chips"><button class="mp-chip all ' + (all ? "on" : "") + '" data-mk="*"><span class="mp-ic">' + Icon("grid") + "</span><span>" + lab("Semua", "الكل") + "</span></button>" +
       sem.map(m => { const ada = Kuliah.list(m.id).length > 0, on = ada && !all && sel.includes(m.id), c = ada && count ? count(m.id) : null;
@@ -893,7 +922,7 @@
   function jadwal() {
     const today = new Date().getDay(), order = [6, 0, 1, 2, 3, 4, 5];
     view.innerHTML = '<div class="wrap"><div class="page-h">' + Icon("calendar", "ph-ic") + "<div><h1>" + lab("Jadwal Kuliah Pekanan", "الجدول الأسبوعي") + '</h1><p class="muted">' + lab("Semester 1 · " + PROGRAM.angkatan.id, "الفصل الأول") + "</p></div></div>" +
-      '<div class="jadwal">' + order.map((d, i) => { const m = MKS().find(x => x.hari === d && x.semester === 1); return '<div class="jd-day st ' + (d === today ? "today" : "") + '" style="--i:' + i + '"><div class="jd-h"><b>' + lab(HARI[d][0], HARI[d][1]) + "</b>" + (d === today ? '<span class="pill on">' + lab("Hari ini", "اليوم") + "</span>" : "") + "</div>" +
+      '<div class="jadwal">' + order.map((d, i) => { const m = MKS().find(x => x.hari === d && x.semester === SEM()); return '<div class="jd-day st ' + (d === today ? "today" : "") + '" style="--i:' + i + '"><div class="jd-h"><b>' + lab(HARI[d][0], HARI[d][1]) + "</b>" + (d === today ? '<span class="pill on">' + lab("Hari ini", "اليوم") + "</span>" : "") + "</div>" +
         (m ? '<a href="#/mk/' + m.id + '" class="jd-mk"><span class="mk-ic t' + (m.tema || 0) + '">' + Icon(m.ikon) + "</span><div><b>" + one(m.nama) + "</b><small>" + one(m.dosen) + "</small><small>" + one(m.kitab) + "</small></div></a>" : '<p class="muted">' + lab("Libur · hari Jumat", "عطلة") + "</p>") + "</div>"; }).join("") + "</div></div>";
   }
 
@@ -906,7 +935,7 @@
       v = v.trim(); history.replaceState(null, "", "#/cari?q=" + encodeURIComponent(v));
       if (v.length < 2) { res.innerHTML = '<p class="muted">' + lab("Ketik minimal 2 huruf.", "اكتب حرفين على الأقل") + "</p>"; return; }
       const sv = strip(v), hits = [];
-      MKS().forEach(m => Kuliah.list(m.id).forEach(p => {
+      MKSEM().forEach(m => Kuliah.list(m.id).forEach(p => {
         const texts = [p.judul, p.ringkas].concat(p.isi.flatMap(b => [b, b.judul, b.q, b.a, b.lughah, b.istilah].concat(b.item || []).filter(Boolean)));
         let snip = null;
         for (const t of texts) { for (const s of [U.pickId(t), U.pickAr(t)]) { if (typeof s === "string" && strip(s).includes(sv)) { snip = s; break; } } if (snip) break; }

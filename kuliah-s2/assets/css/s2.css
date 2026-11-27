@@ -1,0 +1,71 @@
+/* =====================================================================
+   SEMESTER 2 — blok materi baru (kartu hukum, khilaf), pemilih semester,
+   kartu mata kuliah bersampul, dan dukungan pemuatan materi bertahap
+   ===================================================================== */
+
+/* ---------- Kartu hukum ---------- */
+.hukum .hk-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.hk-card { --hc: var(--acc); --hb: var(--acc-bg); position: relative; padding: 14px 16px 14px 18px; border-radius: 18px; background: var(--sf); border: 1px solid var(--line); box-shadow: var(--sh1); overflow: hidden; }
+.hk-card::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 5px; background: var(--hc); }
+.hk-card .bi { grid-template-columns: 1fr; gap: 6px; }
+.hk-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; letter-spacing: .02em; color: var(--hc); background: var(--hb); border: 1px solid color-mix(in srgb, var(--hc) 30%, transparent); padding: 3px 10px 3px 8px; border-radius: 99px; margin-bottom: 8px; }
+.hk-badge svg { width: 15px; height: 15px; }
+.hk-badge .ar-sub { font-size: 1em; }
+.hk-t { font-size: 1.02em; margin: 0 0 6px; display: flex; flex-direction: column; gap: 2px; }
+.hk-t .h-ar { font-size: 1.12em; color: var(--ink2); }
+.hk-wajib { --hc: var(--acc); --hb: var(--acc-bg); }
+.hk-sunnah, .hk-sah { --hc: var(--ok); --hb: var(--ok-bg); }
+.hk-mubah, .hk-info { --hc: var(--blue); --hb: var(--blue-bg); }
+.hk-makruh { --hc: var(--amber); --hb: var(--amber-bg); }
+.hk-haram, .hk-batal { --hc: var(--no); --hb: var(--no-bg); }
+
+/* ---------- Khilaf (perbedaan pendapat) ---------- */
+.khilaf { border-radius: 22px; border: 1px solid var(--line); background: linear-gradient(180deg, var(--sf2), var(--sf)); padding: 16px; box-shadow: var(--sh1); }
+.kh-h { display: flex; gap: 12px; align-items: flex-start; font-weight: 800; font-size: 1.05em; margin-bottom: 12px; }
+.kh-h > svg { flex: none; width: 34px; height: 34px; padding: 7px; border-radius: 12px; background: var(--gold-bg); color: var(--gold); }
+.kh-h small { display: block; font-size: 11.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--mut); }
+.kh-ops { display: grid; gap: 10px; }
+.kh-op { padding: 12px 14px; border-radius: 16px; background: var(--sf); border: 1.5px dashed var(--line2); }
+.kh-op .bi { grid-template-columns: 1fr; gap: 4px; }
+.kh-op.rajih { border: 1.5px solid color-mix(in srgb, var(--ok) 55%, transparent); background: linear-gradient(160deg, var(--ok-bg), var(--sf) 70%); }
+.kh-who { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: .88em; font-weight: 700; color: var(--ink2); margin-bottom: 6px; }
+.kh-n { width: 24px; height: 24px; border-radius: 8px; display: grid; place-items: center; background: var(--sf3); font-size: 12px; font-weight: 800; flex: none; }
+.kh-r { display: inline-flex; align-items: center; gap: 5px; background: var(--ok); color: #fff; font-size: 11.5px; font-weight: 800; padding: 3px 10px 3px 7px; border-radius: 99px; }
+.kh-r svg { width: 14px; height: 14px; }
+.kh-r .ar-sub { color: #fff; opacity: .9; }
+.kh-why { display: flex; gap: 10px; margin-top: 12px; padding: 12px 14px; border-radius: 16px; background: var(--gold-bg); font-size: .95em; }
+.kh-why > svg { flex: none; color: var(--gold); width: 20px; height: 20px; margin-top: 3px; }
+.kh-why .bi { grid-template-columns: 1fr; gap: 4px; }
+
+/* ---------- Pemilih semester ---------- */
+.sem-sw { display: inline-flex; gap: 4px; padding: 4px; border-radius: 14px; background: var(--sf2); border: 1px solid var(--line); }
+.sem-sw button { border: 0; background: transparent; padding: 7px 14px; border-radius: 10px; font-weight: 700; font-size: 14px; color: var(--ink2); white-space: nowrap; }
+.sem-sw button.on { background: var(--acc); color: #fff; box-shadow: var(--sh1); }
+:root[data-theme="dark"] .sem-sw button.on { color: var(--bg); }
+.sec-h.with-sw { flex-wrap: wrap; gap: 10px; }
+.sem.selesai .sem-dot { background: var(--ok); color: #fff; }
+.pill.done { background: var(--ok-bg); color: var(--ok); border-color: color-mix(in srgb, var(--ok) 35%, transparent); }
+
+/* ---------- Kartu mata kuliah bersampul (semester 2 ke atas) ---------- */
+.mk-card.sampul { padding-top: 0; overflow: hidden; }
+.mk-card.sampul .mk-cv { margin: 0 -1px 12px; height: 92px; position: relative; overflow: hidden; border-radius: inherit; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.mk-card.sampul .mk-cv svg { width: 100%; height: 100%; display: block; }
+.mk-card.sampul .mk-cv::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 40%, color-mix(in srgb, var(--sf) 55%, transparent)); }
+.mk-card.sampul .mk-top { margin-top: -38px; position: relative; z-index: 1; }
+
+/* ---------- Pemuatan materi bertahap ---------- */
+.muat-box { min-height: 50vh; display: grid; place-items: center; text-align: center; color: var(--mut); gap: 10px; padding: 40px 16px; }
+.muat-box .muat-ring { width: 46px; height: 46px; border-radius: 50%; border: 4px solid var(--line); border-top-color: var(--acc); animation: muat-putar .8s linear infinite; margin: 0 auto 10px; }
+@keyframes muat-putar { to { transform: rotate(360deg); } }
+
+@media (max-width: 520px) {
+  .hukum .hk-list { grid-template-columns: 1fr; }
+  .khilaf { padding: 12px; border-radius: 18px; }
+  .sem-sw button { padding: 6px 10px; font-size: 13px; }
+}
+
+/* isi dwibahasa di dalam kartu baru: tanpa bingkai ganda */
+.hk-card .bi, .kh-op .bi, .kh-why .bi { background: transparent; border: 0; border-radius: 0; gap: 10px; }
+.hk-card .bi > *, .kh-op .bi > *, .kh-why .bi > * { padding: 0; background: transparent; border: 0; }
+.hk-card .bi > .t-ar, .kh-op .bi > .t-ar { font-size: 1.12em; line-height: 1.9; }
+@media (max-width: 760px) { .hk-card .bi > .t-ar, .kh-op .bi > .t-ar { padding-bottom: 6px; border-bottom: 1px dashed var(--line2); } }
