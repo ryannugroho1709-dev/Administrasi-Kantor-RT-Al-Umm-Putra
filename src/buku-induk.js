@@ -58,7 +58,7 @@ function biKeadaan(x) {
 }
 const biTahunMasuk = (x) => { const t = BI.tambah[x.id] || {}; return (t.tgl_diterima || "").slice(0, 4) || String(x.angkatan || "").match(/\d{4}/)?.[0] || (x.created_at || "").slice(0, 4); };
 // Isian wajib Buku Induk → hitung kelengkapan
-const BI_WAJIB = [["nis", "No. Induk"], ["nisn", "NISN"], ["nik", "NIK"], ["tempat_lahir", "Tempat lahir"], ["tanggal_lahir", "Tanggal lahir"], ["t:jk", "Jenis kelamin"], ["t:agama", "Agama"], ["alamat_asal", "Alamat"], ["nama_ayah", "Nama ayah"], ["nama_ibu", "Nama ibu"], ["sekolah_asal", "Sekolah asal"], ["t:tgl_diterima", "Tanggal diterima"], ["t:diterima_kelas", "Diterima di kelas"]];
+const BI_WAJIB = [["nis", "No. Induk"], ["nisn", "NISN"], ["nik", "NIK"], ["tempat_lahir", "Tempat lahir"], ["tanggal_lahir", "Tanggal lahir"], ["t:jk", "Jenis kelamin"], ["alamat_asal", "Alamat"], ["nama_ayah", "Nama ayah"], ["nama_ibu", "Nama ibu"], ["sekolah_asal", "Sekolah asal"], ["t:tgl_diterima", "Tanggal diterima"], ["t:diterima_kelas", "Diterima di kelas"]];
 function biKurang(x) { const t = BI.tambah[x.id] || {}; return BI_WAJIB.filter(([k]) => { if (k === "t:jk") return !biJk(x); return k.startsWith("t:") ? !t[k.slice(2)] : !x[k]; }).map(([, n]) => n); }
 function _biSaring(f) {
   const q = (f.cari || "").toLowerCase().trim();
@@ -146,7 +146,7 @@ function _biHtmlGuru() {
 }
 function biUnduhGuru() {
   const d = _biDataGuru();
-  _biXlsx(d.map((g, i) => { const dp = _biDpk(g); return { No: i + 1, Nama: g.nama, "NIP/NIK": g.nip_nik || "", Jabatan: g.jabatan || "", "Jenis Guru": BI_JENIS_GURU[g.jenis_guru] || g.jenis_guru || "", "Bertugas Di": _biRgGuru(g).map(_biNamaRg).join(", "), "Tempat Lahir": g.tempat_lahir || "", "Tanggal Lahir": g.tanggal_lahir || "", TMT: g.tmt || "", "No WA": g.no_wa || "", Email: g.email || "", Dapodik: dp ? "Terdaftar" : "Belum", "Status Kepegawaian": dp?.status || "", NUPTK: dp?.nuptk || "", NIP: dp?.nip || "", "Jumlah Jadwal": _biJmlJadwal(g), Akun: g.auth_user_id ? (g.akun_menunggu ? "Menunggu" : "Ada") : "Belum", Status: _biGuruAktif(g) ? "Aktif" : "Nonaktif" }; }), "Guru & PTK", `Buku Induk Guru & PTK ${_biNamaRg(BI.g.rg)} ${tanggalISO()}.xlsx`);
+  _biXlsx(d.map((g, i) => { const dp = _biDpk(g); return { No: i + 1, Nama: g.nama, "NIP/NIK": g.nip_nik || "", Jabatan: g.jabatan || "", "Jenis Guru": BI_JENIS_GURU[g.jenis_guru] || g.jenis_guru || "", "Bertugas Di": _biRgGuru(g).map(_biNamaRg).join(", "), "Tempat Lahir": g.tempat_lahir || "", "Tanggal Lahir": g.tanggal_lahir || "", Agama: "Islam", TMT: g.tmt || "", "No WA": g.no_wa || "", Email: g.email || "", Dapodik: dp ? "Terdaftar" : "Belum", "Status Kepegawaian": dp?.status || "", NUPTK: dp?.nuptk || "", NIP: dp?.nip || "", "Jumlah Jadwal": _biJmlJadwal(g), Akun: g.auth_user_id ? (g.akun_menunggu ? "Menunggu" : "Ada") : "Belum", Status: _biGuruAktif(g) ? "Aktif" : "Nonaktif" }; }), "Guru & PTK", `Buku Induk Guru & PTK ${_biNamaRg(BI.g.rg)} ${tanggalISO()}.xlsx`);
 }
 
 // ── BUKU INDUK ──
@@ -205,7 +205,7 @@ function _biNilai(x, k) { return (BI.tambah[x.id] || {})[k] || ""; }
 function _biBarisLembar(x) {
   const t = BI.tambah[x.id] || {}, k = biKeadaan(x);
   const isi = {
-    A: [["Nama Lengkap", x.nama], ["No. Induk / NISN", `${x.nis || "—"} / ${x.nisn || "—"}`], ["NIK / No. KK", `${x.nik || "—"} / ${x.no_kk || "—"}`], ["Jenis Kelamin", biJk(x) === "P" ? "Perempuan" : biJk(x) === "L" ? "Laki-laki" : ""], ["Tempat, Tanggal Lahir", [x.tempat_lahir, _biTgl(x.tanggal_lahir)].filter(Boolean).join(", ")], ["Agama", t.agama], ["Kewarganegaraan", t.kewarganegaraan || "WNI"], ["Anak ke- / Jumlah Saudara", [t.anak_ke, t.jml_saudara].filter(Boolean).join(" dari ") || ""], ["Status dalam Keluarga", t.status_anak], ["No. BPJS / KIP", [x.no_bpjs, x.no_kip].filter(Boolean).join(" / ")]],
+    A: [["Nama Lengkap", x.nama], ["No. Induk / NISN", `${x.nis || "—"} / ${x.nisn || "—"}`], ["NIK / No. KK", `${x.nik || "—"} / ${x.no_kk || "—"}`], ["Jenis Kelamin", biJk(x) === "P" ? "Perempuan" : biJk(x) === "L" ? "Laki-laki" : ""], ["Tempat, Tanggal Lahir", [x.tempat_lahir, _biTgl(x.tanggal_lahir)].filter(Boolean).join(", ")], ["Agama", t.agama || "Islam"], ["Kewarganegaraan", t.kewarganegaraan || "WNI"], ["Anak ke- / Jumlah Saudara", [t.anak_ke, t.jml_saudara].filter(Boolean).join(" dari ") || ""], ["Status dalam Keluarga", t.status_anak], ["No. BPJS / KIP", [x.no_bpjs, x.no_kip].filter(Boolean).join(" / ")]],
     B: [["Alamat", x.alamat_asal], ["Tinggal Dengan", t.tinggal_dengan], ["No. Telepon", t.no_telp]],
     C: [["Sekolah Asal", x.sekolah_asal], ["No. Ijazah Sekolah Asal", t.no_ijazah_asal], ["Diterima di Kelas", t.diterima_kelas], ["Tanggal Diterima", _biTgl(t.tgl_diterima)], ["Angkatan", x.angkatan]],
     D: [["Nama Ayah", x.nama_ayah], ["Pekerjaan / Pendidikan Ayah", [x.pekerjaan_ayah, t.pendidikan_ayah].filter(Boolean).join(" / ")], ["Nama Ibu", x.nama_ibu], ["Pekerjaan / Pendidikan Ibu", [x.pekerjaan_ibu, t.pendidikan_ibu].filter(Boolean).join(" / ")], ["Alamat Orang Tua", t.alamat_ortu || x.alamat_asal], ["No. WA Ayah / Ibu", [x.no_wa_ayah, x.no_wa_ibu].filter(Boolean).join(" / ")]],
@@ -258,7 +258,7 @@ function biLembarGuru(id) {
       chip: [..._biRgGuru(g).map((r) => [_biE(_biNamaRg(r)), BI_WARNA_RG[r]]), [on ? "Aktif" : "Nonaktif", on ? "#16a34a" : "#dc2626"], [dp ? "Terdaftar Dapodik" : "Belum di Dapodik", dp ? "#16a34a" : "#d97706"]],
       nomor: [["NIK / NIP", g.nip_nik], ["NUPTK", dp && dp.nuptk], ["TMT", _biTgl(g.tmt)]] })}
     <div class="bil-grid">
-      ${_bilKartu("🪪", "A. Identitas", [["Nama Lengkap", g.nama], ["NIK / NIP", g.nip_nik], ["Tempat, Tanggal Lahir", [g.tempat_lahir, _biTgl(g.tanggal_lahir)].filter(Boolean).join(", ")], ["Alamat", g.alamat_domisili]], true)}
+      ${_bilKartu("🪪", "A. Identitas", [["Nama Lengkap", g.nama], ["NIK / NIP", g.nip_nik], ["Tempat, Tanggal Lahir", [g.tempat_lahir, _biTgl(g.tanggal_lahir)].filter(Boolean).join(", ")], ["Agama", "Islam"], ["Alamat", g.alamat_domisili]], true)}
       ${_bilKartu("💼", "B. Tugas", [["Jabatan", g.jabatan], ["Jenis Guru", BI_JENIS_GURU[g.jenis_guru] || g.jenis_guru], ["Bertugas Di", _biRgGuru(g).map(_biNamaRg).join(", ")], ["Mulai Bertugas (TMT)", _biTgl(g.tmt)], ["Status", on ? "Aktif" : "Nonaktif"]])}
       ${_bilKartu("🗂️", "C. Dapodik", [["Status Dapodik", dp ? dp.status || "Terdaftar" : ""], ["NUPTK", dp && dp.nuptk], ["NIP", dp && dp.nip], ["Golongan", dp && dp.golongan], ["Tugas Tambahan", dp && dp.tugas]])}
       ${_bilKartu("📅", "D. Jadwal Mengajar", Object.keys(jw).length ? Object.entries(jw).map(([r, n]) => [nmRg[r] || r, n + " jam pelajaran per pekan"]) : [["Jadwal", ""]])}
@@ -271,7 +271,7 @@ function biUbahLembar(id) {
   const x = (BI.siswa || []).find((s) => s.id === id); if (!x) return;
   const t = BI.tambah[x.id] || {};
   const kolom = ([, k, lbl, tipe]) => {
-    const v = k === "jk" ? (t.jk || biJk(x)) : t[k] || "";
+    const v = k === "jk" ? (t.jk || biJk(x)) : t[k] || (k === "agama" ? "Islam" : "");
     if (tipe.startsWith("pilih:")) return `<label>${lbl}<select class="input" id="bi-${k}"><option value="">—</option>${tipe.slice(6).split(",").map((o) => { const [val, n] = o.split("="); return `<option value="${_biE(val)}" ${v === val ? "selected" : ""}>${_biE(n || val)}</option>`; }).join("")}</select></label>`;
     return `<label>${lbl}<input class="input" id="bi-${k}" type="${tipe}" value="${_biE(v)}"></label>`;
   };
@@ -316,7 +316,7 @@ function _biXlsx(baris, lembar, nama) {
 }
 function biUnduhInduk() {
   const d = _biSaring(BI.f).sort(_biUrutInduk);
-  _biXlsx(d.map((x) => { const t = BI.tambah[x.id] || {}, k = biKeadaan(x); return { Jenjang: _biNamaRg(x.ruang_id), "No Induk": x.nis || "", NISN: x.nisn || "", NIK: x.nik || "", "No KK": x.no_kk || "", Nama: x.nama, "L/P": biJk(x), "Tempat Lahir": x.tempat_lahir || "", "Tanggal Lahir": x.tanggal_lahir || "", Agama: t.agama || "", Kewarganegaraan: t.kewarganegaraan || "WNI", "Anak Ke": t.anak_ke || "", "Jumlah Saudara": t.jml_saudara || "", "Status Anak": t.status_anak || "", Alamat: x.alamat_asal || "", "Tinggal Dengan": t.tinggal_dengan || "", "Sekolah Asal": x.sekolah_asal || "", "Diterima Kelas": t.diterima_kelas || "", "Tanggal Diterima": t.tgl_diterima || "", "Nama Ayah": x.nama_ayah || "", "Pekerjaan Ayah": x.pekerjaan_ayah || "", "Nama Ibu": x.nama_ibu || "", "Pekerjaan Ibu": x.pekerjaan_ibu || "", "Nama Wali": t.nama_wali || "", Keadaan: k.teks, "Alasan Keluar": x.status_aktif === false ? x.alasan_mutasi || "" : "", "No Seri Ijazah": t.no_ijazah || "", "Belum Diisi": biKurang(x).join("; ") }; }), "Buku Induk", `Buku Induk ${_biNamaRg(BI.f.rg)} ${tanggalISO()}.xlsx`);
+  _biXlsx(d.map((x) => { const t = BI.tambah[x.id] || {}, k = biKeadaan(x); return { Jenjang: _biNamaRg(x.ruang_id), "No Induk": x.nis || "", NISN: x.nisn || "", NIK: x.nik || "", "No KK": x.no_kk || "", Nama: x.nama, "L/P": biJk(x), "Tempat Lahir": x.tempat_lahir || "", "Tanggal Lahir": x.tanggal_lahir || "", Agama: t.agama || "Islam", Kewarganegaraan: t.kewarganegaraan || "WNI", "Anak Ke": t.anak_ke || "", "Jumlah Saudara": t.jml_saudara || "", "Status Anak": t.status_anak || "", Alamat: x.alamat_asal || "", "Tinggal Dengan": t.tinggal_dengan || "", "Sekolah Asal": x.sekolah_asal || "", "Diterima Kelas": t.diterima_kelas || "", "Tanggal Diterima": t.tgl_diterima || "", "Nama Ayah": x.nama_ayah || "", "Pekerjaan Ayah": x.pekerjaan_ayah || "", "Nama Ibu": x.nama_ibu || "", "Pekerjaan Ibu": x.pekerjaan_ibu || "", "Nama Wali": t.nama_wali || "", Keadaan: k.teks, "Alasan Keluar": x.status_aktif === false ? x.alasan_mutasi || "" : "", "No Seri Ijazah": t.no_ijazah || "", "Belum Diisi": biKurang(x).join("; ") }; }), "Buku Induk", `Buku Induk ${_biNamaRg(BI.f.rg)} ${tanggalISO()}.xlsx`);
   if (typeof _rgLog === "function") _rgLog("unduh-buku-induk", { ruang: BI.f.rg, jumlah: d.length });
 }
 

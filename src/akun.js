@@ -404,14 +404,38 @@ async function akIsiTabAkun() {
       <small>${punya} dari ${AK_ATUR.guru.length} guru sudah punya akun.</small></div>
       <button class="rg-saklar ${AK.wajib ? "on" : ""}" onclick="akUbahWajib(${!AK.wajib})" aria-label="Nyalakan/matikan"></button></div>
     <p class="rg-ket">Akun memakai nama guru di Data Guru; guru masuk dengan <b>nama pengguna (atau email) + sandi</b>. ${_AK_ATURAN_SANDI}. Sandi awal dibagikan ke guru lewat WA; guru bisa menggantinya sendiri di menu akun. Lupa sandi dikirim ke email yang terdaftar. Maksimal ${AK.BATAS} perangkat per guru.</p>
-    <div class="table-wrap"><table class="table"><thead><tr><th>Guru</th><th>Nama Pengguna · Email</th><th style="text-align:center">Perangkat</th><th>Aksi</th></tr></thead><tbody>
-    ${AK_ATUR.guru.map((g) => `<tr><td>${escapeHtml(g.nama)}</td>
-      <td style="font-size:12px">${g.auth_user_id ? `<b>${escapeHtml(g.username || "-")}</b>${g.email ? " · " + escapeHtml(g.email) : ""}` + (g.akun_menunggu ? ' <em class="ak-tunggu">Menunggu</em>' : "") : `<span class="ak-belum">Belum Punya Akun${g.email ? " · " + escapeHtml(g.email) : ""}</span>`}</td>
-      <td style="text-align:center">${g.auth_user_id ? `<button class="btn btn-sm btn-ghost" onclick="akPerangkatGuru('${g.id}')">${jmlAlat[g.id] || 0}/${AK.BATAS}</button>` : "-"}</td>
-      <td style="white-space:nowrap">${g.auth_user_id
-        ? `<button class="btn btn-sm btn-outline" onclick="akFormAkun('${g.id}','ubah')">Ubah Email</button> <button class="btn btn-sm btn-outline" onclick="akResetSandi('${g.id}')">Reset Sandi</button> <button class="btn btn-sm btn-ghost" onclick="akHapusAkun('${g.id}')">Hapus</button>`
-        : `${/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(g.email || "").trim()) ? `<button class="btn btn-sm btn-outline" onclick="akUndang('${g.id}')">Undang</button> ` : ""}<button class="btn btn-sm btn-accent" onclick="akFormAkun('${g.id}','buat')">Buat Akun</button>`}</td></tr>`).join("")}
-    </tbody></table></div>`;
+    ${_akTabelAkun(jmlAlat)}`;
+}
+// Tabel akun bertema Buku Induk: kolom tetap & sejajar, nama tidak bertabrakan, saringan berwarna, cari nama
+function _akTabelAkun(jmlAlat) {
+  const f = AK_ATUR.saring || "semua", q = (AK_ATUR.cari || "").toLowerCase().trim(), adaEmail = (g) => /^[^@s]+@[^@s]+.[^@s]+$/.test(String(g.email || "").trim());
+  const st = (g) => (!g.auth_user_id ? "belum" : g.akun_menunggu ? "tunggu" : "punya");
+  const d = AK_ATUR.guru.filter((g) => (f === "semua" || st(g) === f) && (!q || [g.nama, g.username, g.email].some((v) => String(v || "").toLowerCase().includes(q))));
+  const n = (k) => AK_ATUR.guru.filter((g) => st(g) === k).length;
+  setTimeout(() => { if (typeof _bi2Label === "function") try { _bi2Label(document.querySelector(".ak2")); } catch (e) {} }, 0);
+  const ini = (nm) => String(nm || "?").trim().split(/s+/).slice(0, 2).map((w) => w[0] || "").join("").toUpperCase();
+  return `<div class="bk2 ak2" style="--bk:#8a5523">
+    <div class="bk2-alat"><div class="bk2-cari">🔎<input placeholder="Cari nama guru, nama pengguna, atau email…" value="${escapeHtml(AK_ATUR.cari || "")}" oninput="AK_ATUR.cari=this.value;_akSegarTabel(this)"></div>
+      <div class="bk2-chip">${[["semua", "Semua", "#475569", AK_ATUR.guru.length], ["punya", "Punya Akun", "#16a34a", n("punya")], ["belum", "Belum Punya", "#d97706", n("belum")], ["tunggu", "Menunggu", "#7c3aed", n("tunggu")]].map(([k, l, w, j]) => `<button class="${f === k ? "on" : ""}" style="--cw:${w}" onclick="AK_ATUR.saring='${k}';_akSegarTabel()">${l} · ${j}</button>`).join("")}</div>
+      <span class="bk2-jml">${d.length} guru</span></div>
+    <div class="bi2-wadah" id="ak2-tabel"><table class="bi2-tabel" style="min-width:900px"><colgroup><col style="width:44px"><col style="width:27%"><col><col style="width:96px"><col style="width:300px"></colgroup>
+      <thead><tr><th class="c">No</th><th>Guru</th><th>Nama Pengguna · Email</th><th class="c">Perangkat</th><th>Aksi</th></tr></thead><tbody>
+      ${d.map((g, i) => `<tr><td class="c redup">${i + 1}</td>
+        <td class="nama"><span class="bi2-nm"><i class="bk2-av">${escapeHtml(ini(g.nama))}</i><span><b>${escapeHtml(g.nama)}</b></span></span></td>
+        <td>${g.auth_user_id ? `<span class="ak2-akun"><b>${escapeHtml(g.username || "—")}</b>${g.email ? `<small>${escapeHtml(g.email)}</small>` : ""}</span>${g.akun_menunggu ? ' <em class="bk2-st" style="background:#ede9fe;color:#6d28d9">Menunggu</em>' : ""}`
+          : `<span class="ak2-akun"><em class="bk2-st belum">Belum Punya Akun</em>${g.email ? `<small>${escapeHtml(g.email)}</small>` : ""}</span>`}</td>
+        <td class="c">${g.auth_user_id ? `<button class="ak2-alat ${(jmlAlat[g.id] || 0) ? "" : "nol"}" onclick="akPerangkatGuru('${g.id}')">📱 ${jmlAlat[g.id] || 0}/${AK.BATAS}</button>` : '<span class="redup">—</span>'}</td>
+        <td><div class="ak2-aksi">${g.auth_user_id
+          ? `<button class="bk2-btn" onclick="akFormAkun('${g.id}','ubah')">✉️ Ubah Email</button><button class="bk2-btn" onclick="akResetSandi('${g.id}')">🔑 Reset Sandi</button><button class="bk2-btn ak2-hapus" onclick="akHapusAkun('${g.id}')">Hapus</button>`
+          : `${adaEmail(g) ? `<button class="bk2-btn" onclick="akUndang('${g.id}')">✉️ Undang</button>` : ""}<button class="bk2-btn utama" onclick="akFormAkun('${g.id}','buat')">＋ Buat Akun</button>`}</div></td></tr>`).join("") || `<tr><td colspan="5" class="c redup" style="padding:24px">Tidak ada guru.</td></tr>`}
+    </tbody></table></div></div>`;
+}
+function _akSegarTabel(inp) {
+  const lama = document.querySelector(".ak2"); if (!lama) return;
+  const jmlAlat = (AK_ATUR.alat || []).reduce((a, p) => { a[p.guru_id] = (a[p.guru_id] || 0) + 1; return a; }, {});
+  const t = document.createElement("div"); t.innerHTML = _akTabelAkun(jmlAlat); lama.replaceWith(t.firstElementChild);
+  if (inp) { const i = document.querySelector(".ak2 .bk2-cari input"); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
+  if (typeof _bi2Label === "function") try { _bi2Label(document.querySelector(".ak2")); } catch (e) {}
 }
 function akPakaiPin() { AK.pinAdmin = (qs("ak-pin")?.value || "").trim(); if (AK.pinAdmin) rgBukaPengaturan("akun"); }
 async function akUbahWajib(nyala) {
