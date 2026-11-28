@@ -337,7 +337,13 @@ async function handleImportGuru(evt) {
       if (_impNikTgl(b.data.nip_nik, b.data.tanggal_lahir) === false) b.peringatan.push(`NIK ${b.data.nip_nik} tidak cocok dengan tanggal lahir ${_impTglTampil(b.data.tanggal_lahir)} (menurut NIK: ${_impNikTglTeks(b.data.nip_nik)}) — cek salah satunya`);
       // nama tanpa gelar ("Alfian Widyananda, S.Pd" = "Alfian Widyananda, S.P") — dipakai hanya bila cocoknya tunggal
       const inti = _impNama(_impTanpaGelar(b.nama)), calon = lama.filter((g) => _impNama(_impTanpaGelar(g.nama)) === inti);
-      b.lama = (b.data.nip_nik && b.data.nip_nik.length >= 10 && lama.find((g) => String(g.nip_nik || "").replace(/\D/g, "") === b.data.nip_nik)) || lama.find((g) => _impNama(g.nama) === kk) || (inti.length >= 4 && calon.length === 1 ? calon[0] : null) || null;
+      // Catatan guru bisa GANDA (salinan lama berstatus kosong/nonaktif). Selalu utamakan catatan yang AKTIF —
+      // dulu NIK dicocokkan lebih dulu sehingga data masuk ke salinan, dan catatan aktif tetap kosong.
+      const viaNik = b.data.nip_nik && b.data.nip_nik.length >= 10 ? lama.filter((g) => String(g.nip_nik || "").replace(/\D/g, "") === b.data.nip_nik) : [];
+      const viaNama = lama.filter((g) => _impNama(g.nama) === kk), satuInti = inti.length >= 4 && new Set(calon.map((g) => _impNama(g.nama))).size === 1 ? calon : [];
+      const semuaCocok = [...new Set([...viaNik, ...viaNama, ...satuInti])], aktif = semuaCocok.filter((g) => g.status_aktif === true);
+      b.lama = (aktif.length ? aktif.find((g) => viaNik.includes(g)) || aktif.find((g) => viaNama.includes(g)) || aktif[0] : null) || viaNik[0] || viaNama[0] || (satuInti.length === 1 ? satuInti[0] : null) || null;
+      if (b.lama && semuaCocok.length > 1) b.peringatan.push(`Guru ini tercatat ${semuaCocok.length} kali di aplikasi (ada salinan ganda) — data dimasukkan ke catatan yang ${b.lama.status_aktif === true ? "aktif" : "pertama"}`);
       if (!b.lama) b.data.nama = b.nama;
     });
     hasil.forEach((b) => { _impBandingkan(b, IMP_G_LABEL, (f, v) => (f === "jenis_guru" ? ({ dalam: "Guru Dalam", luar: "Guru Luar", afiliasi: "Afiliasi", sukarelawan: "Sukarelawan", ekskul: "Ekskul" })[v] || v : v));
