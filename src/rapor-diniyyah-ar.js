@@ -19,15 +19,21 @@ function _rcGelarAr(nama) {
   const bag = String(nama || "").split(",").slice(1).map((x) => x.trim()).filter(Boolean);
   return bag.map((g) => { const k = g.toLowerCase().replace(/\s+/g, "").replace(/\.+$/, ""); const h = RC_GELAR_AR.find(([re]) => re.test(k)); return h ? h[1] : g; });
 }
-const _rcPerempuan = (g) => (g && (String(g.ruang || "").split(",")[0] === "Pi" || g.ruang_utama === "Pi")) || STATE.ruang === "Pi";
-function _rcGuruUsulAr(nama, g) {
-  if (!String(nama || "").trim()) return "";
-  const inti = _rcUsulArab(nama), gelar = _rcGelarAr(nama);
-  return [`${_rcPerempuan(g) ? "الأستاذة" : "الأستاذ"} ${inti}`, ...gelar].join("، ");
+// Jenis kelamin guru untuk الأستاذ/الأستاذة: pilihan tersimpan (rapor:arab.jk) → ruang Putri → ustadz
+const _rcPerempuan = (g) => { const jk = g && RC_ARAB?.jk?.[g.id]; if (jk) return jk === "P"; return (g && (String(g.ruang || "").split(",")[0] === "Pi" || g.ruang_utama === "Pi")) || (!g && STATE.ruang === "Pi"); };
+// Format nama guru di rapor (rapor:arab.format_guru): "gelar" = الأستاذ + nama + gelar Arab · "ustadz" = الأستاذ + nama · "nama" = nama saja
+const RC_FORMAT_GURU = { ustadz: "الأستاذ + Nama (lazim di Arab)", gelar: "الأستاذ + Nama + Gelar", nama: "Nama Saja" };
+const _rcIntiGuruAr = (g, nama) => { const v = g && RC_ARAB?.guru?.[g.id]; return v ? String(v).replace(/^(الأستاذة|الأستاذ)\s+/, "").split("،")[0].trim() : _rcUsulArab(nama || g?.nama || ""); };
+const _rcGelarGuruAr = (g, nama) => { const v = g && RC_ARAB?.gelar?.[g.id]; return v != null && v !== "" ? String(v) : _rcGelarAr(nama || g?.nama || "").join("، "); };
+function _rcSusunGuruAr(g, nama) {
+  nama = nama || g?.nama || ""; if (!String(nama).trim()) return "";
+  const f = RC_ARAB?.format_guru || "gelar", inti = _rcIntiGuruAr(g, nama), awal = _rcPerempuan(g) ? "الأستاذة" : "الأستاذ", gelar = _rcGelarGuruAr(g, nama);
+  return f === "nama" ? inti : f === "ustadz" || !gelar ? `${awal} ${inti}` : `${awal} ${inti}، ${gelar}`;
 }
+function _rcGuruUsulAr(nama, g) { return _rcSusunGuruAr(g, nama); }
 const _rcSiswaAr = (s) => ({ teks: RC_ARAB.siswa[s.id] || _rcUsulArab(s.nama), usul: !RC_ARAB.siswa[s.id] });
-const _rcWaliAr = (w) => (w ? { teks: RC_ARAB.guru[w.id] || _rcGuruUsulAr(w.nama, w), usul: !RC_ARAB.guru[w.id] } : { teks: "", usul: false });
-function _rcMudirAr(p) { if (RC_ARAB.mudir) return { teks: RC_ARAB.mudir, usul: false }; const n = typeof _namaPejabat === "function" ? _namaPejabat(p) : ""; return { teks: _rcGuruUsulAr(n, (LOOKUP.guruAll || []).find((x) => x.nama === n)), usul: !!n }; }
+const _rcWaliAr = (w) => (w ? { teks: _rcSusunGuruAr(w), usul: !RC_ARAB.guru[w.id] } : { teks: "", usul: false });
+function _rcMudirAr(p) { if (RC_ARAB.mudir) return { teks: RC_ARAB.mudir, usul: false }; const n = typeof _namaPejabat === "function" ? _namaPejabat(p) : ""; const g = (LOOKUP.guruAll || []).find((x) => x.nama === n); return { teks: _rcSusunGuruAr(g, n), usul: !!n && !(g && RC_ARAB.guru[g.id]) }; }
 function _rcMapelDiniyyah(kelas, dipakai, nilaiKelas) {
   const paket = paketDariNamaKelas(kelas?.nama_kelas);
   const cocok = (m) => !paket || (!m.paket_b && !m.paket_c) || (paket === "B" ? m.paket_b : m.paket_c);
@@ -96,7 +102,7 @@ renderRaporDiniyyah = async function () {
       <div class="rda-tgl">سلم الكشف في: ${e(p.tempat_ar)} — التاريخ: ${e(p.tanggal_ar)}</div>
       <div class="rda-ttd"><div><i>ولي الفصل</i><b>${u(p.wali_ar, d.usul.wali)}</b></div><div><i>مدير المدرسة</i><b>${u(p.mudir_ar, d.usul.mudir)}</b></div><div><i>ولي الطالب</i><b>(............................)</b></div></div>
     </div>
-    <div class="no-print" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn btn-accent" onclick="bukaCetakRapor('rd')">🖨️ Cetak Word (F4)</button><button class="btn btn-outline" onclick="eksporRaporDiniyyah()">Ekspor PDF</button><button class="btn btn-outline" onclick="bukaNamaArab('${s.kelas_id || siswa.kelas_id}')">🔤 Nama Arab</button></div>`;
+    <div class="no-print" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn btn-accent" onclick="bukaCetakRapor('rd')">🖨️ Cetak Word (F4)</button><button class="btn btn-outline" onclick="eksporRaporDiniyyah()">Ekspor PDF</button><button class="btn btn-outline" onclick="bukaNamaArab('${s.kelas_id || siswa.kelas_id}')">🔤 Nama Arab</button><button class="btn btn-outline" onclick="bukaDaftarNamaArab()">📜 Daftar Nama Arab</button></div>`;
   } catch (e) { console.error(e); target.innerHTML = `<div class="card empty-state">Gagal memuat rapor.</div>`; }
 };
 eksporRaporDiniyyah = function () {
@@ -116,14 +122,14 @@ eksporRaporDiniyyah = function () {
       const j = i.dataset.jenis; if (j !== "guru" && j !== "mudir") return;
       if (j === "mudir" && !i.dataset.latin) i.dataset.latin = mudir;
       const g = j === "guru" ? wali : (LOOKUP.guruAll || []).find((x) => x.nama === mudir);
-      const usul = () => _rcGuruUsulAr(i.dataset.latin, g);
+      const usul = () => (j === "guru" ? _rcUsulArab(i.dataset.latin) : _rcSusunGuruAr(g, i.dataset.latin)); // wali: nama inti saja (awalan & gelar disusun otomatis)
       const b = i.nextElementSibling; if (b) b.onclick = () => { i.value = usul(); };
       if (j === "mudir") { const lab = i.previousElementSibling; if (lab && mudir) lab.textContent = `Mudir (مدير المدرسة) — ${mudir}`; }
       i.dataset.usulGuru = "1";
     });
     const massal = document.querySelector(".rwk-b-ungu");
     if (massal) massal.onclick = () => qsa(".rc-arab").forEach((i) => { if (i.value.trim() || !i.dataset.latin) return; const j = i.dataset.jenis;
-      i.value = j === "guru" || j === "mudir" ? _rcGuruUsulAr(i.dataset.latin, j === "guru" ? wali : (LOOKUP.guruAll || []).find((x) => x.nama === mudir)) : _rcUsulArab(i.dataset.latin); });
+      i.value = j === "mudir" ? _rcSusunGuruAr((LOOKUP.guruAll || []).find((x) => x.nama === mudir), i.dataset.latin) : _rcUsulArab(i.dataset.latin); });
   };
 })();
 

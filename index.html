@@ -1814,6 +1814,7 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
             <button class="btn btn-accent" style="font-size:11px;" onclick="bukaCetakRapor('rd')">🖨️ Cetak Rapor (format sekolah)</button>
             <button class="btn btn-ghost pk-tombol" style="font-size:11px;display:none" onclick="bukaKelengkapanNilai('rd')">📋 Pantau Kelengkapan Nilai</button>
             <button class="btn btn-ghost" style="font-size:11px;" onclick="qs('rd-kelas').value?bukaNamaArab(qs('rd-kelas').value):toast('Pilih kelas dulu','err')">🔤 Nama Arab</button>
+            <button class="btn btn-ghost" style="font-size:11px;" onclick="bukaDaftarNamaArab()">📜 Daftar Nama Arab</button>
           </div>
         </div>
         <div id="rapor-diniyyah-content"></div>
@@ -16220,7 +16221,8 @@ async function handleImportSiswa(evt) {
 <script src="src/rapor-susunan.js?v=1"></script>
 <script src="src/ekskul-wk.js?v=2"></script>
 <script src="src/rapor-cetak.js?v=3"></script>
-<script src="src/rapor-diniyyah-ar.js?v=1"></script>
+<script src="src/rapor-diniyyah-ar.js?v=2"></script>
+<script src="src/nama-arab.js?v=2"></script>
 <script src="src/rekap-hadir-cetak.js?v=1"></script>
 <script src="src/kelengkapan-nilai.js?v=2"></script>
 <script src="src/pengumuman.js?v=5"></script>
