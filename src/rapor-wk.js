@@ -83,7 +83,7 @@ function _rwkGambar() {
           ${isAdmin() ? ` · <a href="#" onclick="bukaGantiWaliKelas('${kelasId}');return false;">ganti</a>` : ""}</small></div></div>
       <div class="rwk-aksi">
         <button class="btn btn-sm rwk-b-ungu" onclick="bukaEkskulMassal('rw')">👥 Ekskul banyak santri</button>
-        ${_rwkBolehAtur() ? `<button class="btn btn-sm rwk-b-emas" onclick="bukaPengaturanPenilaian()">⚖️ Bobot & KKM</button>` : ""}
+        ${_rwkBolehAtur() ? `<button class="btn btn-sm rwk-b-emas" onclick="bukaPengaturanPenilaian()">⚖️ Bobot & KKM</button><button class="btn btn-sm rwk-b-emas" onclick="bukaSusunanRapor(_rsPaket(kelasObj?.nama_kelas))">🧾 Susunan Rapor</button>` : ""}
         <button class="btn btn-sm rwk-b-hijau" onclick="eksporRaporKelas()">📄 Ekspor Word</button>
       </div>
     </div>
@@ -233,6 +233,7 @@ async function bukaPengaturanPenilaian(tabAwal) {
       <button data-t="bobot" onclick="_ppTab('bobot')">⚖️ Bobot</button>
       <button data-t="pola" onclick="_ppTab('pola')">🧩 Pola tiap mapel</button>
       <button data-t="kkm" onclick="_ppTab('kkm')">🎯 KKM per kelas</button>
+      <button onclick="closeModal();setTimeout(bukaSusunanRapor,150)">🧾 Susunan Rapor</button>
     </div>
     <div class="pp2-panel" data-p="bobot">
       ${grup("📚 Standar — tanpa UTS", "UH + Tugas + UAS + Kehadiran", "tu", tu, [["uh", "Ulangan Harian"], ["tugas", "Tugas"], ["uas", "UAS"], ["kehadiran", "Kehadiran"]])}

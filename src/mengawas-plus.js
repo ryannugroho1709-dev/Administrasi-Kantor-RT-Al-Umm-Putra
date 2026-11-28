@@ -77,9 +77,7 @@ async function _mpKirimAjukan(jadwalId, kunci) {
   if (alasan.replace(/[^a-z0-9]/gi, "").length < 5) { toast("Tulis alasan yang jelas", "err"); qs("mp-alasan")?.focus(); return; }
   try {
     setGlobalLoading(true, "Mengirim pengajuan…");
-    const data = (await _kvAmbil(_mpKv(jadwalId), {})) || {};
-    data[`${kunci}|${STATE.guruId}`] = { alasan, status: "menunggu", guru: STATE.guruNama || "", t: new Date().toISOString() };
-    await _kvSimpan(_mpKv(jadwalId), data);
+    const data = await _kvGabung(_mpKv(jadwalId), { [`${kunci}|${STATE.guruId}`]: { alasan, status: "menunggu", guru: STATE.guruNama || "", t: new Date().toISOString() } });
     (JU._aju = JU._aju || {})[jadwalId] = data;
     closeModal(); toast("📤 Pengajuan hadir mengawas terkirim — menunggu persetujuan admin", "ok");
     _mpSegarkan();
@@ -97,11 +95,10 @@ async function mpPutuskan(jadwalId, kunciLengkap, setuju) {
     aju[kunciLengkap] = { ...aju[kunciLengkap], status: setuju ? "disetujui" : "ditolak", oleh: STATE.guruNama || "Admin", diputus: new Date().toISOString() };
     if (setuju) {
       const hadir = (await _kvAmbil("ujian:hadir:" + jadwalId, {})) || {}, lama = hadir[kunciLengkap] || {};
-      hadir[kunciLengkap] = { ...lama, t: lama.t || _mpIso(t, s.mulai), pulang: lama.pulang || _mpIso(t, s.selesai), bersyarat: true, oleh: lama.oleh || aju[kunciLengkap].guru, disetujui: STATE.guruNama || "Admin" };
-      await _kvSimpan("ujian:hadir:" + jadwalId, hadir);
-      (JU._hadir = JU._hadir || {})[jadwalId] = hadir;
+      const isi = { t: lama.t || _mpIso(t, s.mulai), pulang: lama.pulang || _mpIso(t, s.selesai), bersyarat: true, oleh: lama.oleh || aju[kunciLengkap].guru, disetujui: STATE.guruNama || "Admin" };
+      (JU._hadir = JU._hadir || {})[jadwalId] = await _kvGabung("ujian:hadir:" + jadwalId, { [kunciLengkap]: isi });
     }
-    await _kvSimpan(_mpKv(jadwalId), aju);
+    await _kvGabung(_mpKv(jadwalId), { [kunciLengkap]: aju[kunciLengkap] });
     (JU._aju = JU._aju || {})[jadwalId] = aju;
     toast(setuju ? "✅ Disetujui — tercatat Hadir Bersyarat" : "Pengajuan ditolak", setuju ? "ok" : "info");
     _mpSegarkan();

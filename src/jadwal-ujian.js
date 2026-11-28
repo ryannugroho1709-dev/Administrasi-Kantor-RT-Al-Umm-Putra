@@ -743,7 +743,7 @@ async function juAbsenMengawas(jadwalId, kunci) {
     if (!semua.includes(kunci)) semua.push(kunci);
     const data = await _kvAmbil("ujian:hadir:" + jadwalId, {}), waktu = new Date().toISOString(), baru = {};
     semua.forEach((kk) => { const k = `${kk}|${STATE.guruId}`; if (!data[k]) baru[k] = { t: waktu, oleh: STATE.guruNama || "", ...(semua.length > 1 ? { gabung: semua.length } : {}) }; });
-    if (Object.keys(baru).length) { Object.assign(data, baru); if (typeof _kvGabung === "function") { try { Object.assign(data, await _kvGabung("ujian:hadir:" + jadwalId, baru)); } catch (e) { await _kvSimpan("ujian:hadir:" + jadwalId, data); } } else await _kvSimpan("ujian:hadir:" + jadwalId, data); }
+    if (Object.keys(baru).length) Object.assign(data, await _kvGabung("ujian:hadir:" + jadwalId, baru)); // digabung, tidak pernah menimpa absen pengawas lain
     (JU._hadir = JU._hadir || {})[jadwalId] = data;
     toast(semua.length > 1 ? `✓ Kehadiran mengawas gabungan tercatat untuk ${semua.length} kelas (${semua.map((kk) => "Kelas " + _juAngkaKelas(kk.split("|")[2])).join(" + ")}). Barakallahu fiik` : "✓ Kehadiran mengawas tercatat. Barakallahu fiik", "ok");
     if (STATE.currentPage === "dashboard") _juSisipkanKartuDasbor(); else if (qs("ju-wadah")) _juGambarDaftar();

@@ -58,9 +58,9 @@ async function juJurnalMengawas(jadwalId, kunciSlot) {
     const jumlah = { hadir: 0, izin: 0, sakit: 0, alpha: 0 }; absensi.forEach((a) => (jumlah[a.status] = (jumlah[a.status] || 0) + 1));
     try {
       setGlobalLoading(true, "Menyimpan jurnal mengawas…");
-      const data = (await _kvAmbil(_jmKunciKv(m.jadwalId), {})) || {}; // ambil terbaru (pengawas lain bisa menyimpan bersamaan)
-      data[`${m.kunciSlot}|${STATE.guruId}`] = { materi, catatan: (qs("jm-catatan")?.value || "").trim(), metode: [_JM_METODE], absensi, jumlah, mapel: m.mapel, kelasId: m.kelasId, guru: STATE.guruNama || "", t: new Date().toISOString() };
-      await _kvSimpan(_jmKunciKv(m.jadwalId), data);
+      // digabung di server (kv_gabung) — pengawas lain yang menyimpan bersamaan tidak saling menimpa
+      const isi = { materi, catatan: (qs("jm-catatan")?.value || "").trim(), metode: [_JM_METODE], absensi, jumlah, mapel: m.mapel, kelasId: m.kelasId, guru: STATE.guruNama || "", t: new Date().toISOString() };
+      const data = await _kvGabung(_jmKunciKv(m.jadwalId), { [`${m.kunciSlot}|${STATE.guruId}`]: isi });
       (JU._jurnal = JU._jurnal || {})[m.jadwalId] = data;
       const masukRekap = await _jmSimpanAbsensiSantri(m, absensi);
       closeModal();
@@ -179,9 +179,12 @@ async function juPulangMengawas(jadwalId, kunci) {
   if (jendela === "lewat") { toast("Batas absen pulang sesi ini sudah lewat", "err"); return; }
   try {
     setGlobalLoading(true, "Mencatat absen pulang…");
-    const k = `${kunci}|${STATE.guruId}`, data = await _kvAmbil("ujian:hadir:" + jadwalId, {});
+    const k = `${kunci}|${STATE.guruId}`; let data = (await _kvAmbil("ujian:hadir:" + jadwalId, {})) || {};
     if (!data[k]) { toast("Belum absen mengawas (masuk) di sesi ini", "err"); return; }
-    if (!data[k].pulang) { data[k].pulang = new Date().toISOString(); await _kvSimpan("ujian:hadir:" + jadwalId, data); }
+    // mengawas gabungan: absen pulang sekali berlaku untuk semua kelas yang diawasi di sesi yang sama
+    const [t0, s0] = kunci.split("|"), waktu = new Date().toISOString(), potong = {};
+    Object.keys(data).forEach((kk) => { const [t, s, , g] = kk.split("|"); if (t === t0 && s === s0 && g === STATE.guruId && !data[kk].pulang) potong[kk] = { pulang: waktu }; });
+    if (Object.keys(potong).length) data = await _kvGabung("ujian:hadir:" + jadwalId, potong);
     (JU._hadir = JU._hadir || {})[jadwalId] = data;
     toast("🏁 Absen pulang mengawas tercatat — sesi ini lengkap & dihitung insentif", "ok");
     if (STATE.currentPage === "dashboard") _juSisipkanKartuDasbor(); else if (qs("ju-wadah") && !JU.edit) _juGambarDaftar();

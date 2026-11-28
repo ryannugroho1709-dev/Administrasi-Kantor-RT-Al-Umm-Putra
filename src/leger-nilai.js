@@ -294,7 +294,7 @@ async function unggahLegerNilai(input) {
         const row = {
           siswa_id: cocok.siswa.id, mapel_id: mapelId, kelas_id: kelasId, guru_id: p.guruId || nilaiPenuh.guru_id || null,
           semester, tahun_ajaran: tahun, ulangan_harian: satukan("ulangan_harian", uh), tugas: satukan("tugas", tugas), uts: satukan("uts", uts), uas: satukan("uas", uas),
-          nilai_kehadiran: nilaiPenuh.nilai_kehadiran ?? null, capaian_pembelajaran: cp, diisi_oleh: "guru (leger Excel)",
+          nilai_kehadiran: nilaiPenuh.nilai_kehadiran ?? null, capaian_pembelajaran: sub && typeof cpPasangSub === "function" ? cpPasangSub(nilaiPenuh.capaian_pembelajaran, sub, cp) : cp, diisi_oleh: "guru (leger Excel)",
         };
         row.ada_uts = !!(nilaiPenuh.ada_uts || row.uts.length);
         cocok.nilai = { ...nilaiPenuh, ...row }; // lembar mapel berikutnya membangun dari hasil ini

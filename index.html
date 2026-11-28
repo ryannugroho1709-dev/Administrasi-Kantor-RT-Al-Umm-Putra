@@ -56,7 +56,7 @@ function _logoAwal(){try{return localStorage.getItem("logoSekolahUrl")||"assets/
 <!-- pdf.js — hanya dipakai fitur "Ambil sampul dari halaman pertama PDF" di Modul Ajar (render page 1 ke canvas) -->
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script>if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";</script>
-<script src="src/api.js?v=27"></script>
+<script src="src/api.js?v=28"></script>
 <script>
 // ── Override apiPerbaikanAbsenAdmin: pakai RPC SECURITY DEFINER (bypass RLS) ──
 // Blok ini di index.html mengoverride versi dari api.js agar pasti termuat,
@@ -10789,7 +10789,7 @@ async function simpanSemuaNilai() {
         const sub = NILAI_STATE.sub, asliN = (NILAI_STATE.asli || []).find((r) => r.siswa.id === siswaId)?.nilai || {};
         ["ulangan_harian", "tugas", "uts", "uas"].forEach((k) => { row[k] = [...(asliN[k] || []).filter((x) => x && x.sub !== sub), ...(row[k] || []).map((x) => ({ ...x, sub }))]; });
         row.ada_uts = (row.uts || []).some((x) => x.sub ? true : false) || !!asliN.ada_uts;
-        if (asliN.capaian_pembelajaran && !cp) row.capaian_pembelajaran = asliN.capaian_pembelajaran;
+        row.capaian_pembelajaran = typeof cpPasangSub === "function" ? cpPasangSub(asliN.capaian_pembelajaran, sub, cp) : (cp || asliN.capaian_pembelajaran || "");
       }
       await apiSimpanNilaiRapor(row);
     }
@@ -11006,8 +11006,16 @@ async function renderRaporUmum() {
     const ringkas = (arr) => arr.map((b, i) => ({
       no: i + 1, nama: b.nama, nilaiAkhir: b.nilai ? (hitungNilaiAkhir(b.nilai)?.nilaiAkhir ?? "-") : "-", cp: b.nilai?.capaian_pembelajaran || "-",
     }));
-    const barisUmumRingkas = ringkas(barisUmum);
-    const pemberdayaanRingkas = ringkas(pemberdayaan);
+    let barisUmumRingkas = ringkas(barisUmum);
+    let pemberdayaanRingkas = ringkas(pemberdayaan);
+    // Susunan Rapor (format rapor sekolah) — lihat src/rapor-susunan.js
+    if (typeof rsSiapkan === "function") {
+      try {
+        const ctxRs = await rsSiapkan(siswa.kelas, nilai), b = rsBaris(ctxRs, nilai);
+        const ubah = (arr) => arr.map((x, i) => ({ no: i + 1, nama: x.nama, nilaiAkhir: x.na ?? "-", cp: x.cp ? escapeHtml(x.cp).split("\n").join("<br>") : "-" }));
+        barisUmumRingkas = ubah(b.u); pemberdayaanRingkas = ubah(b.p);
+      } catch (e) { console.warn("Susunan rapor:", e); }
+    }
     const kelasBerikutnya = catatan.kelas_tujuan || formatKelasLabel(_tebakKelasBerikutnya(siswa.kelas?.nama_kelas));
 
     RAPOR_UMUM_CACHE = {
@@ -16191,8 +16199,9 @@ async function handleImportSiswa(evt) {
 <script src="src/presentasi-absen.js?v=4"></script>
 <script src="src/modul-peta.js?v=1"></script>
 <script src="src/jurnal-ekspor.js?v=4"></script>
-<script src="src/rapor-wk.js?v=4"></script>
-<script src="src/rapor-cetak.js?v=2"></script>
+<script src="src/rapor-wk.js?v=5"></script>
+<script src="src/rapor-susunan.js?v=1"></script>
+<script src="src/rapor-cetak.js?v=3"></script>
 <script src="src/rekap-hadir-cetak.js?v=1"></script>
 <script src="src/kelengkapan-nilai.js?v=2"></script>
 <script src="src/pengumuman.js?v=5"></script>
@@ -16205,9 +16214,9 @@ async function handleImportSiswa(evt) {
 <script src="src/ujian-editor.js?v=18"></script>
 <script src="src/jurnal-otomatis.js?v=6"></script>
 <script src="src/hp.js?v=8"></script>
-<script src="src/leger-nilai.js?v=5"></script>
+<script src="src/leger-nilai.js?v=6"></script>
 <script src="src/stempel.js?v=3"></script>
-<script src="src/jadwal-ujian.js?v=28"></script>
+<script src="src/jadwal-ujian.js?v=29"></script>
 <script src="src/jadwal-ujian-plus.js?v=4"></script>
 <script src="src/jadwal-ujian-cek.js?v=1"></script>
 <script src="src/jadwal-merata.js?v=3"></script>
@@ -16217,8 +16226,8 @@ async function handleImportSiswa(evt) {
 <script src="src/tur.js?v=4"></script>
 <script src="src/rapi-soal.js?v=1"></script>
 <script src="src/soal-word.js?v=13"></script>
-<script src="src/jurnal-mengawas.js?v=4"></script>
-<script src="src/mengawas-plus.js?v=3"></script>
+<script src="src/jurnal-mengawas.js?v=5"></script>
+<script src="src/mengawas-plus.js?v=4"></script>
 <script src="src/nilai-tempel.js?v=3"></script>
 <script src="src/dapodik.js?v=2"></script>
 <script src="src/modul-urut.js?v=1"></script>

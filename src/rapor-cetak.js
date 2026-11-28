@@ -210,7 +210,8 @@ async function _rcKonteks(kelasId, semester, tahun) {
     apiGetRekapKehadiranSiswa(kelasId, dari, sampai).catch(() => []),
   ]);
   const urut = {}; // urutan mapel = abjad, sama seperti rapor di aplikasi
-  return { kelas, siswa, semester, tahun, pengaturan, nilai, ekskul, catatan, hadir, urut };
+  const susunan = typeof rsSiapkan === "function" ? await rsSiapkan(kelas, nilai).catch(() => null) : null; // format rapor sekolah
+  return { kelas, siswa, semester, tahun, pengaturan, nilai, ekskul, catatan, hadir, urut, susunan };
 }
 const _rcNA = (row) => { if (!row) return null; const n = hitungNilaiAkhir(row); return n && n.nilaiAkhir > 0 ? Math.round(n.nilaiAkhir) : null; };
 
@@ -224,14 +225,18 @@ function _rcDataPkbm(k, s) {
   const umum = (LOOKUP.mapel || []).filter((m) => m.masuk_umum && m.kategori !== "pemberdayaan" && cocok(m) && !idAlias.has(m.id)).sort(urutM);
   const daya = (LOOKUP.mapel || []).filter((m) => m.masuk_umum && m.kategori === "pemberdayaan" && cocok(m) && !idAlias.has(m.id)).sort(urutM);
   const baris = (arr, nama) => arr.map((m, i) => { const r = cari(m.id); return { no: i + 1, mapel: nama(m), nilai: _rcNA(r) ?? "-", cp: r?.capaian_pembelajaran || "-" }; });
+  let u = [...baris(alias, (m) => m.alias_rapor_umum), ...baris(umum, (m) => m.nama_mapel)].map((x, i) => ({ ...x, no: i + 1 })), p = baris(daya, (m) => m.nama_mapel);
+  if (k.susunan) {
+    const b = rsBaris(k.susunan, nilaiS), ubah = (arr) => arr.map((x, i) => ({ no: i + 1, mapel: x.nama, nilai: x.na != null && x.na > 0 ? Math.round(x.na) : "-", cp: x.cp || "-" }));
+    u = ubah(b.u); p = ubah(b.p);
+  }
   const cat = k.catatan.find((c) => c.siswa_id === s.id) || {};
   const h = k.hadir.find((r) => r.siswa?.id === s.id) || {};
   const [al1, al2] = _rcPecahAlamat(s.alamat_asal);
   const wali = guruWaliKelasDari(k.kelas.id);
   return {
     namaKaki: s.nama, tinggal: cat.keputusan === "Tinggal",
-    u: [...baris(alias, (m) => m.alias_rapor_umum), ...baris(umum, (m) => m.nama_mapel)].map((x, i) => ({ ...x, no: i + 1 })),
-    p: baris(daya, (m) => m.nama_mapel),
+    u, p,
     e: k.ekskul.filter((e) => e.siswa_id === s.id).map((e, i) => ({ no: i + 1, nama: e.nama_ekstrakurikuler, ket: e.keterangan || "-" })),
     peta: {
       nama: s.nama, kelas: _rcKelasPanjang(k.kelas.nama_kelas), nis: `${s.nis || "-"}/ ${s.nisn || "-"}`, fase: faseDariKelas(k.kelas.nama_kelas),

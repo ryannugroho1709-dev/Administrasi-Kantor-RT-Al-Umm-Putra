@@ -1119,6 +1119,7 @@ function lensaSub(row, sub) {
   const o = { ...row };
   _KOMP_NILAI.forEach((k) => { o[k] = (row[k] || []).filter((x) => x && x.sub === sub).map(({ sub: _s, ...x }) => x); });
   o.ada_uts = o.uts.length > 0;
+  if (typeof cpSub === "function") o.capaian_pembelajaran = cpSub(row.capaian_pembelajaran, sub); // capaian milik bagian ini saja
   return o;
 }
 function hitungNilaiAkhir(nilaiRow) {
