@@ -33,7 +33,7 @@
 <link rel="stylesheet" href="src/hp.css?v=3">
 <link rel="stylesheet" href="src/kuliah.css?v=6">
 <link rel="stylesheet" href="src/modul-baca.css?v=11">
-<link rel="stylesheet" href="src/ujian.css?v=43">
+<link rel="stylesheet" href="src/ujian.css?v=44">
 
 <script>
 // Logo gagal dimuat → coba logo bawaan; kalau bawaan pun gagal, tampilkan ikon 🎓 (bukan huruf "G").
@@ -10477,7 +10477,7 @@ async function gambarTabelNilai() {
   const NAMA_K = { uh: "UH", tugas: "Tugas", uts: "UTS", uas: "UAS", kehadiran: "Hadir" };
   const _chipB = (o) => Object.entries(NAMA_K).filter(([k]) => o[k] > 0 && (k !== "uts" || adaUTS)).map(([k, l]) => `${l} ${o[k]}%`).join(" · ");
   const subs = NILAI_STATE.subs || [], subAktif = NILAI_STATE.sub;
-  const tabSub = subs.length ? `<div class="nl2-subtab" data-tur="nl-sub">${subs.map((s) => `<button class="${s === subAktif ? "on" : ""}" onclick="nlPilihSub('${escapeHtml(s).replace(/'/g, "")}')">${escapeHtml(s)}</button>`).join("")}<button class="rekap ${subAktif === "rekap" ? "on" : ""}" onclick="nlPilihSub('rekap')">📊 Rekap rata-rata</button><small>Mapel gabungan: nilai diisi terpisah per mapel, nilai rapor = rata-rata ketiganya.</small></div>` : "";
+  const tabSub = subs.length ? `<div class="nl2-subtab" data-tur="nl-sub">${subs.map((s) => `<button class="${s === subAktif ? "on" : ""}" onclick="nlPilihSub('${escapeHtml(s).replace(/'/g, "")}')">${escapeHtml(s)}</button>`).join("")}<button class="rekap ${subAktif === "rekap" ? "on" : ""}" onclick="nlPilihSub('rekap')">🔗 Gabungan · Nilai Rapor</button><small>Mapel gabungan: nilai diisi terpisah per mapel. Tab Gabungan menunjukkan nilai yang keluar di rapor (rata-rata ${subs.length} mapel).</small></div>` : "";
   if (subAktif === "rekap") { target.innerHTML = tabSub + _nlRekapSubHTML(mapelAktif, kelasAktif); return; }
   const nLama = subs.length ? _nlJumlahLama() : 0;
   const pitaLama = nLama ? `<div class="nl2-lama">⚠️ <b>${nLama} santri punya nilai lama</b> yang diisi sebelum mapel ini dipisah. Nilai lama itu <b>tidak ikut dihitung</b> lagi. Bila nilai itu milik <b>${escapeHtml(subAktif)}</b>, pindahkan ke sini: <button class="btn btn-sm btn-accent" onclick="nlPindahLama()">📥 Pindahkan ke ${escapeHtml(subAktif)}</button></div>` : "";
@@ -16274,6 +16274,7 @@ async function handleImportSiswa(evt) {
 <script src="src/kop-amplop.js?v=2"></script>
 <script src="src/jadwal-susun.js?v=1"></script>
 <script src="src/impor-data.js?v=3"></script>
+<script src="src/nilai-cp.js?v=1"></script>
 <script src="src/cari-fitur.js?v=3"></script>
 <script src="src/sop-data.js?v=1"></script>
 <script src="src/sop.js?v=3"></script>
