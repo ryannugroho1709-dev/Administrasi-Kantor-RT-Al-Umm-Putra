@@ -7,7 +7,7 @@
 //     Data: kuliah_pengaturan "cp:nilai:<tahun>:<semester>" (per ruang) → { "<kelasId>|<mapelId>|<bagian>": {sb,b,c,batas,riwayat} }
 //  2) Hak akses: guru hanya mapel & kelas di jadwalnya; Admin utama semua; Kepala Sekolah/Penyelenggara &
 //     wali kelas boleh MELIHAT (tidak bisa mengubah). Admin Kedua ikut Mode Lihat.
-//  3) Nilai yang tersimpan di semester lain padahal diisi di semester ini → pita peringatan + pindahkan.
+//  3) Ada nilai mapel & kelas ini yang berlabel semester lain → keterangan + tombol Lihat (aplikasi tidak memindahkan nilai).
 // ============================================================
 const NC = { tpl: null, kunci: null, draf: false, tema: [], jadwal: {}, hak: "ubah" };
 const NC_KAT = {
@@ -89,7 +89,11 @@ const _NC_BISING = /tata tertib|perkenalan|bincang|nasi[h]?at|organisasi kelas|p
 async function _ncTema(kelasId, mapelId, sem, ta, sub) {
   const { dari, sampai } = _rentangSemesterTahunAjaran(sem, ta);
   let rows = [];
-  try { const r = await supa.from("jurnal_kelas").select("tanggal,materi_pokok").eq("kelas_id", kelasId).eq("mapel_id", mapelId).gte("tanggal", dari).lte("tanggal", sampai).order("tanggal"); rows = r.data || []; } catch (e) {}
+  try { const r = await supa.from("jurnal_kelas").select("id,tanggal,materi_pokok").eq("kelas_id", kelasId).eq("mapel_id", mapelId).gte("tanggal", dari).lte("tanggal", sampai).order("tanggal"); rows = r.data || []; } catch (e) {}
+  NC.jurnal = rows;
+  return _ncTemaDari(rows, sub);
+}
+function _ncTemaDari(rows, sub) {
   let teks = rows.map((r) => String(r.materi_pokok || "").replace(/\s+/g, " ").trim()).filter(Boolean);
   if (sub) { const s = sub.toLowerCase(), cocok = teks.filter((t) => t.toLowerCase().includes(s)); if (cocok.length) teks = cocok.map((t) => t.replace(new RegExp("^\\s*" + sub + "\\s*[:\\-–]\\s*", "i"), "")); }
   const lihat = new Map();
@@ -130,15 +134,17 @@ async function _ncMuatTpl() {
   NC.kunci = kv + "#" + kunci; NC.tema = await _ncTema(kelasId, mapelId, sem, ta, sub);
   const ada = semua[kunci];
   if (ada && (ada.sb || ada.b || ada.c)) { NC.tpl = { batas: [90, 80], riwayat: [], ...ada }; NC.draf = false; }
-  else { NC.tpl = { ..._ncSusun(NC.tema), batas: [90, 80], riwayat: [] }; NC.draf = true; }
+  else { const jenis = _ncJenisAwal(); NC.tpl = { ..._ncSusunJenis(NC.tema, jenis), jenis, batas: [90, 80], riwayat: [], abaikan: [], tambahan: [] }; NC.draf = true; }
+  NC.tplTersimpan = { ...NC.tpl }; // teks awal (tersimpan / usulan) — untuk mengenali CP santri yang masih otomatis
   return NC.tpl;
 }
-const _ncKat = (n) => { const b = NC.tpl?.batas || [90, 80]; return !(n > 0) ? null : n >= b[0] ? "sb" : n >= b[1] ? "b" : "c"; };
-const _ncTeksOtomatis = () => new Set([NC.tpl?.sb, NC.tpl?.b, NC.tpl?.c, ...(NC.tpl?.riwayat || [])].filter(Boolean).map((s) => s.trim()));
+const _ncAktif = () => NC.tplTersimpan || NC.tpl || null; // templat yang berlaku (bukan isian jendela yang belum disimpan)
+const _ncKat = (n) => { const b = _ncAktif()?.batas || [90, 80]; return !(n > 0) ? null : n >= b[0] ? "sb" : n >= b[1] ? "b" : "c"; };
+const _ncTeksOtomatis = () => new Set([_ncAktif()?.sb, _ncAktif()?.b, _ncAktif()?.c, ...(_ncAktif()?.riwayat || [])].filter(Boolean).map((s) => s.trim()));
 function _ncTerapkanBaris(tr) {
-  if (!NC.tpl || tr.dataset.cpAuto !== "1") return false;
+  if (!_ncAktif() || tr.dataset.cpAuto !== "1") return false;
   const ta = tr.querySelector(".nilai-cp"); if (!ta) return false;
-  const k = _ncKat(Number(tr.dataset.akhir)), baru = k ? NC.tpl[k] || "" : "";
+  const k = _ncKat(Number(tr.dataset.akhir)), baru = k ? _ncAktif()[k] || "" : "";
   if (!baru || ta.value === baru) return false;
   ta.value = baru; return true;
 }
@@ -188,7 +194,7 @@ function _ncModeLihat(target) {
 _perbaruiTombolCP = function (tr) {
   const isi = (tr.querySelector(".nilai-cp")?.value || "").trim(), btn = tr.querySelector(".nl-cp-btn"); if (!btn) return;
   const k = _ncKat(Number(tr.dataset.akhir)), auto = tr.dataset.cpAuto === "1";
-  const kat = k && auto && NC.tpl?.[k] ? NC_KAT[k] : null;
+  const kat = k && auto && _ncAktif()?.[k] ? NC_KAT[k] : null;
   btn.innerHTML = !isi ? "＋ Isi" : kat ? `<i style="--w:${kat.warna}">${kat.ikon} ${kat.label}</i>` : `<i style="--w:#7c3aed">✏️ Diubah</i>`;
   btn.classList.toggle("nl-cp-ada", !!isi);
   btn.title = isi || "Capaian Pembelajaran belum diisi";
@@ -199,8 +205,8 @@ bukaEditorCP = function (siswaId) {
   const tr = document.querySelector(`#input-nilai-table tr[data-siswa="${siswaId}"]`); if (!tr) return;
   const nama = tr.querySelector(".nl-col-nama")?.textContent.replace(/^\d+/, "").replace(/^\d+/, "").trim() || "";
   const isi = tr.querySelector(".nilai-cp").value, n = Number(tr.dataset.akhir), k = _ncKat(n), lihat = NC.hak === "lihat";
-  const kartu = Object.entries(NC_KAT).map(([kk, v]) => `<button type="button" class="nc-pil ${kk === k ? "saran" : ""}" style="--w:${v.warna};--l:${v.latar}" ${lihat || !NC.tpl?.[kk] ? "disabled" : ""} onclick="qs('cp-editor').value=NC.tpl['${kk}'];qs('cp-editor').dataset.auto='${kk === k ? 1 : 0}'">
-      <b>${v.ikon} ${v.label}${kk === k ? " <em>sesuai nilai</em>" : ""}</b><span>${_ncE(NC.tpl?.[kk] || "Belum ada teks — atur di 🎯 CP Otomatis")}</span></button>`).join("");
+  const kartu = Object.entries(NC_KAT).map(([kk, v]) => `<button type="button" class="nc-pil ${kk === k ? "saran" : ""}" style="--w:${v.warna};--l:${v.latar}" ${lihat || !_ncAktif()?.[kk] ? "disabled" : ""} onclick="qs('cp-editor').value=_ncAktif()['${kk}'];qs('cp-editor').dataset.auto='${kk === k ? 1 : 0}'">
+      <b>${v.ikon} ${v.label}${kk === k ? " <em>sesuai nilai</em>" : ""}</b><span>${_ncE(_ncAktif()?.[kk] || "Belum ada teks — atur di 🎯 CP Otomatis")}</span></button>`).join("");
   openModal(`<div class="nc-ed">
     <div class="nc-ed-kepala"><div><h3>📝 Capaian Pembelajaran</h3><small>${_ncE(nama)}</small></div>
       <div class="nc-ed-nilai">${n > 0 ? `<b>${n}</b><span>${k ? NC_KAT[k].label : ""}</span>` : `<b>-</b><span>belum ada nilai</span>`}</div></div>
@@ -217,7 +223,7 @@ function _ncSimpanSatu(siswaId) {
   const tr = document.querySelector(`#input-nilai-table tr[data-siswa="${siswaId}"]`), ed = qs("cp-editor");
   if (tr && ed) {
     const v = ed.value.trim(); tr.querySelector(".nilai-cp").value = v;
-    tr.dataset.cpAuto = !v || ed.dataset.auto === "1" || (_ncTeksOtomatis().has(v) && NC.tpl[_ncKat(Number(tr.dataset.akhir))] === v) ? "1" : "0";
+    tr.dataset.cpAuto = !v || ed.dataset.auto === "1" || (_ncTeksOtomatis().has(v) && _ncAktif()[_ncKat(Number(tr.dataset.akhir))] === v) ? "1" : "0";
     _perbaruiTombolCP(tr); _tandaiNilaiBelumDisimpan();
   }
   closeModal();
@@ -228,43 +234,129 @@ function _ncKembaliOtomatis(siswaId) {
 }
 
 // ── 🎯 CP Otomatis: atur 3 teks kategori untuk kelas × mapel × semester ini ──
+// Jenis CP: "paham" (memahami/menjelaskan), "praktik" (terampil mempraktikkan — olahraga, tahsin, khat, TIK…),
+// "campuran" (memahami & mempraktikkan). Materi: dari jurnal (bisa dipilih/dibuang, jurnal bisa diperbaiki di sini)
+// + materi tambahan yang belum sempat disampaikan tetapi wajib ada di CP.
+const NC_JENIS = { paham: "📖 Pemahaman", praktik: "🏃 Praktik", campuran: "🔀 Pemahaman & Praktik" };
+function _ncJenisAwal() {
+  const m = (LOOKUP.mapel || []).find((x) => x.id === qs("nl-mapel").value), n = String(_ncSub() || m?.nama_mapel || "").toLowerCase();
+  if (/pjok|olahraga|penjas|jasmani|tahsin|tahfi[dz]h|khat|kaligrafi|muhadhoroh|pidato|prakarya|keterampilan|seni|tik|informatika|media kreatif|kelistrikan|tata boga|menjahit/.test(n)) return "praktik";
+  if (/tajwid|bahasa arab|bahasa inggris|imla/.test(n)) return "campuran";
+  return "paham";
+}
+const _ncKunciTema = (t) => String(t).toLowerCase().replace(/^(surah|surat)\s+/, "").replace(/[^a-z0-9؀-ۿ]/g, "");
+function _ncTemaDipakai() {
+  const buang = new Set(NC.tpl?.abaikan || []);
+  return [...NC.tema.filter((t) => !buang.has(_ncKunciTema(t))), ...(NC.tpl?.tambahan || [])];
+}
+function _ncSusunJenis(tema, jenis) {
+  if (jenis === "paham") return _ncSusun(tema);
+  let t = tema.slice();
+  if (t.length > 5) { const step = (t.length - 1) / 4; t = [0, 1, 2, 3, 4].map((i) => tema[Math.round(i * step)]); }
+  if (!t.length) return { sb: "", b: "", c: "" };
+  const kecil = (s) => (/^[A-Z][a-z]/.test(s) && !/^(Al|Bab|Dars|Surah|Surat|Pancasila|Indonesia)/.test(s) ? s[0].toLowerCase() + s.slice(1) : s);
+  t = t.map(kecil);
+  const akhir = t[t.length - 1], awal = t.length > 1 ? t.slice(0, -1) : t, separo = Math.ceil(t.length / 2);
+  if (jenis === "praktik") return {
+    sb: `Sangat terampil dan konsisten dalam mempraktikkan ${_ncDaftar(t)} dengan teknik yang benar dan percaya diri.`,
+    b: t.length > 1 ? `Terampil mempraktikkan ${_ncDaftar(awal)} dengan benar; perlu meningkatkan ketepatan dan konsistensi saat mempraktikkan ${akhir}.` : `Terampil mempraktikkan ${t[0]} dengan benar; perlu lebih sering berlatih agar semakin konsisten.`,
+    c: t.length > 1 ? `Mulai mampu mempraktikkan ${_ncDaftar(t.slice(0, separo))}; perlu latihan dan bimbingan lebih lanjut dalam mempraktikkan ${_ncDaftar(t.slice(separo))}.` : `Mulai mampu mempraktikkan ${t[0]}; perlu latihan dan bimbingan lebih lanjut.`,
+  };
+  return {
+    sb: `Sangat baik dalam memahami sekaligus mempraktikkan ${_ncDaftar(t)} dengan tepat dan lancar.`,
+    b: t.length > 1 ? `Baik dalam memahami dan mempraktikkan ${_ncDaftar(awal)}; perlu meningkatkan ketepatan dalam ${akhir}.` : `Baik dalam memahami dan mempraktikkan ${t[0]}; perlu lebih banyak berlatih agar semakin lancar.`,
+    c: t.length > 1 ? `Cukup memahami ${_ncDaftar(t.slice(0, separo))}, namun masih perlu bimbingan dalam memahami dan mempraktikkan ${_ncDaftar(t.slice(separo))}.` : `Cukup memahami ${t[0]}, namun masih perlu bimbingan dalam mempraktikkannya.`,
+  };
+}
+// simpan isian kotak di jendela sebelum digambar ulang
+function _ncAmbilIsian() {
+  if (!qs("nc-sb")) return;
+  ["sb", "b", "c"].forEach((k) => { NC.tpl[k] = qs("nc-" + k).value; });
+  NC.tpl.batas = [Number(qs("nc-b0")?.value) || 90, Number(qs("nc-b1")?.value) || 80];
+}
 async function bukaCPOtomatis() {
   await _ncMuatTpl();
+  NC.tpl = JSON.parse(JSON.stringify(NC.tplTersimpan || NC.tpl)); // salinan kerja jendela
+  if (!NC.tpl.jenis) NC.tpl.jenis = _ncJenisAwal();
+  NC.tpl.abaikan = NC.tpl.abaikan || []; NC.tpl.tambahan = NC.tpl.tambahan || [];
+  _ncGambarModal(true);
+}
+function _ncGambarModal(baru) {
+  if (!baru) _ncAmbilIsian();
   const m = (LOOKUP.mapel || []).find((x) => x.id === qs("nl-mapel").value), kl = (LOOKUP.kelas || []).find((x) => x.id === qs("nl-kelas").value);
-  const sub = _ncSub(), lihat = NC.hak === "lihat", T = NC.tpl, b = T.batas || [90, 80];
+  const sub = _ncSub(), lihat = NC.hak === "lihat", T = NC.tpl, b = T.batas || [90, 80], e = _ncE;
   const jumlah = { sb: 0, b: 0, c: 0 }; qsa("#input-nilai-table tbody tr").forEach((tr) => { const k = _ncKat(Number(tr.dataset.akhir)); if (k) jumlah[k]++; });
   const rentang = { sb: `≥ ${b[0]}`, b: `${b[1]} – ${b[0] - 0.1}`, c: `< ${b[1]}` };
+  const buang = new Set(T.abaikan);
+  const chip = NC.tema.map((t, i) => { const off = buang.has(_ncKunciTema(t)); return `<button type="button" class="nc-chip ${off ? "mati" : "pakai"}" ${lihat ? "disabled" : ""} onclick="_ncTogelTema(${i})" title="${off ? "Tidak dipakai — ketuk untuk memakai" : "Dipakai di CP — ketuk untuk membuang"}">${off ? "○" : "✓"} ${e(t)}</button>`; }).join("");
+  const tambahan = T.tambahan.map((t, i) => `<span class="nc-chip tambah">➕ ${e(t)}${lihat ? "" : `<button type="button" onclick="_ncHapusTambahan(${i})" title="Hapus">×</button>`}</span>`).join("");
+  const jurnal = (NC.jurnal || []).map((j, i) => `<div class="nc-jr"><span>${new Date(j.tanggal + "T00:00:00").toLocaleDateString("id-ID", { day: "numeric", month: "short" })}</span>
+      ${lihat ? `<em>${e(j.materi_pokok || "-")}</em>` : `<input class="input" value="${e(j.materi_pokok || "")}" data-i="${i}" onchange="_ncUbahJurnal(${i},this)"><b class="nc-jr-st" id="nc-jr-${i}"></b>`}</div>`).join("");
   const kartu = Object.entries(NC_KAT).map(([k, v]) => `<div class="nc-kartu" style="--w:${v.warna};--l:${v.latar}">
       <div class="nc-kartu-h"><span class="nc-ikon">${v.ikon}</span><div><b>${v.label}</b><small>Nilai ${rentang[k]} · ${jumlah[k]} santri</small></div></div>
-      <textarea id="nc-${k}" class="input" rows="4" ${lihat ? "readonly" : ""} placeholder="${NC.tema.length ? "" : "Belum ada materi jurnal semester ini — tulis sendiri"}">${_ncE(T[k] || "")}</textarea></div>`).join("");
+      <textarea id="nc-${k}" class="input" rows="4" ${lihat ? "readonly" : ""} placeholder="${_ncTemaDipakai().length ? "" : "Belum ada materi — pilih/tambah materi dulu atau tulis sendiri"}">${e(T[k] || "")}</textarea></div>`).join("");
   openModal(`<div class="nc">
-    <div class="nc-hero"><div><span class="nc-pil-kecil">🎯 CP Otomatis</span><h3>${_ncE(sub || m?.nama_mapel || "")}${sub ? `<small> bagian ${_ncE(m?.nama_mapel || "")}</small>` : ""}</h3>
-      <p>${_ncE(kl?.nama_kelas || "")} · ${_ncE(qs("nl-semester").value)} ${_ncE(qs("nl-tahun").value)} · ${NC.draf ? "usulan otomatis (belum disimpan)" : "tersimpan"}</p></div></div>
-    <div class="nc-tema"><b>📚 Materi dari jurnal semester ini</b>${NC.tema.length ? `<div class="nc-chip-baris">${NC.tema.slice(0, 24).map((t) => `<span class="nc-chip">${_ncE(t)}</span>`).join("")}${NC.tema.length > 24 ? `<span class="nc-chip">+${NC.tema.length - 24} lagi</span>` : ""}</div>` : `<div class="nc-kosong">Belum ada jurnal mengajar mapel ini di kelas ini pada semester ini. CP tidak dikarang — isi sendiri, atau isi jurnal dulu lalu tekan Susun Ulang.</div>`}</div>
+    <div class="nc-hero"><div><span class="nc-pil-kecil">🎯 CP Otomatis</span><h3>${e(sub || m?.nama_mapel || "")}${sub ? `<small> bagian ${e(m?.nama_mapel || "")}</small>` : ""}</h3>
+      <p>${e(kl?.nama_kelas || "")} · ${e(qs("nl-semester").value)} ${e(qs("nl-tahun").value)} · ${NC.draf ? "usulan otomatis (belum disimpan)" : "tersimpan"}</p></div></div>
+    <div class="nc-jenis"><b>Jenis CP</b>${Object.entries(NC_JENIS).map(([k, l]) => `<button type="button" class="${T.jenis === k ? "on" : ""}" ${lihat ? "disabled" : ""} onclick="_ncPilihJenis('${k}')">${l}</button>`).join("")}
+      <small>${T.jenis === "praktik" ? "Kalimat: terampil / mempraktikkan (mis. olahraga, tahsin, khat, TIK)" : T.jenis === "campuran" ? "Kalimat: memahami sekaligus mempraktikkan (mis. tajwid, bahasa)" : "Kalimat: memahami / menjelaskan / menerapkan"}</small></div>
+    <div class="nc-tema"><b>📚 Materi untuk CP</b> <small>ketuk untuk memilih / membuang</small>
+      ${NC.tema.length ? `<div class="nc-chip-baris">${chip}</div>` : `<div class="nc-kosong">Belum ada materi dari jurnal semester ini. Tambahkan materi di bawah atau tulis CP sendiri — tidak dikarang.</div>`}
+      <div class="nc-chip-baris">${tambahan}</div>
+      ${lihat ? "" : `<div class="nc-tambah"><input id="nc-tambah" class="input" placeholder="Tambah materi yang belum sempat disampaikan tetapi wajib ada di CP" onkeydown="if(event.key==='Enter'){event.preventDefault();_ncTambahMateri()}"><button class="btn btn-sm btn-accent" onclick="_ncTambahMateri()">＋ Tambah</button></div>`}
+      ${NC.jurnal?.length ? `<details class="nc-jurnal"><summary>📝 Lihat & Perbaiki Jurnal (${NC.jurnal.length} pertemuan)</summary><div class="nc-jr-daftar">${jurnal}</div>${lihat ? "" : `<small>Perbaikan tersimpan langsung ke jurnal mengajar. Setelah itu tekan ✨ Susun Ulang.</small>`}</details>` : ""}
+    </div>
     <div class="nc-batas">Batas kategori: Sangat Baik ≥ <input id="nc-b0" type="number" class="input" value="${b[0]}" ${lihat ? "disabled" : ""}> · Baik ≥ <input id="nc-b1" type="number" class="input" value="${b[1]}" ${lihat ? "disabled" : ""}> · di bawahnya Cukup</div>
     <div class="nc-grid">${kartu}</div>
     ${lihat ? `<div class="nc-ket">👁️ Mode Lihat — hanya guru pengampu yang bisa mengubah.</div>` : `<div class="nc-aksi">
-      <button class="btn btn-outline" onclick="_ncSusunUlang()">✨ Susun Ulang dari Jurnal</button>
+      <button class="btn btn-outline" onclick="_ncSusunUlang()">✨ Susun Ulang dari Materi Terpilih</button>
       <button class="btn btn-accent" onclick="_ncSimpanTpl()">💾 Simpan & Terapkan ke Santri</button></div>
     <div class="nc-ket">Diterapkan ke santri yang CP-nya masih otomatis/kosong. CP yang sudah diubah sendiri oleh guru tidak disentuh.</div>`}
   </div>`, { lebar: true });
 }
+function _ncTogelTema(i) {
+  const k = _ncKunciTema(NC.tema[i]), s = new Set(NC.tpl.abaikan || []);
+  s.has(k) ? s.delete(k) : s.add(k); NC.tpl.abaikan = [...s]; _ncGambarModal();
+}
+function _ncTambahMateri() {
+  const v = (qs("nc-tambah")?.value || "").trim(); if (v.length < 3) { toast("Tulis materinya dulu", "err"); return; }
+  NC.tpl.tambahan = [...new Set([...(NC.tpl.tambahan || []), v])]; _ncGambarModal();
+}
+function _ncHapusTambahan(i) { NC.tpl.tambahan.splice(i, 1); _ncGambarModal(); }
+function _ncPilihJenis(j) { NC.tpl.jenis = j; _ncGambarModal(); toast(`Jenis CP: ${NC_JENIS[j]} — tekan ✨ Susun Ulang untuk memakai kalimatnya`, "info"); }
+async function _ncUbahJurnal(i, el) {
+  const j = NC.jurnal[i], v = el.value.trim(), st = qs("nc-jr-" + i);
+  if (!j || v === (j.materi_pokok || "")) return;
+  if (v.length < 3) { toast("Materi terlalu pendek", "err"); el.value = j.materi_pokok || ""; return; }
+  try {
+    if (st) st.textContent = "…";
+    const { error } = await supa.from("jurnal_kelas").update({ materi_pokok: v }).eq("id", j.id);
+    if (error) throw error;
+    j.materi_pokok = v; if (st) st.textContent = "✓";
+    const sub = _ncSub(); NC.tema = _ncTemaDari(NC.jurnal, sub);
+    _ncGambarModal(); qs("input-nilai-table") && document.querySelector(".nc-jurnal")?.setAttribute("open", "");
+  } catch (e) { if (st) st.textContent = "✕"; toast("Gagal memperbaiki jurnal: " + (e.message || e), "err"); }
+}
 function _ncSusunUlang() {
-  const s = _ncSusun(NC.tema);
-  if (!NC.tema.length) { toast("Belum ada materi jurnal semester ini untuk disusun", "err"); return; }
-  ["sb", "b", "c"].forEach((k) => { qs("nc-" + k).value = s[k]; });
-  toast("✨ Disusun ulang dari materi jurnal — periksa lalu Simpan", "info");
+  _ncAmbilIsian();
+  const tema = _ncTemaDipakai();
+  if (!tema.length) { toast("Pilih atau tambahkan materi dulu", "err"); return; }
+  const s = _ncSusunJenis(tema, NC.tpl.jenis || "paham");
+  ["sb", "b", "c"].forEach((k) => { NC.tpl[k] = s[k]; });
+  _ncGambarModal(true);
+  toast("✨ Disusun ulang dari materi terpilih — periksa lalu Simpan", "info");
 }
 async function _ncSimpanTpl() {
   const isi = { sb: qs("nc-sb").value.trim(), b: qs("nc-b").value.trim(), c: qs("nc-c").value.trim() };
   const b0 = Number(qs("nc-b0").value) || 90, b1 = Number(qs("nc-b1").value) || 80;
   if (b1 >= b0) { toast("Batas Baik harus lebih kecil dari Sangat Baik", "err"); return; }
-  const lama = NC.tpl || {}, riwayat = [...new Set([...(lama.riwayat || []), lama.sb, lama.b, lama.c].filter((x) => x && !Object.values(isi).includes(x)))].slice(-15);
+  const lama = NC.tplTersimpan || {}, riwayat = [...new Set([...(NC.tpl.riwayat || []), lama.sb, lama.b, lama.c].filter((x) => x && !Object.values(isi).includes(x)))].slice(-15);
   const [kv, kunci] = NC.kunci.split("#");
+  const simpan = { ...isi, batas: [b0, b1], riwayat, jenis: NC.tpl.jenis || "paham", abaikan: NC.tpl.abaikan || [], tambahan: NC.tpl.tambahan || [], oleh: STATE.guruNama || "", t: Date.now() };
   try {
     setGlobalLoading(true, "Menyimpan CP…");
-    await _kvGabung(kv, { [kunci]: { ...isi, batas: [b0, b1], riwayat, oleh: STATE.guruNama || "", t: Date.now() } });
-    NC.tpl = { ...isi, batas: [b0, b1], riwayat }; NC.draf = false;
+    await _kvGabung(kv, { [kunci]: simpan });
+    NC.tpl = { ...simpan }; NC.tplTersimpan = { ...simpan }; NC.draf = false;
     let n = 0; qsa("#input-nilai-table tbody tr").forEach((tr) => { const v = (tr.querySelector(".nilai-cp")?.value || "").trim(); if (!v || riwayat.includes(v) || Object.values(isi).includes(v)) tr.dataset.cpAuto = "1"; if (_ncTerapkanBaris(tr)) n++; _perbaruiTombolCP(tr); });
     closeModal(); if (n) _tandaiNilaiBelumDisimpan();
     toast(`🎯 CP tersimpan${n ? ` · ${n} santri diperbarui — tekan 💾 Simpan nilai` : ""}`, "ok");
@@ -272,7 +364,8 @@ async function _ncSimpanTpl() {
   finally { setGlobalLoading(false); }
 }
 
-// ── Nilai tersimpan di semester lain padahal diisi di semester ini ──
+
+// ── Keterangan: ada nilai mapel & kelas ini yang berlabel semester lain (hanya memberi tahu — aplikasi TIDAK memindahkan nilai) ──
 async function _ncPitaSemester() {
   const kelasId = qs("nl-kelas").value, mapelId = qs("nl-mapel").value, sem = qs("nl-semester").value, ta = qs("nl-tahun").value;
   const target = qs("input-nilai-table"); if (!target) return;
@@ -281,32 +374,17 @@ async function _ncPitaSemester() {
   let r = [];
   try { r = (await supa.from("nilai_rapor").select("id,siswa_id,semester,tahun_ajaran,updated_at").eq("kelas_id", kelasId).eq("mapel_id", mapelId)).data || []; } catch (e) { return; }
   const lain = r.filter((x) => (x.semester !== sem || x.tahun_ajaran !== ta) && ids.has(x.siswa_id));
-  // hanya yang DISIMPAN saat semester lain itu sudah lewat (salah pilih semester), bukan nilai semester lalu yang sah
+  // hanya yang disimpan setelah semester berlabel itu berakhir (nilai semester lalu yang diisi tepat waktu tidak ditampilkan)
   const salah = lain.filter((x) => { if (!x.updated_at) return false; const { sampai } = _rentangSemesterTahunAjaran(x.semester, x.tahun_ajaran); const batas = new Date(new Date(sampai + "T00:00:00").getTime() + 30 * 86400000).toISOString(); return x.updated_at > batas; });
   if (token !== NC.pitaToken) return; // sudah ada gambar ulang yang lebih baru
   qs("input-nilai-table")?.querySelectorAll(".nc-pita-sem").forEach((x) => x.remove());
   if (!salah.length || qs("nl-kelas").value !== kelasId) return;
   const grup = {}; salah.forEach((x) => { const k = x.semester + " " + x.tahun_ajaran; (grup[k] = grup[k] || []).push(x); });
   const html = Object.entries(grup).map(([k, a]) => { const [s, t] = k.split(" "), tgl = a.map((x) => x.updated_at).sort().pop();
-    return `<div class="nc-pita-sem">📅 <div><b>${a.length} nilai mapel ini tersimpan di ${_ncE(k)}</b>, padahal disimpan tanggal ${new Date(tgl).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })} (sudah lewat semester itu). Kemungkinan salah pilih semester saat menyimpan.
-      <span><button class="btn btn-sm btn-outline" onclick="qs('nl-semester').value='${s}';qs('nl-tahun').value='${t}';renderInputNilai()">👁️ Lihat</button>${NC.hak === "ubah" ? ` <button class="btn btn-sm btn-accent" onclick="_ncPindahSemester('${s}','${t}')">📥 Pindahkan ke ${_ncE(sem)} ${_ncE(ta)}</button>` : ""}</span></div></div>`; }).join("");
+    return `<div class="nc-pita-sem">ℹ️ <div><b>Ada ${a.length} nilai mapel ini di ${_ncE(k)}</b> (terakhir disimpan ${new Date(tgl).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}). Nilai itu tidak tampil di sini karena berlabel semester lain. Pindah semester lewat pilihan di atas untuk melihatnya.
+      <span><button class="btn btn-sm btn-outline" onclick="qs('nl-semester').value='${s}';qs('nl-tahun').value='${t}';renderInputNilai()">👁️ Lihat di ${_ncE(k)}</button></span></div></div>`; }).join("");
   target.insertAdjacentHTML("afterbegin", html);
 }
-async function _ncPindahSemester(s, t) {
-  const kelasId = qs("nl-kelas").value, mapelId = qs("nl-mapel").value, sem = qs("nl-semester").value, ta = qs("nl-tahun").value;
-  const r = (await supa.from("nilai_rapor").select("id,siswa_id,semester,tahun_ajaran").eq("kelas_id", kelasId).eq("mapel_id", mapelId)).data || [];
-  const sumber = r.filter((x) => x.semester === s && x.tahun_ajaran === t), sudah = new Set(r.filter((x) => x.semester === sem && x.tahun_ajaran === ta).map((x) => x.siswa_id));
-  const pindah = sumber.filter((x) => !sudah.has(x.siswa_id)), bentrok = sumber.length - pindah.length;
-  if (!pindah.length) { toast(`Semua ${bentrok} santri sudah punya nilai di ${sem} ${ta} — buka 👁️ Lihat lalu bandingkan dulu, tidak dipindah otomatis`, "info"); return; }
-  if (!(await konfirmasiTema(`Pindahkan nilai <b>${pindah.length} santri</b> dari ${_ncE(s)} ${_ncE(t)} ke <b>${_ncE(sem)} ${_ncE(ta)}</b>?${bentrok ? `\n\n${bentrok} santri dilewati karena sudah punya nilai di ${_ncE(sem)} ${_ncE(ta)}.` : ""}\n\nIsi nilainya tidak berubah, hanya label semesternya.`, { ikon: "📥", judul: "Pindahkan semester", teksYa: "Pindahkan" }))) return;
-  try {
-    setGlobalLoading(true, "Memindahkan…"); let n = 0;
-    for (const x of pindah) { const u = await supa.from("nilai_rapor").update({ semester: sem, tahun_ajaran: ta }).eq("id", x.id); if (!u.error) n++; }
-    toast(`📥 ${n} nilai dipindah ke ${sem} ${ta}`, "ok"); renderInputNilai();
-  } catch (e) { toast("Gagal: " + (e.message || e), "err"); }
-  finally { setGlobalLoading(false); }
-}
-
 // ── Penjaga: Mode Lihat tidak bisa menyimpan; peringatan bila menyimpan ke semester yang bukan semester berjalan ──
 (function () {
   const jaga = (nama) => { const asli = window[nama]; if (typeof asli !== "function") return;
@@ -325,7 +403,7 @@ async function _ncPindahSemester(s, t) {
   const css = `.nc-tombol{background:linear-gradient(135deg,#0f766e,#0d9488)!important;color:#fff!important}
   .nl-cp-btn i{font-style:normal;display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:800;color:var(--w);background:color-mix(in srgb,var(--w) 12%,transparent);white-space:nowrap}
   .nc-lihat,.nc-pita-sem{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-radius:14px;margin:0 0 10px;font-size:12.5px;line-height:1.5}
-  .nc-lihat{background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe}.nc-pita-sem{background:#fff7ed;color:#9a3412;border:1px solid #fed7aa}.nc-pita-sem span{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .nc-lihat{background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe}.nc-pita-sem{background:#f0f9ff;color:#075985;border:1px solid #bae6fd}.nc-pita-sem span{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
   .nc-hero{border-radius:18px;padding:16px 18px;margin:-4px 0 12px;color:#fff;background:radial-gradient(120% 140% at 0% 0%,#14b8a6 0%,#0f766e 45%,#134e4a 100%);box-shadow:0 10px 30px rgba(15,118,110,.25)}
   .nc-hero h3{margin:6px 0 2px;color:#fff;font-size:20px}.nc-hero h3 small{font-size:12px;opacity:.8;font-weight:600}.nc-hero p{margin:0;font-size:12px;opacity:.85}
   .nc-pil-kecil{display:inline-block;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:2px 10px;font-size:11px;font-weight:700}
@@ -342,5 +420,17 @@ async function _ncPindahSemester(s, t) {
   .nc-pil b{display:block;color:var(--w);font-size:12.5px;margin-bottom:2px}.nc-pil b em{font-style:normal;font-size:10.5px;background:var(--w);color:#fff;border-radius:999px;padding:1px 7px;margin-left:4px}
   .nc-pil span{font-size:12px;line-height:1.45}.nc-pil.saran{box-shadow:0 0 0 2px var(--w)}.nc-pil:disabled{opacity:.6;cursor:default}
   @media (max-width:760px){.nc-grid{grid-template-columns:1fr}.nc-kartu textarea{min-height:90px}.nc-aksi .btn,.nc-ed-aksi .btn{flex:1}}`;
+  const s = document.createElement("style"); s.textContent = css; document.head.appendChild(s);
+})();
+(function () {
+  const css = `.nc-jenis{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:10px;font-size:12.5px}.nc-jenis>b{margin-right:4px}
+  .nc-jenis button{border:1px solid var(--border-soft,#e2e8f0);background:var(--card-bg,#fff);color:inherit;border-radius:999px;padding:5px 12px;font-weight:700;font-size:12px;cursor:pointer}
+  .nc-jenis button.on{background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;border-color:transparent;box-shadow:0 4px 12px rgba(13,148,136,.3)}.nc-jenis small{flex-basis:100%;color:var(--text-secondary);font-size:11px}
+  button.nc-chip{cursor:pointer;font:inherit;font-size:11.5px}.nc-chip.pakai{background:#ecfdf5;border-color:#6ee7b7;color:#065f46}.nc-chip.mati{background:transparent;color:#94a3b8;text-decoration:line-through;border-style:dashed}
+  .nc-chip.tambah{background:#eef2ff;border-color:#a5b4fc;color:#3730a3;display:inline-flex;align-items:center;gap:4px}.nc-chip.tambah button{border:0;background:none;color:inherit;cursor:pointer;font-size:14px;line-height:1}
+  .nc-tambah{display:flex;gap:6px;margin-top:8px}.nc-tambah input{flex:1;font-size:12.5px}
+  .nc-jurnal{margin-top:8px}.nc-jurnal summary{cursor:pointer;font-weight:700;font-size:12.5px;padding:4px 0}.nc-jurnal small{display:block;color:var(--text-secondary);font-size:11px;margin-top:4px}
+  .nc-jr-daftar{max-height:240px;overflow:auto;display:grid;gap:4px;margin-top:6px;padding-right:4px}.nc-jr{display:grid;grid-template-columns:56px 1fr 18px;gap:6px;align-items:center;font-size:12px}
+  .nc-jr span{color:var(--text-secondary);font-size:11px}.nc-jr input{padding:5px 8px;font-size:12px}.nc-jr-st{color:#059669;font-size:12px}`;
   const s = document.createElement("style"); s.textContent = css; document.head.appendChild(s);
 })();
