@@ -17,6 +17,22 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Amiri:wght@400;700&family=Playfair+Display:wght@600;700;800&display=swap&family=Anton&family=Great+Vibes" rel="stylesheet">
+<!-- Emoji seragam: Windows/Linux memakai emoji bawaan sistem yang datar & kuno (Segoe UI Emoji di Windows 10).
+     Di perangkat itu dimuat Noto Color Emoji supaya ikon tampil sama berwarnanya dengan di HP. iPhone/Mac/Android tetap emoji bawaan. -->
+<script>
+(function () {
+  var u = navigator.userAgent || "";
+  if (/Android|iPhone|iPad|iPod|Macintosh|Mac OS X/i.test(u)) return;
+  document.documentElement.classList.add("emoji-noto");
+  var l = document.createElement("link"); l.rel = "stylesheet"; l.href = "https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap"; document.head.appendChild(l);
+  var s = document.createElement("style");
+  s.textContent = "html.emoji-noto body,html.emoji-noto.tema-elegan body{font-family:'Plus Jakarta Sans','Noto Color Emoji',sans-serif}" +
+    "html.emoji-noto[dir=rtl] body{font-family:'Amiri','Plus Jakarta Sans','Noto Color Emoji',sans-serif}" +
+    ":where(html.emoji-noto) :where(button,input,select,textarea,option){font-family:inherit}" +
+    "html.emoji-noto,html.emoji-noto.tema-elegan{--tl-serif:'Playfair Display','Noto Color Emoji',Georgia,serif}";
+  document.head.appendChild(s);
+})();
+</script>
 <!-- Tema elegan + pilihan palet (menu ✨ di topbar). "klasik" = tampilan hijau lama. Dipasang
      sedini mungkin supaya tidak sempat "berkedip" tampilan lain dulu. Disimpan per perangkat. -->
 <link rel="stylesheet" href="src/tema-elegan.css?v=52">
@@ -2609,7 +2625,8 @@ function applyLanguage(lang) {
   qs("lang-switch").value = lang;
   document.documentElement.setAttribute("lang", lang);
   document.documentElement.setAttribute("dir", lang === "ar" ? "rtl" : "ltr");
-  document.body.style.fontFamily = lang === "ar" ? "'Amiri','Plus Jakarta Sans',sans-serif" : "'Plus Jakarta Sans',sans-serif";
+  const _emoji = document.documentElement.classList.contains("emoji-noto") ? ",'Noto Color Emoji'" : ""; // emoji seragam di laptop Windows
+  document.body.style.fontFamily = lang === "ar" ? `'Amiri','Plus Jakarta Sans'${_emoji},sans-serif` : `'Plus Jakarta Sans'${_emoji},sans-serif`;
   qsa("[data-i18n]").forEach((el) => { el.textContent = t(el.getAttribute("data-i18n")); });
   qsa("[data-i18n-placeholder]").forEach((el) => { el.placeholder = t(el.getAttribute("data-i18n-placeholder")); });
   renderSidebar();
