@@ -1944,7 +1944,7 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
               <button class="btn btn-ghost" onclick="toggleMenuDataGuru(event)" title="Impor/Ekspor Excel">📁 <span data-i18n="data">Data</span> ▾</button>
               <div id="guru-data-menu" class="dropdown-menu">
                 <label class="btn btn-ghost" style="width:100%;justify-content:flex-start;cursor:pointer;">📥 <span data-i18n="importExcel">Impor Excel</span>
-                  <input type="file" id="guru-file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="closeMenuDataGuru();handleImportGuru(event)"/></label>
+                  <input type="file" id="guru-file-input" accept=".xlsx,.xls,.csv,.ods,.pdf,.docx,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="display:none" onchange="closeMenuDataGuru();handleImportGuru(event)"/></label>
                 <button class="btn btn-ghost" style="width:100%;justify-content:flex-start;" onclick="closeMenuDataGuru();eksporDataGuru();">📤 <span data-i18n="eksporExcel">Ekspor Excel</span></button>
               </div>
             </div>
@@ -1973,7 +1973,7 @@ table.bop-table tfoot td{font-weight:800;background:var(--surface2);}
             <button id="btn-toggle-pilih-siswa" class="btn btn-outline btn-toggle-guru" title="Pilih untuk Hapus/Aksi Massal" onclick="toggleModePilihSiswa()"><span class="btn-toggle-guru-icon">🗑️</span></button>
           </div>
           <select id="ds-filter-kelas" class="input" style="display:none" onchange="renderDataSiswa()"><option value=""></option></select>
-          <input type="file" id="siswa-file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleImportSiswa(event)"/>
+          <input type="file" id="siswa-file-input" accept=".xlsx,.xls,.csv,.ods,.pdf,.docx,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="display:none" onchange="handleImportSiswa(event)"/>
           <input type="file" id="siswa-foto-bulk-input" accept="image/*" multiple style="display:none" onchange="handleUploadFotoMassalSiswa(event)"/>
         </div>
         <div id="data-siswa-ringkasan" style="margin-bottom:12px;"></div>
@@ -16225,7 +16225,7 @@ async function handleImportSiswa(evt) {
 <script src="src/ruang.js?v=19"></script>
 <script src="src/akun.js?v=11"></script>
 <script src="src/keamanan-admin.js?v=12"></script>
-<script src="src/siswa-tampil.js?v=4"></script>
+<script src="src/siswa-tampil.js?v=5"></script>
 <script src="src/pengelola.js?v=4"></script>
 <script src="src/bosp-data.js?v=2"></script>
 <script src="src/bosp.js?v=13"></script>
@@ -16264,7 +16264,7 @@ async function handleImportSiswa(evt) {
 <script src="src/dialog-tema.js?v=1"></script>
 <script src="src/kop-amplop.js?v=2"></script>
 <script src="src/jadwal-susun.js?v=1"></script>
-<script src="src/impor-data.js?v=1"></script>
+<script src="src/impor-data.js?v=2"></script>
 <script src="src/cari-fitur.js?v=3"></script>
 <script src="src/sop-data.js?v=1"></script>
 <script src="src/sop.js?v=3"></script>

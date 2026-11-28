@@ -57,7 +57,7 @@ function dsMenuData(btn) {
   if (ada) { ada.remove(); return; }
   const el = document.createElement("div");
   el.id = "ds-menu-data"; el.className = "ds-menu";
-  el.innerHTML = `<button onclick="qs('siswa-file-input').click()"><b>Impor Excel</b><small>Tambah banyak santri dari file Excel</small></button>
+  el.innerHTML = `<button onclick="qs('siswa-file-input').click()"><b>Impor Data</b><small>Tambah banyak santri dari Excel, CSV, PDF, atau Word</small></button>
     <button onclick="eksporDataSiswaAdministrasi()"><b>Ekspor Excel</b><small>Unduh data santri lengkap</small></button>
     ${dsBolehFoto() ? `<button onclick="dsPanduanFoto()"><b>Upload Foto Massal</b><small>Khusus Admin & Admin Pendamping</small></button>` : ""}`;
   btn.parentElement.appendChild(el);
